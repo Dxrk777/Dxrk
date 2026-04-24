@@ -1,0 +1,4 @@
+#!/bin/bash
+# Dxrk launcher (skeleton)
+echo "Dxrk launcher (skeleton)"
+python3 dxrk_master.py start
