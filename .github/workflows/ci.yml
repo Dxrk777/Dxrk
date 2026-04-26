@@ -19,4 +19,6 @@ jobs:
           python -m pip install pytest
       - name: Run tests
         run: |
-          pytest -q tests
+          pwd
+          ls -la
+          pytest -v tests/
