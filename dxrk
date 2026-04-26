@@ -1,4 +1,38 @@
 #!/bin/bash
-# Dxrk launcher (skeleton)
-echo "Dxrk launcher (skeleton)"
-python3 dxrk_master.py start
+# Dxrk CLI - Interfaz de línea de comandos para Dxrk System
+
+case "$1" in
+    install)
+        curl -fsSL https://raw.githubusercontent.com/Dxrk777/Dxrk/main/dxrk_install.py -o /tmp/dxrk_install.py
+        python3 /tmp/dxrk_install.py install
+        ;;
+    start)
+        python3 dxrk_master.py start
+        ;;
+    status)
+        python3 dxrk_master.py status
+        ;;
+    stop)
+        pkill -f "dxrk" 2>/dev/null
+        echo "Dxrk stopped"
+        ;;
+    test)
+        pytest -q tests/
+        ;;
+    build)
+        cd DxrkControl && pnpm build
+        ;;
+    *)
+        echo "Dxrk System v1.0 CLI"
+        echo ""
+        echo "Usage: dxrk <command>"
+        echo ""
+        echo "Commands:"
+        echo "  install   - Instalar el sistema"
+        echo "  start    - Iniciar Dxrk"
+        echo "  status   - Ver estado"
+        echo "  stop     - Detener Dxrk"
+        echo "  test     - Ejecutar tests"
+        echo "  build    - Reconstruir DxrkControl"
+        ;;
+esac
