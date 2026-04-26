@@ -3,7 +3,7 @@
 Copyright (c) 2026 DXRK. Todos los derechos reservados.
 
 ## Titular
-DXRK (en adelante "Titular" o "Nosotros")
+DXRK 
 
 ## Términos de Uso
 
