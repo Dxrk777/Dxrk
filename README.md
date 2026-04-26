@@ -1,4 +1,4 @@
-# DXRK System v1.0
+# DXRK 
 
 Unified AI System - DxrkCore + DxrkControl + DxrkMemory
 
