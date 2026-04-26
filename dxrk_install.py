@@ -50,14 +50,7 @@ def build_dxrk_control(ctrl):
     if os.path.exists(tsconfig):
         if not ensure_pnpm():
             return False
-        return run("CI=true pnpm install --ignore-scripts && CI=true pnpm build", cwd=ctrl)
-            return False
-        dist_index = os.path.join(ctrl, "dist", "index.js")
-        if os.path.exists(dist_index):
-            print(f"[DxrkInstall] dist/index.js found at {dist_index}")
-            return True
-        print("[DxrkInstall] dist/index.js not found after build")
-        return False
+        return run("CI=true pnpm build", cwd=ctrl)
     print("[DxrkInstall] No tsconfig.json")
     return True
 
