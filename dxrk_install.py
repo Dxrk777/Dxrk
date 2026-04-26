@@ -51,6 +51,16 @@ def build_dxrk_control(ctrl):
     if os.path.exists(dist_index):
         print("[DxrkInstall] dist/index.js already exists, skipping build")
         return True
+    # Check node version
+    result = subprocess.run("node --version", shell=True, capture_output=True, text=True)
+    node_ver = result.stdout.strip().replace("v", "")
+    try:
+        major = int(node_ver.split(".")[0])
+        if major < 22:
+            print("[DxrkInstall] Node < 22, skipping build. Use pre-built dist or Docker.")
+            return True
+    except:
+        pass
     if os.path.exists(tsconfig):
         if not ensure_pnpm():
             return False
@@ -77,6 +87,11 @@ def install(args):
     print("=" * 50)
     print("Dxrk System v1.0 - Installation complete")
     print("=" * 50)
+    dist_index = os.path.join(ctrl, "dist", "index.js")
+    if os.path.exists(dist_index):
+        print("✓ dist/index.js ready")
+    else:
+        print("⚠ Build skipped (Node < 22). Use pre-built dist or Docker.")
     print("Next steps:")
     print("  python3 dxrk_master.py start")
 
