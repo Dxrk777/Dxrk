@@ -47,6 +47,10 @@ def install_node_deps(ctrl):
 
 def build_dxrk_control(ctrl):
     tsconfig = os.path.join(ctrl, "tsconfig.json")
+    dist_index = os.path.join(ctrl, "dist", "index.js")
+    if os.path.exists(dist_index):
+        print("[DxrkInstall] dist/index.js already exists, skipping build")
+        return True
     if os.path.exists(tsconfig):
         if not ensure_pnpm():
             return False
