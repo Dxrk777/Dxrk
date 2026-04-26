@@ -1,42 +1,102 @@
 #!/usr/bin/env python3
-"""Dxrk MCP Server - Exposes Dxrk components as MCP tools"""
+"""Dxrk MCP Server - Full integration with Dxrk System"""
 import sys
 import os
 import json
-import asyncio
+import subprocess
 from pathlib import Path
 
-# MCP Server base
+# Paths
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DXRK_PATH = SCRIPT_DIR
+MASTER_PATH = os.path.join(DXRK_PATH, "dxrk_master.py")
+INSTALL_PATH = os.path.join(DXRK_PATH, "dxrk_install.py")
+CONTROL_PATH = os.path.join(DXRK_PATH, "DxrkControl")
+MEMORY_PATH = os.path.join(DXRK_PATH, "DxrkMemory")
+
+# Logging
+LOG_DIR = os.path.join(SCRIPT_DIR, "mcp_logs")
+os.makedirs(LOG_DIR, exist_ok=True)
+LOG_FILE = os.path.join(LOG_DIR, "server.log")
+
+def log(msg):
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(f"[{json.dumps(msg)}]\n")
+
 class MCPTransport:
     def __init__(self):
-        self.buffer = ""
+        self.closed = False
         
     def read_message(self):
-        # Read JSON-RPC message from stdin
-        line = sys.stdin.readline()
-        if not line:
+        try:
+            line = sys.stdin.readline()
+            if not line:
+                self.closed = True
+                return None
+            line = line.strip()
+            if not line:
+                return None
+            return json.loads(line)
+        except Exception as e:
+            log(f"Error reading: {e}")
+            self.closed = True
             return None
-        return json.loads(line.strip())
     
     def send_response(self, response):
-        print(json.dumps(response), flush=True)
+        try:
+            sys.stdout.write(json.dumps(response) + "\n")
+            sys.stdout.flush()
+        except Exception as e:
+            log(f"Error sending: {e}")
+
+def run_dxrk_command(cmd, cwd=None):
+    """Run a Dxrk command and return output"""
+    try:
+        result = subprocess.run(
+            cmd, 
+            shell=True, 
+            cwd=cwd or DXRK_PATH, 
+            capture_output=True, 
+            text=True,
+            timeout=30
+        )
+        output = result.stdout.strip() if result.stdout else result.stderr.strip()
+        return output if output else f"Command completed with code {result.returncode}"
+    except subprocess.TimeoutExpired:
+        return "Command timed out"
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 class DxrkMCPServer:
     def __init__(self):
-        self.dxrk_path = os.path.dirname(os.path.abspath(__file__))
-        self.memory_path = os.path.join(self.dxrk_path, "DxrkMemory")
-        self.core_path = os.path.join(self.dxrk_path, "DxrkCore")
-        self.control_path = os.path.join(self.dxrk_path, "DxrkControl")
+        self.dxrk_path = DXRK_PATH
+        self.memory_store = {}
         
     def tools(self):
         return {
+            "dxrk_status": {
+                "description": "Get Dxrk System status - shows if Dxrk is ONLINE/OFFLINE",
+                "inputSchema": {"type": "object", "properties": {}}
+            },
+            "dxrk_start": {
+                "description": "Start Dxrk System",
+                "inputSchema": {"type": "object", "properties": {}}
+            },
+            "dxrk_stop": {
+                "description": "Stop Dxrk System",
+                "inputSchema": {"type": "object", "properties": {}}
+            },
+            "dxrk_install": {
+                "description": "Install Dxrk System dependencies",
+                "inputSchema": {"type": "object", "properties": {}}
+            },
             "dxrk_memory_save": {
                 "description": "Save information to DxrkMemory",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "key": {"type": "string", "description": "Key to save"},
-                        "value": {"type": "string", "description": "Value to save"}
+                        "key": {"type": "string"},
+                        "value": {"type": "string"}
                     },
                     "required": ["key", "value"]
                 }
@@ -46,107 +106,121 @@ class DxrkMCPServer:
                 "inputSchema": {
                     "type": "object",
                     "properties": {
-                        "key": {"type": "string", "description": "Key to retrieve"}
+                        "key": {"type": "string"}
                     },
                     "required": ["key"]
                 }
             },
-            "dxrk_status": {
-                "description": "Get Dxrk System status",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {}
-                }
+            "dxrk_test": {
+                "description": "Run Dxrk tests",
+                "inputSchema": {"type": "object", "properties": {}}
             },
-            "dxrk_start": {
-                "description": "Start Dxrk System",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {}
-                }
-            },
-            "dxrk_stop": {
-                "description": "Stop Dxrk System",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {}
-                }
+            "dxrk_restart": {
+                "description": "Restart Dxrk System",
+                "inputSchema": {"type": "object", "properties": {}}
             }
         }
     
     def call_tool(self, name, args):
-        if name == "dxrk_memory_save":
-            # Save to memory (placeholder for now)
-            return {"content": [{"type": "text", "text": f"Saved: {args.get('key')} = {args.get('value')}"}]}
+        log(f"Tool call: {name}")
         
-        elif name == "dxrk_memory_get":
-            # Get from memory (placeholder for now)
-            key = args.get('key', '')
-            return {"content": [{"type": "text", "text": f"Retrieved for '{key}': placeholder value"}]}
-        
-        elif name == "dxrk_status":
-            control_dist = os.path.join(self.control_path, "dist", "index.js")
+        if name == "dxrk_status":
+            control_dist = os.path.join(CONTROL_PATH, "dist", "index.js")
             status = "ONLINE" if os.path.exists(control_dist) else "OFFLINE"
-            return {"content": [{"type": "text", "text": f"Dxrk System v1.0 - {status}"}]}
+            output = run_dxrk_command("python3 dxrk_master.py status")
+            return {"content": [{"type": "text", "text": f"Dxrk System v1.0 - {status}\n\n{output}"}]}
         
         elif name == "dxrk_start":
-            return {"content": [{"type": "text", "text": "Dxrk System started - ONLINE"}]}
+            output = run_dxrk_command("python3 dxrk_master.py start")
+            return {"content": [{"type": "text", "text": f"Dxrk started:\n{output}"}]}
         
         elif name == "dxrk_stop":
-            return {"content": [{"type": "text", "text": "Dxrk System stopped"}]}
+            output = run_dxrk_command("pkill -f dxrk_master.py 2>/dev/null || echo 'No process found'")
+            return {"content": [{"type": "text", "text": f"Dxrk stopped:\n{output}"}]}
         
-        return {"error": f"Unknown tool: {name}"}
+        elif name == "dxrk_install":
+            output = run_dxrk_command("python3 dxrk_install.py install")
+            return {"content": [{"type": "text", "text": f"Dxrk installed:\n{output}"}]}
+        
+        elif name == "dxrk_memory_save":
+            key = args.get("key")
+            value = args.get("value")
+            if not key or not value:
+                return {"content": [{"type": "text", "text": "Error: key and value required"}]}
+            self.memory_store[key] = value
+            return {"content": [{"type": "text", "text": f"Saved to memory: {key} = {value}"}]}
+        
+        elif name == "dxrk_memory_get":
+            key = args.get("key")
+            if not key:
+                return {"content": [{"type": "text", "text": "Error: key required"}]}
+            value = self.memory_store.get(key, f"<key '{key}' not found in memory>")
+            return {"content": [{"type": "text", "text": f"Memory[{key}]: {value}"}]}
+        
+        elif name == "dxrk_test":
+            output = run_dxrk_command("pytest -q tests/ 2>&1 || python3 -m pytest -q tests/ 2>&1")
+            tests_passed = "passed" in output
+            return {"content": [{"type": "text", "text": f"Tests result:\n{output}"}]}
+        
+        elif name == "dxrk_restart":
+            run_dxrk_command("pkill -f dxrk_master.py 2>/dev/null")
+            output = run_dxrk_command("python3 dxrk_master.py start")
+            return {"content": [{"type": "text", "text": f"Dxrk restarted:\n{output}"}]}
+        
+        return {"content": [{"type": "text", "text": f"Unknown tool: {name}"}]}
 
-async def main():
+def main():
+    log("=== Starting Dxrk MCP Server ===")
     transport = MCPTransport()
     server = DxrkMCPServer()
     
-    # Send capabilities
-    response = {
-        "jsonrpc": "2.0",
-        "id": None,
-        "result": {
-            "protocolVersion": "2024-11-05",
-            "capabilities": {
-                "tools": server.tools()
-            },
-            "serverInfo": {
-                "name": "dxrk-mcp-server",
-                "version": "1.0.0"
-            }
-        }
-    }
-    transport.send_response(response)
-    
-    # Main loop
-    while True:
+    while not transport.closed:
         msg = transport.read_message()
-        if not msg:
+        if msg is None:
+            log("No message, closing")
             break
-            
-        method = msg.get("method")
-        msg_id = msg.get("id")
         
-        if method == "tools/list":
+        msg_id = msg.get("id")
+        method = msg.get("method")
+        
+        if method == "initialize":
             response = {
                 "jsonrpc": "2.0",
                 "id": msg_id,
                 "result": {
-                    "tools": server.tools()
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {"tools": server.tools()},
+                    "serverInfo": {"name": "dxrk-mcp-server", "version": "1.0.0"}
                 }
             }
             transport.send_response(response)
-            
-        elif method == "tools/call":
+            continue
+        
+        if method == "notifications/initialized":
+            continue
+        
+        if method == "tools/list":
+            response = {"jsonrpc": "2.0", "id": msg_id, "result": {"tools": server.tools()}}
+            transport.send_response(response)
+            continue
+        
+        if method == "tools/call":
             name = msg.get("params", {}).get("name")
             args = msg.get("params", {}).get("arguments", {})
             result = server.call_tool(name, args)
-            response = {
-                "jsonrpc": "2.0",
-                "id": msg_id,
-                "result": result
-            }
+            response = {"jsonrpc": "2.0", "id": msg_id, "result": result}
             transport.send_response(response)
+            continue
+        
+        # Unknown method
+        response = {
+            "jsonrpc": "2.0",
+            "id": msg_id,
+            "error": {"code": -32601, "message": f"Method not found: {method}"}
+        }
+        transport.send_response(response)
+    
+    log("=== Shutting down ===")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

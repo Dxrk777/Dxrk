@@ -1,22 +1,10 @@
-# Dxrk MCP Server Configuration
+# Configure Dxrk as MCP Server in OpenCode Desktop
 
-Para usar Dxrk como MCP en OpenCode Desktop, agrega esta configuración:
+## Pasos para configurar:
 
-## Opción 1: Configuración en OpenCode
+### Método 1: Archivo de configuración
 
-Abre OpenCode Desktop y ve a:
-- Settings → MCP Servers → Add New
-
-Y configura:
-```
-Name: Dxrk
-Command: python3
-Arguments: /home/dxrk/DxrkMonorepo_final/mcp_server.py
-```
-
-## Opción 2: Archivo de configuración
-
-Crea `~/.opencode/mcp-servers.json`:
+Crea el archivo `~/.config/opencode/mcp-servers.json`:
 
 ```json
 {
@@ -27,25 +15,28 @@ Crea `~/.opencode/mcp-servers.json`:
 }
 ```
 
-## Herramientas disponibles
-
-Una vez configurado, tendrás:
-
-- `dxrk_memory_save` - Guardar en memoria
-- `dxrk_memory_get` - Recuperar de memoria  
-- `dxrk_status` - Ver estado
-- `dxrk_start` - Iniciar sistema
-- `dxrk_stop` - Detener sistema
-
-## Uso en OpenCode
+### Método 2: Usando línea de comandos
 
 ```bash
-# Usar herramienta
-/mcp dxrk_status
+# Abrir settings de MCP
+opencode settings mcp add dxrk python3 "/home/dxrk/DxrkMonorepo_final/mcp_server.py"
 ```
 
-O en el chat:
+### Método 3: Buscar en la UI
 
-```
-Usa la herramienta dxrk_memory_save para guardar "proyecto actual" = "Dxrk v1.0"
-```
+1. Abre OpenCode Desktop
+2. Busca en el menú: `Settings > Server Tools` o `Settings > MCP`
+3. Agrega un nuevo servidor
+
+### Verificar después de configurar
+
+Una vez configurado, usa en el chat:
+- Escribe `/dxrk status` para ver el estado
+- O usa `dxrk_memory_save` para guardar info
+
+### Si no encuentras la opción MCP
+
+Prueba estos atajos:
+- Presiona `Ctrl+,` para abrir settings
+- Busca "MCP" o "Server Tools"
+- O Busca en el menú de OpenCode: `Server` → `Manage`
