@@ -5,6 +5,7 @@ import os
 import subprocess
 import shutil
 import venv
+import sys
 
 DXRK_PATH = os.path.dirname(os.path.abspath(__file__))
 
@@ -57,7 +58,14 @@ def build_dxrk_control(ctrl):
     try:
         major = int(node_ver.split(".")[0])
         if major < 22:
-            print("[DxrkInstall] Node < 22, skipping build. Use pre-built dist or Docker.")
+            print("[DxrkInstall] Node < 22, skipping build")
+            parent_dist = os.path.join(os.path.dirname(ctrl), "DxrkControl", "dist")
+            if os.path.exists(os.path.join(parent_dist, "index.js")):
+                if os.path.exists(os.path.join(ctrl, "dist")):
+                    shutil.rmtree(os.path.join(ctrl, "dist"))
+                shutil.copytree(parent_dist, os.path.join(ctrl, "dist"))
+                print("[DxrkInstall] Copied pre-built dist from parent")
+                return True
             return True
     except:
         pass
