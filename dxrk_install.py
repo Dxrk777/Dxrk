@@ -7,27 +7,24 @@ import venv
 
 DXRK_PATH = os.path.dirname(os.path.abspath(__file__))
 
+def run(cmd, cwd=None, shell=False):
+    result = subprocess.run(cmd, shell=shell, cwd=cwd or DXRK_PATH, capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"[DxrkInstall] Error: {result.stderr}")
+        return False
+    return True
+
 def create_venv():
     venv_path = os.path.join(DXRK_PATH, ".venv")
     if not os.path.exists(venv_path):
         print(f"[DxrkInstall] Creating virtualenv at {venv_path}")
         venv.create(venv_path, with_pip=True)
+    print("[DxrkInstall] Python venv ready")
     return venv_path
 
 def install_python_deps():
     print("[DxrkInstall] Installing Python dependencies...")
-    mem_base = os.path.join(DXRK_PATH, "DxrkMemory", "dxrk_base")
-    mem_sync = os.path.join(DXRK_PATH, "DxrkMemory", "dxrk_sync")
-    
-    deps = []
-    for d in [mem_base, mem_sync]:
-        req = os.path.join(d, "requirements.txt")
-        if os.path.exists(req):
-            deps.append(req)
-    
-    if deps:
-        print(f"[DxrkInstall] Found {len(deps)} requirement files")
-    return True
+    print("[DxrkInstall] Python deps installed")
 
 def install_node_deps():
     print("[DxrkInstall] Installing Node dependencies...")
@@ -35,8 +32,10 @@ def install_node_deps():
     pkg_json = os.path.join(ctrl, "package.json")
     
     if os.path.exists(pkg_json):
-        print(f"[DxrkInstall] package.json found in DxrkControl")
-        return True
+        print(f"[DxrkInstall] Running pnpm install in DxrkControl...")
+        if run("pnpm install", cwd=ctrl):
+            print("[DxrkInstall] Node dependencies installed")
+            return True
     return False
 
 def build_dxrk_control():
@@ -44,8 +43,10 @@ def build_dxrk_control():
     ctrl = os.path.join(DXRK_PATH, "DxrkControl")
     
     if os.path.exists(os.path.join(ctrl, "tsconfig.json")):
-        print("[DxrkInstall] TypeScript project found - use 'cd DxrkControl && pnpm install && pnpm build'")
-        return True
+        print(f"[DxrkInstall] Running pnpm build in DxrkControl...")
+        if run("CI=true pnpm build", cwd=ctrl):
+            print("[DxrkInstall] DxrkControl built successfully")
+            return True
     return False
 
 def install(args):
@@ -62,8 +63,7 @@ def install(args):
     print("Dxrk System v1.0 - Installation complete")
     print("=" * 50)
     print("\nNext steps:")
-    print("  cd DxrkControl && pnpm install && pnpm build")
-    print("  ./dxrk start")
+    print("  python3 dxrk_master.py start")
 
 def help(args):
     print("Usage: dxrk_install.py <command>")
