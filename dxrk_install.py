@@ -41,7 +41,7 @@ def install_node_deps(ctrl):
         print("[DxrkInstall] package.json found")
         if not ensure_pnpm():
             return False
-        return run("pnpm install", cwd=ctrl)
+        return run("CI=true pnpm install --ignore-scripts", cwd=ctrl)
     print("[DxrkInstall] No package.json")
     return True
 
@@ -50,9 +50,7 @@ def build_dxrk_control(ctrl):
     if os.path.exists(tsconfig):
         if not ensure_pnpm():
             return False
-        if not run("pnpm install", cwd=ctrl):
-            return False
-        if not run("pnpm build", cwd=ctrl):
+        return run("CI=true pnpm install --ignore-scripts && CI=true pnpm build", cwd=ctrl)
             return False
         dist_index = os.path.join(ctrl, "dist", "index.js")
         if os.path.exists(dist_index):
