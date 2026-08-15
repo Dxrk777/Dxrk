@@ -1,55 +1,42 @@
 # Dxrk
 
-<p align="center">
-  <strong>Ecosistema, Frameworks y Workflows para agentes de IA</strong>
-</p>
+<strong>Ecosistema, Frameworks y Workflows para agentes de IA</strong>
 
-<p align="center">
-  <a href="https://github.com/Dxrk777/Dxrk/releases"><img src="https://img.shields.io/badge/Release-v0.1.2-blue" alt="Release"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green" alt="License"></a>
-  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/Python-3.13%2B-3776AB" alt="Python 3.13+"></a>
-  <a href="https://github.com/Dxrk777/Dxrk"><img src="https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey" alt="Platform"></a>
-  <a href="https://github.com/Dxrk777/Dxrk/actions"><img src="https://img.shields.io/github/actions/workflow/status/Dxrk777/Dxrk/ci.yml" alt="CI"></a>
-  <a href="https://github.com/Dxrk777/Dxrk/stargazers"><img src="https://img.shields.io/github/stars/Dxrk777/Dxrk" alt="Stars"></a>
-</p>
+![Social](assets/social-preview.png)
+
+[![Release](https://img.shields.io/badge/Release-v0.1.2-blue)](https://github.com/Dxrk777/Dxrk/releases/latest)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.13%2B-3776AB)](https://www.python.org/downloads/)
+[![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)](docs/platforms.md)
+[![CI](https://img.shields.io/github/actions/workflow/status/Dxrk777/Dxrk/ci.yml)](https://github.com/Dxrk777/Dxrk/actions)
+[![Stars](https://img.shields.io/github/stars/Dxrk777/Dxrk)](https://github.com/Dxrk777/Dxrk)
 
 ---
 
 ## Qué es Dxrk
 
-**Dxrk** es el configurador y orquestador de ecosistemas para agentes de IA. Unifica
-memoria persistente, Spec-Driven Development, skills curadas, servidores MCP y un
-conmutador de proveedores de modelos en una sola herramienta de línea de comandos.
+**Dxrk** es un configurador y orquestador de ecosistemas para agentes de IA. En un solo comando instala, configura y sincroniza **42 agentes de IA**, memoria persistente, skills curadas, servidores MCP y conmutador de modelos para tu stack de desarrollo completo.
 
-Escrito en **Python 3.13+** con una TUI basada en Textual, Dxrk:
-
-- Configura **42 agentes de IA** (Claude Code, OpenCode, Codex, Gemini CLI, Cursor,
-  Copilot, Windsurf y más) con un solo comando.
-- Mantiene **memoria persistente** entre sesiones y proyectos (SDD, decisiones,
-  contexto, aprender de cada interacción).
-- Gestiona **skills curadas** y servidores **MCP** por proyecto.
-- Conmuta entre **proveedores y modelos de IA** con perfiles de costo por fase
-  (cheap/balanced/quality) o por comando.
-- Ejecuta **workflows** de desarrollo: planificación, commits con conventional
-  commits, PRs, revisión de código, keybindings y más.
+- 🐍 **Python 3.13+** con TUI moderna basada en [Textual](https://textual.textualize.io/)
+- 🤖 Configura **42 agentes** con un solo comando
+- 🧠 Memoria persistente con búsqueda semántica
+- ⚡ Conmutador de proveedores y modelos con perfiles `cheap` / `balanced` / `quality`
 
 ## Instalación
 
-Requisito: **Python 3.13 o superior**.
-
-### Con uv (recomendado)
+> Requisito: **Python 3.13+**
 
 ```bash
-uv tool install --from git+https://github.com/Dxrk777/Dxrk.git dxrk
+pip install dxrk
 ```
 
-### Con pip
+También disponible vía `uv`:
 
 ```bash
-pip install git+https://github.com/Dxrk777/Dxrk.git
+uv tool install dxrk
 ```
 
-### Desde el código fuente
+**Desde el código fuente:**
 
 ```bash
 git clone https://github.com/Dxrk777/Dxrk.git
@@ -61,18 +48,29 @@ uv run dxrk-py --help
 ## Uso rápido
 
 ```bash
-# Instalar y configurar un agente
+# Instala y configura un agente con el preset completo
 dxrk-py install --agent claude-code --preset full-dxrk
 
-# Preguntar sobre un concepto
-dxrk-py query "explica qué es Spec-Driven Development"
+# Consulta tu memoria persistente
+dxrk-py query "¿qué arquitectura decidimos para el módulo de memoria?"
 
-# Sincronizar perfil de modelos barato
+# Cambia de proveedor de modelos
 dxrk-py sync --profile cheap:openrouter/qwen/qwen3-30b-a3b:free
 
-# Perfil por fase (ej. diseño)
+# Asigna modelos por fase de desarrollo
 dxrk-py sync --profile-phase cheap:sdd-design:anthropic/claude-sonnet-4-20250514
 ```
+
+## Por qué Dxrk
+
+| Característica | Dxrk | Configurar a mano |
+|---|---|---|
+| Instalar un agente de IA | `dxrk-py install --agent claude-code` | Documentación, paths, symlinks, permisos |
+| 42 agentes configurados | 1 comando | Horas de setup manual |
+| Memoria persistente | `dxrk-py query "..."` | Buscar soluciones hechas a medida |
+| Skills curadas + MCP | `dxrk-py skill-registry refresh` | Scraping manual de repos |
+| Cambiar de proveedor | `dxrk-py sync --profile cheap:...` | Editar config de cada agente |
+| Workflows Git | `/commit`, `/branch`, `/pr` | Comandos largos manuales |
 
 ## Agentes soportados (42)
 
@@ -92,69 +90,75 @@ dxrk-py sync --profile-phase cheap:sdd-design:anthropic/claude-sonnet-4-20250514
 
 ## Características
 
-- **Memoria persistente**: `dxrk-memory` (binario externo en
-  [Dxrk777/dxrk-memory](https://github.com/Dxrk777/dxrk-memory), instalable vía
-  Homebrew o GitHub Releases) con búsqueda semántica: `dxrk-memory search "SDD"`.
-- **Spec-Driven Development**: inicialización por proyecto con `/sdd-init`,
-  especificaciones, diseño y verificación.
-- **Skills**: `dxrk-py skill-registry refresh` para sincronizar el registro de
-  skills del proyecto.
-- **Servidores MCP**: 35 servidores configurables vía `.mcp.json`.
-- **Conmutador de modelos**: perfiles `cheap` / `balanced` / `quality`, asignación
-  por fase (sdd-design, sdd-spec, sdd-tasks, etc.).
-- **TUI**: interfaz Textual con detección de agentes instalados.
-- **Workflows Git**: commits con conventional commits, PRs con revisión,
-  keybindings configurables.
+- ✅ **Memoria persistente** — binario externo [Dxrk-memory](https://github.com/Dxrk777/dxrk-memory) (Homebrew / GitHub Releases) con búsqueda semántica: `dxrk-memory search "SDD"`
+- ✅ **Spec-Driven Development** — workflow completo con `/sdd-init`, skill registry, hooks y permisos
+- ✅ **Skills curadas** — `dxrk-py skill-registry refresh`
+- ✅ **35+ servidores MCP** — configurables vía `.mcp.json`
+- ✅ **Conmutador de modelos** — perfiles `cheap` / `balanced` / `quality` con asignación por fase (`sdd-design`, `spec`, `tasks`)
+- ✅ **TUI Textual** — detección de agentes instalados en tiempo real
+- ✅ **Workflows Git** — conventional commits, PRs con revisión automática y keybindings
 
 ## Estructura del proyecto
 
-```
+```text
 dxrk/
-├── __main__.py            # Entry point CLI
-├── autonomy/              # Aprendizaje, evolución, verificador
-├── cli/                   # Comandos de instalación y ejecución
-├── commands/              # Comandos del orquestador (commit, plan, mcp, ...)
-├── config/                # Configuración y validación
-├── mcp/                   # Clientes MCP
-├── observe/               # Observabilidad y traces
-├── query/                 # Motor de consultas
-├── rag/                   # Retrieval-Augmented Generation
-├── security/              # JWT, permisos
-├── system/                # Detección de plataforma y gestión del sistema
-├── tools/                 # Herramientas del agente
-├── trace/                 # Trazabilidad
-├── tui/                   # Interfaz Textual
-└── utils/                 # Utilidades (fileops, hooks, http, ...)
+├── agents/          # Adaptadores para 42 agentes de IA
+├── cli/             # Interfaz de línea de comandos
+├── commands/        # Comandos disponibles (/commit, /branch, ...)
+├── config/          # Configuración, perfiles y feature flags
+├── memory/          # Motor de memoria persistente
+├── rag/             # RAG local (chunking, indexado, consulta)
+├── security/        # Permisos y verificación de seguridad
+├── tools/           # Herramientas de detección y utilidades
+├── tui/             # Interfaz de terminal con Textual
+├── mcp/             # Servidores MCP configurables
+├── autonomy/        # Evolución de prompts, aprendizaje y verificación
+├── scholar/         # Búsqueda académica y citas
+└── utils/           # Utilidades compartidas
 ```
 
 ## Desarrollo
 
 ```bash
-uv sync --all-extras          # Instalar dependencias y extras
-uv run pytest                 # Suite de tests (2760+ tests)
-uv run --with mypy mypy dxrk/ # Type checking
+uv sync --all-extras          # Instala dependencias incl. dev
+uv run pytest                 # 2760+ tests
+uv run --with mypy mypy dxrk/ # Verificación de tipos
 ```
+
+## FAQ
+
+**¿Necesito un agente específico para usar Dxrk?**
+No. Dxrk configura tu ecosistema completo; úsalo con los agentes que ya tienes instalados.
+
+**¿Dxrk guarda mis datos?**
+La memoria es local y persistente; los proveedores de modelos se configuran con tus propias API keys.
+
+**¿Funciona en Windows?**
+Sí, macOS, Linux y Windows (ver [platforms.md](docs/platforms.md)).
+
+**¿Cómo cambio de modelo en mitad de un proyecto?**
+`dxrk-py sync --profile <perfil>` y Dxrk actualiza la configuración de todos los agentes.
 
 ## Roadmap
 
-- **v4.1.0** — pipeline de entrenamiento ML, pre-commit, dependabot, más integraciones.
-- **v4.2.0** — marketplace de plugins.
-- **v5.0.0** — multi-tenant.
+- **v0.2.0** — Pipeline de entrenamiento ML, pre-commit hooks y Dependabot
+- **v0.5.0** — Marketplace de plugins
+- **v1.0.0** — Multi-tenant y estabilización de API
 
 ## Documentación
 
 | Documento | Descripción |
 |---|---|
-| [docs/intended-usage.md](docs/intended-usage.md) | Uso intencional del ecosistema |
-| [docs/agents.md](docs/agents.md) | Agentes soportados |
-| [docs/components.md](docs/components.md) | Componentes del sistema |
-| [docs/architecture.md](docs/architecture.md) | Arquitectura |
-| [docs/usage.md](docs/usage.md) | Guía de uso |
-| [docs/platforms.md](docs/platforms.md) | Plataformas |
+| [intended-usage.md](docs/intended-usage.md) | Uso previsto del proyecto |
+| [agents.md](docs/agents.md) | Adaptadores de agentes |
+| [components.md](docs/components.md) | Componentes internos |
+| [architecture.md](docs/architecture.md) | Arquitectura del sistema |
+| [usage.md](docs/usage.md) | Guía de uso |
+| [platforms.md](docs/platforms.md) | Plataformas soportadas |
 
 ## Licencia
 
-MIT — ver [LICENSE](LICENSE).
+[MIT](LICENSE)
 
 ---
 
