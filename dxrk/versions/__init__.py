@@ -1,0 +1,8 @@
+ClaudeCode = "2.1.140"
+Kilocode = "7.2.52"
+OpenCode = "1.14.48"
+QwenCode = "0.15.10"
+Codex = "0.130.0"
+GeminiCLI = "0.41.2"
+Context7MCP = "2.2.5"
+DxrkEngram = "0.1.4"
