@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from enum import Enum, IntEnum
+from enum import IntEnum, StrEnum
 from typing import Dict, List, Optional
 
 _logger = logging.getLogger("dxrk.model")
@@ -640,12 +640,15 @@ OpenCodePluginDxrkLogo: OpenCodeCommunityPluginID = "dxrk-logo"
 # ── Claude model aliases ──────────────────────────────────────────────────
 
 
-class ClaudeModelAlias(str, Enum):
+class ClaudeModelAlias(StrEnum):
     """Semantic model alias used to assign models to SDD phases."""
 
     OPUS = "opus"
     SONNET = "sonnet"
     HAIKU = "haiku"
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}.{self.name}"
 
     def valid(self) -> bool:
         return self in (
