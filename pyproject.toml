@@ -4,11 +4,27 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dxrk"
-version = "0.1.1"
+version = "0.1.2"
 description = "Dxrk Ecosystem Configurator — supercharge AI coding agents"
+readme = "README.md"
 requires-python = ">=3.13"
 authors = [{ name = "Dxrk777" }]
-license = { text = "MIT" }
+license = "MIT"
+keywords = ["ai", "agents", "cli", "tui", "claude-code", "opencode", "mcp", "rag", "sdd", "textual"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: User Interfaces",
+]
 
 dependencies = [
     "textual>=1.0,<9.0",
@@ -20,6 +36,10 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/Dxrk777/Dxrk"
+Repository = "https://github.com/Dxrk777/Dxrk"
+Documentation = "https://github.com/Dxrk777/Dxrk/tree/main/docs"
+Changelog = "https://github.com/Dxrk777/Dxrk/blob/main/CHANGELOG.md"
+Issues = "https://github.com/Dxrk777/Dxrk/issues"
 
 [project.scripts]
 dxrk-py = "dxrk.__main__:main"

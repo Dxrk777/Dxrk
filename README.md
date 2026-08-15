@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Dxrk777/Dxrk/releases"><img src="https://img.shields.io/badge/Release-v0.1.1-blue" alt="Release"></a>
+  <a href="https://github.com/Dxrk777/Dxrk/releases"><img src="https://img.shields.io/badge/Release-v0.1.2-blue" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green" alt="License"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/Python-3.13%2B-3776AB" alt="Python 3.13+"></a>
   <a href="https://github.com/Dxrk777/Dxrk"><img src="https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey" alt="Platform"></a>

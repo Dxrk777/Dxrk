@@ -13,6 +13,11 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es/1.1.0/) y este
 ### Changed
 - Resolver de instalación de OpenCode: ahora usa la fórmula oficial de Homebrew (`brew install opencode`) en lugar de un tap de terceros.
 
+## [0.1.2] - 2026-08-15
+
+### Added
+- Metadata de empaquetado premium para PyPI: `readme`, `license` SPDX (PEP 639), `classifiers`, `keywords` y URLs de proyecto (Repository, Documentation, Changelog, Issues).
+
 ## [0.1.1] - 2026-08-15
 
 ### Fixed
@@ -35,6 +40,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es/1.1.0/) y este
 ### Changed
 - Build system a setuptools con lockfile `uv.lock`.
 
-[Unreleased]: https://github.com/Dxrk777/Dxrk/compare/v0.1.1...HEAD
-[0.1.1]: https://github.com/Dxrk777/Dxrk/releases/tag/v0.1.1
-[0.1.0]: https://github.com/Dxrk777/Dxrk/releases/tag/v0.1.1
+[Unreleased]: https://github.com/Dxrk777/Dxrk/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/Dxrk777/Dxrk/releases/tag/v0.1.2
+[0.1.1]: https://github.com/Dxrk777/Dxrk/releases/tag/v0.1.2
+[0.1.0]: https://github.com/Dxrk777/Dxrk/releases/tag/v0.1.2
