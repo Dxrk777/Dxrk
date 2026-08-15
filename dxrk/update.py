@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import platform
 import re
 import shutil
 import subprocess
@@ -200,9 +201,7 @@ def _look_path(name: str) -> str | None:
     return shutil.which(name)
 
 
-def detect_installed_version(
-    tool: ToolInfo, current_build_version: str, timeout: int = 10
-) -> str:
+def detect_installed_version(tool: ToolInfo, current_build_version: str, timeout: int = 10) -> str:
     npm = tool.npm_package.strip()
     if npm:
         return _detect_npm_package_version(npm)
@@ -236,9 +235,7 @@ def _detect_npm_package_version(pkg: str) -> str:
     home = os.path.expanduser("~")
     if not home or home == "~":
         return ""
-    pkg_json = os.path.join(
-        home, ".config", "opencode", "node_modules", pkg, "package.json"
-    )
+    pkg_json = os.path.join(home, ".config", "opencode", "node_modules", pkg, "package.json")
     try:
         with open(pkg_json) as f:
             data = json.load(f)
@@ -304,12 +301,8 @@ def fetch_latest_release(owner: str, repo: str, timeout_sec: int = 10) -> GitHub
         if e.code == 403:
             raise RuntimeError("GitHub API rate limit exceeded (HTTP 403)") from e
         if e.code == 404:
-            raise RuntimeError(
-                f"No releases found for {owner}/{repo} (HTTP 404)"
-            ) from e
-        raise RuntimeError(
-            f"GitHub API returned HTTP {e.code} for {owner}/{repo}"
-        ) from e
+            raise RuntimeError(f"No releases found for {owner}/{repo} (HTTP 404)") from e
+        raise RuntimeError(f"GitHub API returned HTTP {e.code} for {owner}/{repo}") from e
 
 
 # Check
@@ -319,9 +312,7 @@ def check_all(current_version: str, profile: PlatformProfile) -> list[UpdateResu
     return check_filtered(current_version, profile, None)
 
 
-def check_filtered(
-    current_version: str, profile: PlatformProfile, tool_names: list[str] | None
-) -> list[UpdateResult]:
+def check_filtered(current_version: str, profile: PlatformProfile, tool_names: list[str] | None) -> list[UpdateResult]:
     if tool_names:
         name_set = set(tool_names)
         targets = [t for t in Tools if t.name in name_set]
@@ -330,10 +321,7 @@ def check_filtered(
 
     results: list[UpdateResult | None] = [None] * len(targets)
     with ThreadPoolExecutor(max_workers=len(targets)) as executor:
-        futures = {
-            executor.submit(_check_single_tool, t, current_version, profile): i
-            for i, t in enumerate(targets)
-        }
+        futures = {executor.submit(_check_single_tool, t, current_version, profile): i for i, t in enumerate(targets)}
         for future in as_completed(futures):
             idx = futures[future]
             results[idx] = future.result()
@@ -341,9 +329,7 @@ def check_filtered(
     return [r for r in results if r is not None]
 
 
-def _check_single_tool(
-    tool: ToolInfo, current_build_version: str, profile: PlatformProfile
-) -> UpdateResult:
+def _check_single_tool(tool: ToolInfo, current_build_version: str, profile: PlatformProfile) -> UpdateResult:
     result = UpdateResult(tool=tool)
     result.update_hint = update_hint(tool, profile)
 
@@ -468,15 +454,11 @@ def render_cli(results: list[UpdateResult]) -> str:
     lines.append("")
 
     if updates_available > 0 and checks_failed > 0:
-        lines.append(
-            f"{updates_available} update(s) available. {checks_failed} check(s) failed."
-        )
+        lines.append(f"{updates_available} update(s) available. {checks_failed} check(s) failed.")
     elif updates_available > 0:
         lines.append(f"{updates_available} update(s) available.")
     elif checks_failed > 0:
-        lines.append(
-            f"Update check incomplete: {checks_failed} tool(s) failed to check."
-        )
+        lines.append(f"Update check incomplete: {checks_failed} tool(s) failed to check.")
     else:
         lines.append("All tools are up to date!")
 
@@ -534,9 +516,7 @@ def render_upgrade_report(report: UpgradeReport) -> str:
     lines.append("=" * len(header))
     lines.append("")
     lines.append("  Upgrades managed tool binaries only.")
-    lines.append(
-        "  Agent configs are preserved \u2014 no install or sync is performed."
-    )
+    lines.append("  Agent configs are preserved \u2014 no install or sync is performed.")
     lines.append("")
 
     if not report.results:
@@ -577,19 +557,11 @@ def render_upgrade_report(report: UpgradeReport) -> str:
         lines.append(f"  WARNING: {report.backup_warning}")
 
     if report.dry_run:
-        actionable = sum(
-            1
-            for r in report.results
-            if r.status == ToolUpgradeStatus.SKIPPED and not r.manual_hint
-        )
+        actionable = sum(1 for r in report.results if r.status == ToolUpgradeStatus.SKIPPED and not r.manual_hint)
         if actionable > 0:
-            lines.append(
-                f"  {actionable} upgrade(s) pending. Run without --dry-run to apply."
-            )
+            lines.append(f"  {actionable} upgrade(s) pending. Run without --dry-run to apply.")
         if (skipped - actionable) > 0:
-            lines.append(
-                f"  {skipped - actionable} tool(s) require manual attention (see hints above)."
-            )
+            lines.append(f"  {skipped - actionable} tool(s) require manual attention (see hints above).")
         if actionable == 0 and skipped == 0:
             lines.append("  No actionable upgrades found.")
     else:
@@ -679,18 +651,14 @@ _backup_exclude_subdirs: set[str] = {
 }
 
 
-def enumerate_files_in_dir(
-    dir_path: str, exclude_names: set[str] | None = None
-) -> list[str]:
+def enumerate_files_in_dir(dir_path: str, exclude_names: set[str] | None = None) -> list[str]:
     if exclude_names is None:
         exclude_names = _backup_exclude_subdirs
     files: list[str] = []
     clean_dir = os.path.normpath(dir_path)
 
     for root, dirs, filenames in os.walk(clean_dir):
-        dirs[:] = [
-            d for d in dirs if d.lower() not in exclude_names or root == clean_dir
-        ]
+        dirs[:] = [d for d in dirs if d.lower() not in exclude_names or root == clean_dir]
         for f in filenames:
             fp = os.path.join(root, f)
             if os.path.islink(fp):
@@ -868,9 +836,7 @@ def execute_with_options(
     )
 
 
-def _execute_one(
-    r: UpdateResult, profile: PlatformProfile, dry_run: bool
-) -> ToolUpgradeResult:
+def _execute_one(r: UpdateResult, profile: PlatformProfile, dry_run: bool) -> ToolUpgradeResult:
     base = ToolUpgradeResult(
         tool_name=r.tool.name,
         old_version=r.installed_version,
@@ -952,13 +918,8 @@ def _binary_upgrade(r: UpdateResult, profile: PlatformProfile) -> None:
         return
 
     if profile.os == "windows":
-        hint = (
-            r.update_hint
-            or f"Download manually from https://github.com/Dxrk777/{r.tool.repo}/releases"
-        )
-        raise ManualFallbackError(
-            f"upgrade {r.tool.name!r} on Windows requires manual update: {hint}"
-        )
+        hint = r.update_hint or f"Download manually from https://github.com/Dxrk777/{r.tool.repo}/releases"
+        raise ManualFallbackError(f"upgrade {r.tool.name!r} on Windows requires manual update: {hint}")
 
     _download_and_replace(r, profile)
 
@@ -981,21 +942,14 @@ def _download_and_replace(r: UpdateResult, profile: PlatformProfile) -> None:
 
 def _download(r: UpdateResult, profile: PlatformProfile) -> None:
     if profile.os == "windows":
-        hint = (
-            r.update_hint
-            or f"Download from https://github.com/Dxrk777/{r.tool.repo}/releases"
-        )
-        raise RuntimeError(
-            f"upgrade {r.tool.name!r} on Windows requires manual update \u2014 {hint}"
-        )
+        hint = r.update_hint or f"Download from https://github.com/Dxrk777/{r.tool.repo}/releases"
+        raise RuntimeError(f"upgrade {r.tool.name!r} on Windows requires manual update \u2014 {hint}")
 
     binary_path = _look_path(r.tool.name)
     if not binary_path:
         raise RuntimeError(f"locate {r.tool.name!r} binary: not found on PATH")
 
-    asset_url = _resolve_asset_url(
-        r.tool.owner, r.tool.repo, r.latest_version, profile.os
-    )
+    asset_url = _resolve_asset_url(r.tool.owner, r.tool.repo, r.latest_version, profile.os)
     tmp_path = binary_path + ".new"
     try:
         _download_binary(asset_url, r.tool.name, tmp_path)
@@ -1016,7 +970,7 @@ def _resolve_asset_url(owner: str, repo: str, version: str, goos: str) -> str:
 
 
 def _go_arch() -> str:
-    machine = os.uname().machine
+    machine = platform.machine()
     arch_map = {
         "x86_64": "amd64",
         "amd64": "amd64",
@@ -1065,13 +1019,8 @@ def _install_script_url(owner: str, repo: str) -> str:
 
 def _script_upgrade(r: UpdateResult, profile: PlatformProfile) -> None:
     if profile.os == "windows":
-        hint = (
-            r.update_hint
-            or f"Download manually from https://github.com/{r.tool.owner}/{r.tool.repo}/releases"
-        )
-        raise ManualFallbackError(
-            f"upgrade {r.tool.name!r} on Windows requires manual update: {hint}"
-        )
+        hint = r.update_hint or f"Download manually from https://github.com/{r.tool.owner}/{r.tool.repo}/releases"
+        raise ManualFallbackError(f"upgrade {r.tool.name!r} on Windows requires manual update: {hint}")
 
     url = _install_script_url(r.tool.owner, r.tool.repo)
     req = urllib.request.Request(url)
@@ -1079,9 +1028,7 @@ def _script_upgrade(r: UpdateResult, profile: PlatformProfile) -> None:
         body = resp.read(_max_script_size + 1)
 
     if len(body) > _max_script_size:
-        raise RuntimeError(
-            f"download install.sh: response body exceeds {_max_script_size} bytes limit"
-        )
+        raise RuntimeError(f"download install.sh: response body exceeds {_max_script_size} bytes limit")
 
     result = subprocess.run(
         ["bash", "-c", body.decode()],
@@ -1090,9 +1037,7 @@ def _script_upgrade(r: UpdateResult, profile: PlatformProfile) -> None:
         timeout=300,
     )
     if result.returncode != 0:
-        raise RuntimeError(
-            f"install.sh failed for {r.tool.name!r}: {result.stderr.strip() or result.stdout.strip()}"
-        )
+        raise RuntimeError(f"install.sh failed for {r.tool.name!r}: {result.stderr.strip() or result.stdout.strip()}")
 
 
 def _gga_script_upgrade(r: UpdateResult) -> None:
@@ -1101,13 +1046,8 @@ def _gga_script_upgrade(r: UpdateResult) -> None:
 
 def _gga_script_upgrade_for_os(r: UpdateResult, os_name: str) -> None:
     if os_name == "win32":
-        hint = (
-            r.update_hint
-            or f"Download manually from https://github.com/{r.tool.owner}/{r.tool.repo}/releases"
-        )
-        raise ManualFallbackError(
-            f"upgrade {r.tool.name!r} on Windows requires manual update: {hint}"
-        )
+        hint = r.update_hint or f"Download manually from https://github.com/{r.tool.owner}/{r.tool.repo}/releases"
+        raise ManualFallbackError(f"upgrade {r.tool.name!r} on Windows requires manual update: {hint}")
 
     tmp_dir = tempfile.mkdtemp(prefix="gentle-ai-gga-")
     try:
@@ -1194,9 +1134,7 @@ def _opencode_plugin_upgrade(r: UpdateResult) -> None:
         env=env,
     )
     if result.returncode != 0:
-        raise RuntimeError(
-            f"{pm} upgrade {pkg} in {opencode_dir}: {result.stderr.strip() or result.stdout.strip()}"
-        )
+        raise RuntimeError(f"{pm} upgrade {pkg} in {opencode_dir}: {result.stderr.strip() or result.stdout.strip()}")
 
 
 def _opencode_plugin_registered_or_materialized(opencode_dir: str, pkg: str) -> bool:

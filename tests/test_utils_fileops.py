@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import os
 import struct
+import sys
 import zlib
 
 import pytest
@@ -24,19 +25,9 @@ def _png_1x1() -> bytes:
     ihdr = struct.pack(">IIBBBBB", 1, 1, 8, 2, 0, 0, 0)
 
     def chunk(tag: bytes, data: bytes) -> bytes:
-        return (
-            struct.pack(">I", len(data))
-            + tag
-            + data
-            + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
-        )
+        return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
 
-    return (
-        sig
-        + chunk(b"IHDR", ihdr)
-        + chunk(b"IDAT", zlib.compress(b"\x00\xff\x00\x00"))
-        + chunk(b"IEND", b"")
-    )
+    return sig + chunk(b"IHDR", ihdr) + chunk(b"IDAT", zlib.compress(b"\x00\xff\x00\x00")) + chunk(b"IEND", b"")
 
 
 class TestFileopsError:
@@ -48,10 +39,7 @@ class TestFileopsError:
 
 class TestValidatePath:
     def test_traversal(self):
-        assert (
-            str(_ERR("x") and f.ValidatePath(".."))
-            == "fileops: path contains traversal components"
-        )
+        assert str(_ERR("x") and f.ValidatePath("..")) == "fileops: path contains traversal components"
 
     def test_null_byte(self):
         assert str(f.ValidatePath("a\x00b")) == "fileops: path contains null byte"
@@ -315,10 +303,7 @@ class TestEditFile:
     def test_indent_preserved(self, temp_dir):
         path = str(temp_dir / "ed.txt")
         _write(path, "    x = 1\n    y = 2\n")
-        assert (
-            f.EditFile(path, [f.EditOp(old_text="x = 1", new_text="a = 1\nb = 2")])
-            is None
-        )
+        assert f.EditFile(path, [f.EditOp(old_text="x = 1", new_text="a = 1\nb = 2")]) is None
         assert _read(path) == "    a = 1\n    b = 2\n    y = 2\n"
 
     def test_missing_old_returns_editerror(self, temp_dir):
@@ -337,12 +322,7 @@ class TestEditFileRegex:
     def test_replace(self, temp_dir):
         path = str(temp_dir / "e.txt")
         _write(path, "hello\nworld\n")
-        assert (
-            f.EditFileRegex(
-                path, [f.RegexEditOp(pattern="hello", replacement="bye", flags="g")]
-            )
-            is None
-        )
+        assert f.EditFileRegex(path, [f.RegexEditOp(pattern="hello", replacement="bye", flags="g")]) is None
         assert _read(path) == "bye\nworld\n"
 
     def test_bad_regex(self, temp_dir):
@@ -350,24 +330,17 @@ class TestEditFileRegex:
         _write(path, "hello\n")
         err = f.EditFileRegex(path, [f.RegexEditOp(pattern="(", replacement="x")])
         assert isinstance(err, _ERR)
-        assert (
-            str(err)
-            == "regex edit op 0: missing ), unterminated subpattern at position 0"
-        )
+        assert str(err) == "regex edit op 0: missing ), unterminated subpattern at position 0"
 
 
 class TestApplyEdits:
     def test_ok(self):
-        out, err = f.ApplyEdits(
-            "hello\nworld\n", [f.EditOp(old_text="hello", new_text="hi")]
-        )
+        out, err = f.ApplyEdits("hello\nworld\n", [f.EditOp(old_text="hello", new_text="hi")])
         assert err is None
         assert out == "hi\nworld\n"
 
     def test_missing_old(self):
-        out, err = f.ApplyEdits(
-            "hello\nworld\n", [f.EditOp(old_text="zz", new_text="hi")]
-        )
+        out, err = f.ApplyEdits("hello\nworld\n", [f.EditOp(old_text="zz", new_text="hi")])
         assert out == ""
         assert isinstance(err, f.EditError)
         assert err.op_index == 0
@@ -377,17 +350,10 @@ class TestApplyEdits:
 
 class TestValidateEdits:
     def test_ok(self):
-        assert (
-            f.ValidateEdits(
-                "hello\nworld\n", [f.EditOp(old_text="hello", new_text="hi")]
-            )
-            == []
-        )
+        assert f.ValidateEdits("hello\nworld\n", [f.EditOp(old_text="hello", new_text="hi")]) == []
 
     def test_missing_old(self):
-        errs = f.ValidateEdits(
-            "hello\nworld\n", [f.EditOp(old_text="zz", new_text="hi")]
-        )
+        errs = f.ValidateEdits("hello\nworld\n", [f.EditOp(old_text="zz", new_text="hi")])
         assert len(errs) == 1
         assert errs[0].op_index == 0
         assert errs[0].message == "old text not found: zz"
@@ -409,31 +375,22 @@ class TestFindAndReplace:
 
 class TestApplyRegexEdits:
     def test_global_flag(self):
-        out, count, err = f.ApplyRegexEdits(
-            "foo foo", [f.RegexEditOp(pattern="foo", replacement="bar", flags="g")]
-        )
+        out, count, err = f.ApplyRegexEdits("foo foo", [f.RegexEditOp(pattern="foo", replacement="bar", flags="g")])
         assert err is None
         assert out == "bar bar"
         assert count == 2
 
     def test_case_insensitive(self):
-        out, _, err = f.ApplyRegexEdits(
-            "x x", [f.RegexEditOp(pattern="X", replacement="y", flags="gi")]
-        )
+        out, _, err = f.ApplyRegexEdits("x x", [f.RegexEditOp(pattern="X", replacement="y", flags="gi")])
         assert err is None
         assert out == "y y"
 
     def test_bad_regex(self):
-        out, count, err = f.ApplyRegexEdits(
-            "foo", [f.RegexEditOp(pattern="(", replacement="x")]
-        )
+        out, count, err = f.ApplyRegexEdits("foo", [f.RegexEditOp(pattern="(", replacement="x")])
         assert out == ""
         assert count == 0
         assert isinstance(err, _ERR)
-        assert (
-            str(err)
-            == "regex edit op 0: missing ), unterminated subpattern at position 0"
-        )
+        assert str(err) == "regex edit op 0: missing ), unterminated subpattern at position 0"
 
 
 class TestWalkDir:
@@ -443,9 +400,7 @@ class TestWalkDir:
         (temp_dir / "sub").mkdir()
         _write(str(temp_dir / "sub" / "c.txt"), "c\n")
         seen = []
-        err = f.WalkDir(
-            root, lambda path, info, walk_err: seen.append((path, info, walk_err))
-        )
+        err = f.WalkDir(root, lambda path, info, walk_err: seen.append((path, info, walk_err)))
         assert err is None
         assert {os.path.relpath(p, root) for p, _, _ in seen} == {
             ".",
@@ -465,9 +420,7 @@ class TestWalkDir:
             f.WalkDir(
                 root,
                 lambda path, info, walk_err: (
-                    f._SkipDir()
-                    if os.path.basename(path) == "sub"
-                    else seen.append((path, info, walk_err))
+                    f._SkipDir() if os.path.basename(path) == "sub" else seen.append((path, info, walk_err))
                 ),
             )
             is None
@@ -479,9 +432,7 @@ class TestWalkDir:
     def test_missing_root_calls_fn(self, temp_dir):
         root = str(temp_dir / "zz")
         calls = []
-        err = f.WalkDir(
-            root, lambda path, info, walk_err: calls.append((path, info, walk_err))
-        )
+        err = f.WalkDir(root, lambda path, info, walk_err: calls.append((path, info, walk_err)))
         assert err is None
         assert len(calls) == 1
         assert calls[0][0] == root
@@ -584,7 +535,8 @@ class TestPathHelpers:
         assert out == os.path.expanduser("~")
 
     def test_platform(self):
-        assert f.Platform() == "linux"
+        expected = {"win32": "windows", "cygwin": "windows"}.get(sys.platform, sys.platform)
+        assert f.Platform() == expected
 
     def test_is_hidden(self):
         assert f.IsHidden(".a")

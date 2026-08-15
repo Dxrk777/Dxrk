@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import os
-import resource
+import sys
 
 from .registry import Command, CommandContext, Registry
 
@@ -35,6 +35,10 @@ def _process_rss_kb() -> int:
                     return int(line.split()[1])
     except OSError:
         pass
+    if sys.platform == "win32":
+        return 0
+    import resource
+
     try:
         return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     except (ValueError, OSError):

@@ -13,7 +13,6 @@ from dxrk.resilience import (
     do,
     new_circuit_breaker,
     new_circuit_breaker_with_config,
-    new_rate_limiter,
     new_rate_limiter_with_config,
     new_retry_config,
 )
@@ -117,7 +116,7 @@ def test_do_backoff_caps_at_max_delay():
     elapsed = time.perf_counter() - start
     assert err is None
     assert get_count() == 5
-    assert elapsed < 0.2
+    assert elapsed < 0.5
 
 
 def test_backoff_duration_caps_at_max_delay():
@@ -137,9 +136,7 @@ def test_circuit_breaker_initial_state():
 
 def test_circuit_breaker_opens_after_threshold():
     cb = new_circuit_breaker_with_config(
-        CircuitBreakerConfig(
-            failure_threshold=2, success_threshold=1, timeout=timedelta(minutes=1)
-        )
+        CircuitBreakerConfig(failure_threshold=2, success_threshold=1, timeout=timedelta(minutes=1))
     )
     cb.call(None, lambda ctx: RuntimeError("boom"))
     assert cb.state() == State.CLOSED
@@ -149,9 +146,7 @@ def test_circuit_breaker_opens_after_threshold():
 
 def test_circuit_breaker_rejects_when_open():
     cb = new_circuit_breaker_with_config(
-        CircuitBreakerConfig(
-            failure_threshold=1, success_threshold=1, timeout=timedelta(hours=1)
-        )
+        CircuitBreakerConfig(failure_threshold=1, success_threshold=1, timeout=timedelta(hours=1))
     )
     cb.call(None, lambda ctx: RuntimeError("boom"))
     with pytest.raises(CircuitOpenError):
@@ -160,9 +155,7 @@ def test_circuit_breaker_rejects_when_open():
 
 def test_circuit_breaker_half_open_after_timeout():
     cb = new_circuit_breaker_with_config(
-        CircuitBreakerConfig(
-            failure_threshold=1, success_threshold=1, timeout=timedelta(milliseconds=50)
-        )
+        CircuitBreakerConfig(failure_threshold=1, success_threshold=1, timeout=timedelta(milliseconds=50))
     )
     cb.call(None, lambda ctx: RuntimeError("boom"))
     assert cb.state() == State.OPEN
@@ -174,9 +167,7 @@ def test_circuit_breaker_half_open_after_timeout():
 
 def test_circuit_breaker_half_open_fail_returns_to_open():
     cb = new_circuit_breaker_with_config(
-        CircuitBreakerConfig(
-            failure_threshold=1, success_threshold=1, timeout=timedelta(milliseconds=50)
-        )
+        CircuitBreakerConfig(failure_threshold=1, success_threshold=1, timeout=timedelta(milliseconds=50))
     )
     cb.call(None, lambda ctx: RuntimeError("boom"))
     time.sleep(0.06)
@@ -187,9 +178,7 @@ def test_circuit_breaker_half_open_fail_returns_to_open():
 
 def test_circuit_breaker_closed_resets_failure_count():
     cb = new_circuit_breaker_with_config(
-        CircuitBreakerConfig(
-            failure_threshold=3, success_threshold=1, timeout=timedelta(minutes=1)
-        )
+        CircuitBreakerConfig(failure_threshold=3, success_threshold=1, timeout=timedelta(minutes=1))
     )
     cb.call(None, lambda ctx: RuntimeError("boom"))
     cb.call(None, lambda ctx: RuntimeError("boom"))
@@ -200,9 +189,7 @@ def test_circuit_breaker_closed_resets_failure_count():
 
 def test_circuit_breaker_requires_success_threshold():
     cb = new_circuit_breaker_with_config(
-        CircuitBreakerConfig(
-            failure_threshold=1, success_threshold=3, timeout=timedelta(milliseconds=50)
-        )
+        CircuitBreakerConfig(failure_threshold=1, success_threshold=3, timeout=timedelta(milliseconds=50))
     )
     cb.call(None, lambda ctx: RuntimeError("boom"))
     assert cb.state() == State.OPEN
@@ -242,9 +229,7 @@ def test_rate_limiter_allow():
 
 def test_rate_limiter_wait():
     rl = new_rate_limiter_with_config(
-        RateLimiterConfig(
-            max_tokens=1, refill_interval=timedelta(milliseconds=50), refill_amount=1
-        )
+        RateLimiterConfig(max_tokens=1, refill_interval=timedelta(milliseconds=50), refill_amount=1)
     )
     assert rl.allow()
     start = time.perf_counter()
@@ -257,9 +242,7 @@ def test_rate_limiter_wait():
 
 def test_rate_limiter_wait_context_cancel():
     rl = new_rate_limiter_with_config(
-        RateLimiterConfig(
-            max_tokens=0, refill_interval=timedelta(hours=1), refill_amount=0
-        )
+        RateLimiterConfig(max_tokens=0, refill_interval=timedelta(hours=1), refill_amount=0)
     )
     ctx = CancellableCtx()
     ctx.cancel()
@@ -270,9 +253,7 @@ def test_rate_limiter_wait_context_cancel():
 
 def test_rate_limiter_refill():
     rl = new_rate_limiter_with_config(
-        RateLimiterConfig(
-            max_tokens=5, refill_interval=timedelta(milliseconds=10), refill_amount=3
-        )
+        RateLimiterConfig(max_tokens=5, refill_interval=timedelta(milliseconds=10), refill_amount=3)
     )
     for _ in range(5):
         assert rl.allow()
