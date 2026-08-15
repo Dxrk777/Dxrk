@@ -1,0 +1,32 @@
+site_name: Dxrk
+site_description: Dxrk Ecosystem Configurator — supercharge AI coding agents
+site_url: https://dxrk777.github.io/Dxrk/
+repo_url: https://github.com/Dxrk777/Dxrk
+edit_uri: blob/main/docs/
+
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: indigo
+    accent: purple
+  features:
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - toc.integrate
+
+nav:
+  - Inicio: index.md
+  - Uso: usage.md
+  - Uso previsto: intended-usage.md
+  - Agentes: agents.md
+  - Componentes: components.md
+  - Arquitectura: architecture.md
+  - Plataformas: platforms.md
+
+markdown_extensions:
+  - admonition
+  - tables
+  - fenced_code
+  - codehilite
