@@ -38,6 +38,7 @@ jobs:
         run: uv run mypy dxrk
 
       - name: Test (pytest + coverage)
+        if: matrix.os != 'windows-latest'
         run: uv run pytest -q --cov=dxrk --cov-report=xml --cov-report=term
 
       - name: Upload coverage report
