@@ -8,7 +8,7 @@ import logging
 import os
 import threading
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 _logger = logging.getLogger("dxrk.config")
 
@@ -23,7 +23,7 @@ class SettingsStore:
     def Delete(self, key: str) -> None:
         raise NotImplementedError
 
-    def List(self) -> Dict[str, Any]:
+    def List(self) -> dict[str, Any]:
         raise NotImplementedError
 
     def Save(self) -> None:
@@ -37,11 +37,11 @@ class SettingsStore:
 
 
 class FileSettingsStore(SettingsStore):
-    def __init__(self, path: Optional[str] = None):
+    def __init__(self, path: str | None = None):
         self._path = path or str(Path.home() / ".dxrk" / "settings.json")
         self._priority = 100
         self._mu = threading.RLock()
-        self._data: Dict[str, Any] = {}
+        self._data: dict[str, Any] = {}
 
     def Get(self, key: str) -> tuple[Any, bool]:
         with self._mu:
@@ -55,7 +55,7 @@ class FileSettingsStore(SettingsStore):
         with self._mu:
             self._data.pop(key, None)
 
-    def List(self) -> Dict[str, Any]:
+    def List(self) -> dict[str, Any]:
         with self._mu:
             return dict(self._data)
 
@@ -86,7 +86,7 @@ class FileSettingsStore(SettingsStore):
 
 
 class ProjectSettingsStore(FileSettingsStore):
-    def __init__(self, path: Optional[str] = None):
+    def __init__(self, path: str | None = None):
         super().__init__(path or ".dxrk/settings.json")
         self._priority = 200
 
@@ -95,7 +95,7 @@ class MemorySettingsStore(SettingsStore):
     def __init__(self, priority: int = 0):
         self._priority = priority
         self._mu = threading.RLock()
-        self._data: Dict[str, Any] = {}
+        self._data: dict[str, Any] = {}
 
     def Get(self, key: str) -> tuple[Any, bool]:
         with self._mu:
@@ -109,7 +109,7 @@ class MemorySettingsStore(SettingsStore):
         with self._mu:
             self._data.pop(key, None)
 
-    def List(self) -> Dict[str, Any]:
+    def List(self) -> dict[str, Any]:
         with self._mu:
             return dict(self._data)
 
@@ -124,8 +124,8 @@ class MemorySettingsStore(SettingsStore):
 
 
 class SettingsManager:
-    def __init__(self, stores: Optional[List[SettingsStore]] = None):
-        self._stores: List[SettingsStore] = sorted(
+    def __init__(self, stores: list[SettingsStore] | None = None):
+        self._stores: list[SettingsStore] = sorted(
             stores or [], key=lambda s: s.Priority(), reverse=True
         )
 
@@ -143,8 +143,8 @@ class SettingsManager:
         for store in self._stores:
             store.Delete(key)
 
-    def List(self) -> Dict[str, Any]:
-        merged: Dict[str, Any] = {}
+    def List(self) -> dict[str, Any]:
+        merged: dict[str, Any] = {}
         for store in sorted(self._stores, key=lambda s: s.Priority()):
             merged.update(store.List())
         return merged

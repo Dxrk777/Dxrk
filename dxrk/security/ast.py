@@ -6,7 +6,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import List, Optional
 
 # ---- AST Node Types ----
 
@@ -52,7 +51,7 @@ class ASTNode:
 
     type: NodeType
     value: str = ""
-    children: List["ASTNode"] = field(default_factory=list)
+    children: list[ASTNode] = field(default_factory=list)
     pos: int = 0
     length: int = 0
 
@@ -61,12 +60,12 @@ class ASTNode:
 class ParseForSecurityResult:
     """The outcome of security-focused shell parsing."""
 
-    root: Optional[ASTNode] = None
+    root: ASTNode | None = None
     command: str = ""
-    env_vars: List[str] = field(default_factory=list)
-    operators: List[str] = field(default_factory=list)
+    env_vars: list[str] = field(default_factory=list)
+    operators: list[str] = field(default_factory=list)
     is_safe: bool = True
-    violations: List[str] = field(default_factory=list)
+    violations: list[str] = field(default_factory=list)
 
 
 # ---- Safe builtins (commands that are considered safe) ----
@@ -222,8 +221,8 @@ def parse_for_security(command: str) -> ParseForSecurityResult:
 # ---- Phase 1: Regex pattern detection ----
 
 
-def detect_dangerous_patterns(command: str) -> List[str]:
-    violations: List[str] = []
+def detect_dangerous_patterns(command: str) -> list[str]:
+    violations: list[str] = []
 
     if _CMD_SUBST_RE.search(command):
         violations.append("command substitution detected: $()")
@@ -281,8 +280,8 @@ def parse_shell(input_: str) -> ASTNode:
     return build_ast(tokens)
 
 
-def tokenize(input_: str) -> List[Token]:
-    tokens: List[Token] = []
+def tokenize(input_: str) -> list[Token]:
+    tokens: list[Token] = []
     i = 0
     depth = 0
     n = len(input_)
@@ -454,7 +453,7 @@ def tokenize(input_: str) -> List[Token]:
     return tokens
 
 
-def build_ast(tokens: List[Token]) -> ASTNode:
+def build_ast(tokens: list[Token]) -> ASTNode:
     root = ASTNode(type=NodeType.LIST, value="root")
     i = 0
     n = len(tokens)
@@ -521,7 +520,7 @@ def build_ast(tokens: List[Token]) -> ASTNode:
             i += 1
         elif tok.typ == TokenType.LPAREN:
             depth = 1
-            sub_tokens: List[Token] = []
+            sub_tokens: list[Token] = []
             i += 1  # skip (
             start = tok.pos
             while i < n and depth > 0:
@@ -547,9 +546,9 @@ def build_ast(tokens: List[Token]) -> ASTNode:
 # ---- Phase 3: AST analysis ----
 
 
-def analyze_ast(root: Optional[ASTNode]) -> tuple[List[str], List[str]]:
-    env_vars: List[str] = []
-    operators: List[str] = []
+def analyze_ast(root: ASTNode | None) -> tuple[list[str], list[str]]:
+    env_vars: list[str] = []
+    operators: list[str] = []
 
     if root is None:
         return env_vars, operators
@@ -572,11 +571,11 @@ def analyze_ast(root: Optional[ASTNode]) -> tuple[List[str], List[str]]:
     return env_vars, operators
 
 
-def validate_ast(root: Optional[ASTNode]) -> List[str]:
+def validate_ast(root: ASTNode | None) -> list[str]:
     if root is None:
         return []
 
-    violations: List[str] = []
+    violations: list[str] = []
 
     for child in root.children:
         if child.type == NodeType.COMMAND:
@@ -592,7 +591,7 @@ def validate_ast(root: Optional[ASTNode]) -> List[str]:
     return violations
 
 
-def command_name(cmd: Optional[ASTNode]) -> str:
+def command_name(cmd: ASTNode | None) -> str:
     if cmd is None or cmd.type != NodeType.COMMAND:
         return ""
     # Strip any assignment prefix
@@ -604,7 +603,7 @@ def command_name(cmd: Optional[ASTNode]) -> str:
     return val
 
 
-def is_env_assignment(node: Optional[ASTNode]) -> bool:
+def is_env_assignment(node: ASTNode | None) -> bool:
     if node is None or node.type != NodeType.COMMAND:
         return False
     val = node.value

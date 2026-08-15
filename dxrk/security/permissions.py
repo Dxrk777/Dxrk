@@ -7,7 +7,6 @@ import json
 from dataclasses import dataclass
 from enum import IntEnum
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 # ---- Permission Rule Sources (5-layer hierarchy) ----
 
@@ -72,7 +71,7 @@ class PermissionRule:
 
 @dataclass
 class ToolPermissionRulesConfig:
-    permissions: List[PermissionRule]
+    permissions: list[PermissionRule]
 
 
 # ---- Permission Pipeline ----
@@ -98,8 +97,8 @@ class PermissionContext:
     """Hold the state for permission checking."""
 
     def __init__(self) -> None:
-        self._rules: List[PermissionRule] = []
-        self._denials: Dict[str, int] = {}
+        self._rules: list[PermissionRule] = []
+        self._denials: dict[str, int] = {}
         self.max_denials: int = 5  # after 5 denials, auto-deny for session
 
     def load_rules_from_file(self, path: str, source: SettingSource) -> None:
@@ -156,20 +155,20 @@ class PermissionContext:
             self.load_rules_from_file(path, source)
         return None
 
-    def add_flag_rules(self, tools: List[str], behavior: PermissionBehavior) -> None:
+    def add_flag_rules(self, tools: list[str], behavior: PermissionBehavior) -> None:
         """Add rules from CLI flags."""
         for tool in tools:
             self._rules.append(
                 PermissionRule(tool=tool, behavior=behavior, source=SettingSource.FLAG)
             )
 
-    def add_policy_rules(self, rules: List[PermissionRule]) -> None:
+    def add_policy_rules(self, rules: list[PermissionRule]) -> None:
         """Add rules from enterprise policy."""
         for r in rules:
             r.source = SettingSource.POLICY
             self._rules.append(r)
 
-    def check(self, tool_name: str, command: str) -> Tuple[PermissionResult, str]:
+    def check(self, tool_name: str, command: str) -> tuple[PermissionResult, str]:
         """Evaluate whether a tool+command is allowed, denied, or needs prompting.
 
         Priority: policy > flag > local > project > user.
@@ -218,7 +217,7 @@ class PermissionContext:
         """Clear all denial counts."""
         self._denials = {}
 
-    def rules(self) -> List[PermissionRule]:
+    def rules(self) -> list[PermissionRule]:
         """Return a copy of all loaded rules."""
         return list(self._rules)
 
@@ -283,7 +282,7 @@ def _match_glob(pattern: str, s: str) -> bool:
 
 
 # SafeTools lists tools that are always allowed without prompting.
-SAFE_TOOLS: Dict[str, bool] = {
+SAFE_TOOLS: dict[str, bool] = {
     "Read": True,
     "Glob": True,
     "Grep": True,
@@ -293,13 +292,13 @@ SAFE_TOOLS: Dict[str, bool] = {
 }
 
 # AlwaysAskTools lists tools that always require user approval.
-ALWAYS_ASK_TOOLS: Dict[str, bool] = {
+ALWAYS_ASK_TOOLS: dict[str, bool] = {
     "Bash": True,
     "Execute": True,
 }
 
 # ReadOnlyTools lists tools that are read-only.
-READ_ONLY_TOOLS: Dict[str, bool] = {
+READ_ONLY_TOOLS: dict[str, bool] = {
     "Read": True,
     "Glob": True,
     "Grep": True,
@@ -319,12 +318,12 @@ def classify_tool(tool_name: str) -> PermissionResult:
     return PermissionResult.NEEDS_PROMPT
 
 
-def detect_unreachable_rules(rules: List[PermissionRule]) -> List[str]:
+def detect_unreachable_rules(rules: list[PermissionRule]) -> list[str]:
     """Find rules shadowed by higher-priority rules."""
-    unreachable: List[str] = []
+    unreachable: list[str] = []
 
     # Group by tool+prefix/pattern
-    groups: Dict[Tuple[str, str], List[PermissionRule]] = {}
+    groups: dict[tuple[str, str], list[PermissionRule]] = {}
     for r in rules:
         match = r.prefix
         if match == "":

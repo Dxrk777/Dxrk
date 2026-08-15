@@ -8,7 +8,7 @@ import json
 import os
 import re
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from dxrk.components import filemerge
 from dxrk.strconst import StrDescription
@@ -180,7 +180,7 @@ def regenerate(cwd: str, home: str, force: bool) -> Result:
 def ensure_atl_ignored(cwd: str) -> None:
     gitignore_path = os.path.join(cwd, ".gitignore")
     try:
-        with open(gitignore_path, "r", encoding="utf-8") as fh:
+        with open(gitignore_path, encoding="utf-8") as fh:
             existing = fh.read()
     except FileNotFoundError:
         existing = ""
@@ -218,7 +218,7 @@ def fingerprint(files: list[str]) -> str:
 
 def load_skill(file: str) -> SkillEntry | None:
     try:
-        with open(file, "r", encoding="utf-8") as fh:
+        with open(file, encoding="utf-8") as fh:
             data = fh.read()
     except OSError:
         return None
@@ -243,7 +243,7 @@ def render_registry(cwd: str, sources: list[str], entries: list[SkillEntry]) -> 
         "refresh --force` to regenerate. -->"
     )
     lines.append("")
-    lines.append("Last updated: " + datetime.now(timezone.utc).strftime("%Y-%m-%d"))
+    lines.append("Last updated: " + datetime.now(UTC).strftime("%Y-%m-%d"))
     lines.append("")
     lines.append("## Sources scanned")
     lines.append("")
@@ -437,7 +437,7 @@ def _dedupe_by_skill_name(entries: list[SkillEntry], cwd: str) -> list[SkillEntr
 
 def _read_cached_fingerprint(path: str) -> str:
     try:
-        with open(path, "r", encoding="utf-8") as fh:
+        with open(path, encoding="utf-8") as fh:
             data = fh.read()
     except OSError:
         return ""
@@ -459,7 +459,7 @@ def _is_excluded(name: str) -> bool:
 
 def _file_exists(path: str) -> bool:
     try:
-        info = os.stat(path)
+        os.stat(path)
     except OSError:
         return False
     return not os.path.isdir(path)
@@ -467,7 +467,7 @@ def _file_exists(path: str) -> bool:
 
 def _dir_exists(path: str) -> bool:
     try:
-        info = os.stat(path)
+        os.stat(path)
     except OSError:
         return False
     return os.path.isdir(path)

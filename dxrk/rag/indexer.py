@@ -8,9 +8,8 @@ import logging
 import os
 import threading
 import time
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from .chunker import ChunkConfig, ChunkFile, DefaultIgnoreDirs, IsCodeFile
 from .embedder import Embedder
@@ -43,8 +42,8 @@ class Indexer:
         self._root_dir = root_dir
         self._ignore_dirs = DefaultIgnoreDirs()
         self._mu = threading.Lock()
-        self._last_run: Optional[str] = None
-        self._file_hashes: Dict[str, str] = {}
+        self._last_run: str | None = None
+        self._file_hashes: dict[str, str] = {}
 
     def AddIgnoreDir(self, dir: str) -> None:
         with self._mu:
@@ -52,7 +51,7 @@ class Indexer:
 
     def Index(self) -> IndexStats:
         start = time.monotonic()
-        files: List[str] = []
+        files: list[str] = []
         for dirpath, dirnames, filenames in os.walk(self._root_dir):
             dirnames[:] = [d for d in dirnames if not self._should_ignore_dir(d)]
             for name in filenames:
@@ -81,7 +80,7 @@ class Indexer:
             records = [
                 VectorRecord(
                     id=hashlib.sha256(
-                        f"{file}:{c.start_line}".encode("utf-8")
+                        f"{file}:{c.start_line}".encode()
                     ).hexdigest(),
                     chunk=c,
                     embedding=embeddings[i],
@@ -96,7 +95,7 @@ class Indexer:
             total_chunks += len(records)
 
         with self._mu:
-            self._last_run = datetime.now(timezone.utc).isoformat()
+            self._last_run = datetime.now(UTC).isoformat()
         duration_ms = int((time.monotonic() - start) * 1000)
         count, _ = self._store.Stats()
         return IndexStats(
@@ -108,7 +107,7 @@ class Indexer:
             last_run=self._last_run or "",
         )
 
-    def Query(self, text: str, max_results: int) -> Optional[List]:
+    def Query(self, text: str, max_results: int) -> list | None:
         embeddings = self._embedder.embed([text])
         if embeddings is None:
             return None
@@ -116,7 +115,7 @@ class Indexer:
             return None
         return self._store.Search(embeddings[0], max_results)
 
-    def LastRun(self) -> Optional[str]:
+    def LastRun(self) -> str | None:
         with self._mu:
             return self._last_run
 
@@ -130,7 +129,7 @@ class Indexer:
         return name in self._ignore_dirs
 
     @staticmethod
-    def _file_hash(path: str) -> Optional[str]:
+    def _file_hash(path: str) -> str | None:
         try:
             with open(path, "rb") as f:
                 return hashlib.sha256(f.read()).hexdigest()

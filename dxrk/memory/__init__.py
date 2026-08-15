@@ -4,7 +4,7 @@
 import json
 import time
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from enum import IntEnum
 from pathlib import Path
 from threading import RLock
@@ -40,14 +40,14 @@ class MemoryStats:
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _parse_dt(value: str) -> datetime:
     try:
         return datetime.fromisoformat(value)
     except ValueError:
-        return datetime.fromtimestamp(0, tz=timezone.utc)
+        return datetime.fromtimestamp(0, tz=UTC)
 
 
 class AgentMemory:

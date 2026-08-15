@@ -6,7 +6,6 @@ from __future__ import annotations
 import logging
 import threading
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
 
 _logger = logging.getLogger("dxrk.config")
 
@@ -17,13 +16,13 @@ class FeatureFlag:
     enabled: bool = False
     description: str = ""
     rollout_percent: int = 0
-    allowed_users: List[str] = field(default_factory=list)
+    allowed_users: list[str] = field(default_factory=list)
 
 
 class FeatureFlagManager:
     def __init__(self, config=None):
         self._mu = threading.RLock()
-        self._flags: Dict[str, FeatureFlag] = {}
+        self._flags: dict[str, FeatureFlag] = {}
         self._config = config
         self.LoadDefaults()
 
@@ -94,11 +93,11 @@ class FeatureFlagManager:
             flag.rollout_percent = percent
             flag.enabled = percent > 0
 
-    def GetAll(self) -> List[FeatureFlag]:
+    def GetAll(self) -> list[FeatureFlag]:
         with self._mu:
             return [self._copy_flag(f) for f in self._flags.values()]
 
-    def Get(self, name: str) -> Tuple[Optional[FeatureFlag], bool]:
+    def Get(self, name: str) -> tuple[FeatureFlag | None, bool]:
         with self._mu:
             flag = self._flags.get(name)
             if flag is None:
@@ -141,7 +140,7 @@ class FeatureFlagManager:
                 h = (h * 31 + ord(c)) % 100
             return flag.enabled and h < flag.rollout_percent
 
-    def EnabledFlags(self) -> List[str]:
+    def EnabledFlags(self) -> list[str]:
         with self._mu:
             return [name for name, f in self._flags.items() if f.enabled]
 

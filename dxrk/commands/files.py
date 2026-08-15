@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from .gitutil import run_git
 from .registry import Command, CommandContext, Flag, Registry
@@ -89,7 +89,7 @@ def register_files_command(reg: Registry) -> None:
             out.write("  No files found.\n")
             return 0
         for kind, mtime, rel, size in files:
-            when = datetime.fromtimestamp(mtime, tz=timezone.utc).strftime(
+            when = datetime.fromtimestamp(mtime, tz=UTC).strftime(
                 "%Y-%m-%d %H:%M"
             )
             out.write(f"  {kind}{rel:<40}  {size:<8}  {when}\n")

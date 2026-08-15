@@ -8,9 +8,9 @@ import logging
 import threading
 import urllib.error
 import urllib.request
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from typing import Any
 
 _logger = logging.getLogger("dxrk.config")
 
@@ -24,14 +24,14 @@ class SyncConfig:
     api_key: str = ""
     device_id: str = ""
     interval: int = 0
-    last_sync: Optional[datetime] = None
+    last_sync: datetime | None = None
 
 
 @dataclass
 class SettingChange:
     key: str
     value: Any = None
-    timestamp: Optional[datetime] = None
+    timestamp: datetime | None = None
     device_id: str = ""
     operation: str = "set"
 
@@ -39,7 +39,7 @@ class SettingChange:
 @dataclass
 class SyncStatus:
     connected: bool = False
-    last_sync: Optional[datetime] = None
+    last_sync: datetime | None = None
     pending_push: int = 0
     error: str = ""
 
@@ -58,7 +58,7 @@ ConflictManual = ConflictResolution.MANUAL
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class SettingsSyncer:
@@ -70,7 +70,7 @@ class SettingsSyncer:
         self._storage = storage
         self._resolver: int = ConflictLastWriteWins
         self._status = SyncStatus()
-        self._queue: List[SettingChange] = []
+        self._queue: list[SettingChange] = []
 
     def SetResolver(self, resolver: int) -> None:
         with self._mu:
@@ -102,11 +102,11 @@ class SettingsSyncer:
             self._config.last_sync = self._status.last_sync
             self._status.connected = True
 
-    def Push(self, changes: List[SettingChange]) -> None:
+    def Push(self, changes: list[SettingChange]) -> None:
         with self._mu:
             self._push_locked(changes)
 
-    def _push_locked(self, changes: List[SettingChange]) -> None:
+    def _push_locked(self, changes: list[SettingChange]) -> None:
         if not self._config.endpoint:
             raise ValueError("no sync endpoint configured")
         payload = json.dumps([self._change_to_dict(c) for c in changes]).encode("utf-8")
@@ -126,14 +126,14 @@ class SettingsSyncer:
             body = exc.read().decode("utf-8", errors="replace")
             raise OSError(f"push failed (status {exc.code}): {body}") from exc
 
-    def Pull(self) -> List[SettingChange]:
+    def Pull(self) -> list[SettingChange]:
         with self._mu:
             return self._pull_locked()
 
-    def _pull_locked(self) -> List[SettingChange]:
+    def _pull_locked(self) -> list[SettingChange]:
         if not self._config.endpoint:
             return []
-        last = self._config.last_sync or datetime.fromtimestamp(0, tz=timezone.utc)
+        last = self._config.last_sync or datetime.fromtimestamp(0, tz=UTC)
         since = last.strftime("%Y-%m-%dT%H:%M:%SZ")
         url = (
             self._config.endpoint.rstrip("/")
@@ -154,17 +154,17 @@ class SettingsSyncer:
         return [self._change_from_dict(c) for c in raw]
 
     def ResolveConflicts(
-        self, local: List[SettingChange], remote: List[SettingChange]
-    ) -> List[SettingChange]:
+        self, local: list[SettingChange], remote: list[SettingChange]
+    ) -> list[SettingChange]:
         with self._mu:
             return self._resolve_conflicts_locked(local, remote)
 
     def _resolve_conflicts_locked(
-        self, local: List[SettingChange], remote: List[SettingChange]
-    ) -> List[SettingChange]:
-        local_map: Dict[str, SettingChange] = {c.key: c for c in local}
-        remote_map: Dict[str, SettingChange] = {c.key: c for c in remote}
-        merged: Dict[str, SettingChange] = {}
+        self, local: list[SettingChange], remote: list[SettingChange]
+    ) -> list[SettingChange]:
+        local_map: dict[str, SettingChange] = {c.key: c for c in local}
+        remote_map: dict[str, SettingChange] = {c.key: c for c in remote}
+        merged: dict[str, SettingChange] = {}
         for key, rc in remote_map.items():
             lc = local_map.get(key)
             if lc is not None:
@@ -188,7 +188,7 @@ class SettingsSyncer:
                 merged[key] = lc
         result = sorted(
             merged.values(),
-            key=lambda c: c.timestamp or datetime.fromtimestamp(0, tz=timezone.utc),
+            key=lambda c: c.timestamp or datetime.fromtimestamp(0, tz=UTC),
         )
         return result
 
@@ -202,7 +202,7 @@ class SettingsSyncer:
                 error=self._status.error,
             )
 
-    def _collect_local_changes(self) -> List[SettingChange]:
+    def _collect_local_changes(self) -> list[SettingChange]:
         changes = []
         for key, val in self._storage.List().items():
             changes.append(
@@ -216,7 +216,7 @@ class SettingsSyncer:
             )
         return changes
 
-    def _apply_changes(self, changes: List[SettingChange]) -> None:
+    def _apply_changes(self, changes: list[SettingChange]) -> None:
         for c in changes:
             if len(c.key) > 12 and c.key[:12] == "__conflict__":
                 continue
@@ -246,7 +246,7 @@ class SettingsSyncer:
         self.Push(queue)
 
     @staticmethod
-    def _change_to_dict(c: SettingChange) -> Dict[str, Any]:
+    def _change_to_dict(c: SettingChange) -> dict[str, Any]:
         ts = c.timestamp
         return {
             "key": c.key,
@@ -257,7 +257,7 @@ class SettingsSyncer:
         }
 
     @staticmethod
-    def _change_from_dict(d: Dict[str, Any]) -> SettingChange:
+    def _change_from_dict(d: dict[str, Any]) -> SettingChange:
         ts = d.get("timestamp")
         parsed = None
         if ts:

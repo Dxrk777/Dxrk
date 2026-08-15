@@ -15,11 +15,12 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from threading import Lock
-from typing import Any, Callable, Protocol
+from typing import Any, Protocol
 
 from ..compress import Budget, Compressor, Content
 from ..mcp import Client, StdioTransport
@@ -52,7 +53,7 @@ class Message:
     tool_call_id: str = ""
     tool_name: str = ""
     tool_use_id: str = ""
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 @dataclass

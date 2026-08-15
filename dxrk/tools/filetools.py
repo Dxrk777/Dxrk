@@ -8,7 +8,6 @@ from __future__ import annotations
 import base64
 import os
 import re
-from pathlib import Path
 from typing import Any
 
 from dxrk.tools import Registry, ToolDef, build
@@ -213,7 +212,7 @@ def _execute_file_edit(
         return None, f"file {file_path!r} is too large to edit ({info.st_size} bytes)"
 
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
     except OSError as e:
         return None, f"read {file_path!r}: {e}"
@@ -342,7 +341,7 @@ def _execute_grep(_ctx: Any, input_: dict[str, Any] | None) -> tuple[Any, str | 
             return None, f"compile include pattern: {e}"
 
     try:
-        info = os.stat(search_path)
+        os.stat(search_path)
     except OSError as e:
         return None, f"stat {search_path!r}: {e}"
 
@@ -354,7 +353,7 @@ def _execute_grep(_ctx: Any, input_: dict[str, Any] | None) -> tuple[Any, str | 
         if rel == ".":
             rel = path
         try:
-            with open(path, "r", encoding="utf-8", errors="replace") as f:
+            with open(path, encoding="utf-8", errors="replace") as f:
                 for line_num, raw in enumerate(f, start=1):
                     if len(matches) >= max_results:
                         break

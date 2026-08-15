@@ -13,7 +13,7 @@ from dxrk.agents.discovery import discover_installed
 from dxrk.agents.factory import create_registry
 from dxrk.agents.registry import Registry as AgentRegistry
 from dxrk.models import AgentID
-from dxrk.tools import Registry, Tool, ToolDef, build
+from dxrk.tools import Registry, ToolDef, build
 
 _RG_MISSING_MESSAGE = (
     "ripgrep (rg) is required but not found in PATH; install it via "

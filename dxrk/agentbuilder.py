@@ -9,15 +9,15 @@ import re
 import shutil
 import subprocess
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, cast
 
 from dxrk.catalog import mvp_skills
 from dxrk.models import (
+    AgentClaudeCode,
     AgentCodex,
     AgentGeminiCLI,
     AgentID,
-    AgentClaudeCode,
     AgentOpenCode,
 )
 from dxrk.strconst import StrClaude
@@ -86,7 +86,7 @@ class RegistryEntry:
     Name: str = ""
     Title: str = ""
     Description: str = ""
-    CreatedAt: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    CreatedAt: datetime = field(default_factory=lambda: datetime.now(UTC))
     GenerationEngine: AgentID = cast(AgentID, "")
     SDDIntegration: SDDIntegration | None = None
     InstalledAgents: list[AgentID] = field(default_factory=list)

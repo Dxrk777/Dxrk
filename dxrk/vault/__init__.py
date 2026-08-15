@@ -5,10 +5,11 @@ import hashlib
 import json
 import os
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
@@ -39,7 +40,7 @@ class SecretEntry:
         return d
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "SecretEntry":
+    def from_dict(cls, data: dict[str, Any]) -> SecretEntry:
         return cls(
             value=data["value"],
             created=datetime.fromisoformat(data["created"]),
@@ -57,7 +58,7 @@ class Vault:
         self._secrets: dict[str, SecretEntry] = {}
 
     @classmethod
-    def create(cls, path: str, master_key_env: str = "") -> "Vault":
+    def create(cls, path: str, master_key_env: str = "") -> Vault:
         key = None
         if master_key_env != "":
             ek = os.environ.get(master_key_env)

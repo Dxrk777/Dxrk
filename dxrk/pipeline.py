@@ -15,7 +15,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Any
 
 from dxrk.models import Selection
@@ -26,7 +26,7 @@ log = logging.getLogger(__name__)
 # ─── Stage ──────────────────────────────────────────────────────────────────
 
 
-class Stage(str, Enum):
+class Stage(StrEnum):
     PREPARE = "prepare"
     APPLY = "apply"
     ROLLBACK = "rollback"
@@ -35,7 +35,7 @@ class Stage(str, Enum):
 # ─── Step Status ────────────────────────────────────────────────────────────
 
 
-class StepStatus(str, Enum):
+class StepStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
     SUCCEEDED = "succeeded"

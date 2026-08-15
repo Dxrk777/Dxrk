@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from dxrk.log import Level, Logger, convert_args_to_fields
@@ -17,7 +17,7 @@ _LOG_LEVELS = {
 
 class _JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
-        ts = datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat()
+        ts = datetime.fromtimestamp(record.created, tz=UTC).isoformat()
         return json.dumps(
             {
                 "ts": ts,

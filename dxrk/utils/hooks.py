@@ -33,13 +33,13 @@ from __future__ import annotations
 
 import json
 import os
-import re as _re
 import queue
+import re as _re
 import subprocess
 import threading
 import time
 from dataclasses import dataclass, field, replace
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import IntEnum
 from typing import Any, TextIO
 
@@ -231,8 +231,8 @@ ErrLoggerClosed = HookError("hooks: logger is closed")
 def _go_time_fmt(dt: datetime) -> str:
     """Format a datetime as RFC 3339 nano JSON (UTC, Z)."""
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    dt = dt.astimezone(timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
+    dt = dt.astimezone(UTC)
     base = dt.strftime("%Y-%m-%dT%H:%M:%S")
     micro = dt.microsecond
     if micro == 0:
@@ -1215,8 +1215,7 @@ class HookExecutor:
             try:
                 proc = subprocess.run(
                     cmd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
+                    capture_output=True,
                     env=env,
                     timeout=timeout if timeout > 0 else None,
                 )

@@ -8,7 +8,6 @@ import subprocess
 import threading
 import time
 from dataclasses import dataclass
-from typing import Optional
 
 from .permissions import CapFSWrite, CapGit, PermissionStore
 
@@ -27,7 +26,7 @@ class UpdateResult:
     before: str = ""
     after: str = ""
     changes: int = 0
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class Updater:
@@ -38,7 +37,7 @@ class Updater:
     ) -> None:
         self.project_root = project_root
         self.mu = threading.Lock()
-        self._last_check: Optional[float] = None
+        self._last_check: float | None = None
         self.interval = max(interval_sec, 30)
         self.perms = perms
 
@@ -102,11 +101,11 @@ class Updater:
     def _run_build(self) -> CmdResult:
         return _run_cmd_raw(self.project_root, "go", ["build", "./..."])
 
-    def last_check(self) -> Optional[float]:
+    def last_check(self) -> float | None:
         with self.mu:
             return self._last_check
 
-    def write_file(self, path: str, content: str) -> Optional[str]:
+    def write_file(self, path: str, content: str) -> str | None:
         err = self.perms.check(CapFSWrite, f"write {path}")
         if err:
             return err

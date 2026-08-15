@@ -9,8 +9,7 @@ import logging
 import os
 import threading
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 logger = logging.getLogger(__name__)
 
@@ -23,12 +22,12 @@ class MemoryItem:
     input: str = ""
     output: str = ""
     success: bool = False
-    error: Optional[str] = None
-    fixed_by: Optional[str] = None
+    error: str | None = None
+    fixed_by: str | None = None
     tags: list[str] = field(default_factory=list)
     tokens: int = 0
     latency_ms: float = 0.0
-    metadata: Optional[dict[str, str]] = None
+    metadata: dict[str, str] | None = None
 
 
 @dataclass
@@ -105,11 +104,11 @@ class Learner:
                     (
                         item.input
                         + item.output
-                        + datetime.now(timezone.utc).isoformat()
+                        + datetime.now(UTC).isoformat()
                     ).encode()
                 ).hexdigest()
                 item.id = digest[:16]
-            item.timestamp = datetime.now(timezone.utc).isoformat()
+            item.timestamp = datetime.now(UTC).isoformat()
             self.memories.append(item)
             if len(self.memories) > self.max_items:
                 self.memories = self.memories[len(self.memories) - self.max_items :]

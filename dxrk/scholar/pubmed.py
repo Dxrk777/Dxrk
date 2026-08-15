@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import logging
+
 import httpx
 
 from .provider import Paper

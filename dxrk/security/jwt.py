@@ -9,10 +9,10 @@ import hashlib
 import hmac
 import json
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import IntEnum
-from typing import Callable, Dict, List, Optional, Tuple, Union
 
 # ---- JWT Token Types ----
 
@@ -36,9 +36,9 @@ class TokenInfo:
     token: str
     subject: str
     issuer: str
-    expires_at: Optional[datetime]
-    issued_at: Optional[datetime]
-    claims: Dict[str, object]
+    expires_at: datetime | None
+    issued_at: datetime | None
+    claims: dict[str, object]
     is_valid: bool
     is_expired: bool
 
@@ -52,7 +52,7 @@ def _b64url_decode(data: str) -> bytes:
     return base64.urlsafe_b64decode(padded)
 
 
-def decode_jwt_payload(token_string: str) -> Optional[Dict[str, object]]:
+def decode_jwt_payload(token_string: str) -> dict[str, object] | None:
     """Decode the payload of a JWT without signature verification.
 
     Returns None if the token is malformed.
@@ -91,13 +91,13 @@ def is_token_expired(token_string: str, skew: timedelta) -> bool:
     if not isinstance(exp, (int, float)):
         return False  # no exp claim → assume not expired
 
-    expiry = datetime.fromtimestamp(int(exp), tz=timezone.utc)
-    now = datetime.now(timezone.utc)
+    expiry = datetime.fromtimestamp(int(exp), tz=UTC)
+    now = datetime.now(UTC)
 
     return now > expiry + skew
 
 
-KeyFunc = Callable[[Dict[str, object], Dict[str, object]], bytes]
+KeyFunc = Callable[[dict[str, object], dict[str, object]], bytes]
 
 
 def parse_token_safe(token_string: str, key_func: KeyFunc) -> TokenInfo:
@@ -139,14 +139,14 @@ def parse_token_safe(token_string: str, key_func: KeyFunc) -> TokenInfo:
     # Expiration validation (mirrors golang-jwt/v5 default validation)
     exp = claims.get("exp")
     if isinstance(exp, (int, float)):
-        expiry = datetime.fromtimestamp(int(exp), tz=timezone.utc)
-        if datetime.now(timezone.utc) > expiry:
+        expiry = datetime.fromtimestamp(int(exp), tz=UTC)
+        if datetime.now(UTC) > expiry:
             raise ValueError("parse token: token is expired")
 
-    def _claim_date(name: str) -> Optional[datetime]:
+    def _claim_date(name: str) -> datetime | None:
         value = claims.get(name)
         if isinstance(value, (int, float)):
-            return datetime.fromtimestamp(int(value), tz=timezone.utc)
+            return datetime.fromtimestamp(int(value), tz=UTC)
         return None
 
     subject = claims.get("sub", "")
@@ -177,15 +177,15 @@ def parse_token_safe(token_string: str, key_func: KeyFunc) -> TokenInfo:
 @dataclass
 class RefreshConfig:
     # PollInterval is how often to check token expiry. Default: 5 min.
-    poll_interval: Optional[timedelta] = None
+    poll_interval: timedelta | None = None
     # RefreshBefore is how long before expiry to refresh. Default: 10 min.
-    refresh_before: Optional[timedelta] = None
+    refresh_before: timedelta | None = None
     # RetryInterval is the base interval between refresh retries. Default: 30s.
-    retry_interval: Optional[timedelta] = None
+    retry_interval: timedelta | None = None
     # MaxRetries is the maximum number of retries on refresh failure. Default: 2.
-    max_retries: Optional[int] = None
+    max_retries: int | None = None
     # ClockSkew is the tolerance for clock skew. Default: 30s.
-    clock_skew: Optional[timedelta] = None
+    clock_skew: timedelta | None = None
 
 
 def default_refresh_config() -> RefreshConfig:
@@ -218,11 +218,11 @@ class TokenRefreshScheduler:
         self._token = token
         self._refresh_func = refresh_func
         self._stop = threading.Event()
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
 
         # State
-        self._last_refresh: Optional[datetime] = None
-        self._last_error: Optional[Exception] = None
+        self._last_refresh: datetime | None = None
+        self._last_error: Exception | None = None
         self._refresh_count: int = 0
         self._failure_count: int = 0
 
@@ -250,7 +250,7 @@ class TokenRefreshScheduler:
 
     def refresh_stats(
         self,
-    ) -> Tuple[int, int, Optional[datetime], Optional[Exception]]:
+    ) -> tuple[int, int, datetime | None, Exception | None]:
         """Return refresh metrics: (refresh_count, failure_count, last_refresh, last_error)."""
         with self._lock:
             return (
@@ -275,8 +275,8 @@ class TokenRefreshScheduler:
             exp = claims.get("exp")
             if not isinstance(exp, (int, float)):
                 return
-            expiry = datetime.fromtimestamp(int(exp), tz=timezone.utc)
-            time_until_expiry = expiry - datetime.now(timezone.utc)
+            expiry = datetime.fromtimestamp(int(exp), tz=UTC)
+            time_until_expiry = expiry - datetime.now(UTC)
 
             # Only refresh if within the refresh window
             if time_until_expiry > (self._config.refresh_before or timedelta(0)):
@@ -286,7 +286,7 @@ class TokenRefreshScheduler:
         self._attempt_refresh()
 
     def _attempt_refresh(self) -> None:
-        last_err: Optional[Exception] = None
+        last_err: Exception | None = None
         max_retries = self._config.max_retries or 0
         retry_interval = self._config.retry_interval or timedelta(0)
 
@@ -310,7 +310,7 @@ class TokenRefreshScheduler:
             # Success
             with self._lock:
                 self._token = new_token
-                self._last_refresh = datetime.now(timezone.utc)
+                self._last_refresh = datetime.now(UTC)
                 self._last_error = None
                 self._refresh_count += 1
 
@@ -337,7 +337,7 @@ def is_device_trusted(device: TrustedDevice) -> bool:
     """Check if a device token is valid and not expired."""
     if device.token == "":
         return False
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if now > device.expires_at:
         return False
     # Must be at least 10 minutes old to be considered trusted

@@ -70,7 +70,7 @@ def main() -> None:
     )
 
     # dxrk upgrade
-    upg_parser = sub.add_parser("upgrade", help="Upgrade installed components")
+    sub.add_parser("upgrade", help="Upgrade installed components")
 
     # dxrk uninstall
     uninstall_parser = sub.add_parser(

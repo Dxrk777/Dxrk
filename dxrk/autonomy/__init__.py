@@ -18,8 +18,8 @@ from .permissions import (
     PermissionLevel,
     PermissionStore,
 )
-from .updater import NewUpdater, UpdateResult, Updater
-from .verifier import NewVerifier, VerifyResult, Verifier
+from .updater import NewUpdater, Updater, UpdateResult
+from .verifier import NewVerifier, Verifier, VerifyResult
 
 __all__ = [
     "Autonomy",

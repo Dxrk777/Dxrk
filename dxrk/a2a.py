@@ -15,7 +15,7 @@ import threading
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import NewType, Protocol, runtime_checkable
 
 from dxrk.strconst import StrUnknown
@@ -869,7 +869,7 @@ class ConsensusProposal:
     proposal: str
     options: list[str] = field(default_factory=list)
     detail: bytes | None = None
-    deadline: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    deadline: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 @dataclass
@@ -922,7 +922,7 @@ def handle_consensus_request(
         proposal=req.proposal,
         options=req.options,
         detail=req.detail,
-        deadline=datetime.now(timezone.utc) + timedelta(seconds=30),
+        deadline=datetime.now(UTC) + timedelta(seconds=30),
     )
     with state._lock:
         state._proposals[req.proposal_id] = _ActiveProposal(

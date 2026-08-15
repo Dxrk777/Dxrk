@@ -1,4 +1,6 @@
 # SPDX-License-Identifier: MIT
+from typing import cast
+
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, VerticalScroll
@@ -7,7 +9,6 @@ from textual.screen import Screen
 from textual.visual import Visual
 from textual.widget import Widget
 from textual.widgets import Footer, Static
-from typing import cast
 
 from dxrk.planner import ResolvedPlan, build_review_payload
 from dxrk.tui.shared import STATE

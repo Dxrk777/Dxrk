@@ -39,7 +39,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import IntEnum
 
 # Mirrors dxrk/strconst: StrAssistant / StrSystem / StrToolUse / StrToolResult /
@@ -51,7 +51,7 @@ _STR_TOOL_RESULT = "tool_result"
 _STR_UNKNOWN = "unknown"
 _STR_ERROR = "error"
 
-_ZERO_TIME = datetime.fromtimestamp(0, tz=timezone.utc)
+_ZERO_TIME = datetime.fromtimestamp(0, tz=UTC)
 
 
 class Role(IntEnum):
@@ -77,7 +77,7 @@ class Role(IntEnum):
         return _STR_UNKNOWN
 
     @classmethod
-    def _missing_(cls, value: object) -> "Role":
+    def _missing_(cls, value: object) -> Role:
         return Role.RoleUser
 
 
@@ -232,35 +232,35 @@ class MessageBuilder:
     def __init__(self, msg: Message) -> None:
         self.msg = msg
 
-    def WithID(self, id: str) -> "MessageBuilder":
+    def WithID(self, id: str) -> MessageBuilder:
         self.msg.id = id
         return self
 
-    def WithTimestamp(self, ts: datetime) -> "MessageBuilder":
+    def WithTimestamp(self, ts: datetime) -> MessageBuilder:
         self.msg.timestamp = ts
         return self
 
-    def WithModel(self, model: str) -> "MessageBuilder":
+    def WithModel(self, model: str) -> MessageBuilder:
         self.msg.model = model
         return self
 
-    def WithTokenCount(self, n: int) -> "MessageBuilder":
+    def WithTokenCount(self, n: int) -> MessageBuilder:
         self.msg.token_count = n
         return self
 
-    def WithStopReason(self, reason: str) -> "MessageBuilder":
+    def WithStopReason(self, reason: str) -> MessageBuilder:
         self.msg.stop_reason = reason
         return self
 
-    def WithMetadata(self, key: str, value: object) -> "MessageBuilder":
+    def WithMetadata(self, key: str, value: object) -> MessageBuilder:
         self.msg.metadata[key] = value
         return self
 
-    def Text(self, text: str) -> "MessageBuilder":
+    def Text(self, text: str) -> MessageBuilder:
         self.msg.contents.append(Content(type=ContentType.ContentText, text=text))
         return self
 
-    def Image(self, media_type: str, data: str) -> "MessageBuilder":
+    def Image(self, media_type: str, data: str) -> MessageBuilder:
         self.msg.contents.append(
             Content(
                 type=ContentType.ContentImage,
@@ -269,7 +269,7 @@ class MessageBuilder:
         )
         return self
 
-    def ImageURL(self, url: str, media_type: str) -> "MessageBuilder":
+    def ImageURL(self, url: str, media_type: str) -> MessageBuilder:
         self.msg.contents.append(
             Content(
                 type=ContentType.ContentImage,
@@ -280,7 +280,7 @@ class MessageBuilder:
 
     def ToolUse(
         self, id: str, name: str, input: dict[str, object] | None = None
-    ) -> "MessageBuilder":
+    ) -> MessageBuilder:
         data = input if input is not None else {}
         self.msg.contents.append(
             Content(
@@ -292,7 +292,7 @@ class MessageBuilder:
 
     def ToolResult(
         self, tool_use_id: str, content: str, is_error: bool
-    ) -> "MessageBuilder":
+    ) -> MessageBuilder:
         self.msg.contents.append(
             Content(
                 type=ContentType.ContentToolResult,
@@ -312,7 +312,7 @@ def NewMessage(role: Role) -> MessageBuilder:
     return MessageBuilder(
         Message(
             role=role,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             contents=[],
             metadata={},
         )

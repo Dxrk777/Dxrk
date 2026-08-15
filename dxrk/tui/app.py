@@ -4,7 +4,6 @@ Textual TUI app for Dxrk.
 """
 
 import logging
-
 from typing import cast
 
 from textual import on, work

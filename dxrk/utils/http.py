@@ -46,10 +46,11 @@ import ssl
 import threading
 import time
 import weakref
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
-from enum import Enum, IntEnum
-from typing import Callable, Iterable, Protocol, cast
+from datetime import UTC, datetime, timedelta
+from enum import IntEnum, StrEnum
+from typing import Protocol, cast
 from urllib.parse import urlparse
 
 import httpx
@@ -61,7 +62,7 @@ from cryptography.hazmat.primitives.asymmetric import ec, rsa
 _STR_UNKNOWN = "unknown"
 _STR_ERROR = "error"
 
-_ZERO_TIME = datetime.fromtimestamp(0, tz=timezone.utc)
+_ZERO_TIME = datetime.fromtimestamp(0, tz=UTC)
 
 _CTX_CANCELED = "context canceled"
 _CTX_DEADLINE = "context deadline exceeded"
@@ -69,7 +70,7 @@ _CTX_DEADLINE = "context deadline exceeded"
 
 def _now() -> datetime:
     """Return the current UTC time. Mirrors time.Now()."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _is_zero(dt: datetime) -> bool:
@@ -124,7 +125,7 @@ class _Context:
     __slots__ = ("_done", "_err", "_deadline", "_parent", "_values")
 
     def __init__(
-        self, parent: "_Context | None" = None, deadline: float | None = None
+        self, parent: _Context | None = None, deadline: float | None = None
     ) -> None:
         self._done = threading.Event()
         self._err: str | None = None
@@ -441,7 +442,7 @@ class TLSConfig:
             ctx.load_verify_locations(cadata=data.decode("utf-8", "replace"))
         return ctx
 
-    def WithMutualTLS(self, ca_data: bytes) -> "TLSConfig":
+    def WithMutualTLS(self, ca_data: bytes) -> TLSConfig:
         """Require and verify client certificates against ``ca_data``."""
         self.client_auth = ClientAuthType.RequireAndVerifyClientCert
         try:
@@ -450,27 +451,27 @@ class TLSConfig:
             pass
         return self
 
-    def WithInsecureSkipVerify(self, skip: bool) -> "TLSConfig":
+    def WithInsecureSkipVerify(self, skip: bool) -> TLSConfig:
         """Set whether server certificates are verified."""
         self.insecure_skip_verify = skip
         return self
 
-    def WithServerName(self, name: str) -> "TLSConfig":
+    def WithServerName(self, name: str) -> TLSConfig:
         """Set the server name for SNI/hostname verification."""
         self.server_name = name
         return self
 
-    def WithMinVersion(self, version: ssl.TLSVersion) -> "TLSConfig":
+    def WithMinVersion(self, version: ssl.TLSVersion) -> TLSConfig:
         """Set the minimum TLS version."""
         self.min_version = version
         return self
 
-    def WithCipherSuites(self, suites: list[str]) -> "TLSConfig":
+    def WithCipherSuites(self, suites: list[str]) -> TLSConfig:
         """Set the cipher suites (informative; see the fidelity notes)."""
         self.cipher_suites = suites
         return self
 
-    def Clone(self) -> "TLSConfig":
+    def Clone(self) -> TLSConfig:
         """Return a deep copy of this configuration."""
         return TLSConfig(
             cert_file=self.cert_file,
@@ -555,7 +556,7 @@ def NewCertPool(
 # ---------------------------------------------------------------------------
 
 
-class ProxyType(str, Enum):
+class ProxyType(StrEnum):
     """Proxy type."""
 
     ProxyTypeHTTP = "http"
@@ -657,7 +658,7 @@ class ProxyConfig:
         """Set the no-proxy pattern list."""
         self.no_proxy = no_proxy
 
-    def Clone(self) -> "ProxyConfig":
+    def Clone(self) -> ProxyConfig:
         """Return a deep copy of this configuration."""
         auth = ProxyAuth(self.auth.username, self.auth.password) if self.auth else None
         return ProxyConfig(
@@ -821,7 +822,7 @@ class Transport(Protocol):
 
     def close(self) -> None: ...
 
-    def clone(self) -> "Transport": ...
+    def clone(self) -> Transport: ...
 
 
 def _env_proxy_url() -> str | None:
@@ -1026,7 +1027,7 @@ class HTTPClient:
         with self.mu:
             self.transport.close()
 
-    def Clone(self) -> "HTTPClient":
+    def Clone(self) -> HTTPClient:
         """Return a client sharing the retry/proxy/TLS config with a fresh
         transport and client."""
         with self.mu:
@@ -1048,7 +1049,7 @@ class HTTPClient:
 
     def WithMiddleware(
         self, middleware: Callable[[httpx.HTTPTransport], httpx.HTTPTransport]
-    ) -> "HTTPClient":
+    ) -> HTTPClient:
         """Wrap the transport with middleware (e.g. a logging transport)."""
         with self.mu:
             new_transport = _make_transport()
@@ -1086,7 +1087,6 @@ def NewHTTPClient(
     if timeout.total_seconds() == 0:
         timeout = timedelta(seconds=30)
     max_idle_conns = opts.max_idle_conns or defaultMaxIdleConns
-    max_idle_conns_per_host = opts.max_idle_conns_per_host or defaultMaxIdleConnsPerHost
     idle_conn_timeout = opts.idle_conn_timeout
     if idle_conn_timeout.total_seconds() == 0:
         idle_conn_timeout = defaultIdleConnTimeout
@@ -1363,7 +1363,7 @@ class ConnectionPool:
         """Return True if the pool has been closed."""
         return self.closed.is_set()
 
-    def Clone(self) -> "ConnectionPool":
+    def Clone(self) -> ConnectionPool:
         """Return a pool with a fresh transport and copied settings."""
         with self.mu:
             new_transport = copy.copy(self.transport)
@@ -1877,7 +1877,7 @@ class LoggedTransport:
         """Close the wrapped transport."""
         self.transport.close()
 
-    def clone(self) -> "LoggedTransport":
+    def clone(self) -> LoggedTransport:
         """Return a copy wrapping a fresh transport."""
         return LoggedTransport(self.transport, self.logger)
 

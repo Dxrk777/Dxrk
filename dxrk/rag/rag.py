@@ -6,7 +6,6 @@ from __future__ import annotations
 import logging
 import threading
 from dataclasses import dataclass
-from typing import Optional
 
 from .chunker import ChunkConfig
 from .embedder import Embedder, NewOpenAIEmbedder
@@ -52,7 +51,7 @@ class RAG:
         with self._mu:
             return self._enabled
 
-    def Query(self, query: str, max_results: int = 0) -> Optional[list]:
+    def Query(self, query: str, max_results: int = 0) -> list | None:
         if not self.IsEnabled():
             return None
         if max_results <= 0:

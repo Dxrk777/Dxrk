@@ -6,9 +6,7 @@ from __future__ import annotations
 import logging
 import os
 import urllib.parse
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import List
+from dataclasses import dataclass
 
 _logger = logging.getLogger("dxrk.config")
 
@@ -29,13 +27,13 @@ class ConfigError:
 
 
 class Validator:
-    def Validate(self, cfg) -> List[ConfigError]:  # noqa: N802 - kept for API parity
+    def Validate(self, cfg) -> list[ConfigError]:  # noqa: N802 - kept for API parity
         raise NotImplementedError
 
 
 class ModelValidator(Validator):
-    def Validate(self, cfg) -> List[ConfigError]:
-        errs: List[ConfigError] = []
+    def Validate(self, cfg) -> list[ConfigError]:
+        errs: list[ConfigError] = []
         if not cfg.model.provider:
             errs.append(
                 ConfigError(
@@ -94,8 +92,8 @@ class ModelValidator(Validator):
 
 
 class APIValidator(Validator):
-    def Validate(self, cfg) -> List[ConfigError]:
-        errs: List[ConfigError] = []
+    def Validate(self, cfg) -> list[ConfigError]:
+        errs: list[ConfigError] = []
         if not cfg.api.base_url:
             errs.append(
                 ConfigError(
@@ -164,8 +162,8 @@ class APIValidator(Validator):
 
 
 class PathValidator(Validator):
-    def Validate(self, cfg) -> List[ConfigError]:
-        errs: List[ConfigError] = []
+    def Validate(self, cfg) -> list[ConfigError]:
+        errs: list[ConfigError] = []
         if cfg.auth.token_path:
             expanded = expand_path(cfg.auth.token_path)
             if not os.path.exists(expanded):
@@ -192,8 +190,8 @@ class PathValidator(Validator):
 
 
 class PortValidator(Validator):
-    def Validate(self, cfg) -> List[ConfigError]:
-        errs: List[ConfigError] = []
+    def Validate(self, cfg) -> list[ConfigError]:
+        errs: list[ConfigError] = []
         if cfg.session.max_history < 0:
             errs.append(
                 ConfigError(
@@ -231,11 +229,11 @@ class PortValidator(Validator):
 
 
 class CompositeValidator(Validator):
-    def __init__(self, validators: List[Validator] | None = None):
-        self._validators: List[Validator] = list(validators or [])
+    def __init__(self, validators: list[Validator] | None = None):
+        self._validators: list[Validator] = list(validators or [])
 
-    def Validate(self, cfg) -> List[ConfigError]:
-        all_errs: List[ConfigError] = []
+    def Validate(self, cfg) -> list[ConfigError]:
+        all_errs: list[ConfigError] = []
         for validator in self._validators:
             all_errs.extend(validator.Validate(cfg))
         return all_errs
@@ -245,7 +243,7 @@ def NewCompositeValidator(*validators: Validator) -> CompositeValidator:
     return CompositeValidator(list(validators))
 
 
-def ValidateConfig(cfg) -> List[ConfigError]:
+def ValidateConfig(cfg) -> list[ConfigError]:
     return NewCompositeValidator(
         ModelValidator(),
         APIValidator(),
@@ -254,19 +252,19 @@ def ValidateConfig(cfg) -> List[ConfigError]:
     ).Validate(cfg)
 
 
-def ValidateConfigWith(cfg, *validators: Validator) -> List[ConfigError]:
+def ValidateConfigWith(cfg, *validators: Validator) -> list[ConfigError]:
     return NewCompositeValidator(*validators).Validate(cfg)
 
 
-def HasErrors(errs: List[ConfigError]) -> bool:
+def HasErrors(errs: list[ConfigError]) -> bool:
     return any(e.severity == SeverityError for e in errs)
 
 
-def FilterErrors(errs: List[ConfigError], severity: str) -> List[ConfigError]:
+def FilterErrors(errs: list[ConfigError], severity: str) -> list[ConfigError]:
     return [e for e in errs if e.severity == severity]
 
 
-def FormatErrors(errs: List[ConfigError]) -> str:
+def FormatErrors(errs: list[ConfigError]) -> str:
     if not errs:
         return "configuration is valid"
     lines = []

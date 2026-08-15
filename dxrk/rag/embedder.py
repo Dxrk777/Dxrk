@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 import logging
 import urllib.request
-from typing import List, Optional, Protocol
+from typing import Protocol
 
 _logger = logging.getLogger("dxrk.rag")
 
@@ -20,7 +20,7 @@ TIMEOUT_SECONDS = 30
 class Embedder(Protocol):
     """Generates embeddings for text."""
 
-    def embed(self, texts: List[str]) -> Optional[List[List[float]]]:
+    def embed(self, texts: list[str]) -> list[list[float]] | None:
         """Embeds the given texts; returns None on error."""
         ...
 
@@ -54,10 +54,10 @@ class OpenAIEmbedder:
     def dimensions(self) -> int:
         return self._dimensions
 
-    def embed(self, texts: List[str]) -> Optional[List[List[float]]]:
+    def embed(self, texts: list[str]) -> list[list[float]] | None:
         if not texts:
             return None
-        embeddings: List[List[float]] = []
+        embeddings: list[list[float]] = []
         for i in range(0, len(texts), MAX_BATCH):
             batch = texts[i : i + MAX_BATCH]
             batch_embeddings = self._embed_batch(batch)
@@ -66,7 +66,7 @@ class OpenAIEmbedder:
             embeddings.extend(batch_embeddings)
         return embeddings
 
-    def _embed_batch(self, texts: List[str]) -> Optional[List[List[float]]]:
+    def _embed_batch(self, texts: list[str]) -> list[list[float]] | None:
         url = f"{self._base_url}/embeddings"
         body = json.dumps({"model": self._model, "input": texts}).encode("utf-8")
         req = urllib.request.Request(
@@ -98,7 +98,7 @@ class OpenAIEmbedder:
             _logger.warning("embed invalid json response")
             return None
 
-        ordered: List[List[float]] = []
+        ordered: list[list[float]] = []
         for item in data.get("data", []):
             index = item.get("index")
             if index is None or not isinstance(index, int):

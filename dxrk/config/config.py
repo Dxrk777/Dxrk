@@ -7,9 +7,10 @@ import json
 import logging
 import os
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 import yaml
 
@@ -48,7 +49,7 @@ class APIConfig:
 class AuthConfig:
     provider: str = "oauth"
     client_id: str = ""
-    scopes: List[str] = field(default_factory=lambda: ["read", "write"])
+    scopes: list[str] = field(default_factory=lambda: ["read", "write"])
     token_path: str = "~/.dxrk/tokens"
 
 
@@ -62,8 +63,8 @@ class SessionConfig:
 
 @dataclass
 class ToolsConfig:
-    enabled: List[str] = field(default_factory=list)
-    disabled: List[str] = field(default_factory=list)
+    enabled: list[str] = field(default_factory=list)
+    disabled: list[str] = field(default_factory=list)
     timeout: int = 30
     max_concurrent: int = 5
 
@@ -102,7 +103,7 @@ def default_hierarchical_config() -> HierarchicalConfig:
     return HierarchicalConfig()
 
 
-def _config_to_dict(cfg: HierarchicalConfig) -> Dict[str, Any]:
+def _config_to_dict(cfg: HierarchicalConfig) -> dict[str, Any]:
     """Serializes a HierarchicalConfig to a nested dict."""
     return {
         "model": {
@@ -155,7 +156,7 @@ def _config_to_dict(cfg: HierarchicalConfig) -> Dict[str, Any]:
     }
 
 
-def _dict_to_config(data: Dict[str, Any]) -> HierarchicalConfig:
+def _dict_to_config(data: dict[str, Any]) -> HierarchicalConfig:
     """Deserializes a nested dict back into a HierarchicalConfig."""
     model = data.get("model", {})
     api = data.get("api", {})
@@ -219,10 +220,10 @@ def _dict_to_config(data: Dict[str, Any]) -> HierarchicalConfig:
 class _Option:
     """Internal option holder for ConfigManager construction."""
 
-    global_path: Optional[str] = None
-    user_path: Optional[str] = None
-    project_path: Optional[str] = None
-    env_prefix: Optional[str] = None
+    global_path: str | None = None
+    user_path: str | None = None
+    project_path: str | None = None
+    env_prefix: str | None = None
 
 
 def WithGlobalPath(path: str) -> _Option:
@@ -244,7 +245,7 @@ def WithEnvPrefix(prefix: str) -> _Option:
 class ConfigManager:
     """Manages hierarchical configuration with dot-notation access, validation and watch."""
 
-    def __init__(self, options: List[_Option] | None = None):
+    def __init__(self, options: list[_Option] | None = None):
         self._mu = threading.RLock()
         self._defaults: HierarchicalConfig = default_hierarchical_config()
         self._config: HierarchicalConfig = default_hierarchical_config()
@@ -262,7 +263,7 @@ class ConfigManager:
                     self._project_path = opt.project_path
                 if opt.env_prefix is not None:
                     self._env_prefix = opt.env_prefix
-        self._watchers: Dict[str, List[Watcher]] = {}
+        self._watchers: dict[str, list[Watcher]] = {}
 
     def Load(self) -> None:
         """Loads configuration from file sources and environment variables."""
@@ -305,12 +306,12 @@ class ConfigManager:
         with self._mu:
             self._merge(data)
 
-    def merge(self, overlay: Dict[str, Any]) -> None:
+    def merge(self, overlay: dict[str, Any]) -> None:
         """Merges a dict overlay into the current config (non-zero values win)."""
         with self._mu:
             self._merge(overlay)
 
-    def _merge(self, overlay: Dict[str, Any]) -> None:
+    def _merge(self, overlay: dict[str, Any]) -> None:
         cfg = self._config
         model = overlay.get("model")
         if isinstance(model, dict):
@@ -378,7 +379,7 @@ class ConfigManager:
         env = os.environ
         cfg = self._config
 
-        def get_env(key: str) -> Optional[str]:
+        def get_env(key: str) -> str | None:
             val = env.get(prefix + key)
             return val if val is not None else None
 
@@ -457,7 +458,7 @@ class ConfigManager:
                 elif lowered == "false" or lowered == "0":
                     setter(False)
 
-    def Get(self, path: str) -> Optional[Any]:
+    def Get(self, path: str) -> Any | None:
         """Returns the value at a dot-notation path, or None."""
         with self._mu:
             parts = path.split(".")
@@ -515,7 +516,7 @@ class ConfigManager:
             self._config = _dict_to_config(current)
             self._notify_watchers(path, None)
 
-    def Merge(self, other: Optional[HierarchicalConfig]) -> None:
+    def Merge(self, other: HierarchicalConfig | None) -> None:
         """Merges another config into this one."""
         if other is None:
             return
@@ -523,7 +524,7 @@ class ConfigManager:
             overlay = _config_to_dict(other)
             self._merge(overlay)
 
-    def Validate(self) -> List[ConfigError]:
+    def Validate(self) -> list[ConfigError]:
         """Runs the default validation pipeline on the current config."""
         with self._mu:
             return ValidateConfig(self._config)
@@ -547,10 +548,10 @@ class ConfigManager:
         with self._mu:
             return _dict_to_config(_config_to_dict(self._config))
 
-    def LoadFromViper(self, v: Dict[str, Any]) -> None:
+    def LoadFromViper(self, v: dict[str, Any]) -> None:
         """Applies values from a viper-style config dict (mirrors LoadFromViper)."""
         with self._mu:
-            overlay: Dict[str, Any] = {}
+            overlay: dict[str, Any] = {}
 
             def put(section: str, key: str, value: Any) -> None:
                 if value is not None:
@@ -588,7 +589,7 @@ class ConfigManager:
             self._merge(overlay)
 
 
-def NewConfigManager(options: List[_Option] | None = None) -> ConfigManager:
+def NewConfigManager(options: list[_Option] | None = None) -> ConfigManager:
     """Creates a ConfigManager with the given options applied."""
     return ConfigManager(options)
 
@@ -666,10 +667,10 @@ class AutonomyConfig:
     max_memory_items: int = 1000
     iq_metrics_file: str = ".dxrk/iq.json"
     iq_report_every: int = 10
-    capabilities: List[str] = field(
+    capabilities: list[str] = field(
         default_factory=lambda: ["fs.read", "fs.write", "git", "net.http"]
     )
-    ask_before: List[str] = field(
+    ask_before: list[str] = field(
         default_factory=lambda: ["fs.write", "sudo", "pkg.install", "docker"]
     )
 
@@ -695,15 +696,15 @@ class Config:
     """Legacy flat configuration (mirrors the original Config type)."""
 
     project: ProjectConfig = field(default_factory=ProjectConfig)
-    providers: List[ProviderConfig] = field(default_factory=list)
-    sandbox: Optional[SandboxConfig] = None
-    git: Optional[GitConfig] = None
-    tui: Optional[TUIOpts] = None
-    webui: Optional[WebUIConfig] = None
-    rag: Optional[RAGConfig] = None
-    autonomy: Optional[AutonomyConfig] = None
-    vault: Optional[VaultConfig] = None
-    cache: Optional[CacheConfig] = None
+    providers: list[ProviderConfig] = field(default_factory=list)
+    sandbox: SandboxConfig | None = None
+    git: GitConfig | None = None
+    tui: TUIOpts | None = None
+    webui: WebUIConfig | None = None
+    rag: RAGConfig | None = None
+    autonomy: AutonomyConfig | None = None
+    vault: VaultConfig | None = None
+    cache: CacheConfig | None = None
 
 
 def Default() -> Config:
@@ -735,7 +736,7 @@ def Default() -> Config:
     )
 
 
-def ProviderByName(cfg: Config, name: str) -> Optional[ProviderConfig]:
+def ProviderByName(cfg: Config, name: str) -> ProviderConfig | None:
     """Returns the provider with the given name, or None."""
     for p in cfg.providers:
         if p.name == name:

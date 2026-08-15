@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Dict, List
 
 from .ast import extract_command_name, is_read_only_command, parse_for_security
 
@@ -47,7 +46,7 @@ class ClassificationDecision:
 
 
 # SafeForAutoMode tools that can run without user confirmation in auto mode.
-SAFE_FOR_AUTO_MODE: Dict[str, bool] = {
+SAFE_FOR_AUTO_MODE: dict[str, bool] = {
     "Read": True,
     "Glob": True,
     "Grep": True,
@@ -59,7 +58,7 @@ SAFE_FOR_AUTO_MODE: Dict[str, bool] = {
 }
 
 # NeedsConfirmation tools that always need user confirmation.
-NEEDS_CONFIRMATION: Dict[str, bool] = {
+NEEDS_CONFIRMATION: dict[str, bool] = {
     "Bash": True,
     "Execute": True,
     "Write": True,
@@ -68,7 +67,7 @@ NEEDS_CONFIRMATION: Dict[str, bool] = {
 }
 
 # ReadTools tools that are read-only.
-READ_TOOLS: Dict[str, bool] = {
+READ_TOOLS: dict[str, bool] = {
     "Read": True,
     "Glob": True,
     "Grep": True,
@@ -134,7 +133,7 @@ def assess_bash_risk(command: str) -> RiskLevel:
         return RiskLevel.LOW
 
     # Check for file modification commands
-    modify_cmds: Dict[str, bool] = {
+    modify_cmds: dict[str, bool] = {
         "rm": True,
         "mv": True,
         "cp": True,
@@ -151,7 +150,7 @@ def assess_bash_risk(command: str) -> RiskLevel:
         return RiskLevel.MEDIUM
 
     # Check for network commands
-    network_cmds: Dict[str, bool] = {
+    network_cmds: dict[str, bool] = {
         "curl": True,
         "wget": True,
         "nc": True,
@@ -166,7 +165,7 @@ def assess_bash_risk(command: str) -> RiskLevel:
         return RiskLevel.MEDIUM
 
     # Check for system commands
-    system_cmds: Dict[str, bool] = {
+    system_cmds: dict[str, bool] = {
         "kill": True,
         "pkill": True,
         "killall": True,
@@ -192,11 +191,11 @@ class DangerousPattern:
     pattern: str
     reason: str
     risk: RiskLevel
-    tool_names: List[str] = field(default_factory=list)  # which tools this applies to
+    tool_names: list[str] = field(default_factory=list)  # which tools this applies to
 
 
 # KnownDangerousPatterns lists patterns that should always be flagged.
-KNOWN_DANGEROUS_PATTERNS: List[DangerousPattern] = [
+KNOWN_DANGEROUS_PATTERNS: list[DangerousPattern] = [
     DangerousPattern(
         pattern="rm -rf /",
         reason="recursive deletion of root filesystem",
@@ -260,9 +259,9 @@ KNOWN_DANGEROUS_PATTERNS: List[DangerousPattern] = [
 ]
 
 
-def check_dangerous_patterns(command: str, tool_name: str) -> List[DangerousPattern]:
+def check_dangerous_patterns(command: str, tool_name: str) -> list[DangerousPattern]:
     """Scan a command against known dangerous patterns."""
-    matches: List[DangerousPattern] = []
+    matches: list[DangerousPattern] = []
     cmd_lower = command.lower()
 
     for dp in KNOWN_DANGEROUS_PATTERNS:

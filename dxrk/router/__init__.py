@@ -10,9 +10,10 @@ import math
 import random
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Callable, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from ..query import Message, Provider, Response, ToolSchema, Usage
 
@@ -47,7 +48,7 @@ class CostConfig:
     output_price_per_1k: float
 
 
-DEFAULT_COSTS: Dict[str, CostConfig] = {
+DEFAULT_COSTS: dict[str, CostConfig] = {
     "claude-sonnet-4-20250514": CostConfig(0.003, 0.015),
     "claude-sonnet-4": CostConfig(0.003, 0.015),
     "claude-3-5-sonnet-20241022": CostConfig(0.003, 0.015),
@@ -71,7 +72,7 @@ class CostTracker:
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._costs: Dict[str, float] = {}
+        self._costs: dict[str, float] = {}
         self._total: float = 0.0
 
     def add(self, model: str, input_tokens: int, output_tokens: int) -> None:
@@ -89,7 +90,7 @@ class CostTracker:
         with self._lock:
             return self._total
 
-    def by_model(self) -> Dict[str, float]:
+    def by_model(self) -> dict[str, float]:
         with self._lock:
             return dict(self._costs)
 
@@ -104,26 +105,26 @@ class ProviderEntry:
     name: str
     model: str
     provider: Provider
-    capabilities: List[Capability] = field(default_factory=list)
+    capabilities: list[Capability] = field(default_factory=list)
 
 
 @dataclass
 class Router:
     """Routes generate calls across providers."""
 
-    providers: List[ProviderEntry]
+    providers: list[ProviderEntry]
     strategy: Strategy = Strategy.FIRST_AVAILABLE
-    cost_tracker: Optional[CostTracker] = None
+    cost_tracker: CostTracker | None = None
     rr_index: int = 0
     logger: Callable[..., None] = field(default=lambda *args: None)
     _lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
     def generate(
-        self, messages: List[Message], tools: List[ToolSchema]
+        self, messages: list[Message], tools: list[ToolSchema]
     ) -> tuple[Response | None, str | None]:
         selected = self._select_providers()
 
-        last_err: Optional[str] = None
+        last_err: str | None = None
         for idx in selected:
             entry = self.providers[idx]
 
@@ -153,7 +154,7 @@ class Router:
         with self._lock:
             self.providers.append(entry)
 
-    def _select_providers(self) -> List[int]:
+    def _select_providers(self) -> list[int]:
         with self._lock:
             total = len(self.providers)
             if total == 0:
@@ -169,8 +170,8 @@ class Router:
 
             return list(range(total))
 
-    def _sort_by_cost_locked(self) -> List[int]:
-        scored: List[tuple[float, int]] = []
+    def _sort_by_cost_locked(self) -> list[int]:
+        scored: list[tuple[float, int]] = []
         for i, p in enumerate(self.providers):
             cost = 0.0
             cfg = DEFAULT_COSTS.get(p.model)
@@ -187,11 +188,11 @@ class Router:
 
 
 def new_router(
-    providers: List[ProviderEntry],
+    providers: list[ProviderEntry],
     *,
     strategy: Strategy = Strategy.FIRST_AVAILABLE,
-    cost_tracker: Optional[CostTracker] = None,
-    logger: Optional[Callable[..., None]] = None,
+    cost_tracker: CostTracker | None = None,
+    logger: Callable[..., None] | None = None,
 ) -> Router:
     r = Router(
         providers=providers,
@@ -220,7 +221,7 @@ class CacheEntry:
     last_access: float = 0.0
     index: int = -1
 
-    def __lt__(self, other: "CacheEntry") -> bool:
+    def __lt__(self, other: CacheEntry) -> bool:
         return self.last_access < other.last_access
 
 
@@ -243,16 +244,16 @@ class SemanticCache:
         ttl: float = 300.0,
         semantic_enabled: bool = False,
         semantic_threshold: float = 0.95,
-        key_fn: Optional[Callable[[str], str]] = None,
+        key_fn: Callable[[str], str] | None = None,
     ) -> None:
         self._lock = threading.RLock()
-        self._entries: Dict[str, CacheEntry] = {}
-        self._lru: List[CacheEntry] = []
+        self._entries: dict[str, CacheEntry] = {}
+        self._lru: list[CacheEntry] = []
         self._max_size = max_size
         self._ttl = ttl
         self._semantic_enabled = semantic_enabled
         self._semantic_threshold = semantic_threshold
-        self._embeddings: Dict[str, List[float]] = {}
+        self._embeddings: dict[str, list[float]] = {}
         self._key_fn = key_fn if key_fn is not None else default_key_fn
 
     def get(self, messages: str) -> tuple[QueryResponse, bool]:
@@ -377,7 +378,7 @@ def default_key_fn(messages: str) -> str:
     return h[:16].hex()
 
 
-def simple_embed(text: str) -> List[float]:
+def simple_embed(text: str) -> list[float]:
     words = text.split()
     if len(words) == 0:
         return [0.0] * 128
@@ -400,7 +401,7 @@ def simple_embed(text: str) -> List[float]:
     return vec
 
 
-def cosine_sim(a: List[float], b: List[float]) -> float:
+def cosine_sim(a: list[float], b: list[float]) -> float:
     if len(a) != len(b) or len(a) == 0:
         return 0.0
     dot = 0.0
@@ -423,7 +424,7 @@ class CachingRouter:
         self.cache = cache
 
     def cached_generate(
-        self, messages: List[Message], tools: List[ToolSchema]
+        self, messages: list[Message], tools: list[ToolSchema]
     ) -> tuple[Response | None, str | None]:
         prompt = join_messages(messages)
 
@@ -455,8 +456,8 @@ class CachingRouter:
         return resp, None
 
 
-def join_messages(msgs: List[Message]) -> str:
-    parts: List[str] = []
+def join_messages(msgs: list[Message]) -> str:
+    parts: list[str] = []
     for m in msgs:
         parts.append(f"{m.role}: {m.content}\n")
     return "".join(parts)

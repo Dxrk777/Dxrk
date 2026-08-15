@@ -39,9 +39,9 @@ Fidelity notes (mirrored intentionally, including upstream quirks):
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Callable
 
 StrCritical = "critical"
 StrUnknown = "unknown"
@@ -497,7 +497,7 @@ class _Lexer:
                 self._advance()
                 continue
             if r == "$" and self._peek(1) in "({":
-                close = "}" if self._peek(1) == "{" else ")"
+                "}" if self._peek(1) == "{" else ")"
                 depth = 0
                 while True:
                     c = self._peek()

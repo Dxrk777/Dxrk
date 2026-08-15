@@ -721,7 +721,7 @@ def ApplyPatch(patch: Patch, old_text: str) -> str:
 def ApplyPatchToFile(patch: Patch, path: str) -> str:
     """Apply a patch to a file on disk, returning the new content. Mirrors ApplyPatchToFile."""
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             old_text = f.read()
     except OSError:
         raise ErrFileNotFound
@@ -740,7 +740,7 @@ def RevertPatch(patch: Patch, new_text: str) -> str:
 def RevertPatchToFile(patch: Patch, path: str) -> str:
     """Revert a patch applied to a file, returning the original content. Mirrors RevertPatchToFile."""
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             new_text = f.read()
     except OSError:
         raise ErrFileNotFound
@@ -1319,13 +1319,13 @@ def DetectSemanticFileDiff(fd: FileDiff) -> SemanticResult:
     new_text = ""
     if fd.old_path and os.path.isfile(fd.old_path):
         try:
-            with open(fd.old_path, "r", encoding="utf-8") as f:
+            with open(fd.old_path, encoding="utf-8") as f:
                 old_text = f.read()
         except OSError:
             pass
     if fd.new_path and os.path.isfile(fd.new_path):
         try:
-            with open(fd.new_path, "r", encoding="utf-8") as f:
+            with open(fd.new_path, encoding="utf-8") as f:
                 new_text = f.read()
         except OSError:
             pass

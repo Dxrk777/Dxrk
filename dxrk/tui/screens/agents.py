@@ -1,11 +1,12 @@
 # SPDX-License-Identifier: MIT
+from typing import cast
+
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, VerticalScroll
 from textual.reactive import reactive
 from textual.screen import Screen
 from textual.widgets import Footer, Static
-from typing import cast
 
 from dxrk.models import AgentID
 from dxrk.tui.shared import STATE

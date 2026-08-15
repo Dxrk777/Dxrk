@@ -10,7 +10,7 @@ import tarfile
 import tempfile
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +87,7 @@ def extract_archive(archive_path: str, dest_dir: str) -> list[ArchiveEntry]:
 # Manifest types
 
 
-class BackupSource(str, Enum):
+class BackupSource(StrEnum):
     INSTALL = "install"
     SYNC = "sync"
     UPGRADE = "upgrade"

@@ -15,7 +15,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import NewType
 
 from dxrk.log import Logger, new_slog
@@ -31,7 +31,7 @@ from dxrk.strconst import (
 )
 
 
-class TaskType(str, Enum):
+class TaskType(StrEnum):
     LOCAL_BASH = "local_bash"
     LOCAL_AGENT = "local_agent"
     DREAM = "dream"

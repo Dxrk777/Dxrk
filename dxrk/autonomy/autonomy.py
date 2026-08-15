@@ -8,8 +8,8 @@ import logging
 import os
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import asdict
-from typing import Callable, Optional
 
 from dxrk.config import AutonomyConfig
 
@@ -22,7 +22,7 @@ from .verifier import NewVerifier
 
 logger = logging.getLogger(__name__)
 
-RequestFn = Callable[[str, str], tuple[bool, Optional[str]]]
+RequestFn = Callable[[str, str], tuple[bool, str | None]]
 
 
 class Autonomy:
@@ -32,7 +32,7 @@ class Autonomy:
         self,
         cfg: AutonomyConfig,
         project_root: str,
-        request_fn: Optional[RequestFn] = None,
+        request_fn: RequestFn | None = None,
     ) -> None:
         self.config = cfg
         self.project_root = project_root
@@ -44,7 +44,7 @@ class Autonomy:
         self._running = False
         self.iq_history: list[IQSnapshot] = []
         self.start_time = time.time()
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
 
         learn_dir = os.path.join(project_root, cfg.learn_dir)
         os.makedirs(learn_dir, mode=0o750, exist_ok=True)
@@ -217,6 +217,6 @@ class Autonomy:
 def New(
     cfg: AutonomyConfig,
     project_root: str,
-    request_fn: Optional[RequestFn] = None,
+    request_fn: RequestFn | None = None,
 ) -> Autonomy:
     return Autonomy(cfg, project_root, request_fn)

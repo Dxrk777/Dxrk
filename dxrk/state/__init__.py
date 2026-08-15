@@ -18,9 +18,9 @@ class ModelAssignmentState:
 @dataclass
 class InstallState:
     installed_agents: list[str] = field(default_factory=list)
-    claude_model_assignments: Optional[dict[str, str]] = None
-    kiro_model_assignments: Optional[dict[str, str]] = None
-    model_assignments: Optional[dict[str, ModelAssignmentState]] = None
+    claude_model_assignments: dict[str, str] | None = None
+    kiro_model_assignments: dict[str, str] | None = None
+    model_assignments: dict[str, ModelAssignmentState] | None = None
     persona: str = ""
 
     def _to_dict(self) -> dict:

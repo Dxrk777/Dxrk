@@ -7,10 +7,12 @@ validate -> execute -> (result, error). Execute functions return a tuple of
 
 from __future__ import annotations
 
+import builtins
 import os
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, List, Protocol
+from typing import Any, List, Protocol
 
 ExecuteFn = Callable[[Any, dict[str, Any] | None], tuple[Any, str | None]]
 ValidateFn = Callable[[dict[str, Any] | None], str | None]
@@ -126,7 +128,7 @@ class Registry:
     def list(self) -> list[Tool]:
         return [self._tools[name] for name in sorted(self._tools)]
 
-    def list_enabled(self) -> List[Tool]:
+    def list_enabled(self) -> builtins.list[Tool]:
         return [t for t in self.list() if t.is_enabled()]
 
     def remove(self, name: str) -> None:

@@ -680,7 +680,6 @@ def inject(
                 files.append(out_path)
 
     # 2b. OpenCode agent definitions merge
-    merged_settings_bytes: bytes | None = None
     if adapter.agent in (AgentID.OPENCODE, AgentID.KILOCODE):
         settings_path = adapter.settings_path(home_dir)
         if settings_path:
@@ -711,7 +710,7 @@ def inject(
             agent_result = _merge_json_file(settings_path, overlay_bytes)
             changed = changed or agent_result[0].Changed
             files.append(settings_path)
-            merged_settings_bytes = agent_result[1]
+            agent_result[1]
 
             # Named profile overlays
             for profile in opts.profiles:
@@ -720,7 +719,7 @@ def inject(
                 profile_overlay = generate_profile_overlay(profile, home_dir)
                 profile_result = _merge_json_file(settings_path, profile_overlay)
                 changed = changed or profile_result[0].Changed
-                merged_settings_bytes = profile_result[1]
+                profile_result[1]
 
     # 3. SDD skill files
     if adapter.supports_skills:

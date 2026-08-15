@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 _logger = logging.getLogger("dxrk.rag")
 
@@ -139,7 +139,7 @@ def LanguageFromExt(path: str) -> str:
 def ChunkFile(path: str, cfg: ChunkConfig) -> list[Chunk]:
     """Splits a file into chunks. Returns an empty list for non-UTF-8 files."""
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             text = f.read()
     except (OSError, UnicodeDecodeError):
         return []

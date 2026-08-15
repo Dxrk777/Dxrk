@@ -62,7 +62,7 @@ import queue
 import re
 import threading
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import IntEnum
 from typing import Any, TextIO, cast
 
@@ -79,12 +79,12 @@ _STR_TODOREAD = "TodoRead"
 _STR_FORMAT = "format"
 _STR_PROJECT = "project"
 
-_ZERO_TIME = datetime.fromtimestamp(0, tz=timezone.utc)
+_ZERO_TIME = datetime.fromtimestamp(0, tz=UTC)
 
 
 def _now() -> datetime:
     """Return the current UTC time. Mirrors time.Now()."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _is_zero(dt: datetime) -> bool:
@@ -95,8 +95,8 @@ def _is_zero(dt: datetime) -> bool:
 def _go_time_fmt(dt: datetime) -> str:
     """Format a datetime as RFC 3339 nano JSON (UTC, Z)."""
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    dt = dt.astimezone(timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
+    dt = dt.astimezone(UTC)
     base = dt.strftime("%Y-%m-%dT%H:%M:%S")
     micro = dt.microsecond
     if micro == 0:
@@ -110,8 +110,8 @@ def _go_time_fmt(dt: datetime) -> str:
 def _rfc3339(dt: datetime) -> str:
     """Format a datetime like time.RFC3339."""
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        dt = dt.replace(tzinfo=UTC)
+    return dt.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _parse_go_time(s: str) -> datetime:
@@ -433,7 +433,7 @@ class PolicyEngine:
         with self._mu:
             return list(self._policy.rules)
 
-    def Merge(self, other: "PolicyEngine") -> None:
+    def Merge(self, other: PolicyEngine) -> None:
         """Combine rules from another engine into this one (no dedup)."""
         other_rules = other.GetRules()
         with self._mu:
@@ -614,7 +614,7 @@ def UnmarshalPolicyJSON(data: str | bytes) -> tuple[Policy | None, Exception | N
 def LoadPolicyFile(path: str) -> tuple[Policy | None, Exception | None]:
     """Read and parse a policy from a JSON file."""
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = f.read()
     except OSError as ex:
         return None, Exception(f"read policy file {json.dumps(path)}: {ex}")
@@ -848,7 +848,7 @@ def LoadUserPolicy(config_dir: str) -> tuple[Policy | None, Exception | None]:
     """Load a policy from the user's config directory."""
     path = os.path.join(config_dir, "permissions", "policy.json")
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = f.read()
     except FileNotFoundError:
         return (
@@ -1539,7 +1539,7 @@ class PermissionCache:
     def LoadFromDisk(self, path: str) -> Exception | None:
         """Load a cache from a JSON file."""
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 data = json.load(f)
         except OSError as ex:
             return Exception(f"read cache file: {ex}")

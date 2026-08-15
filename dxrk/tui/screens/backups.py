@@ -100,7 +100,6 @@ class BackupsScreen(Screen):
             s.update(f"{prefix} {display}")
 
     def watch_cursor(self, old: int, new: int) -> None:
-        backups = STATE.backups
         if new < self.list_offset:
             self.list_offset = new
             self._render()

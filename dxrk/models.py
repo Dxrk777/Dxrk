@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import Enum, StrEnum
 
 
-class AgentID(str, Enum):
+class AgentID(StrEnum):
     CLAUDE_CODE = "claude-code"
     OPENCODE = "opencode"
     KILOCODE = "kilocode"
@@ -22,7 +22,7 @@ class AgentID(str, Enum):
     PI = "pi"
 
 
-class ComponentID(str, Enum):
+class ComponentID(StrEnum):
     DXRK_MEMORY = "DXRK_MEMORY"
     SDD = "sdd"
     SKILLS = "skills"
@@ -36,19 +36,19 @@ class ComponentID(str, Enum):
     OPENCODE_DXRK_LOGO = "opencode-dxrk-logo"
 
 
-class UninstallMode(str, Enum):
+class UninstallMode(StrEnum):
     PARTIAL = "partial"
     FULL = "full"
     FULL_REMOVE = "full-remove"
     CLEAN_INSTALL = "clean-install"
 
 
-class DxrkMemoryUninstallScope(str, Enum):
+class DxrkMemoryUninstallScope(StrEnum):
     GLOBAL = "global"
     PROJECT = "project"
 
 
-class SkillID(str, Enum):
+class SkillID(StrEnum):
     SDD_INIT = "sdd-init"
     SDD_APPLY = "sdd-apply"
     SDD_VERIFY = "sdd-verify"
@@ -401,7 +401,7 @@ class SkillID(str, Enum):
     CODEX_SUBAGENT = "codex-subagent"
     CODE_REVIEW_OPT = "code-review-optimization"
 
-class ClaudeModelAlias(str, Enum):
+class ClaudeModelAlias(StrEnum):
     OPUS = "opus"
     SONNET = "sonnet"
     HAIKU = "haiku"
@@ -459,7 +459,7 @@ def claude_model_preset_economy() -> dict[str, ClaudeModelAlias]:
     }
 
 
-class PersonaID(str, Enum):
+class PersonaID(StrEnum):
     DXRK = "dxrk"
     NEUTRAL = "neutral"
     CUSTOM = "custom"
@@ -481,40 +481,40 @@ class MCPStrategy(int, Enum):
     TOML_FILE = 3
 
 
-class PresetID(str, Enum):
+class PresetID(StrEnum):
     FULL_DXRK = "full-dxrk"
     ECOSYSTEM_ONLY = "ecosystem-only"
     MINIMAL = "minimal"
     CUSTOM = "custom"
 
 
-class SDDModeID(str, Enum):
+class SDDModeID(StrEnum):
     SINGLE = "single"
     MULTI = "multi"
 
 
-class SDDProfileStrategyID(str, Enum):
+class SDDProfileStrategyID(StrEnum):
     GENERATED_MULTI = "generated-multi"
     EXTERNAL_SINGLE_ACTIVE = "external-single-active"
 
 
-class OpenCodeCommunityPluginID(str, Enum):
+class OpenCodeCommunityPluginID(StrEnum):
     SUB_AGENT_STATUSLINE = "sub-agent-statusline"
     SDD_ENGRAM_PLUGIN = "sdd-DXRK_MEMORY-plugin"
 
 
-class SupportTier(str, Enum):
+class SupportTier(StrEnum):
     FULL = "full"
 
 
-class PlanStatus(str, Enum):
+class PlanStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
     SUCCEEDED = "succeeded"
     FAILED = "failed"
 
 
-class RunResult(str, Enum):
+class RunResult(StrEnum):
     SKIPPED = "skipped"
     SUCCESS = "success"
     FAILED = "failed"

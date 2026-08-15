@@ -2,11 +2,11 @@
 """Security package: shell parsing, JWT handling, permissions, and auto-mode risk"""
 
 from .ast import (
-    ASTNode,
     MAX_COMMAND_LENGTH,
+    SAFE_BUILTINS,
+    ASTNode,
     NodeType,
     ParseForSecurityResult,
-    SAFE_BUILTINS,
     extract_command_name,
     has_dangerous_patterns,
     is_ascii,
@@ -53,8 +53,8 @@ from .yolo import (
     NEEDS_CONFIRMATION,
     READ_TOOLS,
     SAFE_FOR_AUTO_MODE,
-    ClassificationDecision,
     CircuitBreaker,
+    ClassificationDecision,
     DangerousPattern,
     RiskLevel,
     assess_bash_risk,

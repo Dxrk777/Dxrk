@@ -8,7 +8,7 @@ import logging
 import os
 import threading
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +143,7 @@ class IQMetrics:
             )
             overall_iq = max(0.0, min(overall_iq, 100))
             return IQSnapshot(
-                timestamp=datetime.now(timezone.utc).isoformat(),
+                timestamp=datetime.now(UTC).isoformat(),
                 success_rate=_round2(success_rate),
                 error_reduction=_round2(error_reduction),
                 token_efficiency=_round2(token_efficiency),

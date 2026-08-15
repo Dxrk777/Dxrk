@@ -41,10 +41,10 @@ import queue
 import secrets
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import IntEnum
-from typing import Callable
 
 # Mirrors dxrk/strconst.StrUnknown / dxrk/strconst.StrError /
 # dxrk/strconst.StrTimeout / dxrk/strconst.StrTaskId.
@@ -56,12 +56,12 @@ _STR_TASK_ID = "task_id"
 _CTX_CANCELED = "context canceled"
 _CTX_DEADLINE = "context deadline exceeded"
 
-_ZERO_TIME = datetime.fromtimestamp(0, tz=timezone.utc)
+_ZERO_TIME = datetime.fromtimestamp(0, tz=UTC)
 
 
 def _now() -> datetime:
     """Return the current UTC time. Mirrors time.Now()."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _is_zero(dt: datetime) -> bool:
@@ -72,8 +72,8 @@ def _is_zero(dt: datetime) -> bool:
 def _go_time_fmt(dt: datetime) -> str:
     """Format a datetime as RFC 3339 nano JSON (UTC, Z)."""
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    dt = dt.astimezone(timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
+    dt = dt.astimezone(UTC)
     base = dt.strftime("%Y-%m-%dT%H:%M:%S")
     micro = dt.microsecond
     if micro == 0:
@@ -223,7 +223,7 @@ class Backend:
         with self._mu:
             return self.capacity - self.load
 
-    def CanHandle(self, task: "Task") -> bool:
+    def CanHandle(self, task: Task) -> bool:
         """Return True if the backend can accept the task. Mirrors Backend.CanHandle()."""
         with self._mu:
             if (
@@ -302,7 +302,7 @@ class Task:
     started_at: datetime = _ZERO_TIME
     completed_at: datetime = _ZERO_TIME
     assigned_backend: BackendID = ""
-    result: "TaskResult | None" = None
+    result: TaskResult | None = None
     error: str = ""
     _mu: threading.RLock = field(
         default_factory=threading.RLock, init=False, repr=False
@@ -324,7 +324,7 @@ class Task:
             self.assigned_backend = backend_id
             self.started_at = _now()
 
-    def Complete(self, result: "TaskResult | None", err: SwarmError | None) -> None:
+    def Complete(self, result: TaskResult | None, err: SwarmError | None) -> None:
         """Mark the task complete. Mirrors Task.Complete()."""
         with self._mu:
             self.completed_at = _now()
@@ -409,7 +409,7 @@ class _Context:
     __slots__ = ("_done", "_err", "_deadline", "_parent")
 
     def __init__(
-        self, parent: "_Context | None" = None, deadline: float | None = None
+        self, parent: _Context | None = None, deadline: float | None = None
     ) -> None:
         self._done = threading.Event()
         self._err: str | None = None
@@ -802,9 +802,9 @@ class _Worker:
     """A scheduler worker. Mirrors swarm.worker."""
 
     id: str = ""
-    backend: "Backend | None" = None
-    tasks: queue.Queue["Task"] = field(default_factory=lambda: queue.Queue(maxsize=10))
-    results: queue.Queue["TaskResult"] = field(default_factory=lambda: queue.Queue())
+    backend: Backend | None = None
+    tasks: queue.Queue[Task] = field(default_factory=lambda: queue.Queue(maxsize=10))
+    results: queue.Queue[TaskResult] = field(default_factory=lambda: queue.Queue())
     done: threading.Event = field(default_factory=threading.Event, repr=False)
 
 

@@ -771,7 +771,7 @@ def SplitPath(path: str) -> tuple[str, str]:
 def DirExists(dir: str) -> tuple[bool, FileopsError | None]:
     """Report whether dir exists and is a directory. Mirrors fileops.DirExists."""
     try:
-        info = os.stat(dir)
+        os.stat(dir)
     except FileNotFoundError:
         return False, None
     except OSError as e:

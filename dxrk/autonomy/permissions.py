@@ -4,8 +4,8 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from enum import IntEnum
-from typing import Callable, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ class PermissionLevel(IntEnum):
     PermDenied = 2
 
 
-RequestFn = Callable[[str, str], tuple[bool, Optional[str]]]
+RequestFn = Callable[[str, str], tuple[bool, str | None]]
 
 
 class PermissionStore:
@@ -49,12 +49,12 @@ class PermissionStore:
         self.ask_first: set[str] = set()
         self.denied: set[str] = set()
         self.granted: dict[str, bool] = {}
-        self.request_fn: Optional[RequestFn] = None
+        self.request_fn: RequestFn | None = None
 
-    def set_request_handler(self, fn: Optional[RequestFn]) -> None:
+    def set_request_handler(self, fn: RequestFn | None) -> None:
         self.request_fn = fn
 
-    def check(self, cap: str, reason: str) -> Optional[str]:
+    def check(self, cap: str, reason: str) -> str | None:
         if cap in self.denied:
             return f'capability "{cap}" permanently denied'
         if cap in self.allowed:
@@ -74,7 +74,7 @@ class PermissionStore:
         self.allowed.discard(cap)
         self.ask_first.discard(cap)
 
-    def _request_permission(self, cap: str, reason: str) -> Optional[str]:
+    def _request_permission(self, cap: str, reason: str) -> str | None:
         if self.request_fn is None:
             return f'capability "{cap}" requires approval: {reason}'
         key = f"{cap}:{reason}"

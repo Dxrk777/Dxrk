@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 
 __all__ = [
     "Check",
@@ -18,7 +18,7 @@ __all__ = [
 ]
 
 
-class CheckStatus(str, Enum):
+class CheckStatus(StrEnum):
     PASSED = "passed"
     FAILED = "failed"
     SKIPPED = "skipped"

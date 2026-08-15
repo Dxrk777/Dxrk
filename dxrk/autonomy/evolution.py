@@ -8,8 +8,8 @@ import logging
 import os
 import random
 import threading
-from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 
 from .learner import Learner
 from .metrics import IQMetrics
@@ -56,7 +56,7 @@ class EvolutionEngine:
             self._seed()
 
     def _seed(self) -> None:
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         for i, prompt in enumerate(_BASE_PROMPTS):
             self._population.append(
                 Genome(
@@ -105,7 +105,7 @@ class EvolutionEngine:
             child = Genome(
                 id=f"gen-{self.generation}-{_rand_bytes(4).hex()}",
                 generations=self.generation,
-                created=datetime.now(timezone.utc).isoformat(),
+                created=datetime.now(UTC).isoformat(),
                 parent_id=p1.id,
                 strategy=f"cross_{p1.id[:8]}_{p2.id[:8]}",
             )

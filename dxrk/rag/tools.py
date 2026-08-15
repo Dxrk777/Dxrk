@@ -4,9 +4,9 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
-from ..tools import Registry, Tool, ToolDef, build
+from ..tools import Registry, ToolDef, build
 from .rag import RAG
 
 _logger = logging.getLogger("dxrk.rag")
@@ -46,8 +46,8 @@ def RegisterTools(reg: Registry, rag: RAG) -> None:
     """Registers RAG tools with the given registry."""
 
     def codebase_query_execute(
-        _ctx: Any, input_: Optional[Dict[str, Any]]
-    ) -> Tuple[Any, Optional[str]]:
+        _ctx: Any, input_: dict[str, Any] | None
+    ) -> tuple[Any, str | None]:
         query = ""
         max_results = 0
         if input_:
@@ -86,8 +86,8 @@ def RegisterTools(reg: Registry, rag: RAG) -> None:
         return {"results": items, "total": len(items), KEY_ENABLED: True}, None
 
     def codebase_index_execute(
-        _ctx: Any, input_: Optional[Dict[str, Any]]
-    ) -> Tuple[Any, Optional[str]]:
+        _ctx: Any, input_: dict[str, Any] | None
+    ) -> tuple[Any, str | None]:
         if not rag.IsEnabled():
             return {
                 KEY_ENABLED: False,

@@ -5,17 +5,16 @@ from __future__ import annotations
 
 import logging
 import os
-from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import yaml
 
-from .config import Config, Default, ProviderConfig, ProviderByName  # noqa: F401
+from .config import Config, Default, ProviderByName, ProviderConfig  # noqa: F401
 
 _logger = logging.getLogger("dxrk.config")
 
 
-def _load_config_dict(data: Dict[str, Any]) -> Config:
+def _load_config_dict(data: dict[str, Any]) -> Config:
     """Builds a Config from a parsed dict, keeping defaults for missing sections."""
     cfg = Default()
 
@@ -127,9 +126,9 @@ def _load_config_dict(data: Dict[str, Any]) -> Config:
     return cfg
 
 
-def _config_to_dict(cfg: Config) -> Dict[str, Any]:
+def _config_to_dict(cfg: Config) -> dict[str, Any]:
     """Serializes a Config to a dict for YAML output."""
-    data: Dict[str, Any] = {}
+    data: dict[str, Any] = {}
     data["project"] = {
         "name": cfg.project.name,
         "root": cfg.project.root,

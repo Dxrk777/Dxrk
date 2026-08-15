@@ -14,7 +14,7 @@ import os
 import secrets
 import threading
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import IntEnum
 from typing import Any, Protocol, cast
 
@@ -81,7 +81,7 @@ class SessionStatus(IntEnum):
 _STATUS_NAMES = {0: "active", 1: "paused", 2: "completed", 3: "archived", 4: "expired"}
 _STATUS_BY_NAME = {name: value for value, name in _STATUS_NAMES.items()}
 
-_EPOCH_UTC = datetime.min.replace(tzinfo=timezone.utc)
+_EPOCH_UTC = datetime.min.replace(tzinfo=UTC)
 
 
 class MessageRole(str):
@@ -227,12 +227,12 @@ def estimate_tokens(text: str) -> int:
 
 
 def now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _fmt_ts(dt: datetime) -> str:
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     base = dt.strftime("%Y-%m-%dT%H:%M:%S")
     frac = ""
     if dt.microsecond:
@@ -247,7 +247,7 @@ def _fmt_ts(dt: datetime) -> str:
 
 def _fmt_rfc3339(dt: datetime) -> str:
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     base = dt.strftime("%Y-%m-%dT%H:%M:%S")
     off = dt.strftime("%z")
     if off in ("", "+0000"):
@@ -987,7 +987,7 @@ def export_xml(s: Session) -> str:
         if msg.content:
             lines.append(f"      <content>{xml_escape(msg.content)}</content>")
         for tc in msg.tool_calls:
-            lines.append(f"      <tool_call>")
+            lines.append("      <tool_call>")
             lines.append(f"        <name>{xml_escape(tc.name)}</name>")
             lines.append(f"        <input>{xml_escape(tc.input)}</input>")
             if tc.output:

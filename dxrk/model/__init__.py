@@ -674,7 +674,7 @@ _CLAUDE_MODEL_KEYS = (
 )
 
 
-def claude_model_preset_balanced() -> Dict[str, ClaudeModelAlias]:
+def claude_model_preset_balanced() -> dict[str, ClaudeModelAlias]:
     return {
         SkillSDDExplore: ClaudeModelSonnet,
         SkillSDDPropose: ClaudeModelOpus,
@@ -688,7 +688,7 @@ def claude_model_preset_balanced() -> Dict[str, ClaudeModelAlias]:
     }
 
 
-def claude_model_preset_performance() -> Dict[str, ClaudeModelAlias]:
+def claude_model_preset_performance() -> dict[str, ClaudeModelAlias]:
     return {
         SkillSDDExplore: ClaudeModelSonnet,
         SkillSDDPropose: ClaudeModelOpus,
@@ -702,7 +702,7 @@ def claude_model_preset_performance() -> Dict[str, ClaudeModelAlias]:
     }
 
 
-def claude_model_preset_economy() -> Dict[str, ClaudeModelAlias]:
+def claude_model_preset_economy() -> dict[str, ClaudeModelAlias]:
     return {
         SkillSDDExplore: ClaudeModelSonnet,
         SkillSDDPropose: ClaudeModelSonnet,
@@ -747,26 +747,26 @@ class Profile:
 
     Name: str
     OrchestratorModel: ModelAssignment
-    PhaseAssignments: Dict[str, ModelAssignment] = field(default_factory=dict)
+    PhaseAssignments: dict[str, ModelAssignment] = field(default_factory=dict)
 
 
 @dataclass
 class Selection:
     """The full set of agents, components, skills and model assignments for an install."""
 
-    Agents: List[AgentID]
-    Components: List[ComponentID]
-    Skills: List[SkillID]
+    Agents: list[AgentID]
+    Components: list[ComponentID]
+    Skills: list[SkillID]
     Persona: PersonaID
     Preset: PresetID
     SDDMode: SDDModeID
     SDDProfileStrategy: SDDProfileStrategyID
     StrictTDD: bool = False
-    ModelAssignments: Dict[str, ModelAssignment] = field(default_factory=dict)
-    ClaudeModelAssignments: Dict[str, ClaudeModelAlias] = field(default_factory=dict)
-    KiroModelAssignments: Dict[str, ClaudeModelAlias] = field(default_factory=dict)
-    Profiles: List[Profile] = field(default_factory=list)
-    OpenCodePlugins: List[OpenCodeCommunityPluginID] = field(default_factory=list)
+    ModelAssignments: dict[str, ModelAssignment] = field(default_factory=dict)
+    ClaudeModelAssignments: dict[str, ClaudeModelAlias] = field(default_factory=dict)
+    KiroModelAssignments: dict[str, ClaudeModelAlias] = field(default_factory=dict)
+    Profiles: list[Profile] = field(default_factory=list)
+    OpenCodePlugins: list[OpenCodeCommunityPluginID] = field(default_factory=list)
 
     def has_agent(self, agent: AgentID) -> bool:
         for candidate in self.Agents:
@@ -785,14 +785,14 @@ class Selection:
 class SyncOverrides:
     """Runtime overrides applied during a TUI sync; None/empty mean "keep defaults"."""
 
-    TargetAgents: List[AgentID] = field(default_factory=list)
-    ModelAssignments: Optional[Dict[str, ModelAssignment]] = None
-    ClaudeModelAssignments: Optional[Dict[str, ClaudeModelAlias]] = None
-    KiroModelAssignments: Optional[Dict[str, ClaudeModelAlias]] = None
+    TargetAgents: list[AgentID] = field(default_factory=list)
+    ModelAssignments: dict[str, ModelAssignment] | None = None
+    ClaudeModelAssignments: dict[str, ClaudeModelAlias] | None = None
+    KiroModelAssignments: dict[str, ClaudeModelAlias] | None = None
     SDDMode: SDDModeID = ""
     SDDProfileStrategy: SDDProfileStrategyID = ""
-    StrictTDD: Optional[bool] = None
-    Profiles: List[Profile] = field(default_factory=list)
+    StrictTDD: bool | None = None
+    Profiles: list[Profile] = field(default_factory=list)
 
 
 PlanStatusPending: str = "pending"
@@ -823,4 +823,4 @@ class Plan:
     ID: str
     Selection: Selection
     Status: str
-    Steps: List[PlanStep] = field(default_factory=list)
+    Steps: list[PlanStep] = field(default_factory=list)

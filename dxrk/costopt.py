@@ -10,7 +10,6 @@ import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import List, Optional
 
 from .router import DEFAULT_COSTS, Capability, ProviderEntry, Router, SemanticCache
 from .strconst import StrCritical
@@ -26,7 +25,7 @@ class BudgetConfig:
     monthly_limit_usd: float = 0.0
     alert_threshold: float = 0.0
     auto_switch: bool = False
-    preferred_models: List[str] = field(default_factory=list)
+    preferred_models: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -56,7 +55,7 @@ class BudgetStatus:
     monthly_spent: float
     monthly_limit: float
     monthly_percent: float
-    alerts: List[Alert]
+    alerts: list[Alert]
     cache_hit_rate: float
 
 
@@ -66,7 +65,7 @@ class CostOptimizer:
     def __init__(
         self,
         router: Router,
-        cache: Optional[SemanticCache],
+        cache: SemanticCache | None,
         budget: BudgetConfig,
         path: str,
     ) -> None:
@@ -79,7 +78,7 @@ class CostOptimizer:
         self.last_reset: datetime = datetime.now().replace(
             hour=0, minute=0, second=0, microsecond=0
         )
-        self.alerts: List[Alert] = []
+        self.alerts: list[Alert] = []
         self._mu = threading.RLock()
         self._load()
 
@@ -129,9 +128,9 @@ class CostOptimizer:
         if len(self.alerts) > MAX_ALERTS:
             self.alerts = self.alerts[-MAX_ALERTS:]
 
-    def select_best_provider(self, required_caps: List[Capability]) -> ProviderEntry:
+    def select_best_provider(self, required_caps: list[Capability]) -> ProviderEntry:
         with self._mu:
-            best: Optional[ProviderEntry] = None
+            best: ProviderEntry | None = None
             best_score = 0.0
             for p in self.router.providers:
                 if not self._has_capabilities(p, required_caps):
@@ -144,7 +143,7 @@ class CostOptimizer:
                 raise ValueError("no provider matches capabilities")
             return best
 
-    def _has_capabilities(self, p: ProviderEntry, req: List[Capability]) -> bool:
+    def _has_capabilities(self, p: ProviderEntry, req: list[Capability]) -> bool:
         if len(req) == 0:
             return True
         has = set(p.capabilities)
@@ -192,9 +191,9 @@ class CostOptimizer:
             return 0.0
         return float(st.hits) / float(st.size)
 
-    def get_provider_scores(self) -> List[ProviderScore]:
+    def get_provider_scores(self) -> list[ProviderScore]:
         with self._mu:
-            scores: List[ProviderScore] = []
+            scores: list[ProviderScore] = []
             for p in self.router.providers:
                 cfg = DEFAULT_COSTS.get(p.model)
                 if cfg is None:
@@ -233,7 +232,7 @@ class CostOptimizer:
         if self.path == "":
             return
         try:
-            with open(self.path, "r", encoding="utf-8") as f:
+            with open(self.path, encoding="utf-8") as f:
                 s = json.load(f)
         except (OSError, ValueError):
             return

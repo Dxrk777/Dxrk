@@ -11,8 +11,8 @@ from .chunker import (
     LanguageFromExt,
 )
 from .embedder import Embedder, NewOpenAIEmbedder, OpenAIEmbedder
-from .indexer import IndexStats, Indexer
-from .rag import Config, New, RAG
+from .indexer import Indexer, IndexStats
+from .rag import RAG, Config, New
 from .store import SearchResult, VectorRecord, VectorStore, cosine_similarity
 from .tools import RegisterTools
 

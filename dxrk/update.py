@@ -16,8 +16,8 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
-from typing import Optional, TextIO
+from enum import StrEnum
+from typing import TextIO
 
 from dxrk.system import PlatformProfile
 
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 # Types
 
 
-class UpdateStatus(str, Enum):
+class UpdateStatus(StrEnum):
     UP_TO_DATE = "up-to-date"
     UPDATE_AVAILABLE = "update-available"
     NOT_INSTALLED = "not-installed"
@@ -35,7 +35,7 @@ class UpdateStatus(str, Enum):
     DEV_BUILD = "dev-build"
 
 
-class InstallMethod(str, Enum):
+class InstallMethod(StrEnum):
     BREW = "brew"
     GO_INSTALL = "go-install"
     BINARY = "binary"
@@ -72,7 +72,7 @@ class GitHubRelease:
     html_url: str = ""
 
 
-class ToolUpgradeStatus(str, Enum):
+class ToolUpgradeStatus(StrEnum):
     SUCCEEDED = "succeeded"
     FAILED = "failed"
     SKIPPED = "skipped"
@@ -753,8 +753,8 @@ def execute(
 
 @dataclass
 class ExecuteOptions:
-    progress: Optional[TextIO] = None
-    backup_diagnostics: Optional[TextIO] = None
+    progress: TextIO | None = None
+    backup_diagnostics: TextIO | None = None
 
 
 def execute_with_options(

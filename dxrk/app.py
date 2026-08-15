@@ -94,7 +94,6 @@ class SelfUpdateChecker:
 
 
 def run_cli(args: list[str]) -> int:
-    early_commands = {"version", "--version", "-v", "help", "--help", "-h", "uninstall"}
 
     if args:
         cmd = args[0]

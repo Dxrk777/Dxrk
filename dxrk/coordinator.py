@@ -6,8 +6,8 @@ from __future__ import annotations
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
-from enum import Enum
+from datetime import UTC, datetime, timedelta
+from enum import StrEnum
 
 
 class CoordinatorError(Exception):
@@ -27,13 +27,13 @@ class ScratchpadKeyError(CoordinatorError, KeyError):
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 # --- Modes and statuses (coordinator.go) ---
 
 
-class CoordinatorMode(str, Enum):
+class CoordinatorMode(StrEnum):
     """Operating mode for multi-agent orchestration."""
 
     ModeSingleAgent = "single_agent"
@@ -48,7 +48,7 @@ class CoordinatorMode(str, Enum):
         return self.value
 
 
-class AgentStatus(str, Enum):
+class AgentStatus(StrEnum):
     """Current state of a worker agent."""
 
     AgentIdle = "idle"

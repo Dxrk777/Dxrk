@@ -6,11 +6,11 @@ from __future__ import annotations
 import copy
 import json
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import IntEnum
 from pathlib import Path
-from typing import Callable
 
 from dxrk.strconst import StrEnabled, StrError, StrUnknown
 from dxrk.tools import Registry

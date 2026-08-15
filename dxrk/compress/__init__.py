@@ -1,10 +1,10 @@
-from dataclasses import dataclass, field
-from datetime import datetime
-from enum import IntEnum
 import json
 import os
 import threading
-from typing import Callable
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import IntEnum
 
 
 @dataclass
