@@ -1,0 +1,59 @@
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+*.out
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.tar
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.coverage
+coverage.xml
+dxrk.egg-info/
+.venv/
+venv/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+
+# Imported skills collection (2,208 skills, 125MB; managed out-of-tree)
+agent/skills/
+
+# Agent tooling metadata (generated per-user, not product code)
+.atl/
+.agents/
+.claude/
+.opencode/
+.windsurf/
+.engram/
+
+# Generated / large files
+sbom.spdx.json
+THIRD_PARTY_LICENSES
+mempalace.yaml
+entities.json
+
+# Local builds
+/bin/

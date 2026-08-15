@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: GitHub Discussions
+    url: https://github.com/Dxrk777/Dxrk/discussions
+    about: Ask questions, share ideas and get help from the community
+  - name: Project homepage
+    url: https://github.com/Dxrk777/Dxrk
+    about: Dxrk Ecosystem Configurator on GitHub
