@@ -21,7 +21,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
       - name: Build site
         run: uvx --from 'mkdocs-material[imaging]' mkdocs build
       - uses: actions/configure-pages@v5
