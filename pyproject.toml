@@ -63,7 +63,7 @@ target-version = "py313"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
 ignore = ["E501", "E741", "E402", "E731"]
-per-file-ignores = { "**/__init__.py" = ["F401", "UP035"] }
+per-file-ignores = { "**/__init__.py" = ["F401", "UP035"], "tests/test_model.py" = ["E721"] }
 
 [tool.setuptools.packages.find]
 include = ["dxrk*"]
