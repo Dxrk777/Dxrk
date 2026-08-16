@@ -24,9 +24,23 @@ nav:
   - Componentes: components.md
   - Arquitectura: architecture.md
   - Plataformas: platforms.md
+  - Roadmap: roadmap.md
 
 markdown_extensions:
   - admonition
   - tables
   - fenced_code
   - codehilite
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+
+plugins:
+  - search
+  - social

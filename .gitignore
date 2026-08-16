@@ -57,3 +57,7 @@ entities.json
 
 # Local builds
 /bin/
+
+# Build artifacts
+site/
+.cache/
