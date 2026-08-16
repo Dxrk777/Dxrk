@@ -204,6 +204,7 @@ def test_glob_search_missing_pattern(registry: Registry) -> None:
 
 
 import sys
+
 import pytest
 
 pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX-specific paths")
