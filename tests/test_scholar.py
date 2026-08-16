@@ -3,20 +3,12 @@
 
 from __future__ import annotations
 
-import xml.etree.ElementTree as ET
-
 import httpx
-import pytest
 
 from dxrk.scholar import (
     ArxivProvider,
     CrossrefProvider,
     New,
-    NewArxivProvider,
-    NewCrossrefProvider,
-    NewOpenAlexProvider,
-    NewPubMedProvider,
-    NewSemanticScholarProvider,
     OpenAlexProvider,
     Paper,
     PubMedProvider,

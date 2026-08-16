@@ -4,10 +4,10 @@ from __future__ import annotations
 import json
 import os
 
+import pytest
+
 from dxrk.components import context7
 from dxrk.models import AgentID, MCPStrategy
-
-import pytest
 
 
 class FakeAdapter:

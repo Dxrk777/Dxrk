@@ -1,41 +1,36 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
-import os
-import sys
+import pytest
 
 from dxrk.app import (
+    VERSION,
+    SelfUpdateChecker,
     print_help,
     resolve_version,
     run_cli,
-    SelfUpdateChecker,
-    VERSION,
-)
-from dxrk.verify import (
-    CheckStatus,
-    Check,
-    CheckResult,
-    run_checks,
-    Report,
-    build_report,
-    render_report,
-    VerificationScenario,
-    PostInstallVerifier,
 )
 from dxrk.installcmd import (
     InstallError,
     ProfileResolver,
+    git_bash_path,
     new_resolver,
-    Resolver,
     validate_agent_install_preflight,
     validate_go_for_module_install,
-    git_bash_path,
 )
 from dxrk.models import AgentID, ComponentID
 from dxrk.system import PlatformProfile
-
-import pytest
-
+from dxrk.verify import (
+    Check,
+    CheckResult,
+    CheckStatus,
+    PostInstallVerifier,
+    Report,
+    VerificationScenario,
+    build_report,
+    render_report,
+    run_checks,
+)
 
 # ─── app.py ──────────────────────────────────────────────────────────────────
 
@@ -160,7 +155,7 @@ class TestRunCli:
             system = PlatformProfile(os="darwin", supported=True)
 
         monkeypatch.setattr("dxrk.app.ensure_supported_os", lambda _: None)
-        rc = run_cli(["install"])
+        run_cli(["install"])
         out = capsys.readouterr().err
         assert "detect system" in out
 
@@ -570,3 +565,7 @@ class TestGitBashPath:
         )
         path = git_bash_path()
         assert path != ""
+
+import sys
+
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX-specific paths")

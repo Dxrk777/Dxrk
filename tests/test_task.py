@@ -8,6 +8,7 @@ from collections.abc import Callable
 
 import pytest
 
+from dxrk.log import new_slog
 from dxrk.task import (
     Payload,
     StatusCancelled,
@@ -17,7 +18,6 @@ from dxrk.task import (
     StatusRunning,
     Task,
     TaskStatus,
-    TaskType,
     TypeDream,
     TypeGeneric,
     TypeLocalAgent,
@@ -31,7 +31,6 @@ from dxrk.task import (
     with_priority,
     with_worker_count,
 )
-from dxrk.log import new_slog
 
 
 def _wait_until(predicate: Callable[[], bool], timeout: float = 5.0) -> bool:

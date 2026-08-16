@@ -371,7 +371,7 @@ class TestEventBus_SubscribeAll:
             while len(seen) < 2:
                 if time.monotonic() >= deadline:
                     raise AssertionError(
-                        "Timeout waiting for events, seen: %s" % sorted(seen)
+                        f"Timeout waiting for events, seen: {sorted(seen)}"
                     )
                 try:
                     e = received.get(timeout=0.2)

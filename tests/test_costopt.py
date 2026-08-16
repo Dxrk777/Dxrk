@@ -2,15 +2,14 @@
 
 """Tests for the cost optimizer and budget tracking (mirrors internal/costopt)."""
 
-from typing import List, Optional
 
 import pytest
 
 from dxrk.costopt import BudgetConfig, CostOptimizer
 from dxrk.query import Response, Usage
 from dxrk.router import (
-    CapVision,
     Capability,
+    CapVision,
     ProviderEntry,
     Router,
     SemanticCache,
@@ -34,7 +33,7 @@ class MockProvider:
 def entry(
     name: str,
     model: str = "gpt-4o-mini",
-    capabilities: Optional[List[Capability]] = None,
+    capabilities: list[Capability] | None = None,
 ) -> ProviderEntry:
     return ProviderEntry(
         name=name,

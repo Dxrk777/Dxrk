@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import io
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from dxrk.utils import permissions as perms
 
@@ -1087,7 +1087,7 @@ class TestDangerousCommandPrefixes:
 
 def _entry(**kw) -> perms.AuditEntry:
     return perms.AuditEntry(
-        timestamp=kw.get("timestamp", datetime(2026, 1, 1, tzinfo=timezone.utc)),
+        timestamp=kw.get("timestamp", datetime(2026, 1, 1, tzinfo=UTC)),
         tool=kw.get("tool", "Read"),
         resource=kw.get("resource", "a.txt"),
         action=kw.get("action", perms.Action.Allow),
@@ -1102,7 +1102,7 @@ def _entry(**kw) -> perms.AuditEntry:
 class TestAuditLog:
     def test_log_and_query_order(self):
         log = perms.NewAuditLog(16)
-        t0 = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        t0 = datetime(2026, 1, 1, tzinfo=UTC)
         log.Log(_entry(timestamp=t0, tool="Read"))
         log.Log(_entry(timestamp=t0 + timedelta(seconds=1), tool="Bash"))
         entries = log.Query(perms.AuditFilter())
@@ -1144,7 +1144,7 @@ class TestAuditLog:
 
     def test_filter_by_time_range(self):
         log = perms.NewAuditLog(16)
-        t0 = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        t0 = datetime(2026, 1, 1, tzinfo=UTC)
         log.Log(_entry(timestamp=t0, tool="t1"))
         log.Log(_entry(timestamp=t0 + timedelta(minutes=5), tool="t2"))
         log.Log(_entry(timestamp=t0 + timedelta(minutes=10), tool="t3"))
@@ -1170,7 +1170,7 @@ class TestAuditLog:
         log = perms.NewAuditLog(16)
         log.Log(
             _entry(
-                timestamp=datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+                timestamp=datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC),
                 tool="Read",
                 rule_id="r1",
             )
@@ -1199,7 +1199,7 @@ class TestAuditLog:
         log = perms.NewAuditLog(16)
         log.Log(
             _entry(
-                timestamp=datetime(2026, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+                timestamp=datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC),
                 tool="Read",
                 action=perms.Action.Allow,
                 rule_id="r1",
@@ -1273,8 +1273,8 @@ class TestStreamingAuditLog:
 
 class TestCacheEntry:
     def test_expiry(self):
-        past = datetime.now(timezone.utc) - timedelta(seconds=5)
-        future = datetime.now(timezone.utc) + timedelta(seconds=5)
+        past = datetime.now(UTC) - timedelta(seconds=5)
+        future = datetime.now(UTC) + timedelta(seconds=5)
         assert perms.CacheEntry(expiry=past).IsExpired() is True
         assert perms.CacheEntry(expiry=future).IsExpired() is False
         assert perms.CacheEntry(expiry=perms._ZERO_TIME).IsExpired() is False
@@ -1294,7 +1294,7 @@ class TestPermissionCache:
         cache.Set("k", perms.CacheEntry(key="k"))
         entry, _ = cache.Get("k")
         assert entry is not None
-        assert entry.expiry > datetime.now(timezone.utc)
+        assert entry.expiry > datetime.now(UTC)
 
     def test_session_only_no_expiry(self):
         cache = perms.NewPermissionCache(timedelta(0))
@@ -1314,7 +1314,7 @@ class TestPermissionCache:
         cache.Set(
             "k",
             perms.CacheEntry(
-                key="k", expiry=datetime.now(timezone.utc) - timedelta(seconds=5)
+                key="k", expiry=datetime.now(UTC) - timedelta(seconds=5)
             ),
         )
         entry, ok = cache.Get("k")
@@ -1353,7 +1353,7 @@ class TestPermissionCache:
         cache.SetWithTTL("k", perms.CacheEntry(key="k"), timedelta(minutes=5))
         entry, _ = cache.Get("k")
         assert entry is not None
-        assert entry.expiry > datetime.now(timezone.utc)
+        assert entry.expiry > datetime.now(UTC)
 
     def test_invalidate(self):
         cache = perms.NewPermissionCache(timedelta(minutes=5))
@@ -1370,7 +1370,7 @@ class TestPermissionCache:
 
     def test_purge_returns_count(self):
         cache = perms.NewPermissionCache(timedelta(0))
-        past = datetime.now(timezone.utc) - timedelta(seconds=5)
+        past = datetime.now(UTC) - timedelta(seconds=5)
         cache.Set("expired1", perms.CacheEntry(key="expired1", expiry=past))
         cache.Set("expired2", perms.CacheEntry(key="expired2", expiry=past))
         cache.Set("live", perms.CacheEntry(key="live"))
@@ -1411,7 +1411,7 @@ class TestPermissionCache:
         cache.Set(
             "expired",
             perms.CacheEntry(
-                key="expired", expiry=datetime.now(timezone.utc) - timedelta(seconds=5)
+                key="expired", expiry=datetime.now(UTC) - timedelta(seconds=5)
             ),
         )
         assert cache.PersistToDisk(str(path)) is None

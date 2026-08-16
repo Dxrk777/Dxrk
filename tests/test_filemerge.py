@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import json
 
-from dxrk.components import filemerge
-
 import pytest
+
+from dxrk.components import filemerge
 
 
 class TestWriteFileAtomic:

@@ -6,8 +6,6 @@ import os
 from dxrk.components import skills
 from dxrk.models import PresetID, SkillID
 
-import pytest
-
 
 class FakeAdapter:
     def __init__(self, supports_skills=True, skills_dir=None):
@@ -89,3 +87,9 @@ class TestSkillPathForAgent:
     def test_returns_empty_when_no_skills_dir(self):
         adapter = FakeAdapter(skills_dir=None)
         assert skills.skill_path_for_agent("/home/user", adapter, SkillID.GO_TESTING) == ""
+
+import sys
+
+import pytest
+
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX-specific paths")

@@ -3,13 +3,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
 from dxrk.utils import messages
 
-_ZERO = datetime.fromtimestamp(0, tz=timezone.utc)
+_ZERO = datetime.fromtimestamp(0, tz=UTC)
 
 
 def _msg(role, text="", token_count=0, ts=None):

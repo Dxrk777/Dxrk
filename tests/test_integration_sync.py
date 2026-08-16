@@ -1,14 +1,11 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
-from pathlib import Path
-
-from dxrk.cli.install import run_sync, build_sync_selection, SyncRuntime, SyncResult
-from dxrk.cli.install import parse_sync_flags
-from dxrk.models import AgentID, ComponentID, Selection, SDDModeID, SDDProfileStrategyID
-from dxrk.pipeline import StagePlan
-
 import pytest
+
+from dxrk.cli.install import SyncRuntime, build_sync_selection, parse_sync_flags, run_sync
+from dxrk.models import AgentID, ComponentID, SDDModeID, SDDProfileStrategyID, Selection
+from dxrk.pipeline import StagePlan
 
 
 def test_dry_run_no_agents(tmp_path, monkeypatch):

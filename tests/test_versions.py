@@ -2,13 +2,13 @@ import pytest
 
 from dxrk.versions import (
     ClaudeCode,
+    Codex,
+    Context7MCP,
+    DxrkEngram,
+    GeminiCLI,
     Kilocode,
     OpenCode,
     QwenCode,
-    Codex,
-    GeminiCLI,
-    Context7MCP,
-    DxrkEngram,
 )
 
 EXPECTED = {

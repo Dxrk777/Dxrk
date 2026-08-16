@@ -126,3 +126,9 @@ class TestShouldInstall:
 
     def test_skips_when_disabled(self):
         assert gga.should_install(False) is False
+
+import sys
+
+import pytest
+
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX-specific paths")

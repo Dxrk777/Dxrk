@@ -8,14 +8,11 @@ from dxrk.models import (
     ComponentID,
     PersonaID,
     PresetID,
-    SDDModeID,
     Selection,
     SkillID,
 )
 from dxrk.planner import (
-    Graph,
     DependencyCycleError,
-    DependencyResolver,
     ReviewPayload,
     apply_soft_ordering,
     build_review_payload,
@@ -181,7 +178,6 @@ def test_resolve_unknown_component_raises():
 
 class TestBuildReviewPayload:
     def test_basic_review(self):
-        from dxrk.planner import DependencyResolver
 
         resolver = new_resolver()
         selection = Selection(

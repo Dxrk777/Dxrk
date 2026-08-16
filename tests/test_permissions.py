@@ -7,8 +7,6 @@ import os
 from dxrk.components import permissions
 from dxrk.models import AgentID
 
-import pytest
-
 
 def make_fake_adapter(agent_id: AgentID, settings_path: str | None = ".config/app/settings.json"):
     class FakeAdapter:

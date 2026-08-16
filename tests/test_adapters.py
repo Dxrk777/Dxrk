@@ -5,12 +5,12 @@ import os
 
 import pytest
 
-from dxrk.agents.interface import DetectResult
 from dxrk.agents.antigravity.adapter import AntigravityAdapter
 from dxrk.agents.claude.adapter import ClaudeAdapter
 from dxrk.agents.codex.adapter import CodexAdapter
 from dxrk.agents.cursor.adapter import CursorAdapter
 from dxrk.agents.gemini.adapter import GeminiCLIAdapter
+from dxrk.agents.interface import DetectResult
 from dxrk.agents.kilocode.adapter import KiloCodeAdapter
 from dxrk.agents.kimi.adapter import KimiAdapter
 from dxrk.agents.kiro.adapter import KiroAdapter

@@ -724,3 +724,6 @@ class TestFileCache:
 def _read(path: str) -> str:
     with open(path) as fh:
         return fh.read()
+
+
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX-specific paths")

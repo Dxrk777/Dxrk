@@ -6,7 +6,6 @@ import pytest
 from dxrk.tui.app import DxrkApp
 from dxrk.tui.shared import STATE
 
-
 # ── Helpers ─────────────────────────────────────────────────────────────
 
 
@@ -33,11 +32,11 @@ class TestSCREENSCompleteness:
     def test_all_screen_names_are_registered(self):
         """Every screen referenced in SCREEN_FLOW that has a class must be in SCREENS."""
         from dxrk.tui.app import DxrkApp
-        from dxrk.tui.shared import SCREEN_FLOW, PREV, NEXT
+        from dxrk.tui.shared import SCREEN_FLOW
 
         app = DxrkApp()
         registered = set(app.SCREENS.keys())
-        all_flow_names = set(SCREEN_FLOW.keys())
+        set(SCREEN_FLOW.keys())
         flow_names = set()
         for name, flow in SCREEN_FLOW.items():
             flow_names.add(name)
@@ -90,7 +89,7 @@ class TestSCREENSCompleteness:
         assert NEXT["complete"] is None
 
     def test_go_next_and_go_back(self):
-        from dxrk.tui.shared import go_next, go_back
+        from dxrk.tui.shared import go_back, go_next
 
         assert go_next("welcome") == "detection"
         assert go_back("agents") == "detection"
@@ -144,6 +143,7 @@ class TestAppLifecycle:
     @pytest.mark.asyncio
     async def test_welcome_enter_install_pushes_detection(self):
         from unittest.mock import patch
+
         from dxrk.tui.app import DetectionScreen as InlineDetectionScreen
 
         InlineDetectionScreen.call_from_thread = lambda *a, **kw: None
@@ -186,6 +186,7 @@ class TestDetectionScreen:
     @pytest.mark.asyncio
     async def test_compose_creates_expected_widgets(self):
         from unittest.mock import MagicMock, patch
+
         from dxrk.tui.app import DetectionScreen as InlineDetectionScreen
 
         InlineDetectionScreen.call_from_thread = lambda *a, **kw: None
@@ -210,6 +211,7 @@ class TestDetectionScreen:
     @pytest.mark.asyncio
     async def test_escape_goes_back_to_welcome(self):
         from unittest.mock import MagicMock, patch
+
         from dxrk.tui.app import DetectionScreen as InlineDetectionScreen
 
         InlineDetectionScreen.call_from_thread = lambda *a, **kw: None

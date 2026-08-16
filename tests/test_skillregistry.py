@@ -8,7 +8,6 @@ from dxrk.skillregistry import (
     CacheRelPath,
     RegistryRelPath,
     ensure_atl_ignored,
-    fingerprint,
     project_skill_dirs,
     regenerate,
     user_skill_dirs,
@@ -448,3 +447,9 @@ name: go-testing
     assert "go-testing" in registry
     assert "### sdd-apply" not in registry
     assert "### skill-registry" not in registry
+
+import sys
+
+import pytest
+
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX-specific paths")

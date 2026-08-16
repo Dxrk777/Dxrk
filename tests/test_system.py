@@ -7,8 +7,8 @@ from dxrk.system import (
     LINUX_DISTRO_ARCH,
     LINUX_DISTRO_DEBIAN,
     LINUX_DISTRO_FEDORA,
-    LINUX_DISTRO_UNKNOWN,
     LINUX_DISTRO_UBUNTU,
+    LINUX_DISTRO_UNKNOWN,
     ConfigState,
     Dependency,
     DependencyReport,
@@ -848,3 +848,9 @@ class TestDetectResultType:
         )
         assert isinstance(result, DetectionResult)
         assert result.dependencies is None
+
+import sys
+
+import pytest
+
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX-specific paths")

@@ -3,16 +3,13 @@ from __future__ import annotations
 
 import hashlib
 import io
-import json
 import os
 import tarfile
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import UTC, datetime
 
 import pytest
 
 from dxrk import backup
-
 
 # ─── helpers ────────────────────────────────────────────────────────────
 
@@ -81,7 +78,7 @@ class TestArchiveRoundtrip:
 
 class TestManifestRoundtrip:
     def test_write_and_read(self, tmp_path):
-        now = datetime(2026, 5, 23, 12, 0, 0, tzinfo=timezone.utc)
+        now = datetime(2026, 5, 23, 12, 0, 0, tzinfo=UTC)
         m = backup.Manifest(
             id="test-123",
             created_at=now,
@@ -177,7 +174,7 @@ class TestSnapshotter:
 class TestListBackups:
     def test_returns_display_labels(self, tmp_path, monkeypatch):
         monkeypatch.setattr(backup, "BackupRootFn", lambda: str(tmp_path))
-        now = datetime(2026, 5, 23, 12, 0, 0, tzinfo=timezone.utc)
+        now = datetime(2026, 5, 23, 12, 0, 0, tzinfo=UTC)
         m = backup.Manifest(
             id="b1",
             created_at=now,
@@ -278,7 +275,7 @@ class TestPrune:
                 backup.Manifest(
                     id=f"b{i}",
                     root_dir=d,
-                    created_at=datetime(2026, 5, 20 + i, tzinfo=timezone.utc),
+                    created_at=datetime(2026, 5, 20 + i, tzinfo=UTC),
                 ),
             )
         deleted = backup.prune(str(tmp_path), 2)
@@ -295,7 +292,7 @@ class TestPrune:
             backup.Manifest(
                 id="pinned",
                 root_dir=pinned_dir,
-                created_at=datetime(2026, 5, 20, tzinfo=timezone.utc),
+                created_at=datetime(2026, 5, 20, tzinfo=UTC),
                 pinned=True,
             ),
         )
@@ -386,3 +383,7 @@ class TestBackupSource:
         assert backup.BackupSource.SYNC.label() == "sync"
         assert backup.BackupSource.UPGRADE.label() == "upgrade"
         assert backup.BackupSource.UNINSTALL.label() == "uninstall"
+
+import sys
+
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX-specific paths")

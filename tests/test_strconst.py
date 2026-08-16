@@ -1,4 +1,3 @@
-import pytest
 
 import dxrk.strconst as sc
 

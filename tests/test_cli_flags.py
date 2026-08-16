@@ -1,10 +1,8 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
-import json
-import os
-
 import pytest
+
 from dxrk.models import (
     AgentID,
     ComponentID,
@@ -12,7 +10,6 @@ from dxrk.models import (
     PresetID,
     SDDModeID,
     SkillID,
-    MCPStrategy,
 )
 
 
@@ -459,7 +456,7 @@ class TestParseModelSpec:
 
 class TestVerifyHelpers:
     def test_run_checks_all_pass(self):
-        from dxrk.cli.install import _run_checks, _VerifyCheck
+        from dxrk.cli.install import _run_checks
 
         results = _run_checks(
             [
@@ -471,7 +468,7 @@ class TestVerifyHelpers:
         assert all(not r.error for r in results)
 
     def test_run_checks_with_failure(self):
-        from dxrk.cli.install import _run_checks, _VerifyCheck
+        from dxrk.cli.install import _run_checks
 
         results = _run_checks(
             [
@@ -484,21 +481,21 @@ class TestVerifyHelpers:
         assert results[1].error == "something failed"
 
     def test_build_report_ready_when_all_pass(self):
-        from dxrk.cli.install import _run_checks, _build_report, _VerifyCheck
+        from dxrk.cli.install import _build_report, _run_checks
 
         checks = _run_checks([lambda: None])
         report = _build_report(checks)
         assert report.ready is True
 
     def test_build_report_not_ready_on_hard_fail(self):
-        from dxrk.cli.install import _run_checks, _build_report
+        from dxrk.cli.install import _build_report, _run_checks
 
         checks = _run_checks([lambda: "hard fail"])
         report = _build_report(checks)
         assert report.ready is False
 
     def test_build_report_ready_on_soft_fail(self):
-        from dxrk.cli.install import _run_checks, _build_report
+        from dxrk.cli.install import _build_report, _run_checks
 
         def soft_check():
             pass
@@ -514,7 +511,7 @@ class TestVerifyHelpers:
 class TestDefaultAgentsFromDetection:
     def test_returns_detected_agents(self, tmp_path):
         from dxrk.cli.install import default_agents_from_detection
-        from dxrk.system import DetectionResult, SystemInfo, ConfigState
+        from dxrk.system import ConfigState, DetectionResult, SystemInfo
 
         agent = ConfigState(agent="claude-code", exists=True)
         system = SystemInfo()
@@ -525,17 +522,17 @@ class TestDefaultAgentsFromDetection:
 
     def test_detected_agents_skip_not_found(self, tmp_path):
         from dxrk.cli.install import default_agents_from_detection
-        from dxrk.system import DetectionResult, SystemInfo, ConfigState
+        from dxrk.system import ConfigState, DetectionResult, SystemInfo
 
         agent = ConfigState(agent="claude-code", exists=False)
         system = SystemInfo()
         detection = DetectionResult(system=system, configs=[agent], dependencies=None)
 
-        agents = default_agents_from_detection(detection)
+        default_agents_from_detection(detection)
 
     def test_returns_all_when_none_detected(self, tmp_path):
         from dxrk.cli.install import default_agents_from_detection
-        from dxrk.system import DetectionResult, SystemInfo, ConfigState
+        from dxrk.system import ConfigState, DetectionResult, SystemInfo
 
         agent = ConfigState(agent="bogus", exists=False)
         system = SystemInfo()
@@ -547,8 +544,8 @@ class TestDefaultAgentsFromDetection:
 
 class TestNormalizeInstallFlags:
     def test_minimal_preset(self, tmp_path):
-        from dxrk.cli.install import parse_install_flags, normalize_install_flags
-        from dxrk.system import DetectionResult, SystemInfo, ConfigState
+        from dxrk.cli.install import normalize_install_flags, parse_install_flags
+        from dxrk.system import ConfigState, DetectionResult, SystemInfo
 
         flags = parse_install_flags(["--preset", "minimal"])
         system = SystemInfo()
@@ -561,8 +558,8 @@ class TestNormalizeInstallFlags:
         assert result.dry_run is False
 
     def test_dry_run_flag(self, tmp_path):
-        from dxrk.cli.install import parse_install_flags, normalize_install_flags
-        from dxrk.system import DetectionResult, SystemInfo, ConfigState
+        from dxrk.cli.install import normalize_install_flags, parse_install_flags
+        from dxrk.system import ConfigState, DetectionResult, SystemInfo
 
         flags = parse_install_flags(["--dry-run", "--preset", "minimal"])
         system = SystemInfo()
@@ -599,7 +596,7 @@ class TestComponentsForPresetSkills:
 
 class TestRenderReport:
     def test_all_pass(self):
-        from dxrk.cli.install import _render_report, _VerifyReport, _VerifyCheck
+        from dxrk.cli.install import _render_report, _VerifyCheck, _VerifyReport
 
         report = _VerifyReport(
             checks=[
@@ -613,7 +610,7 @@ class TestRenderReport:
         assert "FAIL" not in output
 
     def test_with_failures(self):
-        from dxrk.cli.install import _render_report, _VerifyReport, _VerifyCheck
+        from dxrk.cli.install import _render_report, _VerifyCheck, _VerifyReport
 
         report = _VerifyReport(
             checks=[
@@ -627,7 +624,7 @@ class TestRenderReport:
         assert "[PASS] check2" in output
 
     def test_with_soft_fail(self):
-        from dxrk.cli.install import _render_report, _VerifyReport, _VerifyCheck
+        from dxrk.cli.install import _render_report, _VerifyCheck, _VerifyReport
 
         report = _VerifyReport(
             checks=[

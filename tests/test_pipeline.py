@@ -1,30 +1,28 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
-import pytest
 from dxrk.pipeline import (
-    Stage,
-    StepStatus,
-    FailurePolicy,
-    StagePlan,
-    StepResult,
-    StageResult,
     ExecutionResult,
-    RollbackPolicy,
+    FailurePolicy,
     ProgressEvent,
-    Step,
+    RollbackPolicy,
     RollbackStep,
     Runner,
-    Orchestrator,
-    execute_rollback,
-    execute_command,
-    run_command_sequence,
+    Stage,
+    StagePlan,
+    StageResult,
+    Step,
+    StepResult,
+    StepStatus,
     default_rollback_policy,
+    execute_command,
+    execute_rollback,
     new_orchestrator,
+    resolve_component_install,
+    run_command_sequence,
+    set_command_streaming,
     with_failure_policy,
     with_progress_func,
-    set_command_streaming,
-    resolve_component_install,
 )
 
 

@@ -6,20 +6,12 @@ import time
 
 from dxrk.query import ROLE_USER, Message, Response, Usage
 from dxrk.router import (
-    Capability,
     CachingRouter,
-    CacheStats,
-    CostConfig,
     CostTracker,
-    DEFAULT_COSTS,
     ProviderEntry,
     QueryResponse,
-    Router,
     SemanticCache,
     Strategy,
-    StrategyFirstAvailable,
-    StrategyLowestCost,
-    StrategyRoundRobin,
     cosine_sim,
     default_key_fn,
     join_messages,

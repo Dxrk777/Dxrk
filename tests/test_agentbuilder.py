@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from dxrk import agentbuilder as ab
 from dxrk.models import AgentClaudeCode, AgentOpenCode
@@ -87,7 +87,7 @@ def test_integration_full_agent_builder_flow(tmp_path) -> None:
             Name=agent.Name,
             Title=agent.Title,
             Description=agent.Description,
-            CreatedAt=datetime.now(timezone.utc),
+            CreatedAt=datetime.now(UTC),
             GenerationEngine=AgentClaudeCode,
             InstalledAgents=[AgentClaudeCode, AgentOpenCode],
         )

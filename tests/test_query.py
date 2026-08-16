@@ -10,16 +10,16 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import pytest
 
 from dxrk.compress import Budget, Compressor, Strategy
-from dxrk.memory import AgentMemory, MemoryEntry, MemoryType
+from dxrk.memory import AgentMemory, MemoryType
 from dxrk.query import (
-    STOP_ERROR,
-    STOP_INTERRUPTED,
-    STOP_MAX_TURNS,
-    STOP_SUCCESS,
     ROLE_ASSISTANT,
     ROLE_SYSTEM,
     ROLE_TOOL,
     ROLE_USER,
+    STOP_ERROR,
+    STOP_INTERRUPTED,
+    STOP_MAX_TURNS,
+    STOP_SUCCESS,
     AnthropicProvider,
     DxrkMemoryBackend,
     GeminiProvider,

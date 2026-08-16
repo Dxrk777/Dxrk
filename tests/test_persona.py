@@ -9,7 +9,6 @@ import pytest
 from dxrk.components import persona
 from dxrk.models import AgentID, PersonaID, SystemPromptStrategy
 
-
 # ─── Fake adapter ──────────────────────────────────────────────────────────
 
 
@@ -286,7 +285,6 @@ class TestCleanLegacyVSCodePersona:
         target.parent.mkdir(parents=True)
         target.write_text("## Personality\nSenior Architect\n## Rules\n")
 
-        original_open = builtins_open = open
 
         def failing_open(*args, **kwargs):
             raise OSError("permission denied")
@@ -300,7 +298,6 @@ class TestCleanLegacyVSCodePersona:
         target.parent.mkdir(parents=True)
         target.write_text("## Personality\nSenior Architect\n## Rules\n")
 
-        original_remove = os.remove
 
         def fail_first_remove(path):
             raise FileNotFoundError("already gone")
@@ -542,7 +539,6 @@ class TestInjectInstructionsFile:
             AgentID.CLAUDE_CODE,
             prompt_strategy=SystemPromptStrategy.INSTRUCTIONS_FILE,
         )
-        original_system_prompt_file = adapter.system_prompt_file
 
         def system_prompt_file(home_dir):
             return os.path.join(home_dir, ".claude", "instructions.md")
@@ -764,7 +760,7 @@ class TestInjectOpenCodeSettings:
             prompt_strategy=SystemPromptStrategy.MARKDOWN_SECTIONS,
             settings_path=str(settings_file),
         )
-        result = persona.inject(str(tmp_path), adapter, PersonaID.DXRK)
+        persona.inject(str(tmp_path), adapter, PersonaID.DXRK)
         data = json.loads(settings_file.read_text())
         assert "agent" not in data
 
@@ -801,7 +797,7 @@ class TestInjectDxrkOutputStyle:
             supports_output_styles=True,
             settings_path=str(settings_file),
         )
-        result = persona.inject(str(tmp_path), adapter, PersonaID.NEUTRAL)
+        persona.inject(str(tmp_path), adapter, PersonaID.NEUTRAL)
         style_file = output_dir / "dxrk.md"
         assert not style_file.exists()
 
@@ -929,3 +925,7 @@ class TestReadFileOrEmpty:
 
     def test_not_found(self, tmp_path):
         assert persona._read_file_or_empty(str(tmp_path / "nope")) == ""
+
+import sys
+
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX-specific paths")

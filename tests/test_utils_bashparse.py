@@ -10,7 +10,7 @@ from dxrk.utils import bashparse as bp
 _T = TypeVar("_T", bound=bp.ASTNode)
 
 
-def _node(text: str, cls: type[_T]) -> _T:
+def _node[T: bp.ASTNode](text: str, cls: type[_T]) -> _T:
     """Parses text, asserting success, and narrows the node to cls."""
     node, err = bp.Parse(text)
     assert err is None, err

@@ -1,4 +1,3 @@
-import pytest
 
 from dxrk.trace import (
     Ctx,

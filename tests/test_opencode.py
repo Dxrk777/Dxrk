@@ -159,3 +159,7 @@ def test_model_defaults():
     assert m.reasoning is False
     assert m.cost.input == 0.0
     assert m.limit.context == 0
+
+import sys
+
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX-specific paths")

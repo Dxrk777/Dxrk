@@ -3,9 +3,13 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
+
+import pytest
 
 from dxrk.components.uninstall import (
+    OpType,
+    Result,
+    Service,
     _clean_codex_toml,
     _dedupe_sorted_strings,
     _delete_json_path,
@@ -23,10 +27,10 @@ from dxrk.components.uninstall import (
     _remove_file,
     _remove_file_if_exists,
     _remove_json_paths,
-    _remove_markdown_sections,
     _remove_managed_persona_preamble,
-    _remove_top_level_toml_keys,
+    _remove_markdown_sections,
     _remove_toml_table,
+    _remove_top_level_toml_keys,
     _remove_tree,
     _rewrite_json_file,
     _rewrite_markdown_file,
@@ -36,14 +40,8 @@ from dxrk.components.uninstall import (
     _strip_trailing_commas,
     _unmarshal_json_object,
     _update_state_after_uninstall,
-    OpType,
-    Result,
-    Service,
 )
-
 from dxrk.models import AgentID, ComponentID, DxrkMemoryUninstallScope
-
-import pytest
 
 
 class FakeAdapter:
@@ -565,3 +563,7 @@ class TestServiceSetEngramScope:
         svc = Service(home_dir="/tmp")
         svc.set_DXRK_MEMORY_uninstall_scope(DxrkMemoryUninstallScope.PROJECT)
         assert svc.DXRK_MEMORY_uninstall_scope == DxrkMemoryUninstallScope.PROJECT
+
+import sys
+
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX-specific paths")

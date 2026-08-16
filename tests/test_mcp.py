@@ -52,7 +52,7 @@ for line in sys.stdin:
 
 
 @pytest.fixture
-def client() -> Generator[Client, None, None]:
+def client() -> Generator[Client]:
     transport = StdioTransport(sys.executable, "-c", FAKE_SERVER)
     c = Client(transport)
     yield c

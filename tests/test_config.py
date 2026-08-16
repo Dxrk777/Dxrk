@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 import os
 import threading
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
@@ -15,7 +15,6 @@ import pytest
 from dxrk.config import (
     APIValidator,
     ConfigManager,
-    ConflictLastWriteWins,
     ConflictLocalWins,
     ConflictManual,
     ConflictRemoteWins,
@@ -38,7 +37,6 @@ from dxrk.config import (
     ProviderByName,
     Save,
     SettingChange,
-    SettingsSyncer,
     SyncConfig,
     ValidateConfig,
     expand_path,
@@ -256,15 +254,15 @@ def _change(key, value, ts, operation="set"):
 
 def test_sync_resolve_last_write_wins():
     s = NewSettingsSyncer(SyncConfig(device_id="dev"), MemorySettingsStore())
-    earlier_local = _change("k", "local", datetime(2025, 1, 1, tzinfo=timezone.utc))
-    later_remote = _change("k", "remote", datetime(2025, 1, 2, tzinfo=timezone.utc))
+    earlier_local = _change("k", "local", datetime(2025, 1, 1, tzinfo=UTC))
+    later_remote = _change("k", "remote", datetime(2025, 1, 2, tzinfo=UTC))
     assert s.ResolveConflicts([earlier_local], [later_remote])[0].value == "remote"
     assert s.ResolveConflicts([later_remote], [earlier_local])[0].value == "remote"
 
 
 def test_sync_resolve_strategies():
-    local = _change("k", "local", datetime(2025, 1, 2, tzinfo=timezone.utc))
-    remote = _change("k", "remote", datetime(2025, 1, 1, tzinfo=timezone.utc))
+    local = _change("k", "local", datetime(2025, 1, 2, tzinfo=UTC))
+    remote = _change("k", "remote", datetime(2025, 1, 1, tzinfo=UTC))
     s = NewSettingsSyncer(SyncConfig(device_id="dev"), MemorySettingsStore())
     s.SetResolver(ConflictLocalWins)
     assert s.ResolveConflicts([local], [remote])[0].value == "local"
@@ -278,8 +276,8 @@ def test_sync_resolve_strategies():
 
 def test_sync_local_only_and_ordering():
     s = NewSettingsSyncer(SyncConfig(device_id="dev"), MemorySettingsStore())
-    local = _change("a", 1, datetime(2025, 1, 2, tzinfo=timezone.utc))
-    remote = _change("b", 2, datetime(2025, 1, 1, tzinfo=timezone.utc))
+    local = _change("a", 1, datetime(2025, 1, 2, tzinfo=UTC))
+    remote = _change("b", 2, datetime(2025, 1, 1, tzinfo=UTC))
     merged = s.ResolveConflicts([local], [remote])
     assert [c.key for c in merged] == ["b", "a"]
 
@@ -287,7 +285,7 @@ def test_sync_local_only_and_ordering():
 def test_sync_push_requires_endpoint():
     s = NewSettingsSyncer(SyncConfig(device_id="dev"), MemorySettingsStore())
     with pytest.raises(ValueError):
-        s.Push([_change("k", 1, datetime(2025, 1, 1, tzinfo=timezone.utc))])
+        s.Push([_change("k", 1, datetime(2025, 1, 1, tzinfo=UTC))])
 
 
 def test_sync_queue_and_flush(tmp_path):
@@ -342,10 +340,10 @@ def test_sync_apply_conflict_marker_skipped():
     store = MemorySettingsStore()
     s = NewSettingsSyncer(SyncConfig(device_id="dev"), store)
     changes = [
-        _change("__conflict__k", "local", datetime(2025, 1, 1, tzinfo=timezone.utc)),
-        _change("k", "remote", datetime(2025, 1, 2, tzinfo=timezone.utc)),
+        _change("__conflict__k", "local", datetime(2025, 1, 1, tzinfo=UTC)),
+        _change("k", "remote", datetime(2025, 1, 2, tzinfo=UTC)),
         _change(
-            "del", None, datetime(2025, 1, 3, tzinfo=timezone.utc), operation="delete"
+            "del", None, datetime(2025, 1, 3, tzinfo=UTC), operation="delete"
         ),
     ]
     store.Set("del", "old")

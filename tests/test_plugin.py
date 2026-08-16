@@ -4,16 +4,12 @@ from __future__ import annotations
 import json
 from datetime import datetime
 
-import pytest
-
 from dxrk.plugin import (
     AuditEntry,
-    EnterprisePolicy,
     HookAfterToolExec,
     HookBeforeLoad,
     HookEvent,
     Manager,
-    Marketplace,
     MarketplaceEvent,
     Plugin,
     PluginApprovalConfig,

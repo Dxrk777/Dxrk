@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import json
-import os
 
 import pytest
 
@@ -522,3 +521,9 @@ class TestSemanticChanges:
 def _read(path: str) -> str:
     with open(path) as fh:
         return fh.read()
+
+import sys
+
+import pytest
+
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX-specific paths")

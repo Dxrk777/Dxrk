@@ -320,3 +320,9 @@ def test_runner_stash(repo):
     repo.stash_pop(0)
     stashes = repo.stash_list()
     assert len(stashes) == 0
+
+import sys
+
+import pytest
+
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX-specific paths")

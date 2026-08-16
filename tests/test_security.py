@@ -7,33 +7,31 @@ import base64
 import hashlib
 import hmac
 import json
-from pathlib import Path
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pytest
 
 from dxrk.security import (
     ALWAYS_ASK_TOOLS,
-    READ_ONLY_TOOLS,
-    SAFE_TOOLS,
-    ClassificationDecision,
-    CircuitBreaker,
-    DangerousPattern,
     KNOWN_DANGEROUS_PATTERNS,
     MAX_COMMAND_LENGTH,
     NEEDS_CONFIRMATION,
+    READ_ONLY_TOOLS,
+    READ_TOOLS,
+    SAFE_FOR_AUTO_MODE,
+    SAFE_TOOLS,
+    CircuitBreaker,
+    ClassificationDecision,
     NodeType,
     PermissionBehavior,
     PermissionContext,
     PermissionResult,
     PermissionRule,
-    READ_TOOLS,
     RefreshConfig,
     RiskLevel,
-    SAFE_FOR_AUTO_MODE,
     SettingSource,
-    TokenInfo,
     TokenKind,
     TokenRefreshScheduler,
     TrustedDevice,
@@ -43,7 +41,6 @@ from dxrk.security import (
     classify_token,
     classify_tool,
     decode_jwt_payload,
-    default_refresh_config,
     detect_unreachable_rules,
     extract_command_name,
     has_dangerous_patterns,
@@ -338,7 +335,7 @@ def test_parse_token_safe() -> None:
     assert not info.is_expired, "token should not be expired"
     assert info.subject == "user42" and info.issuer == "dxrk"
     assert info.kind == TokenKind.UNKNOWN, (
-        "kind = %s, want unknown (no prefix)" % info.kind
+        f"kind = {info.kind}, want unknown (no prefix)"
     )
 
     # Tampered signature must fail
@@ -416,7 +413,7 @@ def test_token_refresh_scheduler_retries_on_failure() -> None:
 
 
 def test_is_device_trusted() -> None:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     cases = [
         (
             "empty token",
@@ -700,14 +697,14 @@ def test_check_auto_deny() -> None:
         pc.record_denial("Bash")
     res, reason = pc.check("Bash", "ls")
     assert res == PermissionResult.DENIED, (
-        "Check = %s, want denied after threshold" % res
+        f"Check = {res}, want denied after threshold"
     )
     assert reason != "", "auto-deny should include a reason"
 
     pc.reset_denials()
     res, _ = pc.check("Bash", "ls")
     assert res == PermissionResult.NEEDS_PROMPT, (
-        "after ResetDenials: %s, want needs_prompt" % res
+        f"after ResetDenials: {res}, want needs_prompt"
     )
 
 

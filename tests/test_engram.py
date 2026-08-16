@@ -2,12 +2,9 @@
 from __future__ import annotations
 
 import json
-import os
 
 from dxrk.components import engram
 from dxrk.models import AgentID
-
-import pytest
 
 
 class TestSetupMode:
@@ -166,3 +163,9 @@ class TestLookPath:
         orig = engram.set_look_path_for_test(mock)
         assert callable(orig)
         engram.set_look_path_for_test(orig)
+
+import sys
+
+import pytest
+
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX-specific paths")

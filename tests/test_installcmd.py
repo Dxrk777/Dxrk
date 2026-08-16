@@ -16,7 +16,7 @@ from dxrk.installcmd import (
 )
 from dxrk.models import AgentID, ComponentID
 from dxrk.system import PlatformProfile
-from dxrk.versions import ClaudeCode, Kilocode, OpenCode
+from dxrk.versions import ClaudeCode, OpenCode
 
 
 def _go_version(version: str, platform: str = "linux/amd64") -> str:

@@ -7,7 +7,6 @@ from dxrk.slo import (
     MultiWindowEvaluator,
     Objective,
     ObjectiveType,
-    Tracker,
     calculate_burn_rate,
     calculate_error_budget,
     default_window_config,

@@ -261,3 +261,7 @@ def test_rate_limiter_refill():
     time.sleep(0.015)
     assert rl.allow()
     rl.close()
+
+import sys
+
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX-specific paths")

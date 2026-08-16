@@ -7,8 +7,7 @@ import base64
 
 import pytest
 
-from dxrk.tools import Registry
-from dxrk.tools import filetools
+from dxrk.tools import Registry, filetools
 
 
 @pytest.fixture
@@ -60,7 +59,7 @@ def test_file_write_validate_missing(registry: Registry) -> None:
     tool = registry.get("file_write")
     assert tool is not None
     assert (
-        tool.validate({"file_path": str("/tmp/x")})
+        tool.validate({"file_path": "/tmp/x"})
         == "file_path and content are required"
     )
     assert tool.validate({"content": "x"}) == "file_path and content are required"
@@ -321,3 +320,10 @@ def test_grep_validate(registry: Registry) -> None:
     tool = registry.get("grep")
     assert tool is not None
     assert tool.validate({}) == "pattern is required"
+
+
+import sys
+
+import pytest
+
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX-specific paths")

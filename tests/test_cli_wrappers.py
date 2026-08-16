@@ -1,33 +1,30 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
-from pathlib import Path
+import pytest
 
-from dxrk.cli.sync import ParseSyncFlags, RunSync, SyncResult, SyncFlags
+from dxrk.cli.dryrun import DryRunMode, build_dryrun_report
 from dxrk.cli.restore import ParseRestoreFlags, RunRestore
+from dxrk.cli.run import (
+    _look_path,
+    _resolve_adapters,
+    _verify_file_exists,
+    add_post_install_notes,
+    build_stage_plan,
+    has_component,
+    resolve_install_profile,
+    run_install,
+)
+from dxrk.cli.sync import ParseSyncFlags, RunSync, SyncFlags, SyncResult
 from dxrk.cli.uninstall import (
     ParseUninstallFlags,
     RunUninstall,
     UninstallFlags,
     UninstallResult,
 )
-from dxrk.cli.dryrun import DryRunMode, build_dryrun_report
-from dxrk.cli.run import (
-    InstallResult,
-    run_install,
-    build_stage_plan,
-    resolve_install_profile,
-    has_component,
-    add_post_install_notes,
-    _verify_file_exists,
-    _look_path,
-    _resolve_adapters,
-)
 from dxrk.models import AgentID, ComponentID, Selection
-from dxrk.system import DetectionResult, SystemInfo
 from dxrk.pipeline import StagePlan
-
-import pytest
+from dxrk.system import DetectionResult, SystemInfo
 
 
 class TestSyncWrapper:

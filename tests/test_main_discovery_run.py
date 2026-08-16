@@ -1,22 +1,15 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
-import os
-import sys
-import subprocess
-from pathlib import Path
-from unittest.mock import ANY
+import pytest
 
 from dxrk.agents.discovery import (
-    discover_installed,
     config_roots_for_backup,
-    InstalledAgent,
+    discover_installed,
 )
 from dxrk.agents.registry import Registry
-from dxrk.models import AgentID, ComponentID, Selection, SDDModeID
-from dxrk.system import SystemInfo, PlatformProfile, DetectionResult, DependencyReport
-
-import pytest
+from dxrk.models import AgentID, ComponentID, Selection
+from dxrk.system import DependencyReport, DetectionResult, PlatformProfile, SystemInfo
 
 
 class FakeAdapter:
@@ -445,3 +438,7 @@ class TestCliRun:
 
         checks = _antigravity_collision_check([AgentID.ANTIGRAVITY])
         assert checks == []
+
+import sys
+
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX-specific paths")

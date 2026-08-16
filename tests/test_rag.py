@@ -3,14 +3,14 @@
 
 from __future__ import annotations
 
-import json
-
 import pytest
 
 from dxrk.rag import (
     ChunkConfig,
     ChunkFile,
     Config,
+    DefaultChunkConfig,
+    DefaultIgnoreDirs,
     IsCodeFile,
     LanguageFromExt,
     New,
@@ -18,8 +18,6 @@ from dxrk.rag import (
     VectorRecord,
     VectorStore,
     cosine_similarity,
-    DefaultChunkConfig,
-    DefaultIgnoreDirs,
 )
 from dxrk.rag.chunker import Chunk
 from dxrk.rag.embedder import OpenAIEmbedder

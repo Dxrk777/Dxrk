@@ -3,13 +3,18 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from dxrk.components import sdd
 from dxrk.models import (
-    AgentID, ModelAssignment, PersonaID, Profile, SDDModeID, SDDProfileStrategyID,
+    AgentID,
     ClaudeModelAlias,
+    ModelAssignment,
+    PersonaID,
+    Profile,
+    SDDModeID,
+    SDDProfileStrategyID,
 )
-
-import pytest
 
 
 class TestValidateProfileName:
@@ -146,3 +151,7 @@ class TestClaudeModelAlias:
         from dxrk.components.sdd import _resolve_claude_model_alias
         alias = _resolve_claude_model_alias({}, "unknown-phase")
         assert alias == ClaudeModelAlias.SONNET
+
+import sys
+
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX-specific paths")

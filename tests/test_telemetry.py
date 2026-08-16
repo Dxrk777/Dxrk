@@ -2,12 +2,8 @@ import json
 import os
 from datetime import timedelta
 
-import pytest
-
 from dxrk.telemetry import (
     Config,
-    Store,
-    ToolCallCounter,
     default_config,
     new_store,
     new_tool_call_counter,

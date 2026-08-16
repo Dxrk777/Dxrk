@@ -1,13 +1,12 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import pytest
+
 from dxrk.agents.errors import AdapterNotFoundError, DuplicateAdapterError, Error
 from dxrk.agents.factory import create_registry
-from dxrk.agents.interface import Adapter
 from dxrk.agents.registry import Registry
 from dxrk.models import AgentID, MCPStrategy, SupportTier, SystemPromptStrategy
-
-import pytest
 
 
 def test_error_hierarchy():

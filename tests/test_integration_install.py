@@ -8,15 +8,9 @@ from dxrk.models import (
     PresetID,
     Selection,
     SkillID,
-    SDDModeID,
-    SDDProfileStrategyID,
-    PersonaID,
-    ModelAssignment,
 )
-from dxrk.system import DetectionResult, PlatformProfile, SystemInfo, DependencyReport
-from dxrk.planner import ResolvedPlan, ReviewPayload, PlatformDecision
-
-import pytest
+from dxrk.planner import ResolvedPlan
+from dxrk.system import DetectionResult, PlatformProfile, SystemInfo
 
 
 def _make_detection() -> DetectionResult:
@@ -188,7 +182,7 @@ class TestRenderDryRun:
 
 class TestNormalizeInstallFlags:
     def test_dry_run_flag(self):
-        from dxrk.cli.install import parse_install_flags, normalize_install_flags
+        from dxrk.cli.install import normalize_install_flags, parse_install_flags
 
         flags = parse_install_flags(["--dry-run"])
         detection = _make_detection()
@@ -196,7 +190,7 @@ class TestNormalizeInstallFlags:
         assert inp.dry_run is True
 
     def test_minimal_preset(self):
-        from dxrk.cli.install import parse_install_flags, normalize_install_flags
+        from dxrk.cli.install import normalize_install_flags, parse_install_flags
 
         flags = parse_install_flags(["--preset", "minimal"])
         detection = _make_detection()
@@ -204,7 +198,7 @@ class TestNormalizeInstallFlags:
         assert inp.selection.preset == PresetID.MINIMAL
 
     def test_agents_flag(self):
-        from dxrk.cli.install import parse_install_flags, normalize_install_flags
+        from dxrk.cli.install import normalize_install_flags, parse_install_flags
 
         flags = parse_install_flags(["--agents", "claude-code"])
         detection = _make_detection()

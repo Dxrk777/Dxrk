@@ -6,8 +6,6 @@ import json
 from dxrk.components import theme
 from dxrk.models import AgentID
 
-import pytest
-
 
 def make_fake_adapter(agent_id: AgentID, settings_path: str | None = ".config/app/settings.json"):
     class FakeAdapter:
@@ -39,7 +37,6 @@ class TestInject:
         assert data["theme"] == "dxrk-kanagawa"
 
     def test_merges_with_existing(self, tmp_path):
-        import os
         settings = tmp_path / ".config" / "app" / "settings.json"
         settings.parent.mkdir(parents=True)
         settings.write_text(json.dumps({"existing": "value"}) + "\n")

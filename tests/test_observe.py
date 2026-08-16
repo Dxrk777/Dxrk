@@ -1,6 +1,8 @@
 import io
 
 from dxrk.observe import (
+    Level,
+    LogFields,
     MetricsSnapshot,
     bool_attr,
     err_attr,
@@ -16,8 +18,6 @@ from dxrk.observe import (
     new_metrics_registry,
     str_attr,
     str_slice_attr,
-    Level,
-    LogFields,
 )
 
 
