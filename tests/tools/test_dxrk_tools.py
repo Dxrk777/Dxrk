@@ -201,3 +201,10 @@ def test_glob_search_missing_pattern(registry: Registry) -> None:
     assert tool is not None
     err = tool.validate({})
     assert err == "pattern is required"
+
+
+import sys
+
+import pytest
+
+pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="POSIX-specific paths")
