@@ -140,9 +140,7 @@ def default_rollback_policy() -> RollbackPolicy:
     return RollbackPolicy(on_apply_failure=True)
 
 
-def execute_rollback(
-    steps: list[StepResult], step_index: dict[str, Step]
-) -> StageResult:
+def execute_rollback(steps: list[StepResult], step_index: dict[str, Step]) -> StageResult:
     result = StageResult(stage=Stage.ROLLBACK, success=True)
 
     for i in range(len(steps) - 1, -1, -1):
@@ -368,11 +366,7 @@ def run_command_sequence(commands: list[list[str]]) -> str | None:
 def resolve_component_install(profile: Any, component_id: Any) -> list[list[str]]:
     from dxrk.models import ComponentID
 
-    cid = (
-        ComponentID(component_id)
-        if not isinstance(component_id, ComponentID)
-        else component_id
-    )
+    cid = ComponentID(component_id) if not isinstance(component_id, ComponentID) else component_id
 
     if cid == ComponentID.DXRK_MEMORY:
         if profile.package_manager == "brew":
@@ -441,8 +435,8 @@ async def run_install_pipeline(
             dry_run=False,
             agents=[a.value for a in selection.agents],
             components=[c.value for c in selection.components],
-            persona=selection.persona.value if selection.persona else "gentleman",
-            preset=selection.preset.value if selection.preset else "full-gentleman",
+            persona=selection.persona.value if selection.persona else "dxrk",
+            preset=selection.preset.value if selection.preset else "full-dxrk",
         ),
         detection,
     )
@@ -473,9 +467,7 @@ async def run_install_pipeline(
         if on_progress:
             import asyncio
 
-            asyncio.ensure_future(
-                on_progress(event.step_id, 10 + 70 * completed[0] / total)
-            )
+            asyncio.ensure_future(on_progress(event.step_id, 10 + 70 * completed[0] / total))
 
     from dxrk.pipeline import default_rollback_policy, new_orchestrator
 
