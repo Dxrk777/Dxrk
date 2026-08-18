@@ -29,15 +29,12 @@ from typing import Any
 try:  # pragma: no cover - exercised only when Pillow is absent
     from PIL import Image as _PILImage  # type: ignore[import-not-found]
 except ImportError:  # pragma: no cover
-    _PILImage = None
+    _PILImage = None  # type: ignore[assignment]
 
 # Type of a decoded image; Any because Pillow is an optional lazy dependency.
 ImageType = Any
 
-_PILLOW_REQUIRED = (
-    "image: Pillow (PIL) is required for this operation "
-    "(install 'pillow' in the project environment)"
-)
+_PILLOW_REQUIRED = "image: Pillow (PIL) is required for this operation (install 'pillow' in the project environment)"
 
 # Mirrors dxrk/strconst.StrPdf / dxrk/strconst.StrUnknown.
 _STR_PDF = "%PDF-"
@@ -263,30 +260,10 @@ def _scale_bilinear(dst: ImageType, src: ImageType) -> None:
             r11, g11, b11, a11 = (v * 257 for v in c11)
 
             # Bilinear interpolation (16-bit values, then >>8).
-            r = (
-                r00 * (1 - dx) * (1 - dy)
-                + r10 * dx * (1 - dy)
-                + r01 * (1 - dx) * dy
-                + r11 * dx * dy
-            )
-            g = (
-                g00 * (1 - dx) * (1 - dy)
-                + g10 * dx * (1 - dy)
-                + g01 * (1 - dx) * dy
-                + g11 * dx * dy
-            )
-            b = (
-                b00 * (1 - dx) * (1 - dy)
-                + b10 * dx * (1 - dy)
-                + b01 * (1 - dx) * dy
-                + b11 * dx * dy
-            )
-            a = (
-                a00 * (1 - dx) * (1 - dy)
-                + a10 * dx * (1 - dy)
-                + a01 * (1 - dx) * dy
-                + a11 * dx * dy
-            )
+            r = r00 * (1 - dx) * (1 - dy) + r10 * dx * (1 - dy) + r01 * (1 - dx) * dy + r11 * dx * dy
+            g = g00 * (1 - dx) * (1 - dy) + g10 * dx * (1 - dy) + g01 * (1 - dx) * dy + g11 * dx * dy
+            b = b00 * (1 - dx) * (1 - dy) + b10 * dx * (1 - dy) + b01 * (1 - dx) * dy + b11 * dx * dy
+            a = a00 * (1 - dx) * (1 - dy) + a10 * dx * (1 - dy) + a01 * (1 - dx) * dy + a11 * dx * dy
 
             dpx[x, y] = (int(r) >> 8, int(g) >> 8, int(b) >> 8, int(a) >> 8)
 
@@ -599,9 +576,7 @@ class ImageCache:
             entry.access_count += 1
             return entry.data, entry.format, entry.width, entry.height, True
 
-    def set(
-        self, key: str, data: bytes, format: Format | int, width: int, height: int
-    ) -> None:
+    def set(self, key: str, data: bytes, format: Format | int, width: int, height: int) -> None:
         """Store an entry, evicting the least-recently-used entry when full."""
         with self._mu:
             if len(self._entries) >= self._max_size:
@@ -639,11 +614,7 @@ class ImageCache:
         oldest_key = ""
         oldest_time: datetime | None = None
         for key, entry in self._entries.items():
-            if (
-                oldest_key == ""
-                or oldest_time is None
-                or entry.accessed_at < oldest_time
-            ):
+            if oldest_key == "" or oldest_time is None or entry.accessed_at < oldest_time:
                 oldest_key = key
                 oldest_time = entry.accessed_at
         if oldest_key != "":
@@ -929,12 +900,7 @@ def _extract_text_from_bytes(data: bytes) -> str:
     stream_start = 0
 
     for i in range(len(data) - 1):
-        if (
-            data[i] == ord("s")
-            and data[i + 1] == ord("t")
-            and i + 5 < len(data)
-            and data[i : i + 6] == b"stream"
-        ):
+        if data[i] == ord("s") and data[i + 1] == ord("t") and i + 5 < len(data) and data[i : i + 6] == b"stream":
             in_stream = True
             stream_start = i + 6
             if stream_start < len(data) and data[stream_start] == ord("\r"):
@@ -945,8 +911,8 @@ def _extract_text_from_bytes(data: bytes) -> str:
             in_stream
             and data[i] == ord("e")
             and data[i + 1] == ord("n")
-            and i + 7 < len(data)
-            and data[i : i + 8] == b"endstream"
+            and i + 8 < len(data)
+            and data[i : i + 9] == b"endstream"
         ):
             stream_data = data[stream_start:i]
             decoded = _decode_stream(stream_data)
@@ -976,21 +942,12 @@ def _decode_stream(data: bytes) -> str:
             elif nxt == ord("\\"):
                 result.append(ord("\\"))
             else:
-                if i + 3 < len(data):
-                    if (
-                        _is_octal(data[i + 1])
-                        and _is_octal(data[i + 2])
-                        and _is_octal(data[i + 3])
-                    ):
-                        val = (
-                            ((data[i + 1] - ord("0")) << 6)
-                            | ((data[i + 2] - ord("0")) << 3)
-                            | (data[i + 3] - ord("0"))
-                        )
-                        result.append(val & 0xFF)
-                        i += 3
-                    else:
-                        result.append(data[i + 1])
+                if i + 3 < len(data) and _is_octal(data[i + 1]) and _is_octal(data[i + 2]) and _is_octal(data[i + 3]):
+                    val = ((data[i + 1] - ord("0")) << 6) | ((data[i + 2] - ord("0")) << 3) | (data[i + 3] - ord("0"))
+                    result.append(val & 0xFF)
+                    i += 2
+                else:
+                    result.append(data[i + 1])
             i += 2
         elif 32 <= data[i] <= 126:
             result.append(data[i])
@@ -1012,13 +969,13 @@ def get_page_count(path: str) -> int:
         raise ErrNotPDF
 
     count = 0
-    for i in range(len(data) - 9):
-        if data[i : i + 9] == b"/Count ":
-            j = i + 9
+    for i in range(len(data) - 7):
+        if data[i : i + 7] == b"/Count ":
+            j = i + 7
             while j < len(data) and ord("0") <= data[j] <= ord("9"):
                 j += 1
-            if j > i + 9:
-                c = int(data[i + 9 : j])
+            if j > i + 7:
+                c = int(data[i + 7 : j])
                 count = max(count, c)
     return count
 
@@ -1046,9 +1003,11 @@ def get_metadata(path: str) -> PDFMetadata:
     for field, attr in fields.items():
         idx = _find_field(data, field)
         if idx >= 0:
-            end = _find_end_of_string(data, idx + len(field))
-            if end > idx + len(field):
-                setattr(meta, attr, data[idx + len(field) : end].decode("latin-1"))
+            start = data.find(b"(", idx + len(field))
+            if start >= 0:
+                end = _find_end_of_string(data, start)
+                if end > start:
+                    setattr(meta, attr, data[start : end + 1].decode("latin-1"))
 
     return meta
 
@@ -1135,11 +1094,10 @@ def validate_pdf(path: str) -> None:
 
 
 def _has_eof_marker(data: bytes) -> bool:
-    i = len(data) - 10
-    while i >= 0 and i < len(data):
+    start = max(0, len(data) - 1024)
+    for i in range(start, len(data)):
         if i + 5 <= len(data) and data[i : i + 5] == b"%%EOF":
             return True
-        i -= 1
     return False
 
 

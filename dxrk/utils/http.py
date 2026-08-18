@@ -124,9 +124,7 @@ class _Context:
 
     __slots__ = ("_done", "_err", "_deadline", "_parent", "_values")
 
-    def __init__(
-        self, parent: _Context | None = None, deadline: float | None = None
-    ) -> None:
+    def __init__(self, parent: _Context | None = None, deadline: float | None = None) -> None:
         self._done = threading.Event()
         self._err: str | None = None
         self._deadline = deadline
@@ -171,9 +169,7 @@ def _with_cancel(parent: _Context | None = None) -> tuple[_Context, Callable[[],
     return child, lambda: child._set(_CTX_CANCELED)
 
 
-def _with_timeout(
-    parent: _Context | None, timeout: timedelta
-) -> tuple[_Context, Callable[[], None]]:
+def _with_timeout(parent: _Context | None, timeout: timedelta) -> tuple[_Context, Callable[[], None]]:
     """Return a child context that expires after ``timeout``."""
     child = _Context(parent=parent, deadline=time.monotonic() + timeout.total_seconds())
     return child, lambda: child._set(_CTX_CANCELED)
@@ -291,12 +287,8 @@ class TLSConfig:
     server_name: str = ""
     min_version: ssl.TLSVersion = VERSION_TLS12
     max_version: ssl.TLSVersion | None = VERSION_TLS13
-    cipher_suites: list[str] = field(
-        default_factory=lambda: list(_DEFAULT_CIPHER_SUITES)
-    )
-    curve_preferences: list[str] = field(
-        default_factory=lambda: list(_DEFAULT_CURVE_PREFERENCES)
-    )
+    cipher_suites: list[str] = field(default_factory=lambda: list(_DEFAULT_CIPHER_SUITES))
+    curve_preferences: list[str] = field(default_factory=lambda: list(_DEFAULT_CURVE_PREFERENCES))
     client_auth: ClientAuthType = ClientAuthType.NoClientCert
     root_cas: list[crypto_x509.Certificate] = field(default_factory=list)
     client_cas: list[crypto_x509.Certificate] = field(default_factory=list)
@@ -385,15 +377,11 @@ class TLSConfig:
                 raise _wrap(str(ErrInvalidCA), e) from e
 
         if self.root_cas:
-            data = b"".join(
-                c.public_bytes(serialization.Encoding.PEM) for c in self.root_cas
-            )
+            data = b"".join(c.public_bytes(serialization.Encoding.PEM) for c in self.root_cas)
             ctx.load_verify_locations(cadata=data.decode("utf-8", "replace"))
 
         if self.client_cas:
-            data = b"".join(
-                c.public_bytes(serialization.Encoding.PEM) for c in self.client_cas
-            )
+            data = b"".join(c.public_bytes(serialization.Encoding.PEM) for c in self.client_cas)
             ctx.load_verify_locations(cadata=data.decode("utf-8", "replace"))
             if self.client_auth is ClientAuthType.NoClientCert:
                 self.client_auth = ClientAuthType.RequireAndVerifyClientCert
@@ -404,9 +392,7 @@ class TLSConfig:
     def BuildClientTLSConfig(self) -> ssl.SSLContext:
         """Build a client TLS config (no client certificate required)."""
         ctx = self.BuildTLSConfig()
-        ctx.verify_mode = (
-            ssl.CERT_NONE if self.insecure_skip_verify else ssl.CERT_REQUIRED
-        )
+        ctx.verify_mode = ssl.CERT_NONE if self.insecure_skip_verify else ssl.CERT_REQUIRED
         return ctx
 
     def BuildServerTLSConfig(self) -> ssl.SSLContext:
@@ -436,9 +422,7 @@ class TLSConfig:
         if self.ca_data:
             ctx.load_verify_locations(cadata=self.ca_data.decode("utf-8", "replace"))
         if self.client_cas:
-            data = b"".join(
-                c.public_bytes(serialization.Encoding.PEM) for c in self.client_cas
-            )
+            data = b"".join(c.public_bytes(serialization.Encoding.PEM) for c in self.client_cas)
             ctx.load_verify_locations(cadata=data.decode("utf-8", "replace"))
         return ctx
 
@@ -680,9 +664,7 @@ def NewProxyConfig(proxy_url: str) -> tuple[ProxyConfig | None, Exception | None
     except ValueError as e:
         return None, _wrap(str(ErrInvalidProxyURL), e)
 
-    proxy_type = cast(
-        ProxyType, ProxyType(parsed.scheme.lower()) if parsed.scheme else None
-    )
+    proxy_type = cast(ProxyType, ProxyType(parsed.scheme.lower()) if parsed.scheme else None)
     if proxy_type not in (
         ProxyType.ProxyTypeHTTP,
         ProxyType.ProxyTypeHTTPS,
@@ -875,11 +857,7 @@ def _transport_from_config(
         if tls_config.insecure_skip_verify:
             verify = False
         if tls_config.ca_data or tls_config.ca_file:
-            verify = (
-                tls_config.ca_data.decode("utf-8", "replace")
-                if tls_config.ca_data
-                else tls_config.ca_file
-            )
+            verify = tls_config.ca_data.decode("utf-8", "replace") if tls_config.ca_data else tls_config.ca_file
 
     return _make_transport(proxy=proxy, verify=verify, limits=limits, timeout=timeout)
 
@@ -978,9 +956,7 @@ class HTTPClient:
             return None, last_err
         return None, ErrMaxRetriesExceeded
 
-    def _send(
-        self, req: httpx.Request
-    ) -> tuple[httpx.Response | None, Exception | None]:
+    def _send(self, req: httpx.Request) -> tuple[httpx.Response | None, Exception | None]:
         """Send one request, returning a response or an error."""
         try:
             with self.mu:
@@ -994,9 +970,7 @@ class HTTPClient:
         except httpx.HTTPError as e:
             return None, HttpError(str(e))
 
-    def DoWithContext(
-        self, ctx: _Context, req: httpx.Request
-    ) -> tuple[httpx.Response | None, Exception | None]:
+    def DoWithContext(self, ctx: _Context, req: httpx.Request) -> tuple[httpx.Response | None, Exception | None]:
         """Send the request with a context deadline/cancellation."""
         if ctx is not None and ctx.err() is not None:
             return None, HttpError("context canceled")
@@ -1047,9 +1021,7 @@ class HTTPClient:
                 tls_config=self.tls_config,
             )
 
-    def WithMiddleware(
-        self, middleware: Callable[[httpx.HTTPTransport], httpx.HTTPTransport]
-    ) -> HTTPClient:
+    def WithMiddleware(self, middleware: Callable[[httpx.HTTPTransport], httpx.HTTPTransport]) -> HTTPClient:
         """Wrap the transport with middleware (e.g. a logging transport)."""
         with self.mu:
             new_transport = _make_transport()
@@ -1059,9 +1031,7 @@ class HTTPClient:
             return self
 
 
-def _client_timeout(
-    req: httpx.Request, default: float | httpx.Timeout = 30.0
-) -> httpx.Timeout:
+def _client_timeout(req: httpx.Request, default: float | httpx.Timeout = 30.0) -> httpx.Timeout:
     """Compute the client timeout for a request (ctx deadline wins)."""
     ctx = getattr(req, "_ctx", None)
     if ctx is not None and ctx.remaining() is not None:
@@ -1385,9 +1355,7 @@ class ConnectionPool:
         except HttpError as e:
             raise e
         with self.mu:
-            self.transport = _make_transport(
-                proxy=_proxy_url_of(_env_proxy_url()), verify=cast(bool | str, ctx)
-            )
+            self.transport = _make_transport(proxy=_proxy_url_of(_env_proxy_url()), verify=cast(bool | str, ctx))
 
     def WithProxy(self, proxy_url: str) -> None:
         """Apply a proxy URL to the pool transport (raises on error)."""
@@ -1444,9 +1412,7 @@ def NewConnectionPool(config: PoolConfig | None) -> ConnectionPool:
 class PooledClient:
     """an HTTP client sharing a pool transport."""
 
-    def __init__(
-        self, client: httpx.Client, pool: ConnectionPool, timeout: timedelta
-    ) -> None:
+    def __init__(self, client: httpx.Client, pool: ConnectionPool, timeout: timedelta) -> None:
         self.client = client
         self.pool = pool
         self.timeout = timeout
@@ -1461,9 +1427,7 @@ class PooledClient:
         except httpx.HTTPError as e:
             return None, HttpError(str(e))
 
-    def DoWithContext(
-        self, ctx: _Context, req: httpx.Request
-    ) -> tuple[httpx.Response | None, Exception | None]:
+    def DoWithContext(self, ctx: _Context, req: httpx.Request) -> tuple[httpx.Response | None, Exception | None]:
         """Send the request with a context deadline/cancellation."""
         if ctx is not None and ctx.err() is not None:
             return None, HttpError("context canceled")
@@ -1562,10 +1526,7 @@ sensitiveHeaders = (
     "x-api-key,x-auth-token,access-token,refresh-token,secret,password,token,"
     "api-key,apikey"
 )
-sensitiveParams = (
-    "password,secret,token,api_key,apikey,access_token,refresh_token,"
-    "auth_code,code,client_secret"
-)
+sensitiveParams = "password,secret,token,api_key,apikey,access_token,refresh_token,auth_code,code,client_secret"
 
 _SENSITIVE_HEADER_RE = re.compile(
     r"(?i)^(authorization|proxy-authorization|www-authenticate|cookie|set-cookie|"
@@ -1575,6 +1536,10 @@ _SENSITIVE_HEADER_RE = re.compile(
 _SENSITIVE_PARAM_RE = re.compile(
     r"(?i)(password|secret|token|api_key|apikey|access_token|refresh_token|"
     r"auth_code|code|client_secret)=([^&]+)"
+)
+_SENSITIVE_PARAM_BYTES_RE = re.compile(
+    rb"(?i)(password|secret|token|api_key|apikey|access_token|refresh_token|"
+    rb"auth_code|code|client_secret)=([^&]+)"
 )
 _CREDIT_CARD_RE = re.compile(rb"\b(?:\d[ -]*?){13,16}\b")
 _SSN_RE = re.compile(rb"\b\d{3}-?\d{2}-?\d{4}\b")
@@ -1676,9 +1641,7 @@ class HTTPLogger:
         self._write_remote_addr(buf, req)
         self._write_user_agent(buf, req)
         if config.log_request_headers:
-            self._write_headers(
-                buf, "Request Headers", _headers_of(req), config.sanitize_headers
-            )
+            self._write_headers(buf, "Request Headers", _headers_of(req), config.sanitize_headers)
         if config.log_request_body and req.content:
             self._write_request_body(buf, req, config)
         if config.logger is not None:
@@ -1695,9 +1658,7 @@ class HTTPLogger:
         if config.include_duration:
             buf.append(f" Duration: {_round_ms(duration)}")
         if config.log_response_headers:
-            self._write_headers(
-                buf, "Response Headers", _headers_of(resp), config.sanitize_headers
-            )
+            self._write_headers(buf, "Response Headers", _headers_of(resp), config.sanitize_headers)
         if config.log_response_body and resp.content:
             self._write_response_body(buf, resp, config)
         if config.logger is not None:
@@ -1753,9 +1714,7 @@ class HTTPLogger:
             if ua:
                 buf.append(f" User-Agent: {ua}")
 
-    def _write_headers(
-        self, buf: list[str], title: str, headers: list[tuple[str, str]], sanitize: bool
-    ) -> None:
+    def _write_headers(self, buf: list[str], title: str, headers: list[tuple[str, str]], sanitize: bool) -> None:
         buf.append(f"\n{title}:")
         for key, value in headers:
             if sanitize and _SENSITIVE_HEADER_RE.match(key):
@@ -1763,9 +1722,7 @@ class HTTPLogger:
                 continue
             buf.append(f"\n  {key}: {value}")
 
-    def _write_request_body(
-        self, buf: list[str], req: httpx.Request, config: LoggingConfig
-    ) -> None:
+    def _write_request_body(self, buf: list[str], req: httpx.Request, config: LoggingConfig) -> None:
         body = req.content
         if len(body) == 0:
             buf.append("\nRequest Body: [empty]")
@@ -1776,13 +1733,9 @@ class HTTPLogger:
             body = self._sanitize_params(body)
         for sanitizer in config.custom_sanitizers:
             body = sanitizer(body)
-        buf.append(
-            f"\nRequest Body ({len(body)} bytes): {body.decode('utf-8', 'replace')}"
-        )
+        buf.append(f"\nRequest Body ({len(body)} bytes): {body.decode('utf-8', 'replace')}")
 
-    def _write_response_body(
-        self, buf: list[str], resp: httpx.Response, config: LoggingConfig
-    ) -> None:
+    def _write_response_body(self, buf: list[str], resp: httpx.Response, config: LoggingConfig) -> None:
         body = resp.content
         if len(body) == 0:
             buf.append("\nResponse Body: [empty]")
@@ -1791,9 +1744,7 @@ class HTTPLogger:
             body = self._sanitize_body(body)
         for sanitizer in config.custom_sanitizers:
             body = sanitizer(body)
-        buf.append(
-            f"\nResponse Body ({len(body)} bytes): {body.decode('utf-8', 'replace')}"
-        )
+        buf.append(f"\nResponse Body ({len(body)} bytes): {body.decode('utf-8', 'replace')}")
 
     def _sanitize_body(self, data: bytes) -> bytes:
         result = _CREDIT_CARD_RE.sub(b"[CREDIT_CARD_REDACTED]", data)
@@ -1802,7 +1753,7 @@ class HTTPLogger:
         return result
 
     def _sanitize_params(self, data: bytes) -> bytes:
-        return cast(re.Pattern[bytes], _SENSITIVE_PARAM_RE).sub(b"\\1=[REDACTED]", data)
+        return cast(re.Pattern[bytes], _SENSITIVE_PARAM_BYTES_RE).sub(b"\\1=[REDACTED]", data)
 
     def SetLevel(self, level: LogLevel) -> None:
         """Set the logging level."""
@@ -1835,9 +1786,7 @@ class HTTPLogger:
                 try:
                     resp = next.handle_request(request)
                 except Exception as e:
-                    logger.LogRoundTrip(
-                        request, None, timedelta(seconds=time.monotonic() - start), e
-                    )
+                    logger.LogRoundTrip(request, None, timedelta(seconds=time.monotonic() - start), e)
                     raise
                 duration = timedelta(seconds=time.monotonic() - start)
                 logger.LogResponse(resp, duration)
@@ -1864,9 +1813,7 @@ class LoggedTransport:
         try:
             resp = self.transport.handle_request(request)
         except Exception as e:
-            self.logger.LogRoundTrip(
-                request, None, timedelta(seconds=time.monotonic() - start), e
-            )
+            self.logger.LogRoundTrip(request, None, timedelta(seconds=time.monotonic() - start), e)
             raise
         duration = timedelta(seconds=time.monotonic() - start)
         self.logger.LogResponse(resp, duration)
@@ -1882,9 +1829,7 @@ class LoggedTransport:
         return LoggedTransport(self.transport, self.logger)
 
 
-def NewLoggedTransport(
-    transport: httpx.HTTPTransport | None, logger: HTTPLogger
-) -> LoggedTransport:
+def NewLoggedTransport(transport: httpx.HTTPTransport | None, logger: HTTPLogger) -> LoggedTransport:
     """Create a logged transport (defaults to a plain transport when None)."""
     if transport is None:
         transport = _make_transport()
@@ -1970,7 +1915,7 @@ def SanitizeBody(body: bytes) -> bytes:
     result = _CREDIT_CARD_RE.sub(b"[CREDIT_CARD_REDACTED]", body)
     result = _SSN_RE.sub(b"[SSN_REDACTED]", result)
     result = _EMAIL_RE.sub(b"[EMAIL_REDACTED]", result)
-    result = cast(re.Pattern[bytes], _SENSITIVE_PARAM_RE).sub(b"\\1=[REDACTED]", result)
+    result = cast(re.Pattern[bytes], _SENSITIVE_PARAM_BYTES_RE).sub(b"\\1=[REDACTED]", result)
     return result
 
 
@@ -1978,9 +1923,7 @@ def SanitizeBody(body: bytes) -> bytes:
 # Logger in context
 # ---------------------------------------------------------------------------
 
-_logger_registry: weakref.WeakValueDictionary[int, HTTPLogger] = (
-    weakref.WeakValueDictionary()
-)
+_logger_registry: weakref.WeakValueDictionary[int, HTTPLogger] = weakref.WeakValueDictionary()
 _logger_registry_lock = threading.RLock()
 
 _loggerContextKey = "http_logger"
