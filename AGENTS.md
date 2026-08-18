@@ -19,7 +19,7 @@ Instrucciones para agentes de IA que trabajan en **Dxrk** (configurador/orquesta
 - **Comandos CLI**: cada módulo en `dxrk/commands/*.py` expone `register_<name>_command(reg: Registry) -> None`; TODOS se registran en `dxrk/commands/__init__.py` (`register_all`). Al crear un comando hay que agregarlo ahí.
 - `dxrk/commands/registry.py` define `Command`, `CommandContext` (out/err como `TextIO`, default `sys.stdout`/`sys.stderr`), `Registry` (`add_command`, `execute(argv, out, err)`), `go_quote`.
 - Submódulos por dominio: `agents/`, `autonomy/`, `cli/`, `commands/`, `components/`, `config/`, `mcp/`, `rag/`, `scholar/`, `security/`, `tui/`, `utils/`.
-- `utils/http.py` y `utils/image.py` son grandes (1000-1900 líneas) y de bajo coverage; `utils/` contiene helpers con sus propios tests (`tests/test_utils_*.py`).
+- `utils/http.py` (1945 líneas, ~62% cobertura) es el módulo más grande y el de menor coverage; `utils/image.py` (1157 líneas, ~96%). `utils/` contiene helpers con sus propios tests (`tests/test_utils_*.py`).
 - Config de usuario en `~/.config/dxrk/` (p.ej. `hooks.json`).
 
 ## Tests
@@ -29,6 +29,7 @@ Instrucciones para agentes de IA que trabajan en **Dxrk** (configurador/orquesta
 - Tests de adapters usan markers (`.claude`, `.opencode`, etc.) definidos en `pyproject.toml`.
 - Gate de cobertura: **80%** (`.github/workflows/ci.yml:48`, `CONTRIBUTING.md:36`). CI corre en ubuntu/macos/windows; tests POSIX-only se marcan `skipif(win32)`; el gate de coverage solo aplica en non-Windows.
 - Gotchas httpx: `httpx.Timeout` no tiene atributo `.timeout` (usar `.connect`/`.read` o `isinstance`); `httpx.Headers` no tiene `.append` (construir con lista de pares).
+- Tests de `dxrk/commands/session.py`: para simular errores de I/O monkeypatch `builtins.open` (no `dxrk.commands.session.open`) y `dxrk.commands.session.os.listdir` con `lambda *a: (_ for _ in ()).throw(OSError())`; los IDs en salida de list se truncan a 8 chars (`s.id[:8]`).
 
 ## Convenciones
 
