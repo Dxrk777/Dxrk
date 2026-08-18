@@ -1,4 +1,5 @@
 import json
+import sys
 
 import pytest
 
@@ -145,6 +146,7 @@ def test_upsert_top_level_toml_string():
     assert "new" in out
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX-specific directory handle")
 def test_write_file_atomic(tmp_path):
     path = str(tmp_path / "f.txt")
     result = filemerge.write_file_atomic(path, b"hello")
@@ -152,6 +154,7 @@ def test_write_file_atomic(tmp_path):
     assert filemerge.read_comparable_file(path) == b"hello"
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX-specific directory handle")
 def test_write_file_atomic_overwrite(tmp_path):
     path = str(tmp_path / "f.txt")
     filemerge.write_file_atomic(path, b"one")
@@ -160,6 +163,7 @@ def test_write_file_atomic_overwrite(tmp_path):
     assert filemerge.read_comparable_file(path) == b"two"
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX-specific directory handle")
 def test_write_file_atomic_same(tmp_path):
     path = str(tmp_path / "f.txt")
     filemerge.write_file_atomic(path, b"x")
