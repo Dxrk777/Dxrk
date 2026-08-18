@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import io
 import os
+import sys
 from datetime import timedelta
 
 import pytest
@@ -452,6 +453,7 @@ def test_processor_encode_unsupported(make_img):
         proc.encode()
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX-specific file mode")
 def test_processor_save(tmp_path, make_img):
     proc = img.ImageProcessor(make_img(8, 8), img.Format.PNG)
     path = tmp_path / "out.png"
