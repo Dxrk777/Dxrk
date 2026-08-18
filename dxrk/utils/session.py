@@ -373,9 +373,7 @@ def _session_from_dict(d: dict[str, Any]) -> Session:
         message_count=int(d.get("message_count", 0) or 0),
         token_count=int(d.get("token_count", 0) or 0),
         model=str(d.get("model", "")),
-        status=SessionStatus(status)
-        if status in _STATUS_NAMES
-        else SessionStatus.Active,
+        status=SessionStatus(status) if status in _STATUS_NAMES else SessionStatus.Active,
         metadata=dict(d.get("metadata", {}) or {}),
         tags=list(d.get("tags", []) or []),
         summary=str(d.get("summary", "")),
@@ -399,11 +397,16 @@ def _index_entry_to_dict(e: dict[str, Any]) -> dict[str, Any]:
 
 
 def _index_entry_from_dict(d: dict[str, Any]) -> dict[str, Any]:
+    def _ts(v: Any) -> datetime | None:
+        if isinstance(v, datetime):
+            return v
+        return _from_ts(v) if v else None
+
     return {
         "id": str(d.get("id", "")),
         "title": str(d.get("title", "")),
-        "created_at": _from_ts(d["created_at"]) if d.get("created_at") else None,
-        "updated_at": _from_ts(d["updated_at"]) if d.get("updated_at") else None,
+        "created_at": _ts(d.get("created_at")),
+        "updated_at": _ts(d.get("updated_at")),
         "message_count": int(d.get("message_count", 0) or 0),
         "token_count": int(d.get("token_count", 0) or 0),
         "status": d.get("status", SessionStatus.Active),
@@ -563,10 +566,7 @@ class FileStorage:
                 continue
             if opts.before is not None and e["created_at"] > opts.before:
                 continue
-            if (
-                opts.search_query
-                and opts.search_query.lower() not in e["title"].lower()
-            ):
+            if opts.search_query and opts.search_query.lower() not in e["title"].lower():
                 continue
             filtered.append(e)
 
@@ -579,16 +579,12 @@ class FileStorage:
         else:
             if key == "updated_at":
                 filtered.sort(
-                    key=lambda e: (
-                        e["updated_at"] if e["updated_at"] is not None else _EPOCH_UTC
-                    ),
+                    key=lambda e: e["updated_at"] if e["updated_at"] is not None else _EPOCH_UTC,
                     reverse=not asc,
                 )
             else:
                 filtered.sort(
-                    key=lambda e: (
-                        e["created_at"] if e["created_at"] is not None else _EPOCH_UTC
-                    ),
+                    key=lambda e: e["created_at"] if e["created_at"] is not None else _EPOCH_UTC,
                     reverse=not asc,
                 )
 
@@ -716,10 +712,7 @@ class MemoryStorage:
             for s in self.sessions.values():
                 if opts.status >= 0 and int(s.status) != opts.status:
                     continue
-                if (
-                    opts.search_query
-                    and opts.search_query.lower() not in s.title.lower()
-                ):
+                if opts.search_query and opts.search_query.lower() not in s.title.lower():
                     continue
                 result.append(
                     SessionSummary(
@@ -738,9 +731,7 @@ class MemoryStorage:
                 result.sort(key=lambda sm: sm.message_count, reverse=True)
             else:
                 result.sort(
-                    key=lambda sm: (
-                        sm.created_at if sm.created_at is not None else _EPOCH_UTC
-                    ),
+                    key=lambda sm: sm.created_at if sm.created_at is not None else _EPOCH_UTC,
                     reverse=True,
                 )
             if opts.offset > 0 and opts.offset < len(result):
@@ -892,20 +883,14 @@ def export_html(s: Session) -> str:
         "<style>body{font-family:system-ui,sans-serif;max-width:800px;margin:0 auto;padding:2rem;line-height:1.6}"
     )
     lines.append("h1{border-bottom:2px solid #333;padding-bottom:.5rem}")
-    lines.append(
-        ".msg{margin:1.5rem 0;padding:1rem;border-radius:8px;border-left:4px solid #ccc}"
-    )
+    lines.append(".msg{margin:1.5rem 0;padding:1rem;border-radius:8px;border-left:4px solid #ccc}")
     lines.append(".msg-user{background:#f0f7ff;border-color:#4a9eff}")
     lines.append(".msg-assistant{background:#f5fff0;border-color:#4aff4a}")
     lines.append(".msg-system{background:#fff8f0;border-color:#ffaa4a}")
     lines.append(".role{font-weight:bold;text-transform:capitalize}")
     lines.append(".time{color:#888;font-size:.85em}")
-    lines.append(
-        "pre{background:#f4f4f4;padding:1rem;overflow-x:auto;border-radius:4px}"
-    )
-    lines.append(
-        "code{background:#f4f4f4;padding:.15em .3em;border-radius:3px;font-size:.9em}"
-    )
+    lines.append("pre{background:#f4f4f4;padding:1rem;overflow-x:auto;border-radius:4px}")
+    lines.append("code{background:#f4f4f4;padding:.15em .3em;border-radius:3px;font-size:.9em}")
     lines.append("</style></head><body>")
     lines.append("")
     lines.append(f"<h1>{html_escape(s.title)}</h1>")
@@ -915,48 +900,30 @@ def export_html(s: Session) -> str:
     )
     created = _fmt_rfc3339(s.created_at) if s.created_at else ""
     updated = _fmt_rfc3339(s.updated_at) if s.updated_at else ""
-    lines.append(
-        f"<p><em>Created: {created} &mdash; Updated: {updated} &mdash; Status: {s.status}</em></p>"
-    )
+    lines.append(f"<p><em>Created: {created} &mdash; Updated: {updated} &mdash; Status: {s.status}</em></p>")
     lines.append("")
     if s.summary:
         lines.append(f"<h2>Summary</h2><div>{html_escape(s.summary)}</div>")
     for msg in s.messages:
         lines.append(f'<div class="msg msg-{msg.role}">')
         ts = _fmt_rfc3339(msg.timestamp) if msg.timestamp else ""
-        lines.append(
-            f'<span class="role">{html_escape(str(msg.role))}</span> '
-            f'<span class="time">{ts}</span>'
-        )
+        lines.append(f'<span class="role">{html_escape(str(msg.role))}</span> <span class="time">{ts}</span>')
         if msg.content:
             lines.append(f"<pre><code>{html_escape(msg.content)}</code></pre>")
         for tc in msg.tool_calls:
             err = f" <em>(error: {html_escape(tc.error)})</em>" if tc.error else ""
-            lines.append(
-                f'<div class="tool-call"><strong>Tool: {html_escape(tc.name)}</strong>{err}</div>'
-            )
+            lines.append(f'<div class="tool-call"><strong>Tool: {html_escape(tc.name)}</strong>{err}</div>')
         lines.append("</div>")
     lines.append("</body></html>")
     return "\n".join(lines)
 
 
 def html_escape(s: str) -> str:
-    return (
-        s.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&#34;")
-        .replace("'", "&#39;")
-    )
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&#34;").replace("'", "&#39;")
 
 
 def xml_escape(s: str) -> str:
-    return (
-        s.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-    )
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
 
 def export_xml(s: Session) -> str:
@@ -967,12 +934,8 @@ def export_xml(s: Session) -> str:
     lines.append(f"  <title>{xml_escape(s.title)}</title>")
     lines.append(f"  <model>{xml_escape(s.model)}</model>")
     lines.append(f"  <status>{s.status}</status>")
-    lines.append(
-        f"  <created_at>{_fmt_rfc3339(s.created_at) if s.created_at else ''}</created_at>"
-    )
-    lines.append(
-        f"  <updated_at>{_fmt_rfc3339(s.updated_at) if s.updated_at else ''}</updated_at>"
-    )
+    lines.append(f"  <created_at>{_fmt_rfc3339(s.created_at) if s.created_at else ''}</created_at>")
+    lines.append(f"  <updated_at>{_fmt_rfc3339(s.updated_at) if s.updated_at else ''}</updated_at>")
     lines.append(f"  <message_count>{s.message_count}</message_count>")
     lines.append(f"  <token_count>{s.token_count}</token_count>")
     if s.summary:
@@ -1026,9 +989,7 @@ def restore_session(id: str, storage: Storage) -> Session:
     if s is None or not s.id:
         raise SessionError(f"session {id!r} invalid")
     if s.version > CurrentVersion:
-        raise SessionError(
-            f"session version {s.version} exceeds current version {CurrentVersion}"
-        )
+        raise SessionError(f"session version {s.version} exceeds current version {CurrentVersion}")
     return s
 
 
@@ -1062,15 +1023,9 @@ def create_summary(s: Session | None, max_tokens: int = 4096) -> str:
         used += t
     kept.reverse()
     if len(kept) < len(s.messages):
-        prefix = (
-            f"Session {_go_quote(s.title)} ({len(kept)} of {len(s.messages)} messages, "
-            f"~{used} tokens).\n"
-        )
+        prefix = f"Session {_go_quote(s.title)} ({len(kept)} of {len(s.messages)} messages, ~{used} tokens).\n"
     else:
-        prefix = (
-            f"Session {_go_quote(s.title)} ({len(s.messages)} messages, "
-            f"~{s.token_count} tokens).\n"
-        )
+        prefix = f"Session {_go_quote(s.title)} ({len(s.messages)} messages, ~{s.token_count} tokens).\n"
     return prefix + _build_message_summary(kept)
 
 
@@ -1203,9 +1158,7 @@ def migrate_session(data: str, from_version: int, to_version: int) -> str:
     if from_version == to_version:
         return data
     if from_version > to_version:
-        raise SessionError(
-            f"downgrade migrations not supported: {from_version} -> {to_version}"
-        )
+        raise SessionError(f"downgrade migrations not supported: {from_version} -> {to_version}")
     current = from_version
     current_data = data
     while current < to_version:
@@ -1215,14 +1168,10 @@ def migrate_session(data: str, from_version: int, to_version: int) -> str:
         try:
             current_data = fn(current_data)
         except SessionError as e:
-            raise SessionError(
-                f"migration {current} -> {current + 1} failed: {e}"
-            ) from e
+            raise SessionError(f"migration {current} -> {current + 1} failed: {e}") from e
         try:
             probe = json.loads(current_data)
-            probe_version = (
-                int(probe.get("version", 0) or 0) if isinstance(probe, dict) else 0
-            )
+            probe_version = int(probe.get("version", 0) or 0) if isinstance(probe, dict) else 0
         except ValueError:
             probe_version = current
         if probe_version > current:
