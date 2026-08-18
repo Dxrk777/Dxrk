@@ -25,6 +25,7 @@ nav:
   - Arquitectura: architecture.md
   - Plataformas: platforms.md
   - Roadmap: roadmap.md
+  - API Reference: api.md
 
 markdown_extensions:
   - admonition
@@ -44,3 +45,6 @@ markdown_extensions:
 plugins:
   - search
   - social
+  - mkdocstrings:
+      default:
+        show_source: true
