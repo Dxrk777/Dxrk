@@ -76,9 +76,7 @@ def sign_test_token(claims: dict) -> str:
     header = {"alg": "HS256", "typ": "JWT"}
     h = _b64url(json.dumps(header, separators=(",", ":")).encode())
     p = _b64url(json.dumps(claims, separators=(",", ":")).encode())
-    sig = _b64url(
-        hmac.new(TEST_JWT_SECRET, f"{h}.{p}".encode(), hashlib.sha256).digest()
-    )
+    sig = _b64url(hmac.new(TEST_JWT_SECRET, f"{h}.{p}".encode(), hashlib.sha256).digest())
     return f"{h}.{p}.{sig}"
 
 
@@ -124,9 +122,7 @@ def test_parse_for_security_safe_commands() -> None:
     ]
     for cmd in safe:
         res = parse_for_security(cmd)
-        assert res.is_safe, (
-            f"ParseForSecurity({cmd!r}) IsSafe = False, violations: {res.violations}"
-        )
+        assert res.is_safe, f"ParseForSecurity({cmd!r}) IsSafe = False, violations: {res.violations}"
 
 
 def test_parse_for_security_dangerous() -> None:
@@ -162,18 +158,14 @@ def test_parse_for_security_null_byte() -> None:
 def test_parse_for_security_env_assignment() -> None:
     res = parse_for_security("FOO=bar echo hi")
     assert res.is_safe, f"expected safe, violations: {res.violations}"
-    assert "FOO=bar" in res.env_vars, (
-        f"EnvVars = {res.env_vars}, want to contain FOO=bar"
-    )
+    assert "FOO=bar" in res.env_vars, f"EnvVars = {res.env_vars}, want to contain FOO=bar"
 
 
 def test_parse_for_security_operators() -> None:
     res = parse_for_security("echo a && echo b; echo c")
     assert res.is_safe, f"expected safe, violations: {res.violations}"
     joined = " ".join(res.operators)
-    assert "&&" in joined and ";" in joined, (
-        f"Operators = {res.operators}, want && and ;"
-    )
+    assert "&&" in joined and ";" in joined, f"Operators = {res.operators}, want && and ;"
 
 
 def test_extract_command_name() -> None:
@@ -203,18 +195,14 @@ def test_sanitize_for_log() -> None:
         ("\x1b[31mred\x1b[0m", "red"),
     ]
     for inp, want in cases:
-        assert sanitize_for_log(inp) == want, (
-            f"SanitizeForLog({inp!r}) = {sanitize_for_log(inp)!r}, want {want!r}"
-        )
+        assert sanitize_for_log(inp) == want, f"SanitizeForLog({inp!r}) = {sanitize_for_log(inp)!r}, want {want!r}"
 
 
 def test_sanitize_for_log_truncation() -> None:
     long_cmd = "a" * 600
     got = sanitize_for_log(long_cmd)
     assert len(got) == 500 + len("...[truncated]")
-    assert got.endswith("...[truncated]"), (
-        f"SanitizeForLog = {got!r}, want truncation suffix"
-    )
+    assert got.endswith("...[truncated]"), f"SanitizeForLog = {got!r}, want truncation suffix"
 
 
 def test_is_read_only_command() -> None:
@@ -261,9 +249,7 @@ def test_redact_sensitive() -> None:
         ("hello world", "hello world"),
     ]
     for inp, want in cases:
-        assert redact_sensitive(inp) == want, (
-            f"RedactSensitive({inp!r}) = {redact_sensitive(inp)!r}, want {want!r}"
-        )
+        assert redact_sensitive(inp) == want, f"RedactSensitive({inp!r}) = {redact_sensitive(inp)!r}, want {want!r}"
 
 
 def test_is_ascii() -> None:
@@ -297,9 +283,7 @@ def test_classify_token() -> None:
         ("", TokenKind.UNKNOWN),
     ]
     for tok, want in cases:
-        assert classify_token(tok) == want, (
-            f"ClassifyToken({tok!r}) = {classify_token(tok)}, want {want}"
-        )
+        assert classify_token(tok) == want, f"ClassifyToken({tok!r}) = {classify_token(tok)}, want {want}"
 
 
 def test_token_kind_string() -> None:
@@ -334,9 +318,7 @@ def test_parse_token_safe() -> None:
     assert info.is_valid, "token should be valid"
     assert not info.is_expired, "token should not be expired"
     assert info.subject == "user42" and info.issuer == "dxrk"
-    assert info.kind == TokenKind.UNKNOWN, (
-        f"kind = {info.kind}, want unknown (no prefix)"
-    )
+    assert info.kind == TokenKind.UNKNOWN, f"kind = {info.kind}, want unknown (no prefix)"
 
     # Tampered signature must fail
     tampered = tok[:-4] + "AAAA"
@@ -452,9 +434,7 @@ def test_is_device_trusted() -> None:
         ),
     ]
     for name, device, want in cases:
-        assert is_device_trusted(device) == want, (
-            f"{name}: IsDeviceTrusted = {is_device_trusted(device)}, want {want}"
-        )
+        assert is_device_trusted(device) == want, f"{name}: IsDeviceTrusted = {is_device_trusted(device)}, want {want}"
 
 
 def test_validate_ingress_url() -> None:
@@ -498,9 +478,7 @@ def test_setting_source_string_and_priority() -> None:
         (SettingSource(99), "unknown", 0),
     ]
     for source, want_str, want_priority in cases:
-        assert str(source) == want_str, (
-            f"SettingSource({source}).String() = {source}, want {want_str}"
-        )
+        assert str(source) == want_str, f"SettingSource({source}).String() = {source}, want {want_str}"
         assert source.priority() == want_priority
 
 
@@ -517,9 +495,7 @@ def test_permission_result_string() -> None:
         PermissionResult(99): "unknown",
     }
     for result, want in cases.items():
-        assert str(result) == want, (
-            f"PermissionResult({result}).String() = {result}, want {want}"
-        )
+        assert str(result) == want, f"PermissionResult({result}).String() = {result}, want {want}"
 
 
 def test_new_permission_context() -> None:
@@ -558,6 +534,23 @@ def test_load_rules_from_file_invalid_json(tmp_path) -> None:
     path.write_text("{not json")
     with pytest.raises(ValueError):
         pc.load_rules_from_file(str(path), SettingSource.USER)
+
+
+def test_load_rules_from_file_unreadable(tmp_path) -> None:
+    pc = PermissionContext()
+    path = tmp_path / "dir.json"
+    path.mkdir()
+    with pytest.raises(ValueError):
+        pc.load_rules_from_file(str(path), SettingSource.USER)
+
+
+def test_load_rules_from_file_skips_non_dict(tmp_path) -> None:
+    pc = PermissionContext()
+    path = tmp_path / "settings.json"
+    path.write_text('{"permissions":[{"tool":"Read","behavior":"allow"},"oops",42]}')
+    pc.load_rules_from_file(str(path), SettingSource.USER)
+    rules = pc.rules()
+    assert len(rules) == 1, f"rules = {len(rules)}, want 1 (non-dict entries skipped)"
 
 
 def test_load_all_sources(tmp_path) -> None:
@@ -605,13 +598,7 @@ def test_add_flag_rules() -> None:
 
 def test_add_policy_rules_overrides_source() -> None:
     pc = PermissionContext()
-    pc.add_policy_rules(
-        [
-            PermissionRule(
-                tool="Bash", behavior=PermissionBehavior.DENY, source=SettingSource.USER
-            )
-        ]
-    )
+    pc.add_policy_rules([PermissionRule(tool="Bash", behavior=PermissionBehavior.DENY, source=SettingSource.USER)])
     rules = pc.rules()
     assert len(rules) == 1 and rules[0].source == SettingSource.POLICY
 
@@ -619,9 +606,14 @@ def test_add_policy_rules_overrides_source() -> None:
 def test_check_no_rules() -> None:
     pc = PermissionContext()
     res, reason = pc.check("Bash", "ls")
-    assert res == PermissionResult.NEEDS_PROMPT, (
-        f"Check = {res} ({reason}), want needs_prompt"
-    )
+    assert res == PermissionResult.NEEDS_PROMPT, f"Check = {res} ({reason}), want needs_prompt"
+
+
+def test_check_rule_tool_mismatch() -> None:
+    pc = PermissionContext()
+    pc.add_policy_rules([PermissionRule(tool="Write", behavior=PermissionBehavior.ALLOW)])
+    res, _ = pc.check("Bash", "ls")
+    assert res == PermissionResult.NEEDS_PROMPT, "Bash should not match a Write-only rule"
 
 
 def test_check_allow_deny_and_priority() -> None:
@@ -641,9 +633,7 @@ def test_check_allow_deny_and_priority() -> None:
     # flag deny beats local allow
     pc = PermissionContext()
     pc.add_flag_rules(["Bash"], PermissionBehavior.DENY)
-    pc.add_policy_rules(
-        [PermissionRule(tool="Bash", behavior=PermissionBehavior.ALLOW)]
-    )
+    pc.add_policy_rules([PermissionRule(tool="Bash", behavior=PermissionBehavior.ALLOW)])
     res, _ = pc.check("Bash", "ls")
     assert res == PermissionResult.ALLOWED, "want allowed (policy=50 wins)"
 
@@ -657,33 +647,17 @@ def test_check_allow_deny_and_priority() -> None:
 def test_check_prefix_word_boundary() -> None:
     pc = PermissionContext()
     pc.add_flag_rules(["Bash"], PermissionBehavior.ALLOW)
-    pc.add_policy_rules(
-        [
-            PermissionRule(
-                tool="Bash", prefix="git commit", behavior=PermissionBehavior.DENY
-            )
-        ]
-    )
+    pc.add_policy_rules([PermissionRule(tool="Bash", prefix="git commit", behavior=PermissionBehavior.DENY)])
 
     res, reason = pc.check("Bash", "git commit -m hello")
-    assert res == PermissionResult.DENIED, (
-        f"git commit -m: {res} ({reason}), want denied"
-    )
+    assert res == PermissionResult.DENIED, f"git commit -m: {res} ({reason}), want denied"
     res, _ = pc.check("Bash", "git commitx --amend")
-    assert res == PermissionResult.ALLOWED, (
-        "git commitx: want allowed (no word boundary match)"
-    )
+    assert res == PermissionResult.ALLOWED, "git commitx: want allowed (no word boundary match)"
 
 
 def test_check_glob_pattern() -> None:
     pc = PermissionContext()
-    pc.add_policy_rules(
-        [
-            PermissionRule(
-                tool="Bash", pattern="npm test *", behavior=PermissionBehavior.ALLOW
-            )
-        ]
-    )
+    pc.add_policy_rules([PermissionRule(tool="Bash", pattern="npm test *", behavior=PermissionBehavior.ALLOW)])
 
     res, _ = pc.check("Bash", "npm test --watch")
     assert res == PermissionResult.ALLOWED, "npm test --watch: want allowed"
@@ -696,16 +670,12 @@ def test_check_auto_deny() -> None:
     for _ in range(5):
         pc.record_denial("Bash")
     res, reason = pc.check("Bash", "ls")
-    assert res == PermissionResult.DENIED, (
-        f"Check = {res}, want denied after threshold"
-    )
+    assert res == PermissionResult.DENIED, f"Check = {res}, want denied after threshold"
     assert reason != "", "auto-deny should include a reason"
 
     pc.reset_denials()
     res, _ = pc.check("Bash", "ls")
-    assert res == PermissionResult.NEEDS_PROMPT, (
-        f"after ResetDenials: {res}, want needs_prompt"
-    )
+    assert res == PermissionResult.NEEDS_PROMPT, f"after ResetDenials: {res}, want needs_prompt"
 
 
 def test_match_glob() -> None:
@@ -774,23 +744,15 @@ def test_detect_unreachable_rules() -> None:
 
     # same priority different behavior
     rules = [
-        PermissionRule(
-            tool="Read", behavior=PermissionBehavior.DENY, source=SettingSource.USER
-        ),
-        PermissionRule(
-            tool="Read", behavior=PermissionBehavior.ALLOW, source=SettingSource.USER
-        ),
+        PermissionRule(tool="Read", behavior=PermissionBehavior.DENY, source=SettingSource.USER),
+        PermissionRule(tool="Read", behavior=PermissionBehavior.ALLOW, source=SettingSource.USER),
     ]
     assert len(detect_unreachable_rules(rules)) == 1
 
     # identical duplicates not flagged
     rules = [
-        PermissionRule(
-            tool="Read", behavior=PermissionBehavior.ALLOW, source=SettingSource.USER
-        ),
-        PermissionRule(
-            tool="Read", behavior=PermissionBehavior.ALLOW, source=SettingSource.USER
-        ),
+        PermissionRule(tool="Read", behavior=PermissionBehavior.ALLOW, source=SettingSource.USER),
+        PermissionRule(tool="Read", behavior=PermissionBehavior.ALLOW, source=SettingSource.USER),
     ]
     assert detect_unreachable_rules(rules) == []
 
@@ -841,9 +803,7 @@ def test_assess_bash_risk() -> None:
         ("eval echo hi", RiskLevel.HIGH),
     ]
     for cmd, want in cases:
-        assert assess_bash_risk(cmd) == want, (
-            f"AssessBashRisk({cmd!r}) = {assess_bash_risk(cmd)}, want {want}"
-        )
+        assert assess_bash_risk(cmd) == want, f"AssessBashRisk({cmd!r}) = {assess_bash_risk(cmd)}, want {want}"
 
 
 def test_check_dangerous_patterns() -> None:

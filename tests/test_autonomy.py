@@ -13,6 +13,7 @@ from dxrk.autonomy import (
     CapFSRead,
     CapFSWrite,
     CapGit,
+    CapSudo,
     MemoryItem,
     New,
     NewEvolutionEngine,
@@ -64,6 +65,62 @@ def test_permission_request_handler() -> None:
     ps.set_request_handler(handler)
     assert ps.check(CapDocker, "run container") is not None
     assert denied
+
+
+def test_permission_store_not_granted() -> None:
+    ps = NewPermissionStore([], [])
+    assert ps.check(CapSudo, "apt install") is not None
+
+
+def test_permission_store_grant() -> None:
+    ps = NewPermissionStore(["fs.write"], [])
+    ps.deny(CapFSWrite, permanent=False)
+    ps.grant(CapFSWrite)
+    assert ps.check(CapFSWrite, "write") is None
+    assert "fs.write" in ps.all_granted()
+
+
+def test_permission_store_request_no_handler() -> None:
+    ps = NewPermissionStore([], ["docker"])
+    err = ps.check(CapDocker, "run container")
+    assert err is not None and "requires approval" in err
+
+
+def test_permission_store_request_cached_grant() -> None:
+    ps = NewPermissionStore([], ["docker"])
+    calls = []
+
+    def handler(capability, reason):
+        calls.append(reason)
+        return True, None
+
+    ps.set_request_handler(handler)
+    assert ps.check(CapDocker, "run") is None
+    assert ps.check(CapDocker, "run") is None
+    assert len(calls) == 1, "second check should hit the cached grant"
+
+
+def test_permission_store_request_not_ok() -> None:
+    ps = NewPermissionStore([], ["docker"])
+
+    def handler(capability, reason):
+        return False, None
+
+    ps.set_request_handler(handler)
+    err = ps.check(CapDocker, "run")
+    assert err is not None and "denied" in err
+
+
+def test_permission_store_all_granted_sorted() -> None:
+    ps = NewPermissionStore(["git"], [])
+    ps.grant("sudo")
+    assert ps.all_granted() == ["git", "sudo"]
+
+
+def test_new_permission_store_skips_empty() -> None:
+    ps = NewPermissionStore(["", "git", " "], ["", "docker", " "])
+    assert ps.allowed == {"git"}
+    assert ps.ask_first == {"docker"}
 
 
 def test_iq_metrics(tmp_path) -> None:
