@@ -76,6 +76,16 @@ dxrk = ["assets/**/*"]
 testpaths = ["tests"]
 pythonpath = ["."]
 asyncio_mode = "auto"
+addopts = "--cov=dxrk --cov-report=term-missing --cov-fail-under=74"
+
+[tool.coverage.run]
+branch = true
+omit = ["*/tests/*", "*/__pycache__/*", "*/tests_*.py"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", "raise NotImplementedError", "@overload"]
 markers = [
   "antigravity: Antigravity adapter tests",
   "claude: Claude adapter tests",
