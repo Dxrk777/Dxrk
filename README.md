@@ -4,7 +4,7 @@
 
 ![Social](assets/social-preview.png)
 
-[![Release](https://img.shields.io/badge/Release-v0.1.2-blue)](https://github.com/Dxrk777/Dxrk/releases/latest)
+[![Release](https://img.shields.io/badge/Release-v0.2.0-blue)](https://github.com/Dxrk777/Dxrk/releases/latest)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.13%2B-3776AB)](https://www.python.org/downloads/)
 [![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)](docs/platforms.md)

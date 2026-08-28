@@ -39,6 +39,7 @@ Este documento es el **plan ejecutable** para llevar a Dxrk a **Top1 GitHub DX**
 | **Zero-trace mempalace** | `grep engram|mempal dxrk/memory → 0` | n/a | n/a | n/a |
 
 > **Disclaimer reproducibilidad:** recall medido en subset LOCOMO-500 con chunking 800/100 idéntico, `k=10`, `since`/`before` desactivado. Latencias p50 de `benchmarks/bench_memory.py --corpus 1k --runs 100` (ver §1.3). Chroma gana latencia pura HNSW por 2.9×, pero pierde en `install size` 420× y `cold start` 7.5× — trade-off documentado en ADR-003. Dxrk prioriza DX > micro-latencia.
+> **Baseline v0.1.2 (R06):** tabla estimada + cómo reproducir en [`benchmarks/README.md`](../benchmarks/README.md) — `uv run python benchmarks/bench_memory.py --quick` (stdlib-only) y `uv run python -m pytest benchmarks/ -q` (fallback sin `pytest-benchmark`).
 
 ### 1.2 Lectura honesta
 
