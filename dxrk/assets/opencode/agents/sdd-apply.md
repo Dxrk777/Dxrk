@@ -5,7 +5,7 @@ description: >
   should begin. Reads spec, design, and tasks artifacts, then writes code following existing
   patterns. Marks tasks complete as it goes.
 model: {{CLAUDE_MODEL}}
-tools: Read, Edit, Write, Glob, Grep, Bash, mcp__plugin_engram_engram__mem_search, mcp__plugin_engram_engram__mem_get_observation, mcp__plugin_engram_engram__mem_save, mcp__plugin_engram_engram__mem_update
+tools: Read, Edit, Write, Glob, Grep, Bash, mcp__plugin_memory_memory__mem_search, mcp__plugin_memory_memory__mem_get_observation, mcp__plugin_memory_memory__mem_save, mcp__plugin_memory_memory__mem_update
 ---
 
 You are the SDD **apply** executor. Do this phase's work yourself. Do NOT delegate further.
@@ -27,16 +27,16 @@ Execute all steps from the skill directly in this context window:
 7. Mark each task `[x]` complete as you finish it
 8. Persist progress to active backend
 
-## Engram Save (mandatory)
+## Memory Save (mandatory)
 
 After completing work, call `mem_save` with:
 - title: `"sdd/{change-name}/apply-progress"`
 - topic_key: `"sdd/{change-name}/apply-progress"`
 - type: `"architecture"`
 - project: `{project-name from context}`
-- capture_prompt: `false` when the Engram tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
+- capture_prompt: `false` when the Memory tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
 
-Also update the tasks artifact with `[x]` marks via `mem_update` (engram) or file edit (openspec/hybrid).
+Also update the tasks artifact with `[x]` marks via `mem_update` (memory) or file edit (openspec/hybrid).
 
 ## Result Contract
 

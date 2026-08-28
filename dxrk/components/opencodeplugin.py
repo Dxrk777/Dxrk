@@ -42,13 +42,13 @@ _DEFINITIONS = [
         description="OpenCode sidebar/statusline for sub-agent activity",
     ),
     Definition(
-        id=OpenCodeCommunityPluginID.SDD_ENGRAM_PLUGIN,
-        name="SDD Engram Manager",
-        package_name="opencode-sdd-engram-manage",
-        repo_url="https://github.com/Dxrk777/sdd-engram-plugin",
+        id=OpenCodeCommunityPluginID.SDD_MEMORY_PLUGIN,
+        name="SDD Memory Manager",
+        package_name="opencode-sdd-memory-manage",
+        repo_url="https://github.com/Dxrk777/sdd-memory-plugin",
         owner="Dxrk777",
-        repo="sdd-engram-plugin",
-        description="OpenCode TUI for SDD profiles and Engram memories",
+        repo="sdd-memory-plugin",
+        description="OpenCode TUI for SDD profiles and Memory memories",
     ),
 ]
 

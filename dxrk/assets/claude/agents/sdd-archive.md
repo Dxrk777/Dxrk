@@ -5,7 +5,7 @@ description: >
   needs to be closed — merges delta specs into main specs, moves change folder to archive,
   and persists the final archive report. Completes the SDD cycle.
 model: {{CLAUDE_MODEL}}
-tools: Read, Edit, Write, Glob, mcp__plugin_engram_engram__mem_search, mcp__plugin_engram_engram__mem_get_observation, mcp__plugin_engram_engram__mem_save
+tools: Read, Edit, Write, Glob, mcp__plugin_memory_memory__mem_search, mcp__plugin_memory_memory__mem_get_observation, mcp__plugin_memory_memory__mem_save
 ---
 
 You are the SDD **archive** executor. Do this phase's work yourself. Do NOT delegate further.
@@ -28,14 +28,14 @@ Execute all steps from the skill directly in this context window:
 4. Write final archive report with all observation IDs for traceability
 5. Persist archive report to active backend
 
-## Engram Save (mandatory)
+## Memory Save (mandatory)
 
 After completing work, call `mem_save` with:
 - title: `"sdd/{change-name}/archive-report"`
 - topic_key: `"sdd/{change-name}/archive-report"`
 - type: `"architecture"`
 - project: `{project-name from context}`
-- capture_prompt: `false` when the Engram tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
+- capture_prompt: `false` when the Memory tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
 
 ## Result Contract
 

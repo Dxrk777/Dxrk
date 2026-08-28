@@ -23,14 +23,14 @@ Execute all steps from the skill directly in this context window:
 3. Teach each phase by doing it — produce real artifacts, not toy examples
 4. Save progress at each phase so the session is resumable
 
-## Engram Save (mandatory)
+## Memory Save (mandatory)
 
 After completing work, call `mem_save` with:
 - title: `"sdd-onboard/{project}"`
 - topic_key: `"sdd-onboard/{project}"`
 - type: `"architecture"`
 - project: `{project-name from context}`
-- capture_prompt: `false` when the Engram tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
+- capture_prompt: `false` when the Memory tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
 
 ## Result Contract
 

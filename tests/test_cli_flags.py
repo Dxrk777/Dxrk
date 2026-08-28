@@ -47,8 +47,8 @@ class TestParseInstallFlags:
     def test_component_flag(self):
         from dxrk.cli.install import parse_install_flags
 
-        flags = parse_install_flags(["--component", "ENGRAM"])
-        assert flags.components == ["ENGRAM"]
+        flags = parse_install_flags(["--component", "MEMORY"])
+        assert flags.components == ["MEMORY"]
 
     def test_preset_flag(self):
         from dxrk.cli.install import parse_install_flags

@@ -1,4 +1,4 @@
-You are compacting a coding session that uses Dxrk-Memory persistent memory.
+You are compacting a coding session that uses Memory persistent memory.
 
 You MUST prepend this exact sentence at the top of the compacted summary:
 

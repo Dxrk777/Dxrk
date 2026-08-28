@@ -15,7 +15,7 @@ class TestDefinitions:
         assert len(defs) >= 2
         ids = [d.id for d in defs]
         assert OpenCodeCommunityPluginID.SUB_AGENT_STATUSLINE in ids
-        assert OpenCodeCommunityPluginID.SDD_ENGRAM_PLUGIN in ids
+        assert OpenCodeCommunityPluginID.SDD_MEMORY_PLUGIN in ids
 
     def test_each_definition_has_fields(self):
         for d in opencodeplugin.definitions():

@@ -27,7 +27,7 @@ class ComponentID(StrEnum):
     SDD = "sdd"
     SKILLS = "skills"
     CONTEXT7 = "context7"
-    MEMPALACE = "mempalace"
+    DXRK = "dxrk"
     PERSONA = "persona"
     PERMISSIONS = "permissions"
     DXRK_GUARDIAN = "DXRK_GUARDIAN"
@@ -500,7 +500,7 @@ class SDDProfileStrategyID(StrEnum):
 
 class OpenCodeCommunityPluginID(StrEnum):
     SUB_AGENT_STATUSLINE = "sub-agent-statusline"
-    SDD_ENGRAM_PLUGIN = "sdd-DXRK_MEMORY-plugin"
+    SDD_MEMORY_PLUGIN = "sdd-DXRK_MEMORY-plugin"
 
 
 class SupportTier(StrEnum):
@@ -620,7 +620,7 @@ AGENTS = [
     AgentPi,
 ]
 
-ComponentEngram = ComponentID.DXRK_MEMORY
+ComponentMemory = ComponentID.DXRK_MEMORY
 ComponentSDD = ComponentID.SDD
 ComponentSkills = ComponentID.SKILLS
 ComponentContext7 = ComponentID.CONTEXT7
@@ -632,7 +632,7 @@ ComponentClaudeTheme = ComponentID.CLAUDE_THEME
 ComponentOpenCodeDxrkLogo = ComponentID.OPENCODE_DXRK_LOGO
 
 COMPONENTS = [
-    ComponentEngram,
+    ComponentMemory,
     ComponentSDD,
     ComponentSkills,
     ComponentContext7,

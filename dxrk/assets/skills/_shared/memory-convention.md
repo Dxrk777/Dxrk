@@ -1,10 +1,10 @@
-# Dxrk-Memory Artifact Convention (reference documentation)
+# Memory Artifact Convention (reference documentation)
 
-NOTE: Critical dxrk-memory calls (`mem_search`, `mem_save`, `mem_get_observation`) are inlined directly in each skill's SKILL.md. This document is supplementary reference — sub-agents do NOT need to read it to function.
+NOTE: Critical memory calls (`mem_search`, `mem_save`, `mem_get_observation`) are inlined directly in each skill's SKILL.md. This document is supplementary reference — sub-agents do NOT need to read it to function.
 
 ## Naming Rules
 
-ALL SDD artifacts persisted to Dxrk-Memory MUST follow this deterministic naming:
+ALL SDD artifacts persisted to Memory MUST follow this deterministic naming:
 
 ```
 title:     sdd/{change-name}/{artifact-type}
@@ -15,7 +15,7 @@ scope:     project
 capture_prompt: false
 ```
 
-Set `capture_prompt: false` when the Dxrk-Memory tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
+Set `capture_prompt: false` when the Memory tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
 
 ### Artifact Types
 
@@ -42,7 +42,7 @@ mem_save(
   type: "architecture",
   project: "{project}",
   capture_prompt: false,
-  content: "change: {change-name}\nphase: {last-phase}\nartifact_store: dxrk-memory\nartifacts:\n  proposal: true\n  specs: true\n  design: false\n  tasks: false\ntasks_progress:\n  completed: []\n  pending: []\nlast_updated: {ISO date}"
+  content: "change: {change-name}\nphase: {last-phase}\nartifact_store: memory\nartifacts:\n  proposal: true\n  specs: true\n  design: false\n  tasks: false\ntasks_progress:\n  completed: []\n  pending: []\nlast_updated: {ISO date}"
 )
 ```
 
@@ -101,7 +101,7 @@ mem_save(
 )
 ```
 
-`capture_prompt: false` is REQUIRED for SDD artifacts when the Dxrk-Memory tool schema supports it. Dxrk-Memory v1.15.3 captures user prompts by default for human/proactive saves, but SDD artifacts are automated pipeline outputs. Do not infer this from `type` because both SDD artifacts and human architecture decisions use `architecture`. If an older schema rejects or does not expose `capture_prompt`, omit it rather than failing.
+`capture_prompt: false` is REQUIRED for SDD artifacts when the Memory tool schema supports it. Memory v1.15.3 captures user prompts by default for human/proactive saves, but SDD artifacts are automated pipeline outputs. Do not infer this from `type` because both SDD artifacts and human architecture decisions use `architecture`. If an older schema rejects or does not expose `capture_prompt`, omit it rather than failing.
 
 Update existing artifact (when you have the observation ID):
 ```
@@ -117,15 +117,15 @@ mem_search(query: "sdd/{change-name}/", project: "{project}")
 → Returns all artifacts for that change
 ```
 
-## Project Name Resolution (dxrk-memory v1.11.0+)
+## Project Name Resolution (memory v1.11.0+)
 
-Dxrk-Memory auto-detects the project name from the git remote at MCP startup. The `--project` flag and `DXRK_MEMORY_PROJECT` env var can override detection. All project names are normalized to lowercase and trimmed.
+Memory auto-detects the project name from the git remote at MCP startup. The `--project` flag and `MEMORY_PROJECT` env var can override detection. All project names are normalized to lowercase and trimmed.
 
-If the agent saves a memory under a project name that doesn't match existing observations, dxrk-memory warns about potential name drift. Use `mem_merge_projects` (MCP tool) or `dxrk-memory projects consolidate` (CLI) to merge variants.
+If the agent saves a memory under a project name that doesn't match existing observations, memory warns about potential name drift. Use `mem_merge_projects` (MCP tool) or `memory projects consolidate` (CLI) to merge variants.
 
 ## Upsert Behavior
 
-Same `topic_key` + `project` + `scope` → UPDATE (overwrite), not INSERT. Previous content is lost — `revision_count` increments but old content is NOT saved. This is by design — dxrk-memory is working memory, not an audit trail. For iteration history or team collaboration, use `openspec` or `hybrid` mode.
+Same `topic_key` + `project` + `scope` → UPDATE (overwrite), not INSERT. Previous content is lost — `revision_count` increments but old content is NOT saved. This is by design — memory is working memory, not an audit trail. For iteration history or team collaboration, use `openspec` or `hybrid` mode.
 
 ## Why This Convention
 

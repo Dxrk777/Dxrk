@@ -264,7 +264,7 @@ class TestDxrkHint:
         assert _dxrk_hint(p) == ""
 
 
-class TestEngramHint:
+class TestMemoryHint:
     def test_brew(self):
         p = MagicMock()
         p.package_manager = "brew"
@@ -296,7 +296,7 @@ class TestUpdateHint:
         t = ToolInfo(name="dxrk")
         assert "brew upgrade dxrk" in update_hint(t, p)
 
-    def test_engram(self):
+    def test_memory(self):
         p = MagicMock()
         p.package_manager = "brew"
         t = ToolInfo(name="DXRK_MEMORY")
@@ -368,8 +368,8 @@ class TestDetectCommandHint:
         assert _detect_command_hint(t) == "my-tool"
 
     def test_with_cmd(self):
-        t = ToolInfo(name="x", detect_cmd=["engram", "version"])
-        assert _detect_command_hint(t) == "engram version"
+        t = ToolInfo(name="x", detect_cmd=["memory", "version"])
+        assert _detect_command_hint(t) == "memory version"
 
 
 class TestOpencodeManualHint:
@@ -466,12 +466,12 @@ class TestRenderCli:
             installed_version="1",
             latest_version="2",
             status=UpdateStatus.UPDATE_AVAILABLE,
-            update_hint="brew upgrade engram",
+            update_hint="brew upgrade memory",
         )
         output = render_cli([r])
         assert "update(s) available" in output
         assert "[UP]" in output
-        assert "brew upgrade engram" in output
+        assert "brew upgrade memory" in output
 
     def test_with_check_failures(self):
         r = UpdateResult(
@@ -989,7 +989,7 @@ class TestCheckSingleTool:
     def test_up_to_date(self, mock_fetch, mock_detect):
         mock_fetch.return_value = MagicMock(tag_name="v1.0.0", html_url="")
         p = MagicMock()
-        t = ToolInfo(name="DXRK_MEMORY", detect_cmd=["engram", "version"])
+        t = ToolInfo(name="DXRK_MEMORY", detect_cmd=["memory", "version"])
         from dxrk.update import _check_single_tool
 
         result = _check_single_tool(t, "dev", p)
@@ -1000,7 +1000,7 @@ class TestCheckSingleTool:
     def test_update_available(self, mock_fetch, mock_detect):
         mock_fetch.return_value = MagicMock(tag_name="v2.0.0", html_url="")
         p = MagicMock()
-        t = ToolInfo(name="DXRK_MEMORY", detect_cmd=["engram", "version"])
+        t = ToolInfo(name="DXRK_MEMORY", detect_cmd=["memory", "version"])
         from dxrk.update import _check_single_tool
 
         result = _check_single_tool(t, "dev", p)
@@ -1011,7 +1011,7 @@ class TestCheckSingleTool:
     def test_dev_build(self, mock_fetch, mock_detect):
         mock_fetch.return_value = MagicMock(tag_name="v2.0.0", html_url="")
         p = MagicMock()
-        t = ToolInfo(name="DXRK_MEMORY", detect_cmd=["engram", "version"])
+        t = ToolInfo(name="DXRK_MEMORY", detect_cmd=["memory", "version"])
         from dxrk.update import _check_single_tool
 
         result = _check_single_tool(t, "dev", p)
@@ -1023,7 +1023,7 @@ class TestCheckSingleTool:
     def test_not_installed(self, mock_look, mock_fetch, mock_detect):
         mock_fetch.return_value = MagicMock(tag_name="v2.0.0", html_url="")
         p = MagicMock()
-        t = ToolInfo(name="DXRK_MEMORY", detect_cmd=["engram", "version"])
+        t = ToolInfo(name="DXRK_MEMORY", detect_cmd=["memory", "version"])
         from dxrk.update import _check_single_tool
 
         result = _check_single_tool(t, "dev", p)
@@ -1045,10 +1045,10 @@ class TestCheckSingleTool:
     def test_version_unknown_when_binary_not_found(self, mock_fetch, mock_detect):
         mock_fetch.return_value = MagicMock(tag_name="v2.0.0", html_url="")
         p = MagicMock()
-        t = ToolInfo(name="DXRK_MEMORY", detect_cmd=["engram", "version"])
+        t = ToolInfo(name="DXRK_MEMORY", detect_cmd=["memory", "version"])
         from dxrk.update import _check_single_tool
 
-        with patch("dxrk.update._look_path", return_value="/usr/bin/engram"):
+        with patch("dxrk.update._look_path", return_value="/usr/bin/memory"):
             result = _check_single_tool(t, "dev", p)
             assert result.status == UpdateStatus.VERSION_UNKNOWN
 
@@ -1057,7 +1057,7 @@ class TestCheckSingleTool:
     def test_version_unknown_when_not_semver(self, mock_fetch, mock_detect):
         mock_fetch.return_value = MagicMock(tag_name="v2.0.0", html_url="")
         p = MagicMock()
-        t = ToolInfo(name="DXRK_MEMORY", detect_cmd=["engram", "version"])
+        t = ToolInfo(name="DXRK_MEMORY", detect_cmd=["memory", "version"])
         from dxrk.update import _check_single_tool
 
         result = _check_single_tool(t, "dev", p)
@@ -1067,7 +1067,7 @@ class TestCheckSingleTool:
     @patch("dxrk.update.fetch_latest_release", side_effect=RuntimeError("GitHub API error"))
     def test_check_failed_on_fetch_error(self, mock_fetch, mock_detect):
         p = MagicMock()
-        t = ToolInfo(name="DXRK_MEMORY", detect_cmd=["engram", "version"])
+        t = ToolInfo(name="DXRK_MEMORY", detect_cmd=["memory", "version"])
         from dxrk.update import _check_single_tool
 
         result = _check_single_tool(t, "dev", p)
@@ -1101,13 +1101,13 @@ class TestDetectInstalledVersionWithNpm:
 
 
 class TestDetectInstalledVersionSubprocessError:
-    @patch("dxrk.update._look_path", return_value="/usr/bin/engram")
+    @patch("dxrk.update._look_path", return_value="/usr/bin/memory")
     @patch(
         "dxrk.update.subprocess.run",
-        side_effect=subprocess.TimeoutExpired("engram version", 10),
+        side_effect=subprocess.TimeoutExpired("memory version", 10),
     )
     def test_timeout_returns_empty(self, mock_run, mock_look):
-        t = ToolInfo(name="DXRK_MEMORY", detect_cmd=["engram", "version"])
+        t = ToolInfo(name="DXRK_MEMORY", detect_cmd=["memory", "version"])
         from dxrk.update import detect_installed_version
 
         assert detect_installed_version(t, "dev") == ""

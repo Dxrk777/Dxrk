@@ -88,9 +88,9 @@
       "command": "npx",
       "args": ["-y", "@sentry/mcp-server"]
     },
-    "mempalace": {
-      "command": "mempalace-mcp",
-      "args": ["--palace", "/home/dxrk/Proyectos/Dxrk/.mempalace"]
+    "dxrk": {
+      "command": "dxrk-mcp",
+      "args": ["--palace", "/home/dxrk/Proyectos/Dxrk/.dxrk"]
     },
     "context7": {
       "command": "npx",

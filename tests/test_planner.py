@@ -49,7 +49,7 @@ def test_graph_has_false():
     assert not g.has(fake)
 
 
-def test_graph_dependencies_of_engram():
+def test_graph_dependencies_of_memory():
     g = mvp_graph()
     assert g.dependencies_of(ComponentID.DXRK_MEMORY) == []
 
@@ -135,21 +135,21 @@ class TestDependencyResolver:
         assert result.ordered_components == []
         assert result.agents == []
 
-    def test_resolve_with_engram(self):
+    def test_resolve_with_memory(self):
         resolver = new_resolver()
         selection = Selection(components=[ComponentID.DXRK_MEMORY])
         result = resolver.resolve(selection)
         assert ComponentID.DXRK_MEMORY in result.ordered_components
         assert result.added_dependencies == []
 
-    def test_resolve_with_sdd_adds_engram(self):
+    def test_resolve_with_sdd_adds_memory(self):
         resolver = new_resolver()
         selection = Selection(components=[ComponentID.SDD])
         result = resolver.resolve(selection)
         assert ComponentID.SDD in result.ordered_components
         assert ComponentID.DXRK_MEMORY in result.added_dependencies
 
-    def test_resolve_with_skills_adds_sdd_and_engram(self):
+    def test_resolve_with_skills_adds_sdd_and_memory(self):
         resolver = new_resolver()
         selection = Selection(components=[ComponentID.SKILLS])
         result = resolver.resolve(selection)

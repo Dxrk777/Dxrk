@@ -164,7 +164,7 @@ def is_supported_agent(agent: AgentID) -> bool:
 _MVP_COMPONENTS = [
     Component(
         id=ComponentID.DXRK_MEMORY,
-        name="Engram",
+        name="Memory",
         description="Persistent cross-session memory",
     ),
     Component(

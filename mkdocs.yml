@@ -23,6 +23,8 @@ nav:
   - Agentes: agents.md
   - Componentes: components.md
   - Arquitectura: architecture.md
+  - DxrkMemory 2.0: memory.md
+  - Migración 3.3.5 → 3.7.1: MIGRATION_3.3.5_3.7.1.md
   - Plataformas: platforms.md
   - Roadmap: roadmap.md
   - API Reference: api.md

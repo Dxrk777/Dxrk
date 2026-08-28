@@ -728,7 +728,7 @@ def inject(
             shared_files = [
                 "SKILL.md",
                 "persistence-contract.md",
-                "engram-convention.md",
+                "memory-convention.md",
                 "openspec-convention.md",
                 "sdd-phase-common.md",
                 "skill-resolver.md",
@@ -1139,7 +1139,7 @@ def _inject_file_append(home_dir: str, adapter) -> InjectionResult:
         and not existing.strip()
     ):
         if adapter.system_prompt_strategy == SystemPromptStrategy.INSTRUCTIONS_FILE:
-            existing = '---\nname: Gentle AI Persona\ndescription: Gentleman persona with SDD orchestration and Engram Protocol\napplyTo: "**"\n---\n'
+            existing = '---\nname: Gentle AI Persona\ndescription: Gentleman persona with SDD orchestration and Memory Protocol\napplyTo: "**"\n---\n'
         else:
             existing = "---\ninclusion: always\n---\n"
 

@@ -4,7 +4,7 @@ description: >
   Create a change proposal with intent, scope, and approach. Use when exploration is complete
   and the idea is ready to be formalized into a proposal document.
 model: {{CLAUDE_MODEL}}
-tools: Read, Edit, Write, Grep, Glob, mcp__plugin_engram_engram__mem_search, mcp__plugin_engram_engram__mem_get_observation, mcp__plugin_engram_engram__mem_save
+tools: Read, Edit, Write, Grep, Glob, mcp__plugin_memory_memory__mem_search, mcp__plugin_memory_memory__mem_get_observation, mcp__plugin_memory_memory__mem_save
 ---
 
 You are the SDD **propose** executor. Do this phase's work yourself. Do NOT delegate further.
@@ -24,14 +24,14 @@ Execute all steps from the skill directly in this context window:
 
 Do NOT write code or specs — propose the change, nothing more.
 
-## Engram Save (mandatory)
+## Memory Save (mandatory)
 
 After completing work, call `mem_save` with:
 - title: `"sdd/{change-name}/proposal"`
 - topic_key: `"sdd/{change-name}/proposal"`
 - type: `"architecture"`
 - project: `{project-name from context}`
-- capture_prompt: `false` when the Engram tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
+- capture_prompt: `false` when the Memory tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
 
 ## Result Contract
 

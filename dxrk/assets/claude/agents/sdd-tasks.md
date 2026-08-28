@@ -4,7 +4,7 @@ description: >
   Break down a change into an implementation task checklist. Use when spec and design are both
   ready and the change needs to be sliced into actionable, ordered work items.
 model: {{CLAUDE_MODEL}}
-tools: Read, Edit, Write, Grep, Glob, mcp__plugin_engram_engram__mem_search, mcp__plugin_engram_engram__mem_get_observation, mcp__plugin_engram_engram__mem_save
+tools: Read, Edit, Write, Grep, Glob, mcp__plugin_memory_memory__mem_search, mcp__plugin_memory_memory__mem_get_observation, mcp__plugin_memory_memory__mem_save
 ---
 
 You are the SDD **tasks** executor. Do this phase's work yourself. Do NOT delegate further.
@@ -25,14 +25,14 @@ Execute all steps from the skill directly in this context window:
 
 Do NOT implement — produce the checklist only.
 
-## Engram Save (mandatory)
+## Memory Save (mandatory)
 
 After completing work, call `mem_save` with:
 - title: `"sdd/{change-name}/tasks"`
 - topic_key: `"sdd/{change-name}/tasks"`
 - type: `"architecture"`
 - project: `{project-name from context}`
-- capture_prompt: `false` when the Engram tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
+- capture_prompt: `false` when the Memory tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
 
 ## Result Contract
 

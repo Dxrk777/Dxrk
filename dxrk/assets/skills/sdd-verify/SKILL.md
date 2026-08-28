@@ -27,7 +27,7 @@ Run when the orchestrator launches verification for an SDD change. You are the q
 - A spec scenario is compliant only when a covering test passed at runtime.
 - Compare specs first, design second, task completion third.
 - Do not fix issues; report them for the orchestrator/user.
-- Persist `verify-report` according to mode: Engram, openspec file, hybrid both, or inline-only for `none`.
+- Persist `verify-report` according to mode: Memory, openspec file, hybrid both, or inline-only for `none`.
 - If Strict TDD is active, load `strict-tdd-verify.md` from this skill directory; if inactive, never load it.
 - Return the Section D envelope from `../_shared/sdd-phase-common.md`.
 

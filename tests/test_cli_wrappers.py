@@ -273,7 +273,7 @@ class TestRunInstall:
         plan = build_stage_plan(selection, resolved)
         assert isinstance(plan, StagePlan)
         assert len(plan.prepare) == 2
-        assert len(plan.apply) == 2  # agent:opencode + component:engram
+        assert len(plan.apply) == 2  # agent:opencode + component:memory
 
     def test_build_stage_plan_empty(self):
         selection = Selection(agents=[], components=[])

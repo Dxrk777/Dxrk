@@ -360,7 +360,7 @@ def run_command_sequence(commands: list[list[str]]) -> str | None:
 
 
 # ─── Component Install Resolution ───────────────────────────────────────────
-# Used by dxrk.components.engram.install_command()
+# Used by dxrk.components.memory.install_command()
 
 
 def resolve_component_install(profile: Any, component_id: Any) -> list[list[str]]:
@@ -378,7 +378,7 @@ def resolve_component_install(profile: Any, component_id: Any) -> list[list[str]
             [
                 "go",
                 "install",
-                "github.com/Dxrk777/engram/cmd/engram@latest",
+                "github.com/Dxrk777/memory/cmd/memory@latest",
             ],
         ]
 

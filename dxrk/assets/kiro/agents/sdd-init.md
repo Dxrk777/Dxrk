@@ -2,9 +2,9 @@
 name: sdd-init
 description: >
   Initialize Spec-Driven Development context in a project. Use when the user says "sdd init",
-  "iniciar sdd", or wants to bootstrap SDD persistence (engram, openspec, or hybrid) for the
+  "iniciar sdd", or wants to bootstrap SDD persistence (memory, openspec, or hybrid) for the
   first time in a project. Detects tech stack and writes the skill registry.
-tools: ["@builtin", "@engram"]
+tools: ["@builtin", "@memory"]
 model: {{KIRO_MODEL}}
 includeMcpJson: true
 ---
@@ -24,18 +24,18 @@ Also read shared conventions from the same skills root:
 
 Execute all steps from the skill directly in this context window:
 1. Detect project tech stack (package.json, go.mod, pyproject.toml, etc.)
-2. Initialize the persistence backend (engram, openspec, or hybrid — per user preference)
+2. Initialize the persistence backend (memory, openspec, or hybrid — per user preference)
 3. Build the skill registry and write `.atl/skill-registry.md`
 4. Save project context to the active backend
 
-## Engram Save (mandatory)
+## Memory Save (mandatory)
 
 After completing work, call `mem_save` with:
 - title: `"sdd-init/{project}"`
 - topic_key: `"sdd-init/{project}"`
 - type: `"architecture"`
 - project: `{project-name from context}`
-- capture_prompt: `false` when the Engram tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
+- capture_prompt: `false` when the Memory tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
 
 ## Result Contract
 

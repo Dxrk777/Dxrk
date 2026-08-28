@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Engram component — ports internal/components/engram/.
+"""Memory component — ports internal/components/memory/.
 
 Install, setup, download, inject, verify.
 """
@@ -25,8 +25,8 @@ from dxrk.system import PlatformProfile
 
 # ─── Config / Setup ────────────────────────────────────────────────────────
 
-SETUP_MODE_ENV_VAR = "GENTLE_AI_ENGRAM_SETUP_MODE"
-SETUP_STRICT_ENV_VAR = "GENTLE_AI_ENGRAM_SETUP_STRICT"
+SETUP_MODE_ENV_VAR = "GENTLE_AI_MEMORY_SETUP_MODE"
+SETUP_STRICT_ENV_VAR = "GENTLE_AI_MEMORY_SETUP_STRICT"
 
 
 class SetupMode:
@@ -166,9 +166,7 @@ def inject(home_dir: str, adapter) -> InjectionResult:
     if strategy == MCPStrategy.SEPARATE_MCP_FILES:
         mcp_path = adapter.mcp_config_path(home_dir, "DXRK_MEMORY")
         cmd = _stable_DXRK_MEMORY_command_for_merged_config(mcp_path, adapter.agent)
-        content = _build_separate_mcp_content(
-            mcp_path, _DXRK_MEMORY_server_json_with_cmd(cmd)
-        )
+        content = _build_separate_mcp_content(mcp_path, _DXRK_MEMORY_server_json_with_cmd(cmd))
         wr = filemerge.write_file_atomic(mcp_path, content, 0o644)
         changed = changed or wr.Changed
         files.append(mcp_path)
@@ -176,9 +174,7 @@ def inject(home_dir: str, adapter) -> InjectionResult:
     elif strategy == MCPStrategy.MERGE_INTO_SETTINGS:
         settings_path = adapter.settings_path(home_dir)
         if settings_path:
-            cmd = _stable_DXRK_MEMORY_command_for_merged_config(
-                settings_path, adapter.agent
-            )
+            cmd = _stable_DXRK_MEMORY_command_for_merged_config(settings_path, adapter.agent)
             overlay = _DXRK_MEMORY_overlay_json(adapter.agent, cmd)
             sw, _ = _merge_json_file(settings_path, overlay)
             changed = changed or sw.Changed
@@ -203,31 +199,23 @@ def inject(home_dir: str, adapter) -> InjectionResult:
                     files.append(sr.Path)
 
     elif strategy == MCPStrategy.TOML_FILE:
-        config_path = adapter.mcp_config_path(home_dir, "engram")
+        config_path = adapter.mcp_config_path(home_dir, "memory")
         if config_path:
-            instr_path, compact_path, instr_err = _write_codex_instruction_files(
-                home_dir
-            )
+            instr_path, compact_path, instr_err = _write_codex_instruction_files(home_dir)
             if instr_err:
                 return InjectionResult()
             existing = _read_file_or_empty(config_path)
-            engram_cmd = _stable_DXRK_MEMORY_command_for_merged_config(
-                config_path, adapter.agent
-            )
-            with_mcp = filemerge.upsert_codex_DXRK_MEMORY_block(existing, engram_cmd)
-            with_instr = filemerge.upsert_top_level_toml_string(
-                with_mcp, "model_instructions_file", instr_path
-            )
+            memory_cmd = _stable_DXRK_MEMORY_command_for_merged_config(config_path, adapter.agent)
+            with_mcp = filemerge.upsert_codex_DXRK_MEMORY_block(existing, memory_cmd)
+            with_instr = filemerge.upsert_top_level_toml_string(with_mcp, "model_instructions_file", instr_path)
             with_compact = filemerge.upsert_top_level_toml_string(
                 with_instr, "experimental_compact_prompt_file", compact_path
             )
-            tw = filemerge.write_file_atomic(
-                config_path, with_compact.encode("utf-8"), 0o644
-            )
+            tw = filemerge.write_file_atomic(config_path, with_compact.encode("utf-8"), 0o644)
             changed = changed or tw.Changed
             files.append(config_path)
 
-    # 2. Inject Engram memory protocol into system prompt
+    # 2. Inject Memory memory protocol into system prompt
     if adapter.supports_system_prompt:
         from dxrk.models import SystemPromptStrategy
 
@@ -237,25 +225,19 @@ def inject(home_dir: str, adapter) -> InjectionResult:
             if hasattr(adapter, "bootstrap_template"):
                 adapter.bootstrap_template(home_dir)
             config_dir = adapter.global_config_dir(home_dir)
-            protocol_content = must_read("claude/engram-protocol.md")
-            module_path = os.path.join(config_dir, "DXRK_MEMORY-protocol.md")
-            wr = filemerge.write_file_atomic(
-                module_path, protocol_content.encode("utf-8"), 0o644
-            )
+            protocol_content = must_read("claude/memory-protocol.md")
+            module_path = os.path.join(config_dir, "memory-protocol.md")
+            wr = filemerge.write_file_atomic(module_path, protocol_content.encode("utf-8"), 0o644)
             changed = changed or wr.Changed
             files.append(module_path)
         elif sps in (SystemPromptStrategy.JINJA_MODULES,):
             pass
         else:
             prompt_path = adapter.system_prompt_file(home_dir)
-            protocol_content = must_read("claude/engram-protocol.md")
+            protocol_content = must_read("claude/memory-protocol.md")
             existing = _read_file_or_empty(prompt_path)
-            updated = filemerge.inject_markdown_section(
-                existing, "engram-protocol", protocol_content
-            )
-            wr = filemerge.write_file_atomic(
-                prompt_path, updated.encode("utf-8"), 0o644
-            )
+            updated = filemerge.inject_markdown_section(existing, "memory-protocol", protocol_content)
+            wr = filemerge.write_file_atomic(prompt_path, updated.encode("utf-8"), 0o644)
             changed = changed or wr.Changed
             files.append(prompt_path)
 
@@ -286,12 +268,12 @@ def _ensure_antigravity_settings(home_dir: str, adapter) -> _SettingsBootstrapRe
 
 def _write_codex_instruction_files(home_dir: str) -> tuple[str, str, str | None]:
     codex_dir = os.path.join(home_dir, ".codex")
-    instr_path = os.path.join(codex_dir, "DXRK_MEMORY-instructions.md")
-    compact_path = os.path.join(codex_dir, "DXRK_MEMORY-compact-prompt.md")
+    instr_path = os.path.join(codex_dir, "memory-instructions.md")
+    compact_path = os.path.join(codex_dir, "memory-compact-prompt.md")
 
-    instr_content = must_read("codex/dxrk-memory-instructions.md")
+    instr_content = must_read("codex/memory-instructions.md")
     filemerge.write_file_atomic(instr_path, instr_content.encode("utf-8"), 0o644)
-    compact_content = must_read("codex/dxrk-memory-compact-prompt.md")
+    compact_content = must_read("codex/memory-compact-prompt.md")
     filemerge.write_file_atomic(compact_path, compact_content.encode("utf-8"), 0o644)
     return instr_path, compact_path, None
 
@@ -299,9 +281,7 @@ def _write_codex_instruction_files(home_dir: str) -> tuple[str, str, str | None]
 # --- JSON file helpers ---
 
 
-def _merge_json_file(
-    path: str, overlay: bytes
-) -> tuple[filemerge.WriteResult, bytes | None]:
+def _merge_json_file(path: str, overlay: bytes) -> tuple[filemerge.WriteResult, bytes | None]:
     base_json = _os_read_file(path)
     merged = filemerge.merge_json_objects(base_json, overlay)
     wr = filemerge.write_file_atomic(path, merged, 0o644)
@@ -338,9 +318,7 @@ def _stable_DXRK_MEMORY_command_for_merged_config(path: str, agent_id: AgentID) 
     return cmd
 
 
-def _stable_DXRK_MEMORY_command_for_existing(
-    cmd: str, agent_id: AgentID | None = None
-) -> str:
+def _stable_DXRK_MEMORY_command_for_existing(cmd: str, agent_id: AgentID | None = None) -> str:
     if _is_versioned_homebrew_cellar_path(cmd):
         stable = _preferred_stable_DXRK_MEMORY_command()
         return stable or "DXRK_MEMORY"
@@ -354,9 +332,7 @@ def _preferred_stable_DXRK_MEMORY_command() -> str:
     return "DXRK_MEMORY"
 
 
-def _existing_merged_DXRK_MEMORY_command(
-    raw: bytes, agent_id: AgentID
-) -> tuple[str, bool]:
+def _existing_merged_DXRK_MEMORY_command(raw: bytes, agent_id: AgentID) -> tuple[str, bool]:
     if not raw:
         return "", False
     try:
@@ -452,11 +428,11 @@ def _is_stable_homebrew_DXRK_MEMORY_path(path: str) -> bool:
 
 # ─── Download ──────────────────────────────────────────────────────────────
 
-_ENGRAM_OWNER = "Dxrk777"
-_ENGRAM_REPO = "engram"
-_ENGRAM_NAME = "DXRK_MEMORY"
+_MEMORY_OWNER = "Dxrk777"
+_MEMORY_REPO = "memory"
+_MEMORY_NAME = "DXRK_MEMORY"
 
-_engram_http_timeout = 300
+_memory_http_timeout = 300
 _DXRK_MEMORY_github_base_url = "https://github.com"
 
 
@@ -464,18 +440,16 @@ def download_latest_binary(profile: PlatformProfile) -> str:
     version = _fetch_latest_DXRK_MEMORY_version()
     goos = profile.os
     goarch = _normalize_arch()
-    asset_url = _DXRK_MEMORY_asset_url(
-        _DXRK_MEMORY_github_base_url, version, goos, goarch
-    )
+    asset_url = _DXRK_MEMORY_asset_url(_DXRK_MEMORY_github_base_url, version, goos, goarch)
     install_dir = _DXRK_MEMORY_install_dir(goos)
     os.makedirs(install_dir, mode=0o755, exist_ok=True)
-    binary_name = _ENGRAM_NAME + (".exe" if goos == "windows" else "")
+    binary_name = _MEMORY_NAME + (".exe" if goos == "windows" else "")
     out_path = os.path.join(install_dir, binary_name)
 
     if asset_url.endswith(".zip"):
         _download_and_extract_zip(asset_url, binary_name, out_path)
     else:
-        _download_and_extract_tar_gz(asset_url, _ENGRAM_NAME, out_path)
+        _download_and_extract_tar_gz(asset_url, _MEMORY_NAME, out_path)
     return out_path
 
 
@@ -495,13 +469,13 @@ def _fetch_latest_DXRK_MEMORY_version() -> str:
 
 
 def _fetch_latest_DXRK_MEMORY_version_request(token: str) -> tuple[str, int]:
-    api_url = f"{_DXRK_MEMORY_api_base_url()}/repos/{_ENGRAM_OWNER}/{_ENGRAM_REPO}/releases/latest"
+    api_url = f"{_DXRK_MEMORY_api_base_url()}/repos/{_MEMORY_OWNER}/{_MEMORY_REPO}/releases/latest"
     req = Request(api_url)
     req.add_header("Accept", "application/vnd.github+json")
     if token:
         req.add_header("Authorization", f"Bearer {token}")
 
-    with urlopen(req, timeout=_engram_http_timeout) as resp:
+    with urlopen(req, timeout=_memory_http_timeout) as resp:
         data = json.loads(resp.read().decode("utf-8"))
     tag = data.get("tag_name", "")
     version = tag.lstrip("v")
@@ -540,8 +514,8 @@ def _DXRK_MEMORY_api_base_url() -> str:
 
 def _DXRK_MEMORY_asset_url(base_url: str, version: str, goos: str, goarch: str) -> str:
     ext = ".zip" if goos == "windows" else ".tar.gz"
-    filename = f"{_ENGRAM_REPO}_{version}_{goos}_{goarch}{ext}"
-    return f"{base_url}/{_ENGRAM_OWNER}/{_ENGRAM_REPO}/releases/download/v{version}/{filename}"
+    filename = f"{_MEMORY_REPO}_{version}_{goos}_{goarch}{ext}"
+    return f"{base_url}/{_MEMORY_OWNER}/{_MEMORY_REPO}/releases/download/v{version}/{filename}"
 
 
 def _DXRK_MEMORY_install_dir(goos: str) -> str:
@@ -563,7 +537,7 @@ def _is_writable_dir(directory: str) -> bool:
     if not os.path.isdir(directory):
         return False
     try:
-        fd, path = tempfile.mkstemp(prefix=".engram-write-test-", dir=directory)
+        fd, path = tempfile.mkstemp(prefix=".memory-write-test-", dir=directory)
         os.close(fd)
         os.unlink(path)
         return True
@@ -573,7 +547,7 @@ def _is_writable_dir(directory: str) -> bool:
 
 def _download_and_extract_tar_gz(url: str, binary_name: str, out_path: str) -> None:
     req = Request(url)
-    with urlopen(req, timeout=_engram_http_timeout) as resp:
+    with urlopen(req, timeout=_memory_http_timeout) as resp:
         data = resp.read()
     with tarfile.open(fileobj=BytesIO(data), mode="r:gz") as tar:
         for member in tar.getmembers():
@@ -587,7 +561,7 @@ def _download_and_extract_tar_gz(url: str, binary_name: str, out_path: str) -> N
 
 def _download_and_extract_zip(url: str, binary_name: str, out_path: str) -> None:
     req = Request(url)
-    with urlopen(req, timeout=_engram_http_timeout) as resp:
+    with urlopen(req, timeout=_memory_http_timeout) as resp:
         data = resp.read()
     with zipfile.ZipFile(BytesIO(data)) as zf:
         for info in zf.infolist():
@@ -602,9 +576,7 @@ def _write_executable(data: bytes, out_path: str) -> None:
     directory = os.path.dirname(out_path)
     os.makedirs(directory, mode=0o755, exist_ok=True)
 
-    fd, tmp_path = tempfile.mkstemp(
-        prefix=".engram-upgrade-", suffix=".tmp", dir=directory
-    )
+    fd, tmp_path = tempfile.mkstemp(prefix=".memory-upgrade-", suffix=".tmp", dir=directory)
     try:
         with os.fdopen(fd, "wb") as tmp:
             tmp.write(data)
@@ -658,7 +630,7 @@ def verify_health(base_url: str = "http://127.0.0.1:7437") -> str | None:
     try:
         with req.urlopen(f"{base_url.rstrip('/')}/health", timeout=2) as resp:
             if resp.status != 200:
-                return f"engram health check returned status {resp.status}"
+                return f"memory health check returned status {resp.status}"
         return None
     except (urllib.error.URLError, OSError) as e:
         return str(e)
@@ -668,7 +640,7 @@ def verify_health(base_url: str = "http://127.0.0.1:7437") -> str | None:
 
 
 def install_command(profile: PlatformProfile) -> list[list[str]]:
-    """Resolve install commands for engram component."""
+    """Resolve install commands for memory component."""
     from dxrk.models import ComponentID
     from dxrk.pipeline import resolve_component_install
 

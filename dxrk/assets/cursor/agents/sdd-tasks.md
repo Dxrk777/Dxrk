@@ -23,16 +23,16 @@ Execute all steps from the skill directly in this context window:
 3. Break down into hierarchically numbered tasks (1.1, 1.2, 2.1, etc.) grouped by phase
 4. Each task must be atomic enough to complete in one session
 5. Map tasks to files from the design's file-change table
-6. Persist tasks to active backend (engram, openspec, or hybrid)
+6. Persist tasks to active backend (memory, openspec, or hybrid)
 
-## Engram Save (mandatory)
+## Memory Save (mandatory)
 
 After completing work, call `mem_save` with:
 - title: `"sdd/{change-name}/tasks"`
 - topic_key: `"sdd/{change-name}/tasks"`
 - type: `"architecture"`
 - project: `{project-name from context}`
-- capture_prompt: `false` when the Engram tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
+- capture_prompt: `false` when the Memory tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
 
 ## Result Contract
 

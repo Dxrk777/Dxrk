@@ -21,7 +21,7 @@
 
 - 🐍 **Python 3.13+** con TUI moderna basada en [Textual](https://textual.textualize.io/)
 - 🤖 Configura **42 agentes** con un solo comando
-- 🧠 Memoria persistente con búsqueda semántica
+- 🧠 **DxrkMemory 2.0 — Flagship local-first stdlib-only** (sin `chromadb`, sin `onnx`) — `sqlite3` FTS5 `trigram`+WAL, 13 módulos 4652 LOC, hybrid BM25, Palace locks, Graph temporal, dialecto AAAK, wake-up **600–900 tok** (paridad mempalace 3.7.1) — ver [`docs/memory.md`](docs/memory.md)
 - ⚡ Conmutador de proveedores y modelos con perfiles `cheap` / `balanced` / `quality`
 
 ## Instalación
@@ -92,7 +92,7 @@ dxrk-py sync --profile-phase cheap:sdd-design:anthropic/claude-sonnet-4-20250514
 
 ## Características
 
-- ✅ **Memoria persistente** — binario externo [Dxrk-memory](https://github.com/Dxrk777/dxrk-memory) (Homebrew / GitHub Releases) con búsqueda semántica: `dxrk-memory search "SDD"`
+- 🧠 **DxrkMemory 2.0 — Flagship top1 local-first stdlib-only** — `dxrk/memory` 13 archivos 4652 LOC `sqlite3` **FTS5 `trigram`+WAL** sin `chromadb`/sin `onnx`/sin `numpy`; `chr-join` LEGACY `dxrk_drawers` compat, `0` traces `engram`/`mempal` (979 reemplazos + 7 `git mv`), **fidelity 3.7.1** (388 files / 50+ commits `359c579`): re-mine honesty `1654cd2`/`759b8f1`, FIFO `O_NONBLOCK`+`S_ISREG` `db29959`, orphan lock reap `27212e5` `~/.dxrk/locks` 900 s, `since`/`before` `5036e3c` pool 3×/15×, SIGTERM. Hybrid **BM25** + closet boost, **Graph** temporal `valid_from`/`valid_to`+`as_of`, dialecto **AAAK** `compress`/`decode`, **Layers** wake-up **600–900 tok** (L0 100 + L1 500–800) — [`docs/memory.md`](docs/memory.md) · [`docs/MIGRATION_3.3.5_3.7.1.md`](docs/MIGRATION_3.3.5_3.7.1.md) · `from dxrk.memory import AgentMemory, Palace, KnowledgeGraph` — verif. `uv run pytest tests/test_memory.py -q` **19 passed**
 - ✅ **Spec-Driven Development** — workflow completo con `/sdd-init`, skill registry, hooks y permisos
 - ✅ **Skills curadas** — `dxrk-py skill-registry refresh`
 - ✅ **35+ servidores MCP** — configurables vía `.mcp.json`
@@ -108,7 +108,7 @@ dxrk/
 ├── cli/             # Interfaz de línea de comandos
 ├── commands/        # Comandos disponibles (/commit, /branch, ...)
 ├── config/          # Configuración, perfiles y feature flags
-├── memory/          # Motor de memoria persistente
+├── memory/          # DxrkMemory 2.0 flagship stdlib-only 13 módulos 4652 LOC — Palace+sqlite FTS5+Graph+Layers+AAAK+miner (ver docs/memory.md)
 ├── rag/             # RAG local (chunking, indexado, consulta)
 ├── security/        # Permisos y verificación de seguridad
 ├── tools/           # Herramientas de detección y utilidades
@@ -151,6 +151,8 @@ Sí, macOS, Linux y Windows (ver [platforms.md](docs/platforms.md)).
 
 | Documento | Descripción |
 |---|---|
+| [memory.md](docs/memory.md) | **DxrkMemory 2.0 flagship** — 13 módulos, sqlite FTS5, Palace locks, BM25, Graph, AAAK, Layers 600–900 tok |
+| [MIGRATION_3.3.5_3.7.1.md](docs/MIGRATION_3.3.5_3.7.1.md) | Migración mempalace 3.3.5 → 3.7.1 — delta 388 files, parches portados |
 | [intended-usage.md](docs/intended-usage.md) | Uso previsto del proyecto |
 | [agents.md](docs/agents.md) | Adaptadores de agentes |
 | [components.md](docs/components.md) | Componentes internos |

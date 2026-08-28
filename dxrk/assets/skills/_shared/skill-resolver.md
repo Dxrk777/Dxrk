@@ -86,7 +86,7 @@ If more than **5 skill blocks** match, keep only the 5 most relevant (prioritize
 ## Compaction Safety
 
 This protocol is compaction-safe because:
-- The registry lives in engram/filesystem, not in the orchestrator's memory
+- The registry lives in memory/filesystem, not in the orchestrator's memory
 - Each delegation re-reads the registry if needed (Step 1 handles cache miss)
 - Compact rules are copied into each sub-agent's prompt at launch time — even if the orchestrator forgets, the sub-agents already have the rules
 

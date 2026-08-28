@@ -101,7 +101,7 @@ class TestValidateGoForModuleInstall:
         validate_go_for_module_install(profile)
 
 
-class TestEngramBrewBypassesGoValidation:
+class TestMemoryBrewBypassesGoValidation:
     def test_brew_memory_resolves_without_go(self, monkeypatch):
         monkeypatch.setattr("dxrk.installcmd._cmd_look_path", lambda _: None)
         resolver = new_resolver()

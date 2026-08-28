@@ -107,9 +107,7 @@ class Service:
         self.home_dir = home_dir
         self.workspace_dir = workspace_dir
         self.app_version = app_version
-        self.backup_root = backup_root or os.path.join(
-            home_dir, ".gentle-ai", "backups"
-        )
+        self.backup_root = backup_root or os.path.join(home_dir, ".gentle-ai", "backups")
         self.profile_names_to_remove: list[str] = []
         self.profile_selection_scoped = False
         self.DXRK_MEMORY_uninstall_scope = DxrkMemoryUninstallScope.GLOBAL
@@ -121,9 +119,7 @@ class Service:
     def set_DXRK_MEMORY_uninstall_scope(self, scope: DxrkMemoryUninstallScope) -> None:
         self.DXRK_MEMORY_uninstall_scope = scope
 
-    def partial_uninstall(
-        self, agent_ids: list[AgentID], component_ids: list[ComponentID]
-    ) -> Result:
+    def partial_uninstall(self, agent_ids: list[AgentID], component_ids: list[ComponentID]) -> Result:
         self.profile_names_to_remove = []
         self.profile_selection_scoped = False
         self.DXRK_MEMORY_uninstall_scope = DxrkMemoryUninstallScope.GLOBAL
@@ -144,8 +140,7 @@ class Service:
         plan = self._build_plan(all_agents, _ALL_MANAGED_COMPONENTS)
         result = self._execute_plan(plan, all_agents)
         result.ManualActions.append(
-            "To completely remove gentle-ai from your system, "
-            "delete the executable (e.g., rm -f $(which gentle-ai))"
+            "To completely remove gentle-ai from your system, delete the executable (e.g., rm -f $(which gentle-ai))"
         )
         return result
 
@@ -165,9 +160,7 @@ class Service:
                 for op in ops:
                     key = f"{op.type_id}:{op.path}"
                     if key in operations_by_key and op.type_id == OpType.REWRITE_FILE:
-                        operations_by_key[key] = _merge_rewrite_ops(
-                            operations_by_key[key], op
-                        )
+                        operations_by_key[key] = _merge_rewrite_ops(operations_by_key[key], op)
                     else:
                         operations_by_key[key] = op
 
@@ -191,15 +184,11 @@ class Service:
         reg = Registry()
         return reg.get(agent_id)
 
-    def _execute_plan(
-        self, plan: tuple[list[str], list[Operation]], agents_to_remove: list[AgentID]
-    ) -> Result:
+    def _execute_plan(self, plan: tuple[list[str], list[Operation]], agents_to_remove: list[AgentID]) -> Result:
         targets, operations = plan
         import datetime as dt
 
-        snapshot_dir = os.path.join(
-            self.backup_root, dt.datetime.now(dt.UTC).strftime("%Y%m%d%H%M%S.%f")
-        )
+        snapshot_dir = os.path.join(self.backup_root, dt.datetime.now(dt.UTC).strftime("%Y%m%d%H%M%S.%f"))
 
         # Create snapshot
         manifest = {}
@@ -243,11 +232,7 @@ class Service:
             if adapter.supports_system_prompt:
                 path = adapter.system_prompt_file(home)
                 targets.append(path)
-                ops.append(
-                    _rewrite_markdown_file(
-                        path, lambda c: _remove_markdown_sections(c, "persona")
-                    )
-                )
+                ops.append(_rewrite_markdown_file(path, lambda c: _remove_markdown_sections(c, "persona")))
             if adapter.supports_output_styles:
                 path = os.path.join(adapter.output_style_dir(home), "dxrk.md")
                 targets.append(path)
@@ -267,20 +252,20 @@ class Service:
 
         elif component_id == ComponentID.DXRK_MEMORY:
             if self.DXRK_MEMORY_uninstall_scope == DxrkMemoryUninstallScope.PROJECT:
-                project_data = os.path.join(self.workspace_dir, ".engram")
+                project_data = os.path.join(self.workspace_dir, ".memory")
                 if self.workspace_dir.strip():
                     targets.append(project_data)
                     ops.append(_remove_tree(project_data))
             else:
-                targets.extend(_engram_targets(adapter, home))
-                ops.extend(_engram_operations(adapter, home))
+                targets.extend(_memory_targets(adapter, home))
+                ops.extend(_memory_operations(adapter, home))
                 if adapter.supports_system_prompt:
                     path = adapter.system_prompt_file(home)
                     targets.append(path)
                     ops.append(
                         _rewrite_markdown_file(
                             path,
-                            lambda c: _remove_markdown_sections(c, "engram-protocol"),
+                            lambda c: _remove_markdown_sections(c, "memory-protocol"),
                         )
                     )
 
@@ -294,9 +279,7 @@ class Service:
                 elif agent == AgentID.OPENCODE:
                     ops.append(_rewrite_json_file(sp, ["permission"]))
                 elif agent == AgentID.GEMINI_CLI:
-                    ops.append(
-                        _rewrite_json_file(sp, ["general", "defaultApprovalMode"])
-                    )
+                    ops.append(_rewrite_json_file(sp, ["general", "defaultApprovalMode"]))
                 elif agent == AgentID.VSCODE_COPILOT:
                     ops.append(_rewrite_json_file(sp, ["chat.tools.autoApprove"]))
 
@@ -312,9 +295,7 @@ class Service:
             else:
                 skill_dir = adapter.skills_dir(home)
                 if skill_dir:
-                    skills_root = os.path.join(
-                        os.path.dirname(__file__), "..", "assets", "skills"
-                    )
+                    skills_root = os.path.join(os.path.dirname(__file__), "..", "assets", "skills")
                     if os.path.isdir(skills_root):
                         for entry in os.listdir(skills_root):
                             if entry.startswith("sdd-") or entry == "_shared":
@@ -332,17 +313,13 @@ class Service:
                 ops.append(
                     _rewrite_markdown_file(
                         path,
-                        lambda c: _remove_markdown_sections(
-                            c, "sdd-orchestrator", "strict-tdd-mode"
-                        ),
+                        lambda c: _remove_markdown_sections(c, "sdd-orchestrator", "strict-tdd-mode"),
                     )
                 )
             if adapter.supports_slash_commands:
                 commands_dir = adapter.commands_dir(home)
                 asset_dir = "opencode/commands"
-                full_asset_dir = os.path.join(
-                    os.path.dirname(__file__), "..", "assets", asset_dir
-                )
+                full_asset_dir = os.path.join(os.path.dirname(__file__), "..", "assets", asset_dir)
                 if os.path.isdir(full_asset_dir):
                     for fname in os.listdir(full_asset_dir):
                         fpath = os.path.join(commands_dir, fname)
@@ -370,9 +347,7 @@ class Service:
 
                 ops.append(_rewrite_json_file(sp, *sdd_paths))
 
-                plugin_path = os.path.join(
-                    home, ".config", "opencode", "plugins", "background-agents.ts"
-                )
+                plugin_path = os.path.join(home, ".config", "opencode", "plugins", "background-agents.ts")
                 targets.append(plugin_path)
                 ops.append(_remove_file(plugin_path))
                 ops.append(_remove_dir_if_empty(os.path.dirname(plugin_path)))
@@ -450,44 +425,42 @@ def _context7_operations(adapter, home_dir: str) -> list[Operation]:
     return ops
 
 
-# ─── Engram helpers ────────────────────────────────────────────────────────
+# ─── Memory helpers ────────────────────────────────────────────────────────
 
 
-def _engram_targets(adapter, home_dir: str) -> list[str]:
+def _memory_targets(adapter, home_dir: str) -> list[str]:
     from dxrk.models import MCPStrategy
 
     mcp = adapter.mcp_strategy
     targets: list[str] = []
     if mcp in (MCPStrategy.SEPARATE_MCP_FILES, MCPStrategy.MCP_CONFIG_FILE):
-        targets.append(adapter.mcp_config_path(home_dir, "engram"))
+        targets.append(adapter.mcp_config_path(home_dir, "memory"))
     elif mcp == MCPStrategy.MERGE_INTO_SETTINGS:
         targets.append(adapter.settings_path(home_dir))
     elif mcp == MCPStrategy.TOML_FILE:
         targets.append(adapter.mcp_config_path(home_dir, "DXRK_MEMORY"))
-        targets.append(os.path.join(home_dir, ".codex", "DXRK_MEMORY-instructions.md"))
-        targets.append(
-            os.path.join(home_dir, ".codex", "DXRK_MEMORY-compact-prompt.md")
-        )
+        targets.append(os.path.join(home_dir, ".codex", "memory-instructions.md"))
+        targets.append(os.path.join(home_dir, ".codex", "memory-compact-prompt.md"))
     return targets
 
 
-def _engram_operations(adapter, home_dir: str) -> list[Operation]:
+def _memory_operations(adapter, home_dir: str) -> list[Operation]:
     from dxrk.models import MCPStrategy
 
     mcp = adapter.mcp_strategy
     ops: list[Operation] = []
 
     if mcp == MCPStrategy.SEPARATE_MCP_FILES:
-        path = adapter.mcp_config_path(home_dir, "engram")
+        path = adapter.mcp_config_path(home_dir, "memory")
         ops.append(_remove_file(path))
         ops.append(_remove_dir_if_empty(os.path.dirname(path)))
 
     elif mcp == MCPStrategy.MERGE_INTO_SETTINGS:
         path = adapter.settings_path(home_dir)
         if adapter.agent == AgentID.OPENCODE:
-            ops.append(_rewrite_json_file(path, ["mcp", "engram"]))
+            ops.append(_rewrite_json_file(path, ["mcp", "memory"]))
         else:
-            ops.append(_rewrite_json_file(path, ["mcpServers", "engram"]))
+            ops.append(_rewrite_json_file(path, ["mcpServers", "memory"]))
 
     elif mcp == MCPStrategy.MCP_CONFIG_FILE:
         path = adapter.mcp_config_path(home_dir, "DXRK_MEMORY")
@@ -498,10 +471,8 @@ def _engram_operations(adapter, home_dir: str) -> list[Operation]:
 
     elif mcp == MCPStrategy.TOML_FILE:
         config_path = adapter.mcp_config_path(home_dir, "DXRK_MEMORY")
-        instructions_path = os.path.join(
-            home_dir, ".codex", "DXRK_MEMORY-instructions.md"
-        )
-        compact_path = os.path.join(home_dir, ".codex", "DXRK_MEMORY-compact-prompt.md")
+        instructions_path = os.path.join(home_dir, ".codex", "memory-instructions.md")
+        compact_path = os.path.join(home_dir, ".codex", "memory-compact-prompt.md")
         ops.append(_rewrite_toml_file(config_path, _clean_codex_toml))
         ops.append(_remove_file(instructions_path))
         ops.append(_remove_file(compact_path))
@@ -513,9 +484,7 @@ def _engram_operations(adapter, home_dir: str) -> list[Operation]:
 # ─── Rewrite / Remove helpers ──────────────────────────────────────────────
 
 
-def _rewrite_markdown_file(
-    path: str, mutate: Callable[[str], tuple[str, bool]]
-) -> Operation:
+def _rewrite_markdown_file(path: str, mutate: Callable[[str], tuple[str, bool]]) -> Operation:
     def apply(p: str) -> tuple[bool, bool, str | None]:
         try:
             content = _read_managed_file(p)
@@ -561,9 +530,7 @@ def _rewrite_json_file(path: str, *json_paths: JsonPath) -> Operation:
     return Operation(OpType.REWRITE_FILE, path, apply)
 
 
-def _rewrite_toml_file(
-    path: str, mutate: Callable[[str], tuple[str, bool]]
-) -> Operation:
+def _rewrite_toml_file(path: str, mutate: Callable[[str], tuple[str, bool]]) -> Operation:
     def apply(p: str) -> tuple[bool, bool, str | None]:
         try:
             content = _read_managed_file(p)
@@ -644,9 +611,7 @@ def _read_managed_file(path: str) -> str:
     if (st.st_mode & 0o170000) == 0o120000:
         raise PermissionError(f"refusing to read symlink {path!r}")
     if st.st_size > _MAX_MANAGED_FILE_SIZE:
-        raise ValueError(
-            f"file {path!r} exceeds max managed size {_MAX_MANAGED_FILE_SIZE} bytes"
-        )
+        raise ValueError(f"file {path!r} exceeds max managed size {_MAX_MANAGED_FILE_SIZE} bytes")
     with open(path) as f:
         return f.read()
 
@@ -695,10 +660,7 @@ def _manual_action_for_non_empty_directory(path: str) -> str | None:
         return None
     if not entries:
         return None
-    return (
-        f"Remove manually if no longer needed: {path} "
-        f"(directory still contains non-managed files)"
-    )
+    return f"Remove manually if no longer needed: {path} (directory still contains non-managed files)"
 
 
 def _dedupe_sorted_strings(items: list[str]) -> list[str]:
@@ -715,9 +677,7 @@ def _global_backup_targets(home_dir: str) -> list[str]:
     ]
 
 
-def _state_agents_to_remove(
-    agent_ids: list[AgentID], component_ids: list[ComponentID]
-) -> list[AgentID]:
+def _state_agents_to_remove(agent_ids: list[AgentID], component_ids: list[ComponentID]) -> list[AgentID]:
     selected = set(component_ids)
     for required in _FULL_AGENT_REMOVAL_COMPONENTS:
         if required not in selected:
@@ -725,9 +685,7 @@ def _state_agents_to_remove(
     return list(agent_ids)
 
 
-def _update_state_after_uninstall(
-    home_dir: str, to_remove: list[AgentID]
-) -> list[AgentID]:
+def _update_state_after_uninstall(home_dir: str, to_remove: list[AgentID]) -> list[AgentID]:
     if not to_remove:
         return []
     from dxrk.state import read as state_read
@@ -784,10 +742,7 @@ def _remove_managed_persona_preamble(content: str) -> tuple[str, bool]:
 
 
 def _looks_like_managed_persona_prefix(prefix: str) -> bool:
-    if (
-        "name: Gentle AI Persona" in prefix
-        and "description: Teaching-oriented persona" in prefix
-    ):
+    if "name: Gentle AI Persona" in prefix and "description: Teaching-oriented persona" in prefix:
         return True
     for fp in _MANAGED_PERSONA_FINGERPRINTS:
         if fp not in prefix:
@@ -839,10 +794,8 @@ def _json_is_empty_object(raw: bytes) -> bool:
 
 def _clean_codex_toml(content: str) -> tuple[str, bool]:
     normalized = content.replace("\r\n", "\n")
-    updated = _remove_toml_table(normalized, "mcp_servers.engram")
-    updated = _remove_top_level_toml_keys(
-        updated, "model_instructions_file", "experimental_compact_prompt_file"
-    )
+    updated = _remove_toml_table(normalized, "mcp_servers.memory")
+    updated = _remove_top_level_toml_keys(updated, "model_instructions_file", "experimental_compact_prompt_file")
     updated = updated.strip()
     if updated:
         updated += "\n"

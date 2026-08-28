@@ -884,7 +884,7 @@ class ComponentApplyStep(Step):
         c = self._component
 
         if c == ComponentID.DXRK_MEMORY:
-            from dxrk.components.engram import (
+            from dxrk.components.memory import (
                 download_latest_binary,
                 parse_setup_mode,
                 parse_setup_strict,
@@ -902,17 +902,17 @@ class ComponentApplyStep(Step):
                 if err:
                     return err
             elif shutil.which("DXRK_MEMORY") is None:
-                # Download engram binary
+                # Download memory binary
                 try:
                     download_latest_binary(self._profile)
                 except Exception as e:
-                    return f"download engram binary: {e}"
+                    return f"download memory binary: {e}"
 
             setup_mode = parse_setup_mode(
-                os.environ.get("GENTLE_AI_ENGRAM_SETUP_MODE", "")
+                os.environ.get("GENTLE_AI_MEMORY_SETUP_MODE", "")
             )
             setup_strict = parse_setup_strict(
-                os.environ.get("GENTLE_AI_ENGRAM_SETUP_STRICT", "")
+                os.environ.get("GENTLE_AI_MEMORY_SETUP_STRICT", "")
             )
             attempted_slugs: set[str] = set()
 
@@ -920,17 +920,17 @@ class ComponentApplyStep(Step):
                 if should_attempt_setup(setup_mode, adapter.agent):
                     slug, _ = setup_agent_slug(adapter.agent)
                     if slug not in attempted_slugs:
-                        err = execute_command("engram", "setup", slug)
+                        err = execute_command("memory", "setup", slug)
                         if err and setup_strict:
-                            return f"engram setup for {adapter.agent!r}: {err}"
+                            return f"memory setup for {adapter.agent!r}: {err}"
                         attempted_slugs.add(slug)
 
-                from dxrk.components.engram import inject as engram_inject_fn
+                from dxrk.components.memory import inject as memory_inject_fn
 
-                res_engram = engram_inject_fn(self._home_dir, adapter)
-                if res_engram.Changed:
+                res_memory = memory_inject_fn(self._home_dir, adapter)
+                if res_memory.Changed:
                     log.info(
-                        "engram injected for %s: %s", adapter.agent, res_engram.Files
+                        "memory injected for %s: %s", adapter.agent, res_memory.Files
                     )
             return None
 
@@ -1223,13 +1223,13 @@ def _component_paths(
 
             mcps = adapter.mcp_strategy
             if mcps in (MCPStrategy.SEPARATE_MCP_FILES, MCPStrategy.MCP_CONFIG_FILE):
-                result.append(adapter.mcp_config_path(home_dir, "engram"))
+                result.append(adapter.mcp_config_path(home_dir, "memory"))
             elif mcps == MCPStrategy.MERGE_INTO_SETTINGS:
                 p = adapter.settings_path(home_dir)
                 if p:
                     result.append(p)
             elif mcps == MCPStrategy.TOML_FILE:
-                p = adapter.mcp_config_path(home_dir, "engram")
+                p = adapter.mcp_config_path(home_dir, "memory")
                 if p:
                     result.append(p)
             from dxrk.models import SystemPromptStrategy
@@ -1362,11 +1362,11 @@ class ComponentSyncStep(Step):
         c = self._component
 
         if c == ComponentID.DXRK_MEMORY:
-            from dxrk.components.engram import inject as engram_inject
+            from dxrk.components.memory import inject as memory_inject
 
             for adapter in adapters:
-                res_engram = engram_inject(self._home_dir, adapter)
-                self._count_changed(int(res_engram.Changed))
+                res_memory = memory_inject(self._home_dir, adapter)
+                self._count_changed(int(res_memory.Changed))
             return None
 
         if c == ComponentID.CONTEXT7:
@@ -1706,8 +1706,8 @@ def _with_post_install_notes(
         if profile.package_manager != "brew":
             bin_dir = _go_install_bin_dir()
             if not _is_in_path(bin_dir):
-                guidance = _engram_path_guidance(os.environ.get("SHELL", ""))
-                report.final_note += f"\n\nThe engram binary was installed to {bin_dir}.\nAdd it to your PATH: {guidance}"
+                guidance = _memory_path_guidance(os.environ.get("SHELL", ""))
+                report.final_note += f"\n\nThe memory binary was installed to {bin_dir}.\nAdd it to your PATH: {guidance}"
     return report
 
 
@@ -1730,7 +1730,7 @@ def _is_in_path(dir_path: str) -> bool:
     return False
 
 
-def _engram_path_guidance(shell_path: str) -> str:
+def _memory_path_guidance(shell_path: str) -> str:
     bin_dir = _go_install_bin_dir()
     if "fish" in shell_path:
         return f"set -Ux fish_user_paths {bin_dir} $fish_user_paths"
@@ -2262,20 +2262,20 @@ def _run_post_apply_verification(
     report = _build_report(check_results)
 
     if _has_component(resolved.ordered_components, ComponentID.DXRK_MEMORY):
-        from dxrk.components.engram import verify_installed
+        from dxrk.components.memory import verify_installed
 
         binary_check = lambda: verify_installed()
-        binary_check._cid = "verify:engram:binary"  # type: ignore
-        binary_check._desc = "engram binary on PATH"  # type: ignore
+        binary_check._cid = "verify:memory:binary"  # type: ignore
+        binary_check._desc = "memory binary on PATH"  # type: ignore
         binary_check._soft = True  # type: ignore
         results = _run_checks([binary_check])
         report.checks.extend(results)
         if not results[0].error:
-            from dxrk.components.engram import verify_version
+            from dxrk.components.memory import verify_version
 
             version_check = lambda: verify_version()
-            version_check._cid = "verify:engram:version"  # type: ignore
-            version_check._desc = "engram version returns valid output"  # type: ignore
+            version_check._cid = "verify:memory:version"  # type: ignore
+            version_check._desc = "memory version returns valid output"  # type: ignore
             version_check._soft = True  # type: ignore
             results2 = _run_checks([version_check])
             report.checks.extend(results2)

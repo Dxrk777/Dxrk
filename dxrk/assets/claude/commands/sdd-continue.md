@@ -22,7 +22,7 @@ CONTEXT:
 - Artifact store mode: ask/cache per orchestrator
 - Delivery strategy: ask/cache per orchestrator
 
-ENGRAM NOTE:
+MEMORY NOTE:
 To check which artifacts exist, search: mem_search(query: "sdd/$ARGUMENTS/", project: "{project}") to list all artifacts for this change.
 Sub-agents handle persistence automatically with topic_key "sdd/$ARGUMENTS/{type}".
 

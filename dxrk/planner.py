@@ -114,11 +114,11 @@ SOFT_ORDERING_PAIRS: list[tuple[ComponentID, ComponentID]] = []
 
 
 def _init_soft_pairs():
-    from dxrk.models import ComponentEngram, ComponentPersona, ComponentSDD
+    from dxrk.models import ComponentMemory, ComponentPersona, ComponentSDD
 
     global SOFT_ORDERING_PAIRS
     SOFT_ORDERING_PAIRS = [
-        (ComponentPersona, ComponentEngram),
+        (ComponentPersona, ComponentMemory),
         (ComponentPersona, ComponentSDD),
     ]
 

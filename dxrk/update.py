@@ -122,10 +122,10 @@ Tools: list[ToolInfo] = [
         install_method=InstallMethod.BINARY,
     ),
     ToolInfo(
-        name="engram",
+        name="memory",
         owner="Dxrk777",
-        repo="engram",
-        detect_cmd=["engram", "version"],
+        repo="memory",
+        detect_cmd=["memory", "version"],
         version_prefix="v",
         install_method=InstallMethod.BINARY,
     ),
@@ -146,12 +146,12 @@ Tools: list[ToolInfo] = [
         npm_package="opencode-subagent-statusline",
     ),
     ToolInfo(
-        name="opencode-sdd-engram-manage",
+        name="opencode-sdd-memory-manage",
         owner="Dxrk777",
-        repo="sdd-engram-plugin",
+        repo="sdd-memory-plugin",
         version_prefix="v",
         install_method=InstallMethod.OPENCODE_PLUGIN,
-        npm_package="opencode-sdd-engram-manage",
+        npm_package="opencode-sdd-memory-manage",
     ),
 ]
 
@@ -397,7 +397,7 @@ def update_hint(tool: ToolInfo, profile: PlatformProfile) -> str:
         "DXRK_MEMORY": _DXRK_MEMORY_hint(profile),
         "DXRK_GUARDIAN": _DXRK_GUARDIAN_hint(profile),
         "opencode-subagent-statusline": "Restart/reload OpenCode; plugins are registered in ~/.config/opencode/tui.json",
-        "opencode-sdd-engram-manage": "Restart/reload OpenCode; plugins are registered in ~/.config/opencode/tui.json",
+        "opencode-sdd-memory-manage": "Restart/reload OpenCode; plugins are registered in ~/.config/opencode/tui.json",
     }
     return hints.get(tool.name, "")
 
@@ -913,8 +913,8 @@ def _go_install_upgrade(tool: ToolInfo, latest_version: str) -> None:
 
 
 def _binary_upgrade(r: UpdateResult, profile: PlatformProfile) -> None:
-    if r.tool.name == "engram":
-        _engram_binary_upgrade(profile)
+    if r.tool.name == "memory":
+        _memory_binary_upgrade(profile)
         return
 
     if profile.os == "windows":
@@ -924,12 +924,12 @@ def _binary_upgrade(r: UpdateResult, profile: PlatformProfile) -> None:
     _download_and_replace(r, profile)
 
 
-def _engram_binary_upgrade(profile: PlatformProfile) -> None:
-    # NOTE: original uses engram.DownloadLatestBinary(profile).
+def _memory_binary_upgrade(profile: PlatformProfile) -> None:
+    # NOTE: original uses memory.DownloadLatestBinary(profile).
     # This is an external dependency not yet ported. Raise a manual fallback.
     raise ManualFallbackError(
-        "engram auto-downloader not available in Python port yet. "
-        "Run: gentle-ai upgrade or download from https://github.com/Dxrk777/engram/releases"
+        "memory auto-downloader not available in Python port yet. "
+        "Run: gentle-ai upgrade or download from https://github.com/Dxrk777/memory/releases"
     )
 
 

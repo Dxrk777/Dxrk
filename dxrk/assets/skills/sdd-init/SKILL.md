@@ -23,11 +23,11 @@ Run this phase when the orchestrator/user asks to initialize SDD in a project. Y
 ## Hard Rules
 
 - Detect the real stack, conventions, architecture, testing tools, and persistence mode; never guess.
-- In `engram` mode, do **not** create `openspec/`.
+- In `memory` mode, do **not** create `openspec/`.
 - In `openspec` mode, follow `../_shared/openspec-convention.md` and write file artifacts.
-- In `hybrid` mode, write both openspec files and Engram observations.
+- In `hybrid` mode, write both openspec files and Memory observations.
 - Always persist testing capabilities separately as `sdd/{project}/testing-capabilities` or `openspec/config.yaml` `testing:`.
-- Always build `.atl/skill-registry.md`; also save `skill-registry` to Engram when available.
+- Always build `.atl/skill-registry.md`; also save `skill-registry` to Memory when available.
 - Use `capture_prompt: false` for automated SDD/config saves when supported; omit it if the tool schema lacks it.
 - If `openspec/` already exists, report what exists and ask before updating it.
 
@@ -35,9 +35,9 @@ Run this phase when the orchestrator/user asks to initialize SDD in a project. Y
 
 | Input | Action |
 |---|---|
-| `mode=engram` | Save context and capabilities to Engram only. |
+| `mode=memory` | Save context and capabilities to Memory only. |
 | `mode=openspec` | Create/update openspec bootstrap files only. |
-| `mode=hybrid` | Do both Engram and openspec persistence. |
+| `mode=hybrid` | Do both Memory and openspec persistence. |
 | `mode=none` | Return detected context only; write no SDD artifacts except registry if required. |
 | strict TDD marker/config found | Use that value. |
 | no marker/config but test runner exists | Default `strict_tdd: true`. |
@@ -59,6 +59,6 @@ Return `status`, `executive_summary`, `artifacts`, `next_recommended`, and `risk
 
 ## References
 
-- [references/init-details.md](references/init-details.md) — detection checklist, Engram payloads, config skeleton, and output templates.
-- `../_shared/engram-convention.md` — Engram artifact naming.
+- [references/init-details.md](references/init-details.md) — detection checklist, Memory payloads, config skeleton, and output templates.
+- `../_shared/memory-convention.md` — Memory artifact naming.
 - `../_shared/openspec-convention.md` — openspec layout and rules.

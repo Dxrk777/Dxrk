@@ -21,14 +21,14 @@ Execute all steps from the skill directly in this context window:
 2. Draft the proposal: intent, scope, approach, rollback plan, affected modules
 3. Persist to active backend
 
-## Engram Save (mandatory)
+## Memory Save (mandatory)
 
 After completing work, call `mem_save` with:
 - title: `"sdd/{change-name}/proposal"`
 - topic_key: `"sdd/{change-name}/proposal"`
 - type: `"architecture"`
 - project: `{project-name from context}`
-- capture_prompt: `false` when the Engram tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
+- capture_prompt: `false` when the Memory tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
 
 ## Result Contract
 

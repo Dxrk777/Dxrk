@@ -120,10 +120,10 @@ def test_is_supported_agent():
 
 
 def test_component_repr():
-    c = Component(id=ComponentID.DXRK_MEMORY, name="Engram")
+    c = Component(id=ComponentID.DXRK_MEMORY, name="Memory")
     r = repr(c)
     assert "Component" in r
-    assert "Engram" in r
+    assert "Memory" in r
 
 
 def test_mvp_components_count():

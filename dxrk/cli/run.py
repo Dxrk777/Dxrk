@@ -185,31 +185,31 @@ def _DXRK_MEMORY_health_checks() -> list:
     checks = []
 
     def binary_check():
-        if not _look_path("engram"):
-            return "engram binary not on PATH (restart shell if missing)"
+        if not _look_path("memory"):
+            return "memory binary not on PATH (restart shell if missing)"
         return None
 
-    binary_check._cid = "verify:engram:binary"  # type: ignore
-    binary_check._desc = "engram binary on PATH (restart shell if missing)"  # type: ignore
+    binary_check._cid = "verify:memory:binary"  # type: ignore
+    binary_check._desc = "memory binary on PATH (restart shell if missing)"  # type: ignore
     binary_check._soft = True  # type: ignore
 
     def version_check():
-        if not _look_path("engram"):
+        if not _look_path("memory"):
             return None
         import subprocess
 
         try:
             r = subprocess.run(
-                ["engram", "version"], capture_output=True, text=True, timeout=10
+                ["memory", "version"], capture_output=True, text=True, timeout=10
             )
             if r.returncode != 0:
-                return "engram version command failed"
+                return "memory version command failed"
         except (FileNotFoundError, subprocess.TimeoutExpired) as e:
-            return f"engram version check failed: {e}"
+            return f"memory version check failed: {e}"
         return None
 
-    version_check._cid = "verify:engram:version"  # type: ignore
-    version_check._desc = "engram version returns valid output"  # type: ignore
+    version_check._cid = "verify:memory:version"  # type: ignore
+    version_check._desc = "memory version returns valid output"  # type: ignore
     version_check._soft = True  # type: ignore
 
     checks.append(binary_check)

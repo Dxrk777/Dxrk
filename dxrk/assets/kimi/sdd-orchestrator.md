@@ -55,10 +55,10 @@ SDD is the structured planning layer for substantial changes.
 
 ### Artifact Store Policy
 
-- `engram` — default when available; persistent memory across sessions
+- `memory` — default when available; persistent memory across sessions
 - `openspec` — file-based artifacts; use only when user explicitly requests
 - `hybrid` — both backends; cross-session recovery + local files; more tokens per op
-- `none` — return results inline only; recommend enabling engram or openspec
+- `none` — return results inline only; recommend enabling memory or openspec
 
 ### Commands
 
@@ -85,7 +85,7 @@ Do NOT invent custom `/sdd-*` command files. On Kimi, user-facing entrypoints ar
 
 Before executing ANY SDD command (`/sdd-new`, `/sdd-ff`, `/sdd-continue`, `/skill:sdd-init`, `/skill:sdd-explore`, `/skill:sdd-propose`, `/skill:sdd-spec`, `/skill:sdd-design`, `/skill:sdd-tasks`, `/skill:sdd-apply`, `/skill:sdd-verify`, `/skill:sdd-archive`, `/skill:sdd-onboard`), check if `sdd-init` has been run for this project:
 
-1. Search Engram: `mem_search(query: "sdd-init/{project}", project: "{project}")`
+1. Search Memory: `mem_search(query: "sdd-init/{project}", project: "{project}")`
 2. If found → init was done, proceed normally
 3. If NOT found → run `sdd-init` FIRST by launching the `sdd-init` custom agent, THEN proceed with the requested command
 
@@ -104,11 +104,11 @@ If the user doesn't specify, default to **Interactive**.
 
 When the user invokes `/sdd-new`, `/sdd-ff`, or `/sdd-continue` (or an equivalent natural-language request) for the first time in a session, ALSO ASK which artifact store they want for this change:
 
-- **`engram`**: Fast, no files created. Artifacts live in engram only.
+- **`memory`**: Fast, no files created. Artifacts live in memory only.
 - **`openspec`**: File-based. Creates `openspec/` with a shareable artifact trail.
-- **`hybrid`**: Both — files for team sharing + engram for cross-session recovery.
+- **`hybrid`**: Both — files for team sharing + memory for cross-session recovery.
 
-If the user doesn't specify, detect: if engram is available → default to `engram`. Otherwise → `none`.
+If the user doesn't specify, detect: if memory is available → default to `memory`. Otherwise → `none`.
 
 Cache the artifact store choice for the session. Pass it as `artifact_store.mode` to every sub-agent launch.
 
@@ -174,7 +174,7 @@ Sub-agents get a fresh context with NO memory. The orchestrator controls context
 | `sdd-verify` | spec + tasks | `verify-report` |
 | `sdd-archive` | all artifacts | `archive-report` |
 
-### Engram Topic Key Format
+### Memory Topic Key Format
 
 | Artifact | Topic Key |
 |----------|-----------|
@@ -191,10 +191,10 @@ Sub-agents get a fresh context with NO memory. The orchestrator controls context
 
 ### State and Conventions
 
-Convention files live under `~/.config/agents/skills/_shared/` (global) or `.agent/skills/_shared/` (workspace): `engram-convention.md`, `persistence-contract.md`, `openspec-convention.md`, `sdd-phase-common.md`, `skill-resolver.md`.
+Convention files live under `~/.config/agents/skills/_shared/` (global) or `.agent/skills/_shared/` (workspace): `memory-convention.md`, `persistence-contract.md`, `openspec-convention.md`, `sdd-phase-common.md`, `skill-resolver.md`.
 
 ### Recovery Rule
 
-- `engram` → `mem_search(...)` → `mem_get_observation(...)`
+- `memory` → `mem_search(...)` → `mem_get_observation(...)`
 - `openspec` → read `openspec/changes/*/state.yaml`
 - `none` → state not persisted — explain to the user

@@ -1,6 +1,6 @@
-## Engram Persistent Memory — Protocol
+## Memory Persistent Memory — Protocol
 
-You have access to Engram, a persistent memory system that survives across sessions and compactions.
+You have access to Memory, a persistent memory system that survives across sessions and compactions.
 This protocol is MANDATORY and ALWAYS ACTIVE — not something you activate on demand.
 
 ### PROACTIVE SAVE TRIGGERS (mandatory — do NOT wait for user to ask)
@@ -33,13 +33,13 @@ Format for `mem_save`:
   - **Where**: Files or paths affected
   - **Learned**: Gotchas, edge cases, things that surprised you (omit if none)
 
-Prompt capture behavior (Engram v1.15.3+):
+Prompt capture behavior (Memory v1.15.3+):
 - `mem_save` captures the user prompt best-effort when the MCP process already has prompt context for the same `project + session_id`.
 - `mem_save` never invents prompt text. If no prompt context exists, the save still succeeds without prompt capture.
 - `mem_save_prompt` records the prompt and feeds SessionActivity so later `mem_save` calls can capture and dedupe it.
 - If an agent/plugin hook can observe the user's prompt before derived memory saves happen, it should call `mem_save_prompt` first.
 - Do not decide prompt capture by `type`; SDD artifacts also use `architecture`, and human decisions can too. Use explicit `capture_prompt: false` for automated artifacts.
-- If an older Engram tool schema does not expose `capture_prompt`, omit the field rather than failing.
+- If an older Memory tool schema does not expose `capture_prompt`, omit the field rather than failing.
 
 Topic update rules:
 - Different topics MUST NOT overwrite each other

@@ -88,7 +88,7 @@ FOR EACH TASK:
 
 ## Choosing Test Layer
 
-Based on the testing capabilities cached in Engram (`sdd/{project}/testing-capabilities`), choose the appropriate test layer for each task:
+Based on the testing capabilities cached in Memory (`sdd/{project}/testing-capabilities`), choose the appropriate test layer for each task:
 
 ```
 Determine test layer by WHAT the task does:

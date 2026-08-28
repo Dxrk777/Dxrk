@@ -19,7 +19,7 @@ CONTEXT:
 - Artifact store mode: ask/cache per orchestrator
 - Delivery strategy: ask/cache per orchestrator
 
-ENGRAM NOTE:
-Sub-agents handle persistence automatically using the selected artifact store. In engram/hybrid, each phase saves with topic_key "sdd/$ARGUMENTS/{type}".
+MEMORY NOTE:
+Sub-agents handle persistence automatically using the selected artifact store. In memory/hybrid, each phase saves with topic_key "sdd/$ARGUMENTS/{type}".
 
 Read the orchestrator instructions to coordinate this workflow. Do NOT execute phase work inline — delegate to sub-agents.
