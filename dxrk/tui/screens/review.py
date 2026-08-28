@@ -11,7 +11,7 @@ from textual.widget import Widget
 from textual.widgets import Footer, Static
 
 from dxrk.planner import ResolvedPlan, build_review_payload
-from dxrk.tui.shared import STATE
+from dxrk.tui.context import get_ctx
 
 
 class ReviewScreen(Screen):
@@ -40,7 +40,8 @@ class ReviewScreen(Screen):
         scroll = self.query_one("#review-content", VerticalScroll)
         scroll.remove_children()
 
-        plan = STATE.plan
+        ctx = get_ctx()
+        plan = ctx.plan
         payload = (
             build_review_payload(
                 selection=plan.selection,
@@ -50,25 +51,23 @@ class ReviewScreen(Screen):
             else None
         )
 
-        agents = STATE.selected_agents
-        components = STATE.selected_components
-        skills = STATE.selected_skills
+        agents = ctx.selected_agents
+        components = ctx.selected_components
+        skills = ctx.selected_skills
 
         parts = []
 
         agent_str = ", ".join(a.value for a in agents) if agents else "none"
         parts.append(f"  [bold]Agents[/]  {agent_str}")
-        parts.append(f"  [bold]Persona[/]  {STATE.persona.value}")
-        parts.append(f"  [bold]Preset[/]  {STATE.preset.value}")
+        parts.append(f"  [bold]Persona[/]  {ctx.persona.value}")
+        parts.append(f"  [bold]Preset[/]  {ctx.preset.value}")
         parts.append("")
 
         if components:
             parts.append("[bold]Components[/]")
             for c in components:
                 is_auto = payload and c in payload.added_dependencies
-                badge = (
-                    "[dim]selected[/]" if not is_auto else "[yellow]auto-dependency[/]"
-                )
+                badge = "[dim]selected[/]" if not is_auto else "[yellow]auto-dependency[/]"
                 parts.append(f"  {c.value} {badge}")
 
             if skills:
@@ -78,7 +77,7 @@ class ReviewScreen(Screen):
 
             has_sdd = any(c.value == "sdd" for c in components)
             if has_sdd:
-                tdd_label = "Enabled" if STATE.strict_tdd else "Disabled"
+                tdd_label = "Enabled" if ctx.strict_tdd else "Disabled"
                 parts.append(f"  [bold]Strict TDD[/]  {tdd_label}")
 
             parts.append("")

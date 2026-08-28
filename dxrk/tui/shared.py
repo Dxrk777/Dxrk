@@ -1,37 +1,55 @@
 # SPDX-License-Identifier: MIT
-from dxrk.models import (
-    AgentID,
-    ComponentID,
-    ModelAssignment,
-    PersonaID,
-    Plan,
-    PresetID,
-    SDDModeID,
-    UninstallMode,
-)
-from dxrk.system import DetectionResult
+from __future__ import annotations
+
+from typing import Any, cast
+
+from dxrk.tui.context import TUIContext, ctx_var, get_ctx, set_ctx
+
+# ---------------------------------------------------------------------------
+# Legacy compatibility — AppState is now an alias of TUIContext.
+# New code should import TUIContext from dxrk.tui.context and use
+# ctx_var / get_ctx() / DxrkApp.ctx for DI.
+# ---------------------------------------------------------------------------
+AppState = TUIContext  # deprecated alias, kept for backward compat
 
 
-class AppState:
-    def __init__(self):
-        self.version: str = "dev"
-        self.detection: DetectionResult | None = None
-        self.selected_agents: list[AgentID] = []
-        self.selected_components: list[ComponentID] = []
-        self.selected_skills: list = []
-        self.persona: PersonaID = PersonaID.DXRK
-        self.preset: PresetID = PresetID.FULL_DXRK
-        self.sdd_mode: SDDModeID = SDDModeID.SINGLE
-        self.strict_tdd: bool = False
-        self.model_assignments: dict[str, ModelAssignment] = {}
-        self.profiles: list = []
-        self.backups: list = []
-        self.plan: Plan | None = None
-        self.uninstall_mode: UninstallMode | None = None
-        self.selected_backup: dict | None = None
+class _StateProxy:
+    """Proxy that forwards attribute access to the current ContextVar.
+
+    This keeps `from dxrk.tui.shared import STATE` working after the
+    migration to ContextVar DI. Legacy code mutates STATE.* and new
+    code uses get_ctx() / app.ctx — both see the same underlying
+    TUIContext via ctx_var.
+    """
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(ctx_var.get(), name)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        setattr(ctx_var.get(), name, value)
+
+    def __repr__(self) -> str:
+        return repr(ctx_var.get())
 
 
-STATE = AppState()
+# STATE is deprecated — prefer get_ctx() or DxrkApp.ctx.
+# Kept as proxy so existing imports remain functional and xdist-safe.
+STATE: TUIContext = cast(TUIContext, _StateProxy())
+
+# Re-export for convenience (allows `from dxrk.tui.shared import TUIContext`).
+__all__ = [
+    "AppState",
+    "TUIContext",
+    "ctx_var",
+    "get_ctx",
+    "set_ctx",
+    "STATE",
+    "SCREEN_FLOW",
+    "NEXT",
+    "PREV",
+    "go_next",
+    "go_back",
+]
 
 
 SCREEN_FLOW: dict[str, dict[str, str | None]] = {

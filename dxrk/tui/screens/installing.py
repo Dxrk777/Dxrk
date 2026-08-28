@@ -26,34 +26,31 @@ class InstallingScreen(Screen):
     async def install(self) -> None:
         from dxrk.models import Selection
         from dxrk.pipeline import run_install_pipeline
-        from dxrk.tui.shared import STATE
+        from dxrk.tui.context import get_ctx
 
         log_widget = self.query_one("#install-log", RichLog)
         progress = self.query_one("#install-progress", ProgressBar)
 
-        async def on_progress(msg: str, pct: float):
+        async def on_progress(msg: str, pct: float) -> None:
             log_widget.write(msg)
             progress.progress = pct
 
+        ctx = get_ctx()
         selection = Selection(
-            agents=list(STATE.selected_agents),
-            components=list(STATE.selected_components),
-            skills=list(STATE.selected_skills),
-            persona=STATE.persona,
-            preset=STATE.preset,
-            sdd_mode=STATE.sdd_mode,
-            strict_tdd=STATE.strict_tdd,
-            model_assignments=dict(STATE.model_assignments),
+            agents=list(ctx.selected_agents),
+            components=list(ctx.selected_components),
+            skills=list(ctx.selected_skills),
+            persona=ctx.persona,
+            preset=ctx.preset,
+            sdd_mode=ctx.sdd_mode,
+            strict_tdd=ctx.strict_tdd,
+            model_assignments=dict(ctx.model_assignments),
         )
         success = await run_install_pipeline(
             selection=selection,
             on_progress=on_progress,
         )
-        log_widget.write(
-            "[green]Installation complete![/]"
-            if success
-            else "[red]Installation failed![/]"
-        )
+        log_widget.write("[green]Installation complete![/]" if success else "[red]Installation failed![/]")
         progress.progress = 100
         await asyncio.sleep(1)
         self.app.push_screen("complete")

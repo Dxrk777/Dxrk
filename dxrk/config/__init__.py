@@ -72,6 +72,7 @@ from .settings import (
     SettingsManager,
     SettingsStore,
 )
+from .storage import save_json_atomic
 from .sync import (
     ConflictLastWriteWins,
     ConflictLocalWins,
@@ -84,6 +85,7 @@ from .sync import (
     SyncConfig,
     SyncStatus,
 )
+from .unified import ConfigSettingsStore, UnifiedConfig
 from .validation import (
     APIValidator,
     CompositeValidator,
@@ -116,6 +118,7 @@ __all__ = [
     "Config",
     "ConfigError",
     "ConfigManager",
+    "ConfigSettingsStore",
     "ConflictLastWriteWins",
     "ConflictLocalWins",
     "ConflictManual",
@@ -170,6 +173,7 @@ __all__ = [
     "TUIOpts",
     "ToolsConfig",
     "UIConfig",
+    "UnifiedConfig",
     "ValidateConfig",
     "ValidateConfigWith",
     "Validator",
@@ -182,4 +186,5 @@ __all__ = [
     "WithUserPath",
     "default_hierarchical_config",
     "expand_path",
+    "save_json_atomic",
 ]
