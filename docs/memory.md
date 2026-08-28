@@ -207,3 +207,36 @@ grep -rn "engram\|mempal" --include="*.py" | wc -l                # 0 global
 ```
 
 Más en [MIGRATION_3.3.5_3.7.1.md](MIGRATION_3.3.5_3.7.1.md) y `docs/architecture.md`.
+
+---
+
+## Relación con Autonomy y RAG — ver [ADR-002](adr/ADR-002-memory-separation.md)
+
+> **Decisión: AISLAR** — `dxrk/memory` (DxrkMemory), `dxrk/autonomy/learner` y `dxrk/rag` son **3 sistemas aislados** con contratos y persistencias distintas.
+> Detalle formal en **[ADR-002: Separación DxrkMemory vs Autonomy/Learner vs RAG/Store](adr/ADR-002-memory-separation.md)** (Accepted 2026-08-27).
+
+**Frontera por diseño — 3 dominios, 3 stores, 0 coupling:**
+
+| Sistema | Módulo | Persistencia | API clave | Deps |
+|---------|--------|--------------|-----------|------|
+| **DxrkMemory** (canónico) | `dxrk/memory` — `Palace`, `AgentMemory`, `KnowledgeGraph`, `AAAK` | `~/.dxrk/palace/sqlite_palace.db` — `sqlite3` FTS5 `trigram` + BM25, `WAL`, `0o600` | `mine()`, `search(since,before)`, `hybrid_search`, `traverse()` | **stdlib-only** (`sqlite3`, `hashlib`, `re`) |
+| **Learner** (patrones) | `dxrk/autonomy/learner.py` — `Learner`, `MemoryItem` | `.dxrk/memories.json` — JSON `0o600`, `max_items 1000`, `RLock` | `record()`, `suggest()`, `top_errors()`, `recent_memories()` | stdlib (`json`, `hashlib`) |
+| **RAG** (code index) | `dxrk/rag` — `chunker`, `indexer`, `VectorStore`, `OpenAIEmbedder` | in-memory `dict[str,VectorRecord]` + JSON opcional | `VectorStore.Search()`, `embed()`, `cosine_similarity` | `urllib` + `OPENAI_API_KEY` opcional |
+
+**Por qué no fusionar.** Fusionar contaminaría `memory` (offline, <50 ms cold, `pip install dxrk` sin extras) con deps de red/modelo, rompería `zero-trace` (`grep engram|mempal == 0`, `LEGACY` `chr-join` ofuscado), mezclaría semánticas incompatibles (`filed_at`/`wing` vs `success_rate`/`error` vs `start_line`/`language`) y acoplaría `WAL`/`mine_palace_lock`/`reap 900 s`/`FIFO guard` (`db29959`/`27212e5`) a dominios que no los necesitan. Alternativas `SQLite compartido` (colecciones separadas en mismo `.db`) y `shared vector store` (todo a `OpenAIEmbedder` + HNSW) se rechazan en el ADR — ver `MIGRATION_3.3.5_3.7.1.md` “No portados” (`HNSW`/`numpy2`/`onnx`).
+
+**Puentes opcionales sin storage coupling:**
+
+- `Learner → Palace` via **hooks** (`dxrk/memory/hooks_cli.py`, `~/.config/dxrk/hooks.json`): export fire-and-forget de `MemoryItem` exitoso a `wing=autonomy/room=pattern` (`source_file=learner:<id>`). Si `Palace` falla, `Learner` no falla — sin transacción compartida.
+- `RAG → Palace` via **enrichment** (`dxrk/memory/__init__.py:148-157`): `AgentMemory(path, rag=rag)` inyecta `rag.is_enabled()/query(text,1)` en `store()` para poblar `entry.embedding` antes del `upsert`. Sin `rag` o sin `OPENAI_API_KEY`, `memory` opera **BM25 puro**. `RAG` nunca lee `sqlite_palace.db`.
+
+**Reglas de frontera (ADR-002):**
+
+- `R1 stdlib-only` — `memory` sin `openai`/`numpy`/`chromadb`.
+- `R2 DB por dominio` — `memory` WAL, `learner` JSON, `rag` in-memory/JSON.
+- `R3 no read-through` — ningún sistema importa el store interno de otro.
+- `R4 zero-trace` — `grep engram|mempal dxrk/memory → 0`.
+- `R5 multi-tenant ready` — `palace_path` por proyecto/usuario, `learner` por repo, `rag` por índice.
+- `R6 fallback sin regresión` — si `rag`/`Palace` falla, cada sistema sigue operativo.
+
+Verificación y plan de migración completos en [ADR-002](adr/ADR-002-memory-separation.md) — ningún `from dxrk.memory` en `learner`/`rag`, ningún `from dxrk.rag` en `memory` salvo `Protocol` `rag: object`.

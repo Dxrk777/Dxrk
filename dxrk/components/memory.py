@@ -215,6 +215,14 @@ def inject(home_dir: str, adapter) -> InjectionResult:
             changed = changed or tw.Changed
             files.append(config_path)
 
+    # 1b. Ensure DxrkMemory session hooks (stdlib-only, no external binary)
+    try:
+        from dxrk.memory.hooks_cli import ensure_hook_configs as _ensure_hooks  # type: ignore[import-not-found]
+
+        _ensure_hooks(home_dir)
+    except Exception:
+        pass
+
     # 2. Inject Memory memory protocol into system prompt
     if adapter.supports_system_prompt:
         from dxrk.models import SystemPromptStrategy
