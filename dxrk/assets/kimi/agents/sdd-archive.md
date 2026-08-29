@@ -28,14 +28,14 @@ Execute all steps from the skill directly in this context window:
 4. Write final archive report with traceability
 5. Persist archive report to active backend
 
-## Engram Save (mandatory)
+## Memory Save (mandatory)
 
 After completing work, call `mem_save` with:
 - title: `"sdd/{change-name}/archive-report"`
 - topic_key: `"sdd/{change-name}/archive-report"`
 - type: `"architecture"`
 - project: `{project-name from context}`
-- capture_prompt: `false` when the Engram tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
+- capture_prompt: `false` when the Memory tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
 
 ## Result Contract
 

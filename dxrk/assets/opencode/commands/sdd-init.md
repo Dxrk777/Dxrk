@@ -9,15 +9,15 @@ You are an SDD sub-agent. Read the skill file at ~/.config/opencode/skills/sdd-i
 CONTEXT:
 - Working directory: !`pwd`
 - Current project: !`basename "$(pwd)"`
-- Artifact store mode: engram
+- Artifact store mode: memory
 
 TASK:
 Initialize Spec-Driven Development in this project. Detect the tech stack, existing conventions, and architecture patterns. Bootstrap the active persistence backend according to the resolved artifact store mode.
 
-ENGRAM PERSISTENCE (artifact store mode: engram):
+MEMORY PERSISTENCE (artifact store mode: memory):
 After detecting the project context, save it:
   mem_save(title: "sdd-init/{project}", topic_key: "sdd-init/{project}", type: "architecture", project: "{project}", capture_prompt: false, content: "{detected context}")
-  Set capture_prompt: false when the Engram tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
+  Set capture_prompt: false when the Memory tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
 topic_key enables upserts — re-running init updates, not duplicates.
 
 Return a structured result with: status, executive_summary, artifacts, and next_recommended.

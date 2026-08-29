@@ -174,7 +174,7 @@ class TestSyncRuntimeStagePlan:
 
         assert isinstance(plan, StagePlan)
         assert len(plan.prepare) == 1
-        assert len(plan.apply) == 3  # rollback-restore + SDD + ENGRAM
+        assert len(plan.apply) == 3  # rollback-restore + SDD + MEMORY
         assert plan.prepare[0].id() == "prepare:backup-snapshot"
         assert plan.apply[0].id() == "apply:rollback-restore"
 

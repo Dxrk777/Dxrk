@@ -13,7 +13,7 @@
  *
  * Adaptations:
  * - Inlined kdco-primitives (types, getProjectId, logWarn, withTimeout, TimeoutError)
- * - Exported as `BackgroundAgents` (matching the Engram plugin convention)
+ * - Exported as `BackgroundAgents` (matching the Memory plugin convention)
  * - All imports resolved to available node_modules
  */
 

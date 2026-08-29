@@ -10,7 +10,7 @@ from textual.widgets import Footer, Static
 
 from dxrk.catalog import mvp_components
 from dxrk.models import PresetID
-from dxrk.tui.shared import STATE
+from dxrk.tui.context import get_ctx
 
 ALL_COMPONENTS = mvp_components()
 
@@ -39,7 +39,7 @@ class DependencyTreeScreen(Screen):
         scroll = self.query_one("#dep-tree-content", VerticalScroll)
         scroll.remove_children()
 
-        if STATE.preset == PresetID.CUSTOM:
+        if get_ctx().preset == PresetID.CUSTOM:
             self._render_custom_picker(scroll)
         else:
             self._render_preset_plan(scroll)
@@ -50,7 +50,7 @@ class DependencyTreeScreen(Screen):
         scroll.mount(Static("[bold]Install Plan[/]"))
         scroll.mount(Static(""))
 
-        plan = STATE.plan
+        plan = get_ctx().plan
         ordered = plan.steps if plan else []
         added: set[str] = set()
 
@@ -88,7 +88,7 @@ class DependencyTreeScreen(Screen):
         scroll.mount(Static("[dim]Toggle components with enter or space.[/]"))
         scroll.mount(Static(""))
 
-        selected_set = set(STATE.selected_components)
+        selected_set = set(get_ctx().selected_components)
         self._component_statics = []
         for idx, comp in enumerate(ALL_COMPONENTS):
             checked = "✓" if comp.id in selected_set else " "
@@ -118,7 +118,7 @@ class DependencyTreeScreen(Screen):
             s.update(f"{prefix} {actions[i]}")
 
     def _comp_count(self) -> int:
-        if STATE.preset == PresetID.CUSTOM:
+        if get_ctx().preset == PresetID.CUSTOM:
             return len(ALL_COMPONENTS)
         return 0
 
@@ -126,14 +126,14 @@ class DependencyTreeScreen(Screen):
         return self._comp_count() + 2
 
     def watch_cursor(self, old: int, new: int) -> None:
-        if STATE.preset == PresetID.CUSTOM:
+        if get_ctx().preset == PresetID.CUSTOM:
             self._update_component_list()
         self._update_actions()
 
     def _update_component_list(self) -> None:
         if not hasattr(self, "_component_statics"):
             return
-        selected_set = set(STATE.selected_components)
+        selected_set = set(get_ctx().selected_components)
         for idx, s in enumerate(self._component_statics):
             if idx >= len(ALL_COMPONENTS):
                 break
@@ -152,14 +152,15 @@ class DependencyTreeScreen(Screen):
             self.cursor += 1
 
     async def action_toggle(self, attribute_name: str = "") -> None:
-        if STATE.preset != PresetID.CUSTOM:
+        if get_ctx().preset != PresetID.CUSTOM:
             return
         if self.cursor < len(ALL_COMPONENTS):
             comp = ALL_COMPONENTS[self.cursor]
-            if comp.id in STATE.selected_components:
-                STATE.selected_components.remove(comp.id)
+            ctx = get_ctx()
+            if comp.id in ctx.selected_components:
+                ctx.selected_components.remove(comp.id)
             else:
-                STATE.selected_components.append(comp.id)
+                ctx.selected_components.append(comp.id)
             self._update_component_list()
 
     async def action_select(self) -> None:

@@ -18,10 +18,12 @@ from .permissions import (
     PermissionLevel,
     PermissionStore,
 )
+from .swarm import AgentRole, NewSwarmOrchestrator, SwarmOrchestrator, SwarmResult, SwarmTask
 from .updater import NewUpdater, Updater, UpdateResult
 from .verifier import NewVerifier, Verifier, VerifyResult
 
 __all__ = [
+    "AgentRole",
     "Autonomy",
     "CapDocker",
     "CapExec",
@@ -47,6 +49,10 @@ __all__ = [
     "Pattern",
     "PermissionLevel",
     "PermissionStore",
+    "SwarmOrchestrator",
+    "SwarmResult",
+    "SwarmTask",
+    "NewSwarmOrchestrator",
     "UpdateResult",
     "Updater",
     "VerifyResult",

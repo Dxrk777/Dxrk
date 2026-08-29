@@ -16,18 +16,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Dxrk — Agent Ecosystem Manager")
     parser.add_argument("--version", "-v", action="store_true", help="Show version")
     parser.add_argument("--health", action="store_true", help="Run health check")
-    parser.add_argument(
-        "--tui", action="store_true", help="Launch TUI (default if no args)"
-    )
+    parser.add_argument("--tui", action="store_true", help="Launch TUI (default if no args)")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
+    parser.add_argument("--tenant", "-t", default=os.environ.get("DXRK_TENANT", ""), help="Tenant ID")
 
     sub = parser.add_subparsers(dest="command")
 
     # dxrk install
     install_parser = sub.add_parser("install", help="Install agents and components")
-    install_parser.add_argument(
-        "--agent", "-a", action="append", dest="agents", help="Agent to install"
-    )
+    install_parser.add_argument("--agent", "-a", action="append", dest="agents", help="Agent to install")
     install_parser.add_argument(
         "--component",
         "-c",
@@ -35,55 +32,33 @@ def main() -> None:
         dest="components",
         help="Component to install",
     )
-    install_parser.add_argument(
-        "--persona", choices=["gentleman", "neutral", "custom"], default="gentleman"
-    )
-    install_parser.add_argument(
-        "--preset", choices=["full-gentleman", "ecosystem-only", "minimal", "custom"]
-    )
-    install_parser.add_argument(
-        "--dry-run", action="store_true", help="Preview without installing"
-    )
+    install_parser.add_argument("--persona", choices=["dxrk", "neutral", "custom"], default="dxrk")
+    install_parser.add_argument("--preset", choices=["full-dxrk", "ecosystem-only", "minimal", "custom"])
+    install_parser.add_argument("--dry-run", action="store_true", help="Preview without installing")
 
     # dxrk sync
     sync_parser = sub.add_parser("sync", help="Sync configuration to disk")
-    sync_parser.add_argument(
-        "--agent", "-a", action="append", dest="agents", help="Agent to sync"
-    )
-    sync_parser.add_argument(
-        "--dry-run", action="store_true", help="Preview without syncing"
-    )
-    sync_parser.add_argument(
-        "--sdd-mode", type=str, default="", help="SDD mode (single/multi)"
-    )
-    sync_parser.add_argument(
-        "--strict-tdd", action="store_true", default=False, help="Enable strict TDD"
-    )
+    sync_parser.add_argument("--agent", "-a", action="append", dest="agents", help="Agent to sync")
+    sync_parser.add_argument("--dry-run", action="store_true", help="Preview without syncing")
+    sync_parser.add_argument("--sdd-mode", type=str, default="", help="SDD mode (single/multi)")
+    sync_parser.add_argument("--strict-tdd", action="store_true", default=False, help="Enable strict TDD")
     sync_parser.add_argument(
         "--include-permissions",
         action="store_true",
         default=False,
         help="Include permissions",
     )
-    sync_parser.add_argument(
-        "--include-theme", action="store_true", default=False, help="Include theme"
-    )
+    sync_parser.add_argument("--include-theme", action="store_true", default=False, help="Include theme")
 
     # dxrk upgrade
     sub.add_parser("upgrade", help="Upgrade installed components")
 
     # dxrk uninstall
-    uninstall_parser = sub.add_parser(
-        "uninstall", help="Uninstall agents and components"
-    )
+    uninstall_parser = sub.add_parser("uninstall", help="Uninstall agents and components")
     uninstall_parser.add_argument("--agent", action="append", dest="agents")
     uninstall_parser.add_argument("--component", action="append", dest="components")
-    uninstall_parser.add_argument(
-        "--all", action="store_true", default=False, help="Uninstall all"
-    )
-    uninstall_parser.add_argument(
-        "--yes", "-y", action="store_true", default=False, help="Skip confirmation"
-    )
+    uninstall_parser.add_argument("--all", action="store_true", default=False, help="Uninstall all")
+    uninstall_parser.add_argument("--yes", "-y", action="store_true", default=False, help="Skip confirmation")
 
     # dxrk backup / restore
     sub.add_parser("backup", help="Manage backups")
@@ -99,12 +74,35 @@ def main() -> None:
     # dxrk version
     sub.add_parser("version", help="Show version")
 
+    # dxrk tenant
+    tenant_parser = sub.add_parser("tenant", help="Manage tenants")
+    tenant_sub = tenant_parser.add_subparsers(dest="tenant_command")
+    tenant_sub.add_parser("list", help="List tenants")
+    create_p = tenant_sub.add_parser("create", help="Create a tenant")
+    create_p.add_argument("tenant_id", help="Tenant ID")
+    switch_p = tenant_sub.add_parser("switch", help="Switch active tenant")
+    switch_p.add_argument("tenant_id", help="Tenant ID")
+    tenant_sub.add_parser("current", help="Show current tenant")
+    delete_p = tenant_sub.add_parser("delete", help="Delete a tenant")
+    delete_p.add_argument("tenant_id", help="Tenant ID")
+    delete_p.add_argument("--force", action="store_true", help="Force deletion")
+    tenant_sub.add_parser("whoami", help="Show tenant ID")
+    tenant_sub.add_parser("migrate", help="Migrate legacy data")
+
+    # early tenant resolution via DXRK_TENANT / --tenant, validated via validate_id
+    pre_args, _ = parser.parse_known_args()
+    tenant_id = str(getattr(pre_args, "tenant", "") or "").strip()
+    if tenant_id:
+        from dxrk.security.jwt import validate_id
+
+        if not validate_id(tenant_id):
+            parser.error(f"invalid tenant id {tenant_id!r}")
+        os.environ["DXRK_TENANT"] = tenant_id
+
     args = parser.parse_args()
 
     if args.debug:
-        logging.basicConfig(
-            level=logging.DEBUG, format="%(levelname)s %(name)s: %(message)s"
-        )
+        logging.basicConfig(level=logging.DEBUG, format="%(levelname)s %(name)s: %(message)s")
     else:
         logging.basicConfig(level=logging.WARNING)
 
@@ -118,9 +116,7 @@ def main() -> None:
         from dxrk.system import detect, render_dependency_report
 
         result = detect()
-        assert result.dependencies is not None, (
-            "detection did not populate dependencies"
-        )
+        assert result.dependencies is not None, "detection did not populate dependencies"
         print(render_dependency_report(result.dependencies))
         return
 
@@ -152,11 +148,33 @@ def main() -> None:
         _run_model_cli(args)
         return
 
+    if args.command == "tenant":
+        _run_tenant_cli(args)
+        return
+
     if args.command:
         print(f"Command '{args.command}' not yet implemented")
         return
 
     _launch_tui(version)
+
+
+def _run_tenant_cli(args: argparse.Namespace) -> None:
+    from dxrk.commands import register_all
+
+    reg = register_all()
+    argv: list[str] = ["tenant"]
+    tc = getattr(args, "tenant_command", None)
+    if tc:
+        argv.append(str(tc))
+        tid = getattr(args, "tenant_id", None)
+        if tid:
+            argv.append(str(tid))
+        if getattr(args, "force", False):
+            argv.append("--force")
+    code = reg.execute(argv)
+    if code != 0:
+        sys.exit(code)
 
 
 def _run_install_cli(args) -> None:

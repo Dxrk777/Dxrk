@@ -8,9 +8,10 @@ import binascii
 import hashlib
 import hmac
 import json
+import os
 import threading
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import IntEnum
 
@@ -41,6 +42,10 @@ class TokenInfo:
     claims: dict[str, object]
     is_valid: bool
     is_expired: bool
+    # R08 tenant claims (backward compat defaults)
+    tenant_id: str = ""
+    role: str = ""
+    tenants: list[str] = field(default_factory=list)
 
 
 # ---- JWT Utilities ----
@@ -72,6 +77,35 @@ def decode_jwt_payload(token_string: str) -> dict[str, object] | None:
     return claims
 
 
+def _extract_tid_role_tenants(claims: dict[str, object]) -> tuple[str, str, list[str]]:
+    tid_raw = claims.get("tid")
+    if not isinstance(tid_raw, str):
+        alt = claims.get("tenant_id")
+        tid_raw = alt if isinstance(alt, str) else ""
+    tid = tid_raw if isinstance(tid_raw, str) else ""
+    role_raw = claims.get("role")
+    role = role_raw if isinstance(role_raw, str) else ""
+    tenants_raw: object = claims.get("tenants")
+    tenants: list[str] = []
+    if isinstance(tenants_raw, list):
+        tenants = [t for t in tenants_raw if isinstance(t, str)]
+    elif isinstance(tenants_raw, str) and tenants_raw:
+        tenants = [tenants_raw]
+    return tid, role, tenants
+
+
+def get_tenant_from_token(token_string: str) -> str | None:
+    """Extract ``tid`` (tenant id) from JWT without verification (R08).
+
+    Returns ``None`` if token is malformed or lacks ``tid``/``tenant_id``.
+    """
+    claims = decode_jwt_payload(token_string)
+    if claims is None:
+        return None
+    tid, _, _ = _extract_tid_role_tenants(claims)
+    return tid if tid else None
+
+
 def classify_token(token: str) -> TokenKind:
     """Determine the kind of a token based on its prefix."""
     if token.startswith("sk-ant-si-"):
@@ -98,6 +132,130 @@ def is_token_expired(token_string: str, skew: timedelta) -> bool:
 
 
 KeyFunc = Callable[[dict[str, object], dict[str, object]], bytes]
+
+
+def _tenant_env_name(tenant_id: str, prefix: str = "DXRK_JWT_SECRET") -> str:
+    return f"{prefix}_{tenant_id.upper().replace('-', '_')}"
+
+
+def tenant_key_func(header: dict[str, object], claims: dict[str, object]) -> bytes:
+    """Per-tenant KeyFunc via ``DXRK_JWT_SECRET_{TENANT}`` or vault (R08).
+
+    Order: ``DXRK_JWT_SECRET_{TID}`` -> ``DXRK_JWT_SECRET`` -> vault
+    ``jwt_secret``. Raises ``ValueError`` if no secret found.
+    """
+    tid_raw = claims.get("tid")
+    tenant_id = tid_raw if isinstance(tid_raw, str) and tid_raw else None
+    if tenant_id is None:
+        alt = claims.get("tenant_id")
+        if isinstance(alt, str) and alt:
+            tenant_id = alt
+    if tenant_id:
+        env_name = _tenant_env_name(tenant_id)
+        val = os.environ.get(env_name)
+        if val:
+            return val.encode()
+    # generic fallback
+    generic = os.environ.get("DXRK_JWT_SECRET")
+    if generic:
+        return generic.encode()
+    # vault fallback per-tenant (best-effort, avoids hard dep cycle)
+    if tenant_id:
+        try:
+            from dxrk.vault import get_tenant_vault  # lazy
+
+            vault = get_tenant_vault(tenant_id)
+            secret, ok = vault.get("jwt_secret")
+            if ok and secret:
+                return secret.encode()
+        except Exception:
+            pass
+        raise ValueError(f"no JWT secret for tenant {tenant_id!r}")
+    raise ValueError("missing tid claim for tenant key resolution")
+
+
+def make_tenant_key_func(default_env: str = "DXRK_JWT_SECRET") -> KeyFunc:
+    """Factory for per-tenant KeyFunc with custom default env (R08)."""
+
+    def _kf(header: dict[str, object], claims: dict[str, object]) -> bytes:
+        tid_raw = claims.get("tid")
+        tenant_id = tid_raw if isinstance(tid_raw, str) and tid_raw else None
+        if tenant_id is None:
+            alt = claims.get("tenant_id")
+            if isinstance(alt, str) and alt:
+                tenant_id = alt
+        if tenant_id:
+            env_name = _tenant_env_name(tenant_id)
+            val = os.environ.get(env_name)
+            if val:
+                return val.encode()
+        generic = os.environ.get(default_env)
+        if generic:
+            return generic.encode()
+        if tenant_id:
+            try:
+                from dxrk.vault import get_tenant_vault
+
+                vault = get_tenant_vault(tenant_id)
+                secret, ok = vault.get("jwt_secret")
+                if ok and secret:
+                    return secret.encode()
+            except Exception:
+                pass
+            raise ValueError(f"no JWT secret for tenant {tenant_id!r}")
+        raise ValueError("missing tid claim for tenant key resolution")
+
+    return _kf
+
+
+class TenantAuthorizer:
+    """Validate ``tid`` / ``role`` / ``tenants`` claims (R08)."""
+
+    VALID_ROLES: set[str] = {"admin", "dev", "readonly", "member", "viewer"}
+
+    def __init__(self, allowed_roles: set[str] | None = None) -> None:
+        self.allowed_roles: set[str] = allowed_roles if allowed_roles is not None else set(self.VALID_ROLES)
+
+    def authorize(self, info: TokenInfo) -> None:
+        """Raise ``ValueError`` / ``PermissionError`` if not authorized.
+
+        Checks:
+        - ``tid`` present
+        - ``tid in tenants`` when ``tenants`` claim non-empty
+        - ``role`` in ``allowed_roles`` when role present
+        """
+        if not info.tenant_id:
+            raise ValueError("missing tid claim")
+        if info.tenants and info.tenant_id not in info.tenants:
+            raise PermissionError(f"tid {info.tenant_id!r} not in tenants {info.tenants!r}")
+        if info.role and info.role not in self.allowed_roles:
+            raise PermissionError(f"invalid role {info.role!r}")
+
+    def is_authorized(self, info: TokenInfo) -> bool:
+        try:
+            self.authorize(info)
+            return True
+        except (ValueError, PermissionError):
+            return False
+
+    def authorize_claims(self, claims: dict[str, object]) -> None:
+        tid, role, tenants = _extract_tid_role_tenants(claims)
+        # Build minimal TokenInfo for reuse
+        info = TokenInfo(
+            kind=TokenKind.UNKNOWN,
+            token="",
+            subject="",
+            issuer="",
+            expires_at=None,
+            issued_at=None,
+            claims=claims,
+            is_valid=True,
+            is_expired=False,
+            tenant_id=tid,
+            role=role,
+            tenants=tenants,
+        )
+        self.authorize(info)
 
 
 def parse_token_safe(token_string: str, key_func: KeyFunc) -> TokenInfo:
@@ -156,6 +314,8 @@ def parse_token_safe(token_string: str, key_func: KeyFunc) -> TokenInfo:
     if not isinstance(issuer, str):
         issuer = ""
 
+    tid, role, tenants = _extract_tid_role_tenants(claims)
+
     info = TokenInfo(
         kind=classify_token(token_string),
         token=token_string,
@@ -166,6 +326,9 @@ def parse_token_safe(token_string: str, key_func: KeyFunc) -> TokenInfo:
         claims=claims,
         is_valid=True,
         is_expired=False,
+        tenant_id=tid,
+        role=role,
+        tenants=tenants,
     )
 
     return info
@@ -361,9 +524,7 @@ def validate_ingress_url(url: str, is_dev: bool) -> None:
         return None  # localhost exception
 
     if not url.startswith("https://"):
-        raise ValueError(
-            f"insecure origin required: {url} (must use HTTPS in production)"
-        )
+        raise ValueError(f"insecure origin required: {url} (must use HTTPS in production)")
 
     return None
 

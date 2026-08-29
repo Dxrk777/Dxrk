@@ -2,7 +2,7 @@
 
 {% include "output-style.md" ignore missing %}
 
-{% include "engram-protocol.md" ignore missing %}
+{% include "memory-protocol.md" ignore missing %}
 
 {% include "sdd-orchestrator.md" ignore missing %}
 {% include "strict-tdd-mode.md" ignore missing %}

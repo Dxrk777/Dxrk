@@ -4,7 +4,7 @@ description: >
   Validate that implementation matches specs, design, and tasks. Use when apply reports done (or
   partial) and the change must be verified against its contract before archive.
 model: {{CLAUDE_MODEL}}
-tools: Read, Grep, Glob, Bash, mcp__plugin_engram_engram__mem_search, mcp__plugin_engram_engram__mem_get_observation, mcp__plugin_engram_engram__mem_save
+tools: Read, Grep, Glob, Bash, mcp__plugin_memory_memory__mem_search, mcp__plugin_memory_memory__mem_get_observation, mcp__plugin_memory_memory__mem_save
 ---
 
 You are the SDD **verify** executor. Do this phase's work yourself. Do NOT delegate further.
@@ -24,14 +24,14 @@ Execute all steps from the skill directly in this context window:
 6. Confirm tasks are marked complete and match code state
 7. Persist verify report to active backend
 
-## Engram Save (mandatory)
+## Memory Save (mandatory)
 
 After completing work, call `mem_save` with:
 - title: `"sdd/{change-name}/verify-report"`
 - topic_key: `"sdd/{change-name}/verify-report"`
 - type: `"architecture"`
 - project: `{project-name from context}`
-- capture_prompt: `false` when the Engram tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
+- capture_prompt: `false` when the Memory tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
 
 ## Result Contract
 

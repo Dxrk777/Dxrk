@@ -9,12 +9,12 @@ You are an SDD sub-agent. Read the skill file at ~/.config/opencode/skills/sdd-v
 CONTEXT:
 - Working directory: !`pwd`
 - Current project: !`basename "$(pwd)"`
-- Artifact store mode: engram
+- Artifact store mode: memory
 
 TASK:
 Verify the active SDD change. Read the proposal, specs, design, and tasks artifacts. Then:
 
-ENGRAM PERSISTENCE (artifact store mode: engram):
+MEMORY PERSISTENCE (artifact store mode: memory):
 CRITICAL: mem_search returns 300-char PREVIEWS, not full content. You MUST call mem_get_observation(id) for EVERY artifact.
 STEP A — SEARCH (get IDs only):
   mem_search(query: "sdd/{change-name}/spec", project: "{project}") → save spec_id
@@ -26,7 +26,7 @@ STEP B — RETRIEVE FULL CONTENT (mandatory):
   mem_get_observation(id: tasks_id) → full tasks
 Save report:
   mem_save(title: "sdd/{change-name}/verify-report", topic_key: "sdd/{change-name}/verify-report", type: "architecture", project: "{project}", capture_prompt: false, content: "{verification report}")
-  Set capture_prompt: false when the Engram tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
+  Set capture_prompt: false when the Memory tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
 
 Then:
 1. Check completeness — are all tasks done?

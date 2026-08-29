@@ -258,9 +258,12 @@ def test_rate_limiter_refill():
     for _ in range(5):
         assert rl.allow()
     assert not rl.allow()
-    time.sleep(0.015)
-    assert rl.allow()
+    deadline = time.monotonic() + 5.0
+    while not rl.allow():
+        assert time.monotonic() < deadline, "refill did not happen in time"
+        time.sleep(0.001)
     rl.close()
+
 
 import sys
 

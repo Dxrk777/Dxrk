@@ -1,0 +1,148 @@
+{
+  "mcpServers": {
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp"]
+    },
+    "playwright-puppeteer": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-puppeteer"]
+    },
+    "git": {
+      "command": "uvx",
+      "args": ["mcp-server-git"]
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-sequential-thinking"]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/home/dxrk"]
+    },
+    "slack": {
+      "command": "npx",
+      "args": ["-y", "slack-mcp-server"]
+    },
+    "brave-search": {
+      "command": "npx",
+      "args": ["-y", "@brave/mcp-server"]
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@crystaldba/postgres-mcp-server"]
+    },
+    "docker": {
+      "command": "npx",
+      "args": ["-y", "mcp-docker-server"]
+    },
+    "notion": {
+      "command": "npx",
+      "args": ["-y", "@notionhq/notion-mcp-server"]
+    },
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "mcp-server-memory"]
+    },
+    "supabase": {
+      "command": "npx",
+      "args": ["-y", "supabase-mcp"]
+    },
+    "stripe": {
+      "command": "npx",
+      "args": ["-y", "@stripe/mcp"]
+    },
+    "figma": {
+      "command": "npx",
+      "args": ["-y", "figma-mcp-server"]
+    },
+    "linear": {
+      "command": "npx",
+      "args": ["-y", "linear-mcp-server"]
+    },
+    "obsidian": {
+      "command": "npx",
+      "args": ["-y", "obsidian-mcp-server"]
+    },
+    "sqlite": {
+      "command": "npx",
+      "args": ["-y", "@mokei/mcp-sqlite"]
+    },
+    "aws": {
+      "command": "npx",
+      "args": ["-y", "@yawlabs/aws-mcp"]
+    },
+    "vercel": {
+      "command": "npx",
+      "args": ["-y", "vercel-mcp"]
+    },
+    "cloudflare": {
+      "command": "npx",
+      "args": ["-y", "@cloudflare/mcp-server-cloudflare"]
+    },
+    "sentry": {
+      "command": "npx",
+      "args": ["-y", "@sentry/mcp-server"]
+    },
+    "dxrk": {
+      "command": "dxrk-mcp",
+      "args": ["--palace", "/home/dxrk/Proyectos/Dxrk/.dxrk"]
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"]
+    },
+    "kubernetes": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-kubernetes"]
+    },
+    "redis": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-redis"]
+    },
+    "mongodb": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-mongodb"]
+    },
+    "elasticsearch": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-elasticsearch"]
+    },
+    "jira": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-jira"]
+    },
+    "grafana": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-grafana"]
+    },
+    "prometheus": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-prometheus"]
+    },
+    "openai": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-openai"]
+    },
+    "confluence": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-server-confluence"]
+    },
+    "rag-code-mcp": {
+      "command": "/home/dxrk/.local/bin/rag-code-mcp",
+      "args": ["-ollama-base-url", "http://localhost:11434", "-qdrant-url", "http://localhost:6333", "-allowed-paths", "/home/dxrk/Proyectos"]
+    },
+    "chunkhound": {
+      "command": "/home/dxrk/.local/bin/chunkhound-mcp",
+      "args": ["--transport", "stdio"]
+    },
+    "paper-search": {
+      "command": "npx",
+      "args": ["-y", "paper-search-mcp"]
+    }
+  }
+}

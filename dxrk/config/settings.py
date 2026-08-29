@@ -5,10 +5,11 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import threading
 from pathlib import Path
 from typing import Any
+
+from .storage import save_json_atomic
 
 _logger = logging.getLogger("dxrk.config")
 
@@ -62,12 +63,7 @@ class FileSettingsStore(SettingsStore):
     def Save(self) -> None:
         with self._mu:
             data = dict(self._data)
-        path = Path(self._path)
-        path.parent.mkdir(parents=True, exist_ok=True, mode=0o750)
-        payload = json.dumps(data, indent=2)
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(payload)
-        os.chmod(path, 0o600)
+        save_json_atomic(self._path, data)
 
     def Load(self) -> None:
         with self._mu:
@@ -125,9 +121,7 @@ class MemorySettingsStore(SettingsStore):
 
 class SettingsManager:
     def __init__(self, stores: list[SettingsStore] | None = None):
-        self._stores: list[SettingsStore] = sorted(
-            stores or [], key=lambda s: s.Priority(), reverse=True
-        )
+        self._stores: list[SettingsStore] = sorted(stores or [], key=lambda s: s.Priority(), reverse=True)
 
     def Get(self, key: str) -> Any:
         for store in self._stores:
@@ -170,18 +164,14 @@ class SettingsManager:
             try:
                 store.Save()
             except Exception as exc:
-                raise OSError(
-                    f"save store (priority {store.Priority()}): {exc}"
-                ) from exc
+                raise OSError(f"save store (priority {store.Priority()}): {exc}") from exc
 
     def Load(self) -> None:
         for store in self._stores:
             try:
                 store.Load()
             except Exception as exc:
-                raise OSError(
-                    f"load store (priority {store.Priority()}): {exc}"
-                ) from exc
+                raise OSError(f"load store (priority {store.Priority()}): {exc}") from exc
 
     def Keys(self) -> list[str]:
         return sorted(self.List().keys())

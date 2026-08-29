@@ -54,12 +54,9 @@ from datetime import datetime, timedelta
 try:  # pragma: no cover - exercised only when Pillow is absent
     from PIL import Image as _PILImage  # type: ignore[import-not-found]
 except ImportError:  # pragma: no cover
-    _PILImage = None
+    _PILImage = None  # type: ignore[assignment]
 
-_PILLOW_REQUIRED = (
-    "fileops: Pillow (PIL) is required for this operation "
-    "(install 'pillow' in the project environment)"
-)
+_PILLOW_REQUIRED = "fileops: Pillow (PIL) is required for this operation (install 'pillow' in the project environment)"
 
 _MAX_TEXT_SIZE = 10 * 1024 * 1024
 _READ_LIMIT_DEFAULT = 50 * 1024 * 1024
@@ -204,9 +201,7 @@ def ReadFile(path: str) -> tuple[FileContent | None, FileopsError | None]:
     )
 
 
-def ReadFileLines(
-    path: str, offset: int, limit: int
-) -> tuple[list[str], int, FileopsError | None]:
+def ReadFileLines(path: str, offset: int, limit: int) -> tuple[list[str], int, FileopsError | None]:
     """Read a file and return lines[offset:offset+limit] plus the total count. Mirrors ReadFileLines."""
     fc, err = ReadFile(path)
     if err is not None or fc is None:
@@ -487,9 +482,7 @@ def FindAndReplaceAll(content: str, old: str, new: str) -> tuple[str, int, None]
     return content.replace(old, new), count, None
 
 
-def ApplyRegexEdits(
-    content: str, edits: list[RegexEditOp]
-) -> tuple[str, int, FileopsError | None]:
+def ApplyRegexEdits(content: str, edits: list[RegexEditOp]) -> tuple[str, int, FileopsError | None]:
     """Apply regex-based edits to content. Mirrors fileops.ApplyRegexEdits."""
     total_replaced = 0
     for i, op in enumerate(edits):
@@ -723,9 +716,7 @@ def TmpFile(ext: str) -> tuple[str, Callable[[], None], FileopsError | None]:
     if not ext.startswith(".") and ext != "":
         ext = "." + ext
     try:
-        with tempfile.NamedTemporaryFile(
-            delete=False, prefix="fileops-", suffix=ext
-        ) as f:
+        with tempfile.NamedTemporaryFile(delete=False, prefix="fileops-", suffix=ext) as f:
             name = f.name
     except OSError as e:
         return "", lambda: None, FileopsError(str(e))
@@ -948,11 +939,7 @@ class FileCache:
                 content=content,
                 size=size,
                 mod_time=mod_time,
-                expiry=(
-                    datetime.now() + self._ttl
-                    if self._ttl is not None
-                    else datetime.max
-                ),
+                expiry=(datetime.now() + self._ttl if self._ttl is not None else datetime.max),
             )
             if path in self._entries:
                 self._entries[path] = entry
@@ -977,11 +964,7 @@ class FileCache:
     def InvalidatePattern(self, pattern: str) -> None:
         """Remove entries whose path base name matches the glob pattern. Mirrors InvalidatePattern."""
         with self._mu:
-            matched = [
-                p
-                for p in self._entries
-                if fnmatch.fnmatchcase(os.path.basename(p), pattern)
-            ]
+            matched = [p for p in self._entries if fnmatch.fnmatchcase(os.path.basename(p), pattern)]
             for p in matched:
                 self._remove_locked(p)
 
@@ -1093,10 +1076,7 @@ class FileCache:
                 continue
             with self._mu:
                 entry = self._entries.get(p)
-            if (
-                entry is not None
-                and datetime.fromtimestamp(info.st_mtime) > entry.mod_time
-            ):
+            if entry is not None and datetime.fromtimestamp(info.st_mtime) > entry.mod_time:
                 with self._mu:
                     self._remove_locked(p)
                 for cb in cbs.get(p, []):

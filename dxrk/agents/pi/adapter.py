@@ -34,9 +34,9 @@ class PiAdapter(Adapter):
     def install_command(self, profile) -> list[list[str]]:
         return [
             ["pi", "install", "npm:gentle-pi"],
-            ["pi", "install", "npm:gentle-engram"],
+            ["pi", "install", "npm:gentle-memory"],
             ["pi", "install", "npm:pi-mcp-adapter"],
-            ["npm", "exec", "--yes", "--package", "gentle-engram", "--", "pi-engram", "init"],
+            ["npm", "exec", "--yes", "--package", "gentle-memory", "--", "pi-memory", "init"],
             ["pi", "install", "npm:pi-subagents"],
             ["pi", "install", "npm:pi-intercom"],
             ["pi", "install", "npm:@juicesharp/rpiv-ask-user-question"],

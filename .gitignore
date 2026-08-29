@@ -47,12 +47,12 @@ agent/skills/
 .claude/
 .opencode/
 .windsurf/
-.engram/
+.memory/
 
 # Generated / large files
 sbom.spdx.json
 THIRD_PARTY_LICENSES
-mempalace.yaml
+dxrk.yaml
 entities.json
 
 # Local builds

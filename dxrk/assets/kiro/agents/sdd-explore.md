@@ -4,7 +4,7 @@ description: >
   Explore and investigate ideas before committing to a change. Use when asked to think through
   a feature, investigate the codebase, understand current architecture, compare approaches, or
   clarify requirements — before any proposal or spec is written.
-tools: ["read", "@context7", "@engram"]
+tools: ["read", "@context7", "@memory"]
 model: {{KIRO_MODEL}}
 includeMcpJson: true
 ---
@@ -31,14 +31,14 @@ Execute all steps from the skill directly in this context window:
 
 Do NOT create or modify project files — your job is investigation only, not implementation.
 
-## Engram Save (mandatory when tied to a named change)
+## Memory Save (mandatory when tied to a named change)
 
 After completing work, call `mem_save` with:
 - title: `"sdd/{change-name}/explore"` (or `"sdd/explore/{topic-slug}"` if standalone)
 - topic_key: `"sdd/{change-name}/explore"`
 - type: `"architecture"`
 - project: `{project-name from context}`
-- capture_prompt: `false` when the Engram tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
+- capture_prompt: `false` when the Memory tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
 
 ## Result Contract
 

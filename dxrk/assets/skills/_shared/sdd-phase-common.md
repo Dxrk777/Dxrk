@@ -16,7 +16,7 @@ Executor boundary: every SDD phase agent is an EXECUTOR, not an orchestrator. Do
 
 NOTE: the preferred path is (1) — compact rules pre-injected by the orchestrator. Paths (2) and (3) are fallbacks for backwards compatibility. Searching the registry is SKILL LOADING, not delegation. If `## Project Standards` is present, IGNORE any `SKILL: Load` instructions — they are redundant.
 
-## B. Artifact Retrieval (Engram Mode)
+## B. Artifact Retrieval (Memory Mode)
 
 **CRITICAL**: `mem_search` returns 300-char PREVIEWS, not full content. You MUST call `mem_get_observation(id)` for EVERY artifact. **Skipping this produces wrong output.**
 
@@ -38,7 +38,7 @@ Do NOT use search previews as source material.
 
 Every phase that produces an artifact MUST persist it. Skipping this BREAKS the pipeline — downstream phases will not find your output.
 
-### Engram mode
+### Memory mode
 
 ```
 mem_save(
@@ -52,7 +52,7 @@ mem_save(
 ```
 
 `topic_key` enables upserts — saving again updates, not duplicates.
-`capture_prompt: false` is mandatory for SDD artifacts because they are automated pipeline outputs, not human/proactive memory saves. Set it when the Engram tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
+`capture_prompt: false` is mandatory for SDD artifacts because they are automated pipeline outputs, not human/proactive memory saves. Set it when the Memory tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
 
 ### OpenSpec mode
 
@@ -83,7 +83,7 @@ Example:
 ```markdown
 **Status**: success
 **Summary**: Proposal created for `{change-name}`. Defined scope, approach, and rollback plan.
-**Artifacts**: Engram `sdd/{change-name}/proposal` | `openspec/changes/{change-name}/proposal.md`
+**Artifacts**: Memory `sdd/{change-name}/proposal` | `openspec/changes/{change-name}/proposal.md`
 **Next**: sdd-spec or sdd-design
 **Risks**: None
 **Skill Resolution**: injected — 3 skills (react-19, typescript, tailwind-4)

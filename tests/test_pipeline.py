@@ -342,7 +342,7 @@ class TestRunCommandSequence:
 
 
 class TestResolveComponentInstall:
-    def test_engram_brew(self):
+    def test_memory_brew(self):
         class BrewProfile:
             package_manager = "brew"
 
@@ -351,7 +351,7 @@ class TestResolveComponentInstall:
         assert cmds[0] == ["brew", "tap", "Dxrk777/homebrew-tap"]
         assert cmds[1] == ["brew", "install", "DXRK_MEMORY"]
 
-    def test_engram_go(self):
+    def test_memory_go(self):
         class LinuxProfile:
             package_manager = "apt"
             os = "linux"

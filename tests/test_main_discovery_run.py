@@ -412,7 +412,7 @@ class TestCliRun:
         plan = build_stage_plan(selection, resolved)
         assert plan.prepare == []
 
-    def test_engram_health_checks(self, monkeypatch):
+    def test_memory_health_checks(self, monkeypatch):
         from dxrk.cli.run import _DXRK_MEMORY_health_checks
 
         monkeypatch.setattr(

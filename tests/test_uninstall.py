@@ -558,7 +558,7 @@ class TestServiceSetProfileNames:
         assert svc.profile_names_to_remove == ["a", "b"]
 
 
-class TestServiceSetEngramScope:
+class TestServiceSetMemoryScope:
     def test_sets_scope(self):
         svc = Service(home_dir="/tmp")
         svc.set_DXRK_MEMORY_uninstall_scope(DxrkMemoryUninstallScope.PROJECT)

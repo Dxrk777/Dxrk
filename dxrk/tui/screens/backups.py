@@ -8,7 +8,7 @@ from textual.visual import Visual
 from textual.widget import Widget
 from textual.widgets import Footer, Static
 
-from dxrk.tui.shared import STATE
+from dxrk.tui.context import get_ctx
 
 
 class BackupsScreen(Screen):
@@ -32,9 +32,7 @@ class BackupsScreen(Screen):
             with VerticalScroll(id="backup-list"):
                 yield Static("")
             yield Static("")
-            yield Static(
-                "[dim]j/k: navigate • enter: restore • r: rename • d: delete • p: pin/unpin • esc: back[/]"
-            )
+            yield Static("[dim]j/k: navigate • enter: restore • r: rename • d: delete • p: pin/unpin • esc: back[/]")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -44,7 +42,7 @@ class BackupsScreen(Screen):
         scroll = self.query_one("#backup-list", VerticalScroll)
         scroll.remove_children()
 
-        backups = STATE.backups
+        backups = get_ctx().backups
         if not backups:
             scroll.mount(Static("[yellow]No backups found yet.[/]"))
             scroll.mount(Static(""))
@@ -82,7 +80,7 @@ class BackupsScreen(Screen):
     def _update_list(self) -> None:
         if not hasattr(self, "_backup_statics"):
             return
-        backups = STATE.backups
+        backups = get_ctx().backups
         end = self.list_offset + self.MAX_VISIBLE
         end = min(end, len(backups))
         for idx, s in enumerate(self._backup_statics):
@@ -114,15 +112,15 @@ class BackupsScreen(Screen):
             self.cursor -= 1
 
     def action_cursor_down(self) -> None:
-        backups = STATE.backups
+        backups = get_ctx().backups
         total = len(backups) + 1
         if self.cursor < total - 1:
             self.cursor += 1
 
     def action_select(self) -> None:
-        backups = STATE.backups
+        backups = get_ctx().backups
         if self.cursor < len(backups):
-            STATE.selected_backup = backups[self.cursor]
+            get_ctx().selected_backup = backups[self.cursor]
             self.app.push_screen("restore_confirm")
         else:
             self.app.push_screen("welcome")
@@ -131,19 +129,19 @@ class BackupsScreen(Screen):
         self.app.push_screen("welcome")
 
     def action_rename(self) -> None:
-        backups = STATE.backups
+        backups = get_ctx().backups
         if self.cursor < len(backups):
-            STATE.selected_backup = backups[self.cursor]
+            get_ctx().selected_backup = backups[self.cursor]
             self.app.push_screen("rename_backup")
 
     def action_delete(self) -> None:
-        backups = STATE.backups
+        backups = get_ctx().backups
         if self.cursor < len(backups):
-            STATE.selected_backup = backups[self.cursor]
+            get_ctx().selected_backup = backups[self.cursor]
             self.app.push_screen("delete_confirm")
 
     def action_pin(self) -> None:
-        backups = STATE.backups
+        backups = get_ctx().backups
         if self.cursor < len(backups):
             snap = backups[self.cursor]
             snap["pinned"] = not snap.get("pinned", False)
@@ -164,7 +162,7 @@ class RestoreConfirmScreen(Screen):
         with Container():
             yield Static("[bold]Restore Backup[/]")
             yield Static("")
-            snap = getattr(STATE, "selected_backup", None) or {}
+            snap = getattr(get_ctx(), "selected_backup", None) or {}
             yield Static(f"[bold]Backup:[/] {snap.get('id', 'unknown')}")
             yield Static(f"[dim]{snap.get('display_label', '')}[/]")
             yield Static("")
@@ -214,13 +212,11 @@ class DeleteConfirmScreen(Screen):
         with Container():
             yield Static("[bold]Delete Backup[/]")
             yield Static("")
-            snap = getattr(STATE, "selected_backup", None) or {}
+            snap = getattr(get_ctx(), "selected_backup", None) or {}
             yield Static(f"[bold]Backup:[/] {snap.get('id', 'unknown')}")
             yield Static(f"[dim]{snap.get('display_label', '')}[/]")
             yield Static("")
-            yield Static(
-                "[yellow]Are you sure you want to permanently delete this backup?[/]"
-            )
+            yield Static("[yellow]Are you sure you want to permanently delete this backup?[/]")
             yield Static("[yellow]This action cannot be undone.[/]")
             yield Static("")
             yield Static("  ▸ Delete")
@@ -257,7 +253,7 @@ class RenameBackupScreen(Screen):
         with Container():
             yield Static("[bold]Rename Backup[/]")
             yield Static("")
-            snap = getattr(STATE, "selected_backup", None) or {}
+            snap = getattr(get_ctx(), "selected_backup", None) or {}
             yield Static(f"[bold]Backup:[/] {snap.get('id', 'unknown')}")
             yield Static(f"[dim]{snap.get('display_label', '')}[/]")
             yield Static("")

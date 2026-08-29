@@ -23,8 +23,14 @@ nav:
   - Agentes: agents.md
   - Componentes: components.md
   - Arquitectura: architecture.md
+  - DxrkMemory 2.0: memory.md
+  - ADR-002 Separación Memoria: adr/ADR-002-memory-separation.md
+  - ADR-003 Hybrid vs Stdlib: adr/ADR-003-hybrid-vs-stdlib.md
+  - Migración 3.3.5 → 3.7.1: MIGRATION_3.3.5_3.7.1.md
+  - DX Top 1: dx.md
   - Plataformas: platforms.md
   - Roadmap: roadmap.md
+  - API Reference: api.md
 
 markdown_extensions:
   - admonition
@@ -44,3 +50,6 @@ markdown_extensions:
 plugins:
   - search
   - social
+  - mkdocstrings:
+      default:
+        show_source: true

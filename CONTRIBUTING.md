@@ -1,41 +1,51 @@
-# Contribuyendo a Dxrk
+# Contributing to Dxrk
 
-¡Gracias por tu interés en contribuir a Dxrk! Este documento describe cómo participar en el proyecto.
+¡Gracias por querer contribuir! Dxrk es un proyecto público y toda ayuda suma.
 
-## Código de conducta
+## Cómo contribuir
 
-Al participar en este proyecto, aceptas seguir nuestro [Código de conducta](CODE_OF_CONDUCT.md).
-
-## Empezar
-
-1. Haz un fork del repositorio.
-2. Clona tu fork: `git clone https://github.com/<tu-usuario>/Dxrk.git`
-3. Instala dependencias: `uv sync --all-extras`
-4. Crea una rama para tu cambio: `git checkout -b feat/mi-cambio`
+1. **Fork** el repositorio y creá una rama: `git checkout -b feat/mi-cambio`
+2. Hacé cambios chicos y atómicos (una sola responsabilidad por commit)
+3. Corré las verificaciones locales (abajo)
+4. Abrí un **Pull Request** a `main` describiendo qué y por qué
 
 ## Entorno de desarrollo
 
-- **Python 3.13+** con `uv` como gestor de paquetes.
-- Ejecuta la suite de tests: `uv run pytest`
-- Verifica tipos: `uv run --with mypy mypy dxrk/`
+Requisitos: **Python 3.13+** y [uv](https://docs.astral.sh/uv/).
+
+```bash
+uv sync --all-extras --dev
+```
+
+## Verificaciones obligatorias
+
+Antes de pushear, todo debe pasar en verde:
+
+```bash
+uvx ruff check dxrk tests     # lint
+uv run mypy dxrk              # type check
+uv run pytest -q              # tests (2760+)
+uv audit                      # seguridad de dependencias
+```
+
+Los mismos checks corren en CI (ubuntu, macos, windows) — si pasa local, pasa en CI.
 
 ## Convenciones
 
-- **Commits**: [Conventional Commits](https://www.conventionalcommits.org/) (`feat`, `fix`, `chore`, `docs`, `test`, `refactor`, `style`, `perf`, `ci`).
-- **Tests**: los cambios de código deben incluir tests; la suite completa debe pasar antes de abrir un PR.
-- **Tipos**: TypeScript estricto no aplica (Python), pero mantenemos mypy limpio en `dxrk/`.
-- **Idioma**: nombres de código en inglés; strings de UI pueden ser en español.
-- **Commits chicos y atómicos**: un solo cambio por commit.
+- **Commits**: [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `ci:`, `chore:`)
+- **Tests**: escribí tests para cambios de comportamiento; el gate de cobertura es 80% (los tests POSIX-only se marcan `skipif(win32)`)
+- **Tipos**: TypeScript estricto no aplica (Python), pero mypy estricto sí — sin `Any` innecesarios
+- **Nombres**: descriptivos, en inglés (excepto strings de UI)
+- **Documentación**: cambios de API o CLI se reflejan en `docs/` (mkdocs + mkdocstrings)
 
-## Reportar issues
+## Reportar bugs / pedir features
 
-Usa las plantillas de issue:
+Usá los issue templates: `bug_report` y `feature_request`. Incluí versión (`dxrk --version`), OS y pasos para reproducir.
 
-- [Bug report](https://github.com/Dxrk777/Dxrk/issues/new?template=bug_report.yml)
-- [Feature request](https://github.com/Dxrk777/Dxrk/issues/new?template=feature_request.yml)
+## Releases
 
-## Pull requests
+Los releases se disparan con un tag `v*` desde `main` — el pipeline publica a PyPI, genera changelog y crea el release automáticamente. No es necesario (ni recomendable) tocar workflows de release en PRs normales.
 
-1. Asegúrate de que la suite completa pase localmente: `uv run pytest` y `uv run --with mypy mypy dxrk/`.
-2. Describe el problema que resuelve tu PR y los pasos de verificación.
-3. Un mantenedor revisará y hará merge cuando el CI esté verde.
+## Código de conducta
+
+Sea respetuoso y constructivo. Dxrk es un proyecto open source hecho con cariño.

@@ -27,7 +27,7 @@
 - References must be local files and stable relative to the skill directory when possible.
 - Quality gates: hard rules are observable, decision gates cover real forks, output contract states exactly what to return, and references resolve locally.
 
-## Engram Saves
+## Memory Saves
 
 ```text
 mem_save title/topic_key: sdd-init/{project}
@@ -95,4 +95,4 @@ openspec/
 
 ## Output Templates
 
-For each mode, include project, stack, persistence, Strict TDD Mode, Testing Capabilities table, artifacts created/saved, limitations where relevant, and next steps. Engram mode must mention local/non-shareable limitations; none mode must recommend enabling persistence.
+For each mode, include project, stack, persistence, Strict TDD Mode, Testing Capabilities table, artifacts created/saved, limitations where relevant, and next steps. Memory mode must mention local/non-shareable limitations; none mode must recommend enabling persistence.

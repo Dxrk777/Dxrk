@@ -4,7 +4,7 @@ from dxrk.versions import (
     ClaudeCode,
     Codex,
     Context7MCP,
-    DxrkEngram,
+    DxrkMemory,
     GeminiCLI,
     Kilocode,
     OpenCode,
@@ -19,7 +19,7 @@ EXPECTED = {
     "Codex": Codex,
     "GeminiCLI": GeminiCLI,
     "Context7MCP": Context7MCP,
-    "DxrkEngram": DxrkEngram,
+    "DxrkMemory": DxrkMemory,
 }
 
 

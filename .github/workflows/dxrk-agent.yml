@@ -1,0 +1,36 @@
+name: Dxrk Agent Verification
+
+on:
+  workflow_call:
+    inputs:
+      agent:
+        description: 'AI Agent to run (e.g. claude-code, opencode)'
+        required: false
+        type: string
+        default: 'opencode'
+      preset:
+        description: 'Configuration preset'
+        required: false
+        type: string
+        default: 'full-dxrk'
+
+jobs:
+  dxrk-agent:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Install Dxrk
+        run: uv sync --all-extras
+
+      - name: Run Agent Setup & Verification
+        run: |
+          uv run dxrk-py --help
+          uv run dxrk-py install --agent ${{ inputs.agent }} --preset ${{ inputs.preset }} --dry-run

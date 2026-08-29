@@ -33,9 +33,17 @@ jobs:
       - name: Generate changelog
         uses: orhun/git-cliff-action@v4
         with:
-          args: -v --latest
+          args: -v
         env:
           OUTPUT: CHANGELOG.md
+
+      - name: Commit changelog
+        run: |
+          git config user.name "Dxrk System"
+          git config user.email "dxrk@local"
+          git add CHANGELOG.md
+          git commit -m "docs: update changelog for ${{ github.ref_name }}"
+          git push origin HEAD:main
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v3

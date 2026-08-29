@@ -170,7 +170,7 @@ Create the `.atl/` directory in the project root if it doesn't exist, then write
 .atl/skill-registry.md
 ```
 
-#### B. If engram is available, also save to engram (cross-session bonus):
+#### B. If memory is available, also save to memory (cross-session bonus):
 
 ```
 mem_save(
@@ -183,7 +183,7 @@ mem_save(
 )
 ```
 
-`capture_prompt: false` is required because the skill registry is an automated artifact, not a human/proactive memory save. Set it when the Engram tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
+`capture_prompt: false` is required because the skill registry is an automated artifact, not a human/proactive memory save. Set it when the Memory tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
 
 `topic_key` ensures upserts — running again updates the same observation.
 
@@ -194,7 +194,7 @@ mem_save(
 
 **Project**: {project name}
 **Location**: .atl/skill-registry.md
-**Engram**: {saved / not available}
+**Memory**: {saved / not available}
 
 ### User Skills Found
 
@@ -218,7 +218,7 @@ To update after installing/removing skills, run this again.
 ## Rules
 
 - ALWAYS write `.atl/skill-registry.md` regardless of any SDD persistence mode
-- ALWAYS save to engram if the `mem_save` tool is available
+- ALWAYS save to memory if the `mem_save` tool is available
 - SKIP `sdd-*`, `_shared`, and `skill-registry` directories when scanning
 - Read SKILL.md files (respecting the 200-line guard in Step 1) to generate accurate compact rules — this is a build-time cost, not a runtime cost
 - Compact rules MUST be 5-15 lines per skill — concise, actionable, no fluff

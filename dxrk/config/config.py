@@ -14,6 +14,7 @@ from typing import Any
 
 import yaml
 
+from .storage import save_json_atomic
 from .validation import ConfigError, ValidateConfig
 
 _logger = logging.getLogger("dxrk.config")
@@ -498,11 +499,7 @@ class ConfigManager:
         with self._mu:
             path = self._user_path
             data = _config_to_dict(self._config)
-            payload = json.dumps(data, indent=2)
-        Path(path).parent.mkdir(parents=True, exist_ok=True, mode=0o750)
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(payload)
-        os.chmod(path, 0o600)
+        save_json_atomic(path, data)
 
     def Reset(self, path: str) -> None:
         """Resets a section of the config to defaults."""
@@ -667,12 +664,8 @@ class AutonomyConfig:
     max_memory_items: int = 1000
     iq_metrics_file: str = ".dxrk/iq.json"
     iq_report_every: int = 10
-    capabilities: list[str] = field(
-        default_factory=lambda: ["fs.read", "fs.write", "git", "net.http"]
-    )
-    ask_before: list[str] = field(
-        default_factory=lambda: ["fs.write", "sudo", "pkg.install", "docker"]
-    )
+    capabilities: list[str] = field(default_factory=lambda: ["fs.read", "fs.write", "git", "net.http"])
+    ask_before: list[str] = field(default_factory=lambda: ["fs.write", "sudo", "pkg.install", "docker"])
 
 
 @dataclass
@@ -718,12 +711,8 @@ def Default() -> Config:
                 api_key_env="ANTHROPIC_API_KEY",
             ),
             ProviderConfig(name="openai", model="gpt-4o", api_key_env="OPENAI_API_KEY"),
-            ProviderConfig(
-                name="gemini", model="gemini-2.0-flash", api_key_env="GEMINI_API_KEY"
-            ),
-            ProviderConfig(
-                name="ollama", model="llama3.1:8b", base_url="http://localhost:11434"
-            ),
+            ProviderConfig(name="gemini", model="gemini-2.0-flash", api_key_env="GEMINI_API_KEY"),
+            ProviderConfig(name="ollama", model="llama3.1:8b", base_url="http://localhost:11434"),
         ],
         sandbox=SandboxConfig(),
         git=GitConfig(),

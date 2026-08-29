@@ -55,10 +55,10 @@ SDD is the structured planning layer for substantial changes.
 
 ### Artifact Store Policy
 
-- `engram` — default when available; persistent memory across sessions
+- `memory` — default when available; persistent memory across sessions
 - `openspec` — file-based artifacts; use only when user explicitly requests
 - `hybrid` — both backends; cross-session recovery + local files; more tokens per op
-- `none` — return results inline only; recommend enabling engram or openspec
+- `none` — return results inline only; recommend enabling memory or openspec
 
 ### Commands
 
@@ -81,7 +81,7 @@ Meta-commands (type directly — orchestrator handles them, won't appear in auto
 
 Before executing ANY SDD command (`/sdd-new`, `/sdd-ff`, `/sdd-continue`, `/sdd-explore`, `/sdd-apply`, `/sdd-verify`, `/sdd-archive`), check if `sdd-init` has been run for this project:
 
-1. Search Engram: `mem_search(query: "sdd-init/{project}", project: "{project}")`
+1. Search Memory: `mem_search(query: "sdd-init/{project}", project: "{project}")`
 2. If found → init was done, proceed normally
 3. If NOT found → run `sdd-init` FIRST (delegate to sdd-init sub-agent), THEN proceed with the requested command
 
@@ -115,11 +115,11 @@ For this agent (sub-agent delegation): **Automatic** means phases run back-to-ba
 
 When the user invokes `/sdd-new`, `/sdd-ff`, or `/sdd-continue` (or an equivalent natural-language request) for the first time in a session, ALSO ASK which artifact store they want for this change:
 
-- **`engram`**: Fast, no files created. Artifacts live in engram only. Best for solo work and quick iteration. Note: re-running a phase overwrites the previous version (no history).
+- **`memory`**: Fast, no files created. Artifacts live in memory only. Best for solo work and quick iteration. Note: re-running a phase overwrites the previous version (no history).
 - **`openspec`**: File-based. Creates `openspec/` directory with full artifact trail. Committable, shareable with team, full git history.
-- **`hybrid`**: Both — files for team sharing + engram for cross-session recovery. Higher token cost.
+- **`hybrid`**: Both — files for team sharing + memory for cross-session recovery. Higher token cost.
 
-If the user doesn't specify, detect: if engram is available → default to `engram`. Otherwise → `none`.
+If the user doesn't specify, detect: if memory is available → default to `memory`. Otherwise → `none`.
 
 Cache the artifact store choice for the session. Pass it as `artifact_store.mode` to every sub-agent launch.
 
@@ -159,7 +159,7 @@ The orchestrator resolves skills from the registry ONCE (at session start or fir
 
 Orchestrator skill resolution (do once per session):
 1. `mem_search(query: "skill-registry", project: "{project}")` → `mem_get_observation(id)` for full registry content
-2. Fallback: read `.atl/skill-registry.md` if engram not available
+2. Fallback: read `.atl/skill-registry.md` if memory not available
 3. Cache the **Compact Rules** section and the **User Skills** trigger table
 4. If no registry exists, warn user and proceed without project-specific standards
 
@@ -184,9 +184,9 @@ Sub-agents get a fresh context with NO memory. The orchestrator controls context
 
 #### Non-SDD Tasks (general delegation)
 
-- Read context: orchestrator searches engram (`mem_search`) for relevant prior context and passes it in the sub-agent prompt. Sub-agent does NOT search engram itself.
-- Write context: sub-agent MUST save significant discoveries, decisions, or bug fixes to engram via `mem_save` before returning. Sub-agent has full detail — save before returning, not after.
-- Always add to sub-agent prompt: `"If you make important discoveries, decisions, or fix bugs, save them to engram via mem_save with project: '{project}'."`
+- Read context: orchestrator searches memory (`mem_search`) for relevant prior context and passes it in the sub-agent prompt. Sub-agent does NOT search memory itself.
+- Write context: sub-agent MUST save significant discoveries, decisions, or bug fixes to memory via `mem_save` before returning. Sub-agent has full detail — save before returning, not after.
+- Always add to sub-agent prompt: `"If you make important discoveries, decisions, or fix bugs, save them to memory via mem_save with project: '{project}'."`
 - Skills: orchestrator resolves compact rules from the registry and injects them as `## Project Standards (auto-resolved)` in the sub-agent prompt. Sub-agents do NOT read SKILL.md files or the registry — they receive rules pre-digested.
 
 #### SDD Phases
@@ -228,9 +228,9 @@ When launching `sdd-apply` for a continuation batch (not the first batch):
 
 This prevents progress loss across batches. The sub-agent is responsible for read-merge-write, but the orchestrator MUST tell it that previous progress exists.
 
-#### Engram Topic Key Format
+#### Memory Topic Key Format
 
-When launching sub-agents for SDD phases with engram mode, pass these exact topic_keys as artifact references:
+When launching sub-agents for SDD phases with memory mode, pass these exact topic_keys as artifact references:
 
 | Artifact | Topic Key |
 |----------|-----------|
@@ -251,10 +251,10 @@ Sub-agents retrieve full content via two steps:
 
 ### State and Conventions
 
-Convention files under `~/.qwen/skills/_shared/` (global) or `.agent/skills/_shared/` (workspace): `engram-convention.md`, `persistence-contract.md`, `openspec-convention.md`.
+Convention files under `~/.qwen/skills/_shared/` (global) or `.agent/skills/_shared/` (workspace): `memory-convention.md`, `persistence-contract.md`, `openspec-convention.md`.
 
 ### Recovery Rule
 
-- `engram` → `mem_search(...)` → `mem_get_observation(...)`
+- `memory` → `mem_search(...)` → `mem_get_observation(...)`
 - `openspec` → read `openspec/changes/*/state.yaml`
 - `none` → state not persisted — explain to user

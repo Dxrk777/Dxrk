@@ -28,16 +28,16 @@ Execute all steps from the skill directly in this context window:
 7. Mark each task `[x]` complete as you finish it
 8. Persist progress to active backend
 
-## Engram Save (mandatory)
+## Memory Save (mandatory)
 
 After completing work, call `mem_save` with:
 - title: `"sdd/{change-name}/apply-progress"`
 - topic_key: `"sdd/{change-name}/apply-progress"`
 - type: `"architecture"`
 - project: `{project-name from context}`
-- capture_prompt: `false` when the Engram tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
+- capture_prompt: `false` when the Memory tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
 
-Also update the tasks artifact with `[x]` marks via `mem_update` (engram) or file edit (openspec/hybrid).
+Also update the tasks artifact with `[x]` marks via `mem_update` (memory) or file edit (openspec/hybrid).
 
 ## Result Contract
 

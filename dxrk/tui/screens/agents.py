@@ -9,7 +9,7 @@ from textual.screen import Screen
 from textual.widgets import Footer, Static
 
 from dxrk.models import AgentID
-from dxrk.tui.shared import STATE
+from dxrk.tui.context import get_ctx
 
 AGENT_OPTIONS: list[tuple[AgentID, str, str]] = [
     (AgentID.CLAUDE_CODE, "Claude Code", "Anthropic's CLI agent"),
@@ -45,7 +45,7 @@ class AgentsScreen(Screen):
             yield Static("")
             with VerticalScroll(id="agent-list"):
                 for i, (aid, name, desc) in enumerate(AGENT_OPTIONS):
-                    checked = "✓" if aid in STATE.selected_agents else " "
+                    checked = "✓" if aid in get_ctx().selected_agents else " "
                     prefix = "▸" if i == 0 else " "
                     yield Static(f"{prefix}[{checked}] {name}")
             yield Static("")
@@ -65,7 +65,7 @@ class AgentsScreen(Screen):
             if i >= len(AGENT_OPTIONS):
                 continue
             aid, name, _ = AGENT_OPTIONS[i]
-            checked = "✓" if aid in STATE.selected_agents else " "
+            checked = "✓" if aid in get_ctx().selected_agents else " "
             prefix = "▸" if i == self.cursor else " "
             cast(Static, child).update(f"{prefix}[{checked}] {name}")
             child.set_class(i == self.cursor, "focused")
@@ -85,14 +85,15 @@ class AgentsScreen(Screen):
     async def action_toggle(self, attribute_name: str = "") -> None:
         if self.cursor < self._action_offset:
             aid = AGENT_OPTIONS[self.cursor][0]
-            if aid in STATE.selected_agents:
-                STATE.selected_agents.remove(aid)
+            ctx = get_ctx()
+            if aid in ctx.selected_agents:
+                ctx.selected_agents.remove(aid)
             else:
-                STATE.selected_agents.append(aid)
+                ctx.selected_agents.append(aid)
             self._update_list()
 
     async def action_continue(self) -> None:
-        if self.cursor == self._action_offset and STATE.selected_agents:
+        if self.cursor == self._action_offset and get_ctx().selected_agents:
             self.app.push_screen("persona")
         elif self.cursor == self._action_offset + 1:
             self.app.push_screen("detection")

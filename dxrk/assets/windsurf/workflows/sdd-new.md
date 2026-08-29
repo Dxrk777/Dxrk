@@ -11,7 +11,7 @@ Este workflow define el comportamiento obligatorio de **Cascade** al iniciar una
 Usar las capacidades nativas de Windsurf de forma **Hybrid-First**:
 
 - **Plan Mode** para planificar
-- **Memories / MCP (Engram)** para recuperar contexto previo
+- **Memories / MCP (Memory)** para recuperar contexto previo
 - **Artifacts `.sdd/`** solo como contrato formal de planificación
 - **Code Mode** únicamente después de aprobación explícita del usuario
 
@@ -59,8 +59,8 @@ Antes de redactar cualquier artefacto SDD, **DEBES recuperar contexto arquitect�
 
 Orden de preferencia:
 
-1. Usar **Engram** mediante las herramientas MCP canónicas: `mem_search` para buscar decisiones previas y `mem_context` para recuperar el contexto reciente del proyecto
-2. Si Engram no está disponible o no devuelve contexto suficiente, leer `AGENTS.md`
+1. Usar **Memory** mediante las herramientas MCP canónicas: `mem_search` para buscar decisiones previas y `mem_context` para recuperar el contexto reciente del proyecto
+2. Si Memory no está disponible o no devuelve contexto suficiente, leer `AGENTS.md`
 3. Si existe contexto adicional del proyecto relacionado con SDD o arquitectura, incorporarlo también
 
 Debes buscar, como mínimo:
@@ -176,7 +176,7 @@ Sigue esta secuencia sin saltos:
 
 1. Detectar que el trabajo amerita `/sdd-new`
 2. Entrar en **Plan Mode**
-3. Recuperar contexto con **Engram** o, en su defecto, leer `AGENTS.md`
+3. Recuperar contexto con **Memory** o, en su defecto, leer `AGENTS.md`
 4. Sintetizar restricciones, alcance y riesgos
 5. Crear `.sdd/` si no existe
 6. Generar `.sdd/proposal.md`
@@ -206,7 +206,7 @@ Mientras este workflow no haya sido aprobado por el usuario:
 Este workflow se considera correctamente ejecutado solo si:
 
 - Cascade usó **Plan Mode**
-- Recuperó contexto con **Engram** o `AGENTS.md`
+- Recuperó contexto con **Memory** o `AGENTS.md`
 - Generó `.sdd/proposal.md`
 - Generó `.sdd/spec.md`
 - Presentó un resumen al usuario

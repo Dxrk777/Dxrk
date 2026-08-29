@@ -24,15 +24,15 @@ You are a sub-agent responsible for ARCHIVING. You merge delta specs into the ma
 
 From the orchestrator:
 - Change name
-- Artifact store mode (`engram | openspec | hybrid | none`)
+- Artifact store mode (`memory | openspec | hybrid | none`)
 
 ## Execution and Persistence Contract
 
 > Follow **Section B** (retrieval) and **Section C** (persistence) from `skills/_shared/sdd-phase-common.md`.
 
-- **engram**: Read `sdd/{change-name}/proposal`, `sdd/{change-name}/spec`, `sdd/{change-name}/design`, `sdd/{change-name}/tasks`, `sdd/{change-name}/verify-report` (all required). Record all observation IDs in the archive report for traceability. Save as `sdd/{change-name}/archive-report`.
+- **memory**: Read `sdd/{change-name}/proposal`, `sdd/{change-name}/spec`, `sdd/{change-name}/design`, `sdd/{change-name}/tasks`, `sdd/{change-name}/verify-report` (all required). Record all observation IDs in the archive report for traceability. Save as `sdd/{change-name}/archive-report`.
 - **openspec**: Read and follow `skills/_shared/openspec-convention.md`. Perform merge and archive folder moves.
-- **hybrid**: Follow BOTH conventions — persist archive report to Engram (with observation IDs) AND perform filesystem merge + archive folder moves.
+- **hybrid**: Follow BOTH conventions — persist archive report to Memory (with observation IDs) AND perform filesystem merge + archive folder moves.
 - **none**: Return closure summary only. Do not perform archive file operations.
 
 ## What to Do
@@ -42,7 +42,7 @@ Follow **Section A** from `skills/_shared/sdd-phase-common.md`.
 
 ### Step 2: Sync Delta Specs to Main Specs
 
-**IF mode is `engram`:** Skip filesystem sync — artifacts live in Engram only. The archive report (Step 5) records all observation IDs for traceability.
+**IF mode is `memory`:** Skip filesystem sync — artifacts live in Memory only. The archive report (Step 5) records all observation IDs for traceability.
 
 **IF mode is `none`:** Skip — no artifacts to sync.
 
@@ -76,7 +76,7 @@ openspec/changes/{change-name}/specs/{domain}/spec.md
 
 ### Step 3: Move to Archive
 
-**IF mode is `engram`:** Skip — there are no `openspec/` directories to move. The archive report in Engram serves as the audit trail.
+**IF mode is `memory`:** Skip — there are no `openspec/` directories to move. The archive report in Memory serves as the audit trail.
 
 **IF mode is `none`:** Skip — no filesystem operations.
 
@@ -97,7 +97,7 @@ Use today's date in ISO format (e.g., `2026-02-16`).
 - [ ] Archive contains all artifacts (proposal, specs, design, tasks)
 - [ ] Active changes directory no longer has this change
 
-**IF mode is `engram`:** Confirm all artifact observation IDs are recorded in the archive report.
+**IF mode is `memory`:** Confirm all artifact observation IDs are recorded in the archive report.
 
 **IF mode is `none`:** Skip verification — no persisted artifacts.
 
@@ -118,7 +118,7 @@ Return to the orchestrator:
 ## Change Archived
 
 **Change**: {change-name}
-**Archived to**: `openspec/changes/archive/{YYYY-MM-DD}-{change-name}/` (openspec/hybrid) | Engram archive report (engram) | inline (none)
+**Archived to**: `openspec/changes/archive/{YYYY-MM-DD}-{change-name}/` (openspec/hybrid) | Memory archive report (memory) | inline (none)
 
 ### Specs Synced
 | Domain | Action | Details |

@@ -173,7 +173,7 @@ def test_open_code_plugins():
     assert (
         OpenCodeCommunityPluginID.SUB_AGENT_STATUSLINE.value == "sub-agent-statusline"
     )
-    assert OpenCodeCommunityPluginID.SDD_ENGRAM_PLUGIN.value == "sdd-DXRK_MEMORY-plugin"
+    assert OpenCodeCommunityPluginID.SDD_MEMORY_PLUGIN.value == "sdd-DXRK_MEMORY-plugin"
 
 
 def test_plan_status():

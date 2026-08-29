@@ -3,8 +3,10 @@
 Textual TUI app for Dxrk.
 """
 
+from __future__ import annotations
+
 import logging
-from typing import cast
+from typing import Any, cast
 
 from textual import on, work
 from textual.app import App, ComposeResult
@@ -29,6 +31,7 @@ from dxrk.models import (
     UninstallMode,
 )
 from dxrk.system import detect
+from dxrk.tui.context import TUIContext, ctx_var, get_ctx
 from dxrk.tui.screens.backups import (
     DeleteConfirmScreen,
     RenameBackupScreen,
@@ -37,7 +40,7 @@ from dxrk.tui.screens.backups import (
 from dxrk.tui.screens.dependency_tree import DependencyTreeScreen
 from dxrk.tui.screens.installing import InstallingScreen
 from dxrk.tui.screens.review import ReviewScreen
-from dxrk.tui.shared import STATE
+from dxrk.tui.screens.tenant_switcher import TenantSwitcherScreen
 
 log = logging.getLogger(__name__)
 
@@ -91,14 +94,24 @@ class WelcomeScreen(Screen):
         Binding("enter", "select", "Select"),
         Binding("escape", "back", "Back", show=False),
         Binding("q", "quit", "Quit"),
+        Binding("t", "tenant_switcher", "Tenants"),
     ]
 
     cursor = reactive(0)
 
+    def _tenant_badge(self) -> str:
+        ctx = get_ctx()
+        tid = getattr(ctx, "tenant_id", "") or "default"
+        role = getattr(ctx, "role", "") or "readonly"
+        return f"tenant: {tid} · role: {role}"
+
     def compose(self) -> ComposeResult:
         with Container(id="welcome-container"):
             yield Static("[bold cyan]Dxrk[/] Installer", id="title")
-            yield Static(f"v{STATE.version}", id="version")
+            # Migrated to ContextVar DI: prefer get_ctx() over STATE
+            yield Static(f"v{get_ctx().version}", id="version")
+            yield Static(self._tenant_badge(), id="tenant-badge")
+            yield Static("[dim]press t for Tenants[/]", id="tenant-hint")
             with VerticalScroll(id="menu"):
                 for i, (title, desc) in enumerate(WELCOME_OPTIONS):
                     with Container(classes=f"menu-item {'focused' if i == 0 else ''}"):
@@ -148,6 +161,9 @@ class WelcomeScreen(Screen):
     def action_back(self) -> None:
         pass
 
+    def action_tenant_switcher(self) -> None:
+        self.app.push_screen("tenant_switcher")
+
     def action_quit(self) -> None:
         self.app.exit()
 
@@ -163,9 +179,7 @@ class PlaceholderScreen(Screen):
 
     def compose(self) -> ComposeResult:
         with Container():
-            yield Static(
-                f"[bold]{(self.name or 'screen').replace('_', ' ').title()}[/]"
-            )
+            yield Static(f"[bold]{(self.name or 'screen').replace('_', ' ').title()}[/]")
             yield Static("")
             yield Static("Coming soon")
         yield Footer()
@@ -198,10 +212,11 @@ class DetectionScreen(Screen):
 
     @work(exclusive=True, thread=True)
     async def _run_detection(self) -> None:
-        self.query_one("#detection-status", Static).update(
-            "Detecting OS, tools, and dependencies..."
-        )
-        STATE.detection = detect()
+        self.query_one("#detection-status", Static).update("Detecting OS, tools, and dependencies...")
+        # DI migration: use get_ctx() (ContextVar) — STATE is deprecated proxy
+        get_ctx().detection = detect()
+        # Keep STATE sync for backward compat (proxy already forwards, explicit for clarity)
+        # STATE.detection = get_ctx().detection
         self.app.call_from_thread(self._show_results)
 
     def _show_results(self) -> None:
@@ -209,7 +224,7 @@ class DetectionScreen(Screen):
         spinner.display = False
         container = self.query_one("#detection-container", Container)
 
-        d = STATE.detection
+        d = get_ctx().detection
         if not d:
             container.mount(Static("[red]Detection failed[/]"))
             return
@@ -218,26 +233,20 @@ class DetectionScreen(Screen):
         container.mount(items)
         items.mount(Static(f"OS: [green]{d.system.os}[/] / [green]{d.system.arch}[/]"))
         items.mount(Static(f"Shell: [green]{d.system.shell}[/]"))
-        items.mount(
-            Static(f"Package Manager: [green]{d.system.profile.package_manager}[/]")
-        )
+        items.mount(Static(f"Package Manager: [green]{d.system.profile.package_manager}[/]"))
         items.mount(Static(""))
         items.mount(Static("[bold]Tools:[/]"))
         for name, status in d.tools.items():
             c = "green" if status.installed else "red"
             v = f"  ({status.path})" if status.installed else ""
-            items.mount(
-                Static(f"  [{c}]{'✅' if status.installed else '❌'} {name}{v}[/]")
-            )
+            items.mount(Static(f"  [{c}]{'✅' if status.installed else '❌'} {name}{v}[/]"))
         items.mount(Static(""))
         items.mount(Static("[bold]Configs Found:[/]"))
         for cfg in d.configs:
             items.mount(Static(f"  📄 {cfg.path}"))
         items.mount(Static(""))
         items.mount(Button("Continue", variant="primary", id="detection-continue"))
-        self.query_one("#detection-status", Static).update(
-            "Detection complete. Press Enter or click Continue."
-        )
+        self.query_one("#detection-status", Static).update("Detection complete. Press Enter or click Continue.")
 
     @on(Button.Pressed, "#detection-continue")
     def on_continue_click(self) -> None:
@@ -284,10 +293,9 @@ class AgentsScreen(Screen):
             yield Static("[bold]Select Agents to Install[/]", id="agents-title")
             with VerticalScroll(id="agent-list"):
                 for i, (aid, name, desc) in enumerate(AGENT_OPTIONS):
-                    checked = " " if aid not in STATE.selected_agents else "✓"
-                    yield Static(
-                        f"{'[' if i == 0 else ' '}{checked}{']' if i == 0 else ' '} {name}"
-                    )
+                    # TODO(R11): migrate remaining STATE.* to get_ctx() / self.app.ctx
+                    checked = " " if aid not in get_ctx().selected_agents else "✓"
+                    yield Static(f"{'[' if i == 0 else ' '}{checked}{']' if i == 0 else ' '} {name}")
             yield Static("")
             yield Static("[dim]Space: toggle • Enter: continue • Esc: back[/]")
         yield Footer()
@@ -301,7 +309,7 @@ class AgentsScreen(Screen):
     def _update_list(self) -> None:
         for i, child in enumerate(self.query("#agent-list > Static")):
             aid, name, _ = AGENT_OPTIONS[i]
-            checked = "✓" if aid in STATE.selected_agents else " "
+            checked = "✓" if aid in get_ctx().selected_agents else " "
             prefix = "▸" if i == self.cursor else " "
             cast(Static, child).update(f"{prefix}[{checked}] {name}")
             child.set_class(i == self.cursor, "focused")
@@ -316,14 +324,15 @@ class AgentsScreen(Screen):
 
     async def action_toggle(self, attribute_name: str = "") -> None:
         aid = AGENT_OPTIONS[self.cursor][0]
-        if aid in STATE.selected_agents:
-            STATE.selected_agents.remove(aid)
+        ctx = get_ctx()
+        if aid in ctx.selected_agents:
+            ctx.selected_agents.remove(aid)
         else:
-            STATE.selected_agents.append(aid)
+            ctx.selected_agents.append(aid)
         self._update_list()
 
     def action_continue(self) -> None:
-        if STATE.selected_agents:
+        if get_ctx().selected_agents:
             self.app.push_screen("persona")
 
     def action_back(self) -> None:
@@ -376,7 +385,8 @@ class PersonaScreen(Screen):
             child.set_class(i == self.cursor, "focused")
 
     def action_select(self) -> None:
-        STATE.persona = PERSONA_OPTIONS[self.cursor][0]
+        # Migrated to DI
+        get_ctx().persona = PERSONA_OPTIONS[self.cursor][0]
         self.app.push_screen("preset")
 
     def action_back(self) -> None:
@@ -434,7 +444,7 @@ class PresetScreen(Screen):
             child.set_class(i == self.cursor, "focused")
 
     def action_select(self) -> None:
-        STATE.preset = PRESET_OPTIONS[self.cursor][0]
+        get_ctx().preset = PRESET_OPTIONS[self.cursor][0]
         self.app.push_screen("claude_model_picker")
 
     def action_back(self) -> None:
@@ -476,7 +486,7 @@ class SDDModeScreen(Screen):
     def on_mount(self) -> None:
         self._update_focus()
 
-    def watch_cursor(self, old, new):
+    def watch_cursor(self, old: Any, new: Any) -> None:
         self._update_focus()
 
     def _update_focus(self) -> None:
@@ -492,7 +502,7 @@ class SDDModeScreen(Screen):
             self.cursor += 1
 
     def action_select(self) -> None:
-        STATE.sdd_mode = SDD_OPTIONS[self.cursor][0]
+        get_ctx().sdd_mode = SDD_OPTIONS[self.cursor][0]
         self.app.push_screen("model_picker")
 
     def action_back(self) -> None:
@@ -532,11 +542,11 @@ class StrictTDDScreen(Screen):
             self.cursor += 1
 
     def action_toggle_and_continue(self) -> None:
-        STATE.strict_tdd = self.cursor == 0
+        get_ctx().strict_tdd = self.cursor == 0
         self.app.push_screen("dependency_tree")
 
     def action_skip(self) -> None:
-        STATE.strict_tdd = False
+        get_ctx().strict_tdd = False
         self.app.push_screen("preset")
 
 
@@ -553,10 +563,9 @@ class CompleteScreen(Screen):
         with Container(id="complete-container"):
             yield Static("[bold green]✓ Installation Complete[/]", id="complete-title")
             yield Static("")
-            yield Static(f"Agents configured: {len(STATE.selected_agents) or 'N/A'}")
-            yield Static(
-                f"Components installed: {len(STATE.selected_components) or 'N/A'}"
-            )
+            # TODO(R11): migrate to get_ctx() fully; keeping STATE for backward compat
+            yield Static(f"Agents configured: {len(get_ctx().selected_agents) or 'N/A'}")
+            yield Static(f"Components installed: {len(get_ctx().selected_components) or 'N/A'}")
             yield Static("")
             yield Static("[dim]Press Enter to return to the main menu[/]")
         yield Footer()
@@ -607,7 +616,7 @@ class UninstallModeScreen(Screen):
             UninstallMode.FULL_REMOVE,
             UninstallMode.CLEAN_INSTALL,
         ]
-        STATE.uninstall_mode = modes[self.cursor]
+        get_ctx().uninstall_mode = modes[self.cursor]
         self.app.push_screen("uninstall")
 
     def action_back(self) -> None:
@@ -695,12 +704,8 @@ class ModelPickerScreen(Screen):
             yield Static("[dim]Configure which model each SDD phase uses[/]")
             yield Static("")
             for i, phase in enumerate(SDD_PHASES):
-                assignment = STATE.model_assignments.get(phase)
-                model_str = (
-                    f"{assignment.provider_id}/{assignment.model_id}"
-                    if assignment
-                    else "[dim]not set[/]"
-                )
+                assignment = get_ctx().model_assignments.get(phase)
+                model_str = f"{assignment.provider_id}/{assignment.model_id}" if assignment else "[dim]not set[/]"
                 yield Static(f"  {'▸' if i == 0 else ' '} {phase}: {model_str}")
             yield Static("")
             yield Static("[dim]Enter: edit • Esc: done[/]")
@@ -769,9 +774,7 @@ class ModelSelectScreen(ModalScreen[str]):
     def action_select(self) -> None:
         provider = "anthropic"
         model = MODEL_OPTIONS[self.cursor]
-        STATE.model_assignments[self.phase] = ModelAssignment(
-            provider_id=provider, model_id=model
-        )
+        get_ctx().model_assignments[self.phase] = ModelAssignment(provider_id=provider, model_id=model)
         self.dismiss()
 
     def action_cancel(self) -> None:
@@ -782,10 +785,17 @@ class ModelSelectScreen(ModalScreen[str]):
 
 
 class DxrkApp(App):
-    """Dxrk Textual TUI."""
+    """Dxrk Textual TUI — now ContextVar DI aware.
+
+    Preferred usage: DxrkApp(ctx=TUIContext(version=...)).
+    Legacy global STATE is kept as proxy for backward compat.
+    """
 
     TITLE = "Dxrk"
-    SUB_TITLE = f"v{STATE.version}"
+    SUB_TITLE = "vdev"
+    BINDINGS = [
+        Binding("t", "tenant_switcher", "Tenants"),
+    ]
     CSS = """
     Screen {
         background: $surface;
@@ -920,6 +930,7 @@ class DxrkApp(App):
         "restore_confirm": RestoreConfirmScreen,
         "delete_confirm": DeleteConfirmScreen,
         "rename_backup": RenameBackupScreen,
+        "tenant_switcher": TenantSwitcherScreen,
         # Placeholders for missing screens
         "upgrade": PlaceholderScreen,
         "sync": PlaceholderScreen,
@@ -936,11 +947,29 @@ class DxrkApp(App):
         "skill_picker": PlaceholderScreen,
     }
 
+    def __init__(self, ctx: TUIContext | None = None, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        if ctx is not None:
+            self.ctx: TUIContext = ctx
+            ctx_var.set(self.ctx)
+        else:
+            # Reuse current ContextVar value (xdist-safe via ContextVar)
+            self.ctx = get_ctx()
+        # Sync legacy STATE proxy is automatic (STATE forwards to ctx_var),
+        # but keep instance sub-title in sync for display.
+        self.SUB_TITLE = f"v{self.ctx.version}"
+
+    def action_tenant_switcher(self) -> None:
+        self.push_screen("tenant_switcher")
+
     def on_mount(self) -> None:
         self.push_screen("welcome")
 
 
 def run(version: str = "dev") -> None:
-    STATE.version = version
-    app = DxrkApp()
+    ctx = TUIContext(version=version)
+    ctx_var.set(ctx)
+    # Legacy sync: STATE is proxy -> also reflects ctx, explicit for clarity
+    # (kept for tests that import STATE)
+    app = DxrkApp(ctx)
     app.run()

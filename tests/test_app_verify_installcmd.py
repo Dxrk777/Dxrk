@@ -415,7 +415,7 @@ class TestProfileResolverAgentInstall:
 
 
 class TestProfileResolverComponentInstall:
-    def test_engram_brew(self):
+    def test_memory_brew(self):
         resolver = ProfileResolver()
         profile = PlatformProfile(os="darwin", package_manager="brew")
         cmds = resolver.resolve_component_install(profile, ComponentID.DXRK_MEMORY)
@@ -423,7 +423,7 @@ class TestProfileResolverComponentInstall:
         assert ["brew", "tap", "Dxrk777/homebrew-tap"] in cmds
         assert ["brew", "install", "dxrk-memory"] in cmds
 
-    def test_engram_not_brew_raises(self):
+    def test_memory_not_brew_raises(self):
         resolver = ProfileResolver()
         profile = PlatformProfile(os="linux", package_manager="apt")
         with pytest.raises(InstallError, match="dxrk-memory on"):

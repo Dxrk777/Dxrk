@@ -20,8 +20,8 @@ CONTEXT:
 - Artifact store mode: ask/cache per orchestrator
 - Delivery strategy: ask/cache per orchestrator
 
-ENGRAM NOTE:
-To check which artifacts exist in engram/hybrid, search: mem_search(query: "sdd/$ARGUMENTS/", project: "{project}") to list all artifacts for this change.
+MEMORY NOTE:
+To check which artifacts exist in memory/hybrid, search: mem_search(query: "sdd/$ARGUMENTS/", project: "{project}") to list all artifacts for this change.
 Sub-agents handle persistence automatically using the selected artifact store.
 
 Read the orchestrator instructions to coordinate this workflow. Do NOT execute phase work inline — delegate to sub-agents.

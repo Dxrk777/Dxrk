@@ -9,17 +9,17 @@ CONTEXT:
 - Working directory: !`pwd`
 - Current project: !`basename "$(pwd)"`
 - Topic to explore: $ARGUMENTS
-- Artifact store mode: engram
+- Artifact store mode: memory
 
 TASK:
 Explore the topic "$ARGUMENTS" in this codebase. Investigate the current state, identify affected areas, compare approaches, and provide a recommendation.
 
-ENGRAM PERSISTENCE (artifact store mode: engram):
+MEMORY PERSISTENCE (artifact store mode: memory):
 Read project context (optional):
   mem_search(query: "sdd-init/{project}", project: "{project}") → if found, mem_get_observation(id) for full content
 Save exploration:
   mem_save(title: "sdd/$ARGUMENTS/explore", topic_key: "sdd/$ARGUMENTS/explore", type: "architecture", project: "{project}", capture_prompt: false, content: "{exploration}")
-  Set capture_prompt: false when the Engram tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
+  Set capture_prompt: false when the Memory tool schema supports it; if an older schema rejects or does not expose the field, omit it rather than failing.
 
 This is an exploration only — do NOT create any files or modify code. Just research and return your analysis.
 

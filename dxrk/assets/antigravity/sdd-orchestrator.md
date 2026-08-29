@@ -36,10 +36,10 @@ SDD is the structured planning layer for substantial changes.
 
 ### Artifact Store Policy
 
-- `engram` — default when available; persistent memory across sessions via MCP
+- `memory` — default when available; persistent memory across sessions via MCP
 - `openspec` — file-based artifacts; use only when user explicitly requests
 - `hybrid` — both backends; cross-session recovery + local files; more tokens per op
-- `none` — return results inline only; recommend enabling engram or openspec
+- `none` — return results inline only; recommend enabling memory or openspec
 
 ### Commands
 
@@ -62,7 +62,7 @@ Meta-commands (type directly — orchestrator handles them, will not appear in a
 
 Before executing ANY SDD command (`/sdd-new`, `/sdd-ff`, `/sdd-continue`, `/sdd-explore`, `/sdd-apply`, `/sdd-verify`, `/sdd-archive`), check if `sdd-init` has been run for this project:
 
-1. Search Engram: `mem_search(query: "sdd-init/{project}", project: "{project}")`
+1. Search Memory: `mem_search(query: "sdd-init/{project}", project: "{project}")`
 2. If found → init was done, proceed normally
 3. If NOT found → run `sdd-init` FIRST (delegate to sdd-init sub-agent), THEN proceed with the requested command
 
@@ -96,11 +96,11 @@ For this agent (inline execution): **Interactive** is already the default behavi
 
 When the user invokes `/sdd-new`, `/sdd-ff`, or `/sdd-continue` for the first time in a session, ALSO ASK which artifact store they want for this change:
 
-- **`engram`**: Fast, no files created. Artifacts live in engram only. Best for solo work and quick iteration. Note: re-running a phase overwrites the previous version (no history).
+- **`memory`**: Fast, no files created. Artifacts live in memory only. Best for solo work and quick iteration. Note: re-running a phase overwrites the previous version (no history).
 - **`openspec`**: File-based. Creates `openspec/` directory with full artifact trail. Committable, shareable with team, full git history.
-- **`hybrid`**: Both — files for team sharing + engram for cross-session recovery. Higher token cost.
+- **`hybrid`**: Both — files for team sharing + memory for cross-session recovery. Higher token cost.
 
-If the user doesn't specify, detect: if engram is available → default to `engram`. Otherwise → `none`.
+If the user doesn't specify, detect: if memory is available → default to `memory`. Otherwise → `none`.
 
 Cache the artifact store choice for the session. Pass it as `artifact_store.mode` to every sub-agent launch.
 
@@ -140,7 +140,7 @@ Read this table at session start. Antigravity supports multiple models via Missi
 Since SDD phases run inline, skill resolution runs before each phase. Do this ONCE per session (or after compaction):
 
 1. `mem_search(query: "skill-registry", project: "{project}")` → `mem_get_observation(id)` for full registry content
-2. Fallback: read `.atl/skill-registry.md` if engram not available
+2. Fallback: read `.atl/skill-registry.md` if memory not available
 3. Cache the **Compact Rules** section and the **User Skills** trigger table
 4. If no registry exists, warn user and proceed without project-specific standards
 
@@ -174,7 +174,7 @@ Since SDD phases run inline, YOU read and write all artifacts directly. Each pha
 | `sdd-verify` | spec + tasks + **apply-progress** | `verify-report` |
 | `sdd-archive` | all artifacts | `archive-report` |
 
-For phases with required dependencies, retrieve artifacts from Engram using topic keys before starting the phase. Pass artifact references (topic keys), NOT full content. Retrieve full content only when actively working on that phase — do not inline entire specs or designs into conversation context. Do NOT rely on conversation history alone — conversation context is lossy across sessions.
+For phases with required dependencies, retrieve artifacts from Memory using topic keys before starting the phase. Pass artifact references (topic keys), NOT full content. Retrieve full content only when actively working on that phase — do not inline entire specs or designs into conversation context. Do NOT rely on conversation history alone — conversation context is lossy across sessions.
 
 #### Strict TDD Forwarding (MANDATORY)
 
@@ -201,11 +201,11 @@ This prevents progress loss across batches. Read-merge-write is mandatory for co
 ### Non-SDD Tasks
 
 When executing general (non-SDD) work:
-1. Search engram (`mem_search`) for relevant prior context before starting
-2. If you make important discoveries, decisions, or fix bugs, save them to engram via `mem_save`
-3. Do NOT rely solely on conversation history — persist important findings to engram for cross-session durability
+1. Search memory (`mem_search`) for relevant prior context before starting
+2. If you make important discoveries, decisions, or fix bugs, save them to memory via `mem_save`
+3. Do NOT rely solely on conversation history — persist important findings to memory for cross-session durability
 
-## Engram Topic Key Format
+## Memory Topic Key Format
 
 | Artifact | Topic Key |
 |----------|-----------|
@@ -226,12 +226,12 @@ Retrieve full content via two steps:
 
 ## State and Conventions
 
-Convention files under `~/.gemini/antigravity/skills/_shared/` (global) or `.agent/skills/_shared/` (workspace): `engram-convention.md`, `persistence-contract.md`, `openspec-convention.md`.
+Convention files under `~/.gemini/antigravity/skills/_shared/` (global) or `.agent/skills/_shared/` (workspace): `memory-convention.md`, `persistence-contract.md`, `openspec-convention.md`.
 
-DAG state is tracked in Engram under `sdd/{change-name}/state`. Update it after each phase completes so `/sdd-continue` knows which phase to run next.
+DAG state is tracked in Memory under `sdd/{change-name}/state`. Update it after each phase completes so `/sdd-continue` knows which phase to run next.
 
 ## Recovery Rule
 
-- `engram` → `mem_search(...)` → `mem_get_observation(...)`
+- `memory` → `mem_search(...)` → `mem_get_observation(...)`
 - `openspec` → read `openspec/changes/*/state.yaml`
 - `none` → state not persisted — explain to user
