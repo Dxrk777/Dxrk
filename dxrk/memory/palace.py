@@ -216,6 +216,59 @@ def _is_regular_file(path: Path) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Tenant isolation helpers (R10) — stdlib-only, avoid top-level cycle
+# ---------------------------------------------------------------------------
+
+
+def _effective_tenant_id(tenant_id: str | None = None) -> str:
+    """Resolve effective tenant id: explicit > env DXRK_TENANT > default if migrated."""
+    tid = (tenant_id if tenant_id is not None else os.environ.get("DXRK_TENANT", "")).strip()
+    if tid:
+        return tid
+    try:
+        from dxrk.tenant.migration import is_migrated
+
+        if is_migrated():
+            return "default"
+        return ""
+    except Exception:
+        return ""
+
+
+def _resolve_tenant_path(tenant_id: str | None, palace_path: Path | str | None) -> Path:
+    """Resolve palace path with tenant isolation.
+
+    - If palace_path given (non-empty and not sentinel) → Path(palace_path)
+    - Sentinel "memory-only" or "" → memory-only sentinel path
+    - elif tenant_id or env DXRK_TENANT → tenant_root(effective)/palace
+    - elif is_migrated() → tenant_root("default")/palace
+    - else → Path.home()/".dxrk"/"palace" (legacy) — task mentions ".dxrk"/"memory" as legacy alias
+    """
+    if palace_path is not None:
+        s = str(palace_path).strip()
+        if s == "" or s == "memory-only":
+            # preserve sentinel for backward compat
+            return Path(s) if s else Path.home() / ".dxrk" / "memory"
+        return Path(palace_path).expanduser()
+    tid = _effective_tenant_id(tenant_id)
+    if tid:
+        try:
+            from dxrk.tenant.migration import tenant_root
+
+            return tenant_root(tid) / "palace"
+        except OSError:
+            return Path.home() / ".dxrk" / "palace"
+    try:
+        from dxrk.tenant.migration import is_migrated, tenant_root
+
+        if is_migrated():
+            return tenant_root("default") / "palace"
+    except OSError:
+        pass
+    return Path.home() / ".dxrk" / "palace"
+
+
+# ---------------------------------------------------------------------------
 # Locks (port of palace.mine_lock + mine_palace_lock + 27212e5 reap)
 # ---------------------------------------------------------------------------
 
@@ -245,13 +298,25 @@ def _mark_released(key: str) -> None:
     _holder_state().discard(key)
 
 
-def _dxrk_lock_dir() -> Path:
-    # Dxrk lock directory; legacy paths reaped if present for cleanup
+def _dxrk_lock_dir(tenant_id: str | None = None) -> Path:
+    # Tenant-aware lock directory; legacy fallback if no tenant
+    tid = _effective_tenant_id(tenant_id)
+    if tid:
+        try:
+            from dxrk.tenant.migration import tenant_root
+
+            return tenant_root(tid) / "locks"
+        except OSError:
+            pass
     return Path.home() / ".dxrk" / "locks"
 
 
-def _mine_lock_path(source_file: str) -> str:
-    lock_dir = _dxrk_lock_dir()
+def _mine_lock_path(source_file: str, tenant_id: str | None = None) -> str:
+    # tenant-aware lock dir with fallback for monkeypatched zero-arg _dxrk_lock_dir
+    try:
+        lock_dir = _dxrk_lock_dir(tenant_id)  # type: ignore[call-arg]
+    except TypeError:
+        lock_dir = _dxrk_lock_dir()  # type: ignore[call-arg]
     lock_dir.mkdir(parents=True, exist_ok=True)
     try:
         lock_dir.chmod(0o750)
@@ -397,15 +462,21 @@ def _cleanup_dxrk_lock_file(lock_path: str | Path) -> None:
     _cleanup_mine_lock_file(str(lock_path))
 
 
-def reap_stale_dxrk_locks(*, min_age_seconds: int = 3600) -> tuple[int, int]:
+def reap_stale_dxrk_locks(
+    *, min_age_seconds: int = 3600, tenant_id: str | None = None
+) -> tuple[int, int]:
     """Best-effort GC for orphaned per-source-file mine locks (port of 27212e5).
 
     Reuses _cleanup_mine_lock_file for actual removal — same nonblocking flock
     reacquire safety, so genuinely held locks are never removed regardless of age.
     Skips mine_palace_*.lock (per-palace locks have own lifecycle).
     Returns (reaped, skipped) for logging/testing.
+    Tenant-aware via tenant_id or DXRK_TENANT env.
     """
-    lock_dir = _dxrk_lock_dir()
+    try:
+        lock_dir = _dxrk_lock_dir(tenant_id)  # type: ignore[call-arg]
+    except TypeError:
+        lock_dir = _dxrk_lock_dir()  # type: ignore[call-arg]
     try:
         entries = os.listdir(lock_dir)
     except OSError:
@@ -436,9 +507,12 @@ reap_stale_mine_locks = reap_stale_dxrk_locks
 _LOCK_REAP_INTERVAL_SECONDS = 900  # 15 min
 
 
-def _maybe_reap_stale_mine_locks() -> None:
+def _maybe_reap_stale_mine_locks(tenant_id: str | None = None) -> None:
     """Throttled opportunistic reap — at most once per 15 min, piggybacks on mine."""
-    lock_dir = _dxrk_lock_dir()
+    try:
+        lock_dir = _dxrk_lock_dir(tenant_id)  # type: ignore[call-arg]
+    except TypeError:
+        lock_dir = _dxrk_lock_dir()  # type: ignore[call-arg]
     marker = lock_dir / ".last_reap"
     try:
         if marker.exists() and time.time() - marker.stat().st_mtime < _LOCK_REAP_INTERVAL_SECONDS:
@@ -458,18 +532,19 @@ def _maybe_reap_stale_mine_locks() -> None:
         logger.debug("Opportunistic mine-lock reap failed", exc_info=True)
 
 
-def _maybe_reap_stale_dxrk_locks() -> None:
-    _maybe_reap_stale_mine_locks()
+def _maybe_reap_stale_dxrk_locks(tenant_id: str | None = None) -> None:
+    _maybe_reap_stale_mine_locks(tenant_id=tenant_id)
 
 
 @contextlib.contextmanager
-def mine_lock(source_file: str) -> Generator[None]:
+def mine_lock(source_file: str, tenant_id: str | None = None) -> Generator[None]:
     """Per-file lock to avoid duplicate drawers on concurrent mine.
 
     Includes opportunistic orphan reap (throttled) and safe cleanup on release.
+    Tenant-aware: uses tenant lock dir when tenant_id or DXRK_TENANT present.
     """
-    _maybe_reap_stale_mine_locks()
-    lock_path = _mine_lock_path(source_file)
+    _maybe_reap_stale_mine_locks(tenant_id=tenant_id)
+    lock_path = _mine_lock_path(source_file, tenant_id=tenant_id)
     lf = _acquire_mine_lock_file(lock_path)
     try:
         yield
@@ -486,9 +561,12 @@ def mine_lock(source_file: str) -> Generator[None]:
 
 
 @contextlib.contextmanager
-def mine_palace_lock(palace_path: str) -> Generator[None]:
-    """Per-palace lock with re-entrant support for same thread."""
-    lock_dir = _dxrk_lock_dir()
+def mine_palace_lock(palace_path: str, tenant_id: str | None = None) -> Generator[None]:
+    """Per-palace lock with re-entrant support for same thread. Tenant-aware."""
+    try:
+        lock_dir = _dxrk_lock_dir(tenant_id)  # type: ignore[call-arg]
+    except TypeError:
+        lock_dir = _dxrk_lock_dir()  # type: ignore[call-arg]
     lock_dir.mkdir(parents=True, exist_ok=True)
     try:
         lock_dir.chmod(0o750)
@@ -670,10 +748,25 @@ class DxrkMemory:
 
     Canonical name for the fused engine. ``Palace`` remains as alias for
     backward compatibility with earlier DxrkMemory drafts.
+    Tenant-aware: palace_path isolated per tenant via ~/.dxrk/tenants/{id}/palace.
     """
 
-    def __init__(self, palace_path: str | Path, backend: SqliteBackend | None = None) -> None:
-        self.palace_path = str(Path(palace_path).expanduser().resolve())
+    def __init__(
+        self,
+        palace_path: str | Path | None = None,
+        backend: SqliteBackend | None = None,
+        tenant_id: str | None = None,
+    ) -> None:
+        self.tenant_id: str = _effective_tenant_id(tenant_id)
+        resolved = _resolve_tenant_path(tenant_id, palace_path)
+        # preserve sentinel memory-only handling without resolve
+        if str(resolved) in ("", "memory-only"):
+            self.palace_path = str(resolved) if str(resolved) else ""
+        else:
+            try:
+                self.palace_path = str(Path(resolved).expanduser().resolve())
+            except Exception:
+                self.palace_path = str(Path(resolved).expanduser())
         self._backend = backend or SqliteBackend()
         self._ref = PalaceRef(id=self.palace_path, local_path=self.palace_path)
 
@@ -770,8 +863,8 @@ class DxrkMemory:
                 total_drawers += len(chunks)
                 files_mined += 1
                 continue
-            # Per-file lock
-            with mine_lock(source_file):
+            # Per-file lock (tenant-aware)
+            with mine_lock(source_file, tenant_id=self.tenant_id or None):
                 # Purge stale drawers before re-inserting fresh chunks.
                 # If purge fails, abort this file and let next mine retry
                 # (leaves old mtime untouched so freshness check stays honest).

@@ -15,6 +15,49 @@ from threading import RLock
 from .types import MemoryType as _MemoryTypeBase  # noqa: F401 (expose)
 
 
+def _effective_tenant_id(tenant_id: str | None = None) -> str:
+    import os
+    import pathlib
+
+    tid = (tenant_id if tenant_id is not None else os.environ.get("DXRK_TENANT", "")).strip()
+    if tid:
+        return tid
+    try:
+        from dxrk.tenant.migration import is_migrated
+
+        if is_migrated():
+            return "default"
+        return ""
+    except Exception:
+        return ""
+
+
+def _resolve_memory_tenant_path(
+    tenant_id: str | None, path: str | Path | None
+) -> str | Path | None:
+    if path is not None:
+        s = str(path).strip()
+        if s == "" or s == "memory-only":
+            return path
+        return path
+    tid = _effective_tenant_id(tenant_id)
+    if tid:
+        try:
+            from dxrk.tenant.migration import tenant_root
+
+            return str(tenant_root(tid) / "palace")
+        except OSError:
+            return path
+    try:
+        from dxrk.tenant.migration import is_migrated, tenant_root
+
+        if is_migrated():
+            return str(tenant_root("default") / "palace")
+    except OSError:
+        pass
+    return path
+
+
 # Keep local IntEnum with 3 legacy values for strict backward compat (tests compare MemoryType(0) etc.)
 class MemoryType(IntEnum):
     SEMANTIC = 0
@@ -91,6 +134,7 @@ class AgentMemory:
     When ``path`` points to a sqlite palace (directory or .db file) the store
     additionally delegates to :class:`dxrk.memory.backend.sqlite.SqliteBackend`
     (hybrid BM25). JSON path remains the backward-compat fallback used by tests.
+    Tenant-aware via tenant_id or DXRK_TENANT env.
     """
 
     def __init__(
@@ -99,6 +143,7 @@ class AgentMemory:
         max_entries: int = 0,
         rag: object | None = None,
         vault: object | None = None,
+        tenant_id: str | None = None,
     ) -> None:
         self._lock = RLock()
         self._entries: dict[str, MemoryEntry] = {}
@@ -107,22 +152,31 @@ class AgentMemory:
         self._by_type: dict[MemoryType, list[str]] = {}
         self._rag = rag
         self._vault = vault
-        self._path = str(path) if path else ""
+        self.tenant_id: str = _effective_tenant_id(tenant_id)
+        # resolve tenant-aware palace path if path is None and tenant present
+        _resolved_path = _resolve_memory_tenant_path(tenant_id, path)
+        # for mypy, keep path as resolved or original
+        effective_path = _resolved_path if _resolved_path is not None else path
+        self._path = str(effective_path) if effective_path else ""
         self._max_entries = max_entries
-        self._use_sqlite = _is_sqlite_path(path)
+        self._use_sqlite = _is_sqlite_path(effective_path)
         self._palace: object | None = None
         self._palace_collection: object | None = None
         if self._use_sqlite:
             try:
                 from .palace import Palace
 
-                # path is palace dir or db file
-                palace_dir = str(path) if path else ""
+                # path is palace dir or db file (tenant-aware effective_path)
+                palace_dir = str(effective_path) if effective_path else ""
                 # if path is a file ending .db, use its parent dir
                 p = Path(palace_dir).expanduser()
                 if p.is_file() or p.suffix.lower() in (".db", ".sqlite", ".sqlite3"):
                     palace_dir = str(p.parent)
-                pal = Palace(palace_dir)
+                # Palace tenant-aware: pass tenant_id if we have one
+                try:
+                    pal = Palace(palace_dir, tenant_id=tenant_id)  # type: ignore[call-arg]
+                except TypeError:
+                    pal = Palace(palace_dir)
                 self._palace = pal
                 # ensure palace dir exists
                 Path(palace_dir).mkdir(parents=True, exist_ok=True)

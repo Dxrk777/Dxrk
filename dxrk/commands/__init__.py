@@ -64,6 +64,7 @@ def register_all() -> Registry:
         stats,
         tag,
         tasks,
+        tenant,
         theme,
         usage,
         vim,
@@ -107,4 +108,5 @@ def register_all() -> Registry:
     usage.register_usage_command(reg)
     vim.register_vim_command(reg)
     rewind.register_rewind_command(reg)
+    tenant.register_tenant_command(reg)
     return reg

@@ -40,6 +40,7 @@ from dxrk.tui.screens.backups import (
 from dxrk.tui.screens.dependency_tree import DependencyTreeScreen
 from dxrk.tui.screens.installing import InstallingScreen
 from dxrk.tui.screens.review import ReviewScreen
+from dxrk.tui.screens.tenant_switcher import TenantSwitcherScreen
 
 log = logging.getLogger(__name__)
 
@@ -93,15 +94,24 @@ class WelcomeScreen(Screen):
         Binding("enter", "select", "Select"),
         Binding("escape", "back", "Back", show=False),
         Binding("q", "quit", "Quit"),
+        Binding("t", "tenant_switcher", "Tenants"),
     ]
 
     cursor = reactive(0)
+
+    def _tenant_badge(self) -> str:
+        ctx = get_ctx()
+        tid = getattr(ctx, "tenant_id", "") or "default"
+        role = getattr(ctx, "role", "") or "readonly"
+        return f"tenant: {tid} · role: {role}"
 
     def compose(self) -> ComposeResult:
         with Container(id="welcome-container"):
             yield Static("[bold cyan]Dxrk[/] Installer", id="title")
             # Migrated to ContextVar DI: prefer get_ctx() over STATE
             yield Static(f"v{get_ctx().version}", id="version")
+            yield Static(self._tenant_badge(), id="tenant-badge")
+            yield Static("[dim]press t for Tenants[/]", id="tenant-hint")
             with VerticalScroll(id="menu"):
                 for i, (title, desc) in enumerate(WELCOME_OPTIONS):
                     with Container(classes=f"menu-item {'focused' if i == 0 else ''}"):
@@ -150,6 +160,9 @@ class WelcomeScreen(Screen):
 
     def action_back(self) -> None:
         pass
+
+    def action_tenant_switcher(self) -> None:
+        self.app.push_screen("tenant_switcher")
 
     def action_quit(self) -> None:
         self.app.exit()
@@ -780,6 +793,9 @@ class DxrkApp(App):
 
     TITLE = "Dxrk"
     SUB_TITLE = "vdev"
+    BINDINGS = [
+        Binding("t", "tenant_switcher", "Tenants"),
+    ]
     CSS = """
     Screen {
         background: $surface;
@@ -914,6 +930,7 @@ class DxrkApp(App):
         "restore_confirm": RestoreConfirmScreen,
         "delete_confirm": DeleteConfirmScreen,
         "rename_backup": RenameBackupScreen,
+        "tenant_switcher": TenantSwitcherScreen,
         # Placeholders for missing screens
         "upgrade": PlaceholderScreen,
         "sync": PlaceholderScreen,
@@ -941,6 +958,9 @@ class DxrkApp(App):
         # Sync legacy STATE proxy is automatic (STATE forwards to ctx_var),
         # but keep instance sub-title in sync for display.
         self.SUB_TITLE = f"v{self.ctx.version}"
+
+    def action_tenant_switcher(self) -> None:
+        self.push_screen("tenant_switcher")
 
     def on_mount(self) -> None:
         self.push_screen("welcome")

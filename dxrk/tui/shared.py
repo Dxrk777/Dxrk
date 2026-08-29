@@ -84,6 +84,7 @@ SCREEN_FLOW: dict[str, dict[str, str | None]] = {
     "agent_builder_engine": {"forward": None, "backward": "welcome"},
     "opencode_plugins": {"forward": None, "backward": "welcome"},
     "uninstall": {"forward": None, "backward": "uninstall_mode"},
+    "tenant_switcher": {"forward": None, "backward": "welcome"},
 }
 
 NEXT = {k: v["forward"] for k, v in SCREEN_FLOW.items()}

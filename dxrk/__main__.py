@@ -18,6 +18,7 @@ def main() -> None:
     parser.add_argument("--health", action="store_true", help="Run health check")
     parser.add_argument("--tui", action="store_true", help="Launch TUI (default if no args)")
     parser.add_argument("--debug", action="store_true", help="Enable debug logging")
+    parser.add_argument("--tenant", "-t", default=os.environ.get("DXRK_TENANT", ""), help="Tenant ID")
 
     sub = parser.add_subparsers(dest="command")
 
@@ -73,6 +74,31 @@ def main() -> None:
     # dxrk version
     sub.add_parser("version", help="Show version")
 
+    # dxrk tenant
+    tenant_parser = sub.add_parser("tenant", help="Manage tenants")
+    tenant_sub = tenant_parser.add_subparsers(dest="tenant_command")
+    tenant_sub.add_parser("list", help="List tenants")
+    create_p = tenant_sub.add_parser("create", help="Create a tenant")
+    create_p.add_argument("tenant_id", help="Tenant ID")
+    switch_p = tenant_sub.add_parser("switch", help="Switch active tenant")
+    switch_p.add_argument("tenant_id", help="Tenant ID")
+    tenant_sub.add_parser("current", help="Show current tenant")
+    delete_p = tenant_sub.add_parser("delete", help="Delete a tenant")
+    delete_p.add_argument("tenant_id", help="Tenant ID")
+    delete_p.add_argument("--force", action="store_true", help="Force deletion")
+    tenant_sub.add_parser("whoami", help="Show tenant ID")
+    tenant_sub.add_parser("migrate", help="Migrate legacy data")
+
+    # early tenant resolution via DXRK_TENANT / --tenant, validated via validate_id
+    pre_args, _ = parser.parse_known_args()
+    tenant_id = str(getattr(pre_args, "tenant", "") or "").strip()
+    if tenant_id:
+        from dxrk.security.jwt import validate_id
+
+        if not validate_id(tenant_id):
+            parser.error(f"invalid tenant id {tenant_id!r}")
+        os.environ["DXRK_TENANT"] = tenant_id
+
     args = parser.parse_args()
 
     if args.debug:
@@ -122,11 +148,33 @@ def main() -> None:
         _run_model_cli(args)
         return
 
+    if args.command == "tenant":
+        _run_tenant_cli(args)
+        return
+
     if args.command:
         print(f"Command '{args.command}' not yet implemented")
         return
 
     _launch_tui(version)
+
+
+def _run_tenant_cli(args: argparse.Namespace) -> None:
+    from dxrk.commands import register_all
+
+    reg = register_all()
+    argv: list[str] = ["tenant"]
+    tc = getattr(args, "tenant_command", None)
+    if tc:
+        argv.append(str(tc))
+        tid = getattr(args, "tenant_id", None)
+        if tid:
+            argv.append(str(tid))
+        if getattr(args, "force", False):
+            argv.append("--force")
+    code = reg.execute(argv)
+    if code != 0:
+        sys.exit(code)
 
 
 def _run_install_cli(args) -> None:

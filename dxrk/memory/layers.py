@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import os
+import pathlib
 from collections import defaultdict
 from pathlib import Path
 
@@ -16,16 +17,81 @@ MAX_DRAWERS_L1 = 15
 MAX_CHARS_L1 = 3200
 
 
+def _effective_tenant_id(tenant_id: str | None = None) -> str:
+    tid = (tenant_id if tenant_id is not None else os.environ.get("DXRK_TENANT", "")).strip()
+    if tid:
+        return tid
+    try:
+        from dxrk.tenant.migration import is_migrated
+
+        if is_migrated():
+            return "default"
+        return ""
+    except Exception:
+        return ""
+
+
+def _resolve_palace_path(tenant_id: str | None, palace_path: str | None) -> str:
+    if palace_path is not None:
+        s = str(palace_path).strip()
+        if s == "" or s == "memory-only":
+            return s
+        return str(palace_path)
+    tid = _effective_tenant_id(tenant_id)
+    if tid:
+        try:
+            from dxrk.tenant.migration import tenant_root
+
+            return str(tenant_root(tid) / "palace")
+        except OSError:
+            return str(pathlib.Path.home() / ".dxrk" / "palace")
+    try:
+        from dxrk.tenant.migration import is_migrated, tenant_root
+
+        if is_migrated():
+            return str(tenant_root("default") / "palace")
+    except OSError:
+        pass
+    return str(pathlib.Path.home() / ".dxrk" / "palace")
+
+
+def _resolve_identity_path(tenant_id: str | None, identity_path: str | None) -> str:
+    if identity_path is not None:
+        s = str(identity_path).strip()
+        if s:
+            return str(pathlib.Path(identity_path).expanduser())
+        return s
+    tid = _effective_tenant_id(tenant_id)
+    if tid:
+        try:
+            from dxrk.tenant.migration import tenant_root
+
+            return str(tenant_root(tid) / "identity.txt")
+        except OSError:
+            return str(pathlib.Path.home() / ".dxrk" / "identity.txt")
+    try:
+        from dxrk.tenant.migration import is_migrated, tenant_root
+
+        if is_migrated():
+            return str(tenant_root("default") / "identity.txt")
+    except OSError:
+        pass
+    return str(pathlib.Path.home() / ".dxrk" / "identity.txt")
+
+
 def _get_collection(palace_path: str, *, create: bool = False) -> BaseCollection:
     pal = Palace(palace_path)
     return pal._collection(create=create)  # type: ignore[attr-defined]
 
 
 class Layer0:
-    """Identity — ~100 tokens, always loaded from ~/.dxrk/identity.txt."""
+    """Identity — ~100 tokens, always loaded from ~/.dxrk/identity.txt (tenant-aware)."""
 
-    def __init__(self, identity_path: str | None = None) -> None:
-        self.path = identity_path or str(Path.home() / ".dxrk" / "identity.txt")
+    def __init__(
+        self, identity_path: str | None = None, tenant_id: str | None = None
+    ) -> None:
+        self.tenant_id: str = _effective_tenant_id(tenant_id)
+        self.path = _resolve_identity_path(tenant_id, identity_path)
         self._text: str | None = None
 
     def render(self) -> str:
@@ -51,8 +117,14 @@ class Layer1:
     MAX_CHARS: int = MAX_CHARS_L1
     MAX_SCAN: int = MAX_SCAN
 
-    def __init__(self, palace_path: str | None = None, wing: str | None = None) -> None:
-        self.palace_path = palace_path or str(Path.home() / ".dxrk" / "palace")
+    def __init__(
+        self,
+        palace_path: str | None = None,
+        wing: str | None = None,
+        tenant_id: str | None = None,
+    ) -> None:
+        self.tenant_id: str = _effective_tenant_id(tenant_id)
+        self.palace_path = _resolve_palace_path(tenant_id, palace_path)
         self.wing = wing
 
     def generate(self) -> str:
@@ -131,8 +203,9 @@ class Layer1:
 class Layer2:
     """On-demand wing/room filtered retrieval."""
 
-    def __init__(self, palace_path: str | None = None) -> None:
-        self.palace_path = palace_path or str(Path.home() / ".dxrk" / "palace")
+    def __init__(self, palace_path: str | None = None, tenant_id: str | None = None) -> None:
+        self.tenant_id: str = _effective_tenant_id(tenant_id)
+        self.palace_path = _resolve_palace_path(tenant_id, palace_path)
 
     def retrieve(self, wing: str | None = None, room: str | None = None, n_results: int = 10) -> str:
         try:
@@ -182,8 +255,11 @@ class Layer2:
 class Layer3:
     """Deep search via sqlite hybrid."""
 
-    def __init__(self, palace_path: str | None = None) -> None:
-        self.palace_path = palace_path or str(Path.home() / ".dxrk" / "palace")
+    def __init__(
+        self, palace_path: str | None = None, tenant_id: str | None = None
+    ) -> None:
+        self.tenant_id: str = _effective_tenant_id(tenant_id)
+        self.palace_path = _resolve_palace_path(tenant_id, palace_path)
 
     def search(self, query: str, wing: str | None = None, room: str | None = None, n_results: int = 5) -> str:
         from .search import hybrid_search
@@ -218,15 +294,21 @@ class Layer3:
 
 
 class MemoryStack:
-    """Unified 4-layer stack."""
+    """Unified 4-layer stack. Tenant-aware."""
 
-    def __init__(self, palace_path: str | None = None, identity_path: str | None = None) -> None:
-        self.palace_path = palace_path or str(Path.home() / ".dxrk" / "palace")
-        self.identity_path = identity_path or str(Path.home() / ".dxrk" / "identity.txt")
-        self.l0 = Layer0(self.identity_path)
-        self.l1 = Layer1(self.palace_path)
-        self.l2 = Layer2(self.palace_path)
-        self.l3 = Layer3(self.palace_path)
+    def __init__(
+        self,
+        palace_path: str | None = None,
+        identity_path: str | None = None,
+        tenant_id: str | None = None,
+    ) -> None:
+        self.tenant_id: str = _effective_tenant_id(tenant_id)
+        self.palace_path = _resolve_palace_path(tenant_id, palace_path)
+        self.identity_path = _resolve_identity_path(tenant_id, identity_path)
+        self.l0 = Layer0(self.identity_path, tenant_id=tenant_id)
+        self.l1 = Layer1(self.palace_path, tenant_id=tenant_id)
+        self.l2 = Layer2(self.palace_path, tenant_id=tenant_id)
+        self.l3 = Layer3(self.palace_path, tenant_id=tenant_id)
 
     def wake_up(self, wing: str | None = None) -> str:
         parts: list[str] = []

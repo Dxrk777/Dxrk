@@ -13,6 +13,46 @@ from pathlib import Path
 DEFAULT_KG_PATH = str(Path.home() / ".dxrk" / "knowledge_graph.sqlite3")
 
 
+def _effective_tenant_id(tenant_id: str | None = None) -> str:
+    import os
+
+    tid = (tenant_id if tenant_id is not None else os.environ.get("DXRK_TENANT", "")).strip()
+    if tid:
+        return tid
+    try:
+        from dxrk.tenant.migration import is_migrated
+
+        if is_migrated():
+            return "default"
+        return ""
+    except Exception:
+        return ""
+
+
+def _resolve_kg_path(tenant_id: str | None, db_path: str | None) -> str:
+    if db_path is not None:
+        s = str(db_path).strip()
+        if s == "" or s == "memory-only":
+            return s
+        return s
+    tid = _effective_tenant_id(tenant_id)
+    if tid:
+        try:
+            from dxrk.tenant.migration import tenant_root
+
+            return str(tenant_root(tid) / "knowledge_graph.sqlite3")
+        except OSError:
+            return DEFAULT_KG_PATH
+    try:
+        from dxrk.tenant.migration import is_migrated, tenant_root
+
+        if is_migrated():
+            return str(tenant_root("default") / "knowledge_graph.sqlite3")
+    except OSError:
+        pass
+    return DEFAULT_KG_PATH
+
+
 def _sanitize_iso(value: str | None, field: str) -> str | None:
     if value is None:
         return None
@@ -69,10 +109,12 @@ def _temporal_filter_sql(as_of: str) -> tuple[str, list[str]]:
 
 
 class KnowledgeGraph:
-    """SQLite-backed temporal KG."""
+    """SQLite-backed temporal KG. Tenant-aware via ~/.dxrk/tenants/{id}/ ."""
 
-    def __init__(self, db_path: str | None = None) -> None:
-        self.db_path = db_path or DEFAULT_KG_PATH
+    def __init__(self, db_path: str | None = None, tenant_id: str | None = None) -> None:
+        self.tenant_id: str = _effective_tenant_id(tenant_id)
+        resolved = _resolve_kg_path(tenant_id, db_path)
+        self.db_path = resolved if resolved else DEFAULT_KG_PATH
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         try:
             Path(self.db_path).parent.chmod(0o700 if Path(self.db_path).parent == Path.home() / ".dxrk" else 0o750)

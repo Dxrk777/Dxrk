@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -62,6 +63,7 @@ class CommandContext:
     err: TextIO = field(default_factory=lambda: sys.stderr)
     cwd: str = "."
     reg: Registry | None = None
+    tenant_id: str = ""
 
     def flag_bool(self, name: str, default: bool = False) -> bool:
         value = self.flags.get(name, default)
@@ -211,5 +213,6 @@ class Registry:
         if cmd.run is None:
             err.write(f"Error: command {cmd.name} is not implemented\n")
             return 1
-        ctx = CommandContext(args=args, flags=flags, out=out, err=err, cwd=cwd, reg=self)
+        tenant_id = os.environ.get("DXRK_TENANT", "")
+        ctx = CommandContext(args=args, flags=flags, out=out, err=err, cwd=cwd, reg=self, tenant_id=tenant_id)
         return cmd.run(ctx)

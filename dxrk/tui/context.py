@@ -66,6 +66,10 @@ class TUIContext:
     selected_backup: dict[str, Any] | None = None
     # Alternative typed alias (keep dict for compat):
     # selected_backup: SelectedBackupDict | None = None
+    # R10 tenant-aware + R12 RBAC + R15 TUI switcher
+    tenant_id: str = ""
+    tenant_path: str = ""
+    role: str = "readonly"
 
 
 ctx_var: ContextVar[TUIContext] = ContextVar("tui_ctx", default=TUIContext())
