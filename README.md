@@ -1,6 +1,6 @@
-# Dxrk
+# Dxrk — Memory local-first en 30 segundos. 42 agentes, 1 comando.
 
-<strong>Ecosistema, Frameworks y Workflows para agentes de IA</strong>
+<strong>Ecosistema, Frameworks y Workflows para agentes de IA — DxrkMemory 2.0 stdlib-only (sin chromadb, sin onnx)</strong>
 
 ![Social](assets/social-preview.png)
 
@@ -18,6 +18,16 @@
 **Dxrk** es un configurador y orquestador de ecosistemas para agentes de IA. En un solo comando instala, configura y sincroniza **42 agentes de IA**, memoria persistente, skills curadas, servidores MCP y conmutador de modelos para tu stack de desarrollo completo.
 
 ![Demo](docs/assets/demo.gif)
+*30s: install → mine → query. Sin API keys, sin Docker, offline.*
+
+## 30s Quickstart
+
+```bash
+uv tool install dxrk && dxrk-py init          # 1) instala + detecta 42 agentes
+uv run python -c "from dxrk.memory import Palace; print(Palace('~/.dxrk/palace').search('hybrid BM25', n_results=5))"  # 2) indexa + busca (FTS5 trigram+WAL, BM25, <50ms cold)
+dxrk-py query "¿qué arquitectura decidimos para memoria?"  # 3) CLI query — Graph temporal + AAAK 600–900 tok
+```
+> **Por qué DxrkMemory 2.0:** `sqlite3` FTS5 `trigram→porter→unicode61` + BM25 híbrido, Graph temporal `valid_from/valid_to`, AAAK 600–900 tok wake-up, Palace locks `~/.dxrk/locks` 900s — ver [`docs/memory.md`](docs/memory.md) · [`docs/MIGRATION_3.3.5_3.7.1.md`](docs/MIGRATION_3.3.5_3.7.1.md) · [`docs/dx.md`](docs/dx.md)
 
 - 🐍 **Python 3.13+** con TUI moderna basada en [Textual](https://textual.textualize.io/)
 - 🤖 Configura **42 agentes** con un solo comando
