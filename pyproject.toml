@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dxrk"
-version = "0.2.0"
+version = "0.2.1"
 description = "Dxrk Ecosystem Configurator — supercharge AI coding agents"
 readme = "README.md"
 requires-python = ">=3.13"
