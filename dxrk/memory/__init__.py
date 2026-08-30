@@ -32,29 +32,12 @@ def _effective_tenant_id(tenant_id: str | None = None) -> str:
         return ""
 
 
-def _resolve_memory_tenant_path(
-    tenant_id: str | None, path: str | Path | None
-) -> str | Path | None:
-    if path is not None:
-        s = str(path).strip()
-        if s == "" or s == "memory-only":
-            return path
+def _resolve_memory_tenant_path(tenant_id: str | None, path: str | Path | None) -> str | Path | None:
+    if path is None:
+        return None
+    s = str(path).strip()
+    if s == "" or s == "memory-only":
         return path
-    tid = _effective_tenant_id(tenant_id)
-    if tid:
-        try:
-            from dxrk.tenant.migration import tenant_root
-
-            return str(tenant_root(tid) / "palace")
-        except OSError:
-            return path
-    try:
-        from dxrk.tenant.migration import is_migrated, tenant_root
-
-        if is_migrated():
-            return str(tenant_root("default") / "palace")
-    except OSError:
-        pass
     return path
 
 

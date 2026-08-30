@@ -77,7 +77,7 @@ dxrk = ["assets/**/*"]
 testpaths = ["tests"]
 pythonpath = ["."]
 asyncio_mode = "auto"
-addopts = "--cov=dxrk --cov-report=term-missing --cov-fail-under=77"
+addopts = "--cov=dxrk --cov-report=term-missing --cov-fail-under=80"
 
 [tool.coverage.run]
 branch = true
