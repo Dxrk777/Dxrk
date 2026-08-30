@@ -5,6 +5,15 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es/1.1.0/) y este
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-08-29
+
+### Added
+- Coverage **76.28% → 77.82%** (`--cov-fail-under=77` ✅, 3262 passed) — P3 `tests/test_r05_p3_coverage.py` 45 tests (pool 32→98%, logging 46→93%, transport 60→66%), P4 `tests/test_r05_p4_coverage.py` 50 tests (tls 49→97%, client 73→98%, transport 66→95%, tui `app.py` 55→85%, screens 18→92%, 3250 passed), P5 `tests/test_sdd_pure.py` 12 tests (helpers `validate_profile_name`, `profile_phase_order`, `resolve_profile_strategy` `Generated` sólo `GENERATED_MULTI`/`EXTERNAL_SINGLE_ACTIVE`, 3262 passed) — gap 80% aún abierto (~838 stmts sdd/uninstall por cubrir, branch `true`).
+- Gate branch `true` uniforme `ci.yml` elevado `75 → 77` en `pyproject.toml` (`branch = true`, `show_missing = true`); 80% objetivo v0.2.3.
+
+### Changed
+- `pyproject.toml` `version = "0.2.2"`, `dxrk/__init__.py` `__version__ = "0.2.2"`.
+
 ## [0.2.1] - 2026-08-29
 
 ### Added
@@ -57,7 +66,8 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es/1.1.0/) y este
 ### Changed
 - Build system a setuptools con lockfile `uv.lock`.
 
-[Unreleased]: https://github.com/Dxrk777/Dxrk/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/Dxrk777/Dxrk/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/Dxrk777/Dxrk/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/Dxrk777/Dxrk/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Dxrk777/Dxrk/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/Dxrk777/Dxrk/releases/tag/v0.1.2
