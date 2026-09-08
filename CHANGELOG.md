@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [0.2.4](https://github.com/Dxrk777/Dxrk/releases/tag/v0.2.4) - 2026-09-08
+
+### Testing
+
+- Enterprise multi-tenant verification: 85 new tests (rbac matrix admin/dev/readonly, jwt tid + vault HKDF isolation, CLI tenant + idempotent migration + TUI switcher pilot). Suite 4283 passed, coverage 85.23% (gate 80)
+
+### Documentation
+
+- GA docs: tenants, rbac, benchmarks baseline, migration + mkdocs nav
+- Fix stale benchmarks link in dx.md
+
 ## [0.2.3](https://github.com/Dxrk777/Dxrk/releases/tag/v0.2.3) - 2026-09-08
 
 ### Testing
