@@ -36,6 +36,38 @@ def _resolve_palace(palace: str | None) -> str:
     return str(Path.home() / ".dxrk" / "memory")
 
 
+# Write tools mutate palace state -> require ``mine`` op (fs.write).
+# Read tools bypass (all roles hold fs.read). Tenant from ``tenant``
+# arg or DXRK_TENANT env; user from DXRK_USER env.
+_MCP_WRITE_TOOLS: frozenset[str] = frozenset(
+    {
+        "dxrk_memory_add_drawer",
+        "dxrk_memory_update_drawer",
+        "dxrk_memory_delete_drawer",
+        "dxrk_memory_mine",
+        "dxrk_memory_kg_add",
+        "dxrk_memory_kg_invalidate",
+    }
+)
+
+
+def _check_mcp_op(name: str, args: dict[str, Any]) -> None:
+    """R12 gate: deny prohibited write combos with RBAC_DENIED.
+
+    Raises ``PermissionError("RBAC_DENIED: ...")`` when ``DXRK_USER``
+    lacks the ``mine`` op in the resolved tenant. Empty tenant/user
+    bypasses (local trusted mode). Called inside ``_handle_tool``'s
+    try block so denial surfaces as ``{"error": ...}`` with
+    ``isError=true`` at the JSON-RPC layer.
+    """
+    if name not in _MCP_WRITE_TOOLS:
+        return
+    from dxrk.security.enforcement import require_op, resolve_user
+
+    tenant = str(args.get("tenant") or os.environ.get("DXRK_TENANT", "") or "").strip()
+    require_op(tenant, resolve_user(), "mine")
+
+
 def _get_memory(palace_path: str) -> DxrkMemory:
     dm = DxrkMemory(palace_path)
     dm.init()
@@ -245,6 +277,7 @@ TOOLS: dict[str, dict[str, Any]] = {
 def _handle_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
     palace_path = _resolve_palace(args.get("palace"))
     try:
+        _check_mcp_op(name, args)
         if name == "dxrk_memory_status":
             dm = _get_memory(palace_path)
             h = dm.health()

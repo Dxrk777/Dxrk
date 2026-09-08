@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 
 
@@ -18,7 +19,10 @@ def _cmd_mine(args: list[str]) -> int:
         from pathlib import Path
 
         from dxrk.memory.palace import DxrkMemory
+        from dxrk.security.enforcement import require_op, resolve_user
 
+        # R12: mine mutates palace state -> readonly denied (RBAC_DENIED).
+        require_op(os.environ.get("DXRK_TENANT", ""), resolve_user(), "mine")
         dm = DxrkMemory(Path.home() / ".dxrk" / "memory")
         dm.init()
         result = dm.mine(ns.path, wing=ns.wing, room=ns.room or "general", dry_run=ns.dry_run)
@@ -41,6 +45,15 @@ def _cmd_search(args: list[str]) -> int:
     parser.add_argument("--wing", default="")
     parser.add_argument("--n", type=int, default=5)
     ns = parser.parse_args(args)
+    try:
+        from dxrk.security.enforcement import require_op, resolve_user
+
+        # R12: search is read-only -> all roles pass; gate stays wired
+        # so identity/tenant errors surface here instead of storage.
+        require_op(os.environ.get("DXRK_TENANT", ""), resolve_user(), "read")
+    except Exception as exc:
+        print(f"search denied: {exc}", file=sys.stderr)
+        return 1
     from dxrk.memory import AgentMemory
 
     mem = AgentMemory()
