@@ -1,13 +1,11 @@
-name: Deploy docs
+name: Deploy versioned docs
 
 on:
   push:
     branches: [main]
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
@@ -16,17 +14,17 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v7
-      - name: Build site
-        run: uv sync --group dev && uv run mkdocs build
-      - uses: actions/configure-pages@v6
-      - uses: actions/upload-pages-artifact@v5
         with:
-          path: site
-      - id: deployment
-        uses: actions/deploy-pages@v5
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v7
+      - name: Deploy docs with mike
+        run: |
+          uv sync --group dev
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          VERSION=$(uv run python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          MIKE_VERSION="${VERSION%.*}"
+          uv run mike deploy --push --update-aliases "$MIKE_VERSION" latest
+          uv run mike set-default --push latest
