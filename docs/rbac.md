@@ -25,6 +25,13 @@ Usuario desconocido → `readonly`. Los roles `member`/`viewer` que acepta
 3. **JWT cross-tenant** (`authorize_via_jwt`): token del tenant A **no**
    autoriza nada en el tenant B (`PermissionError`); `tid` ausente o rol no
    permitido también se rechazan.
+4. **Gate de dispatch** (`dxrk/security/enforcement.py`): `require_op`
+   mapea `read`/`mine`/`manage` → caps `fs.read`/`fs.write`/`sudo` y
+   deniega con `PermissionError("RBAC_DENIED: ...")`. Cableado en
+   `tenant create/delete` (manage), `python -m dxrk.memory mine/search`
+   (mine/read) y tools MCP de escritura (`_check_mcp_op`, responden
+   error `RBAC_DENIED` con `isError=true`). Sin tenant o sin `DXRK_USER`
+   → trusted mode local (retorna `""`, no rompe nada).
 
 ## Política por tenant
 
@@ -55,5 +62,8 @@ Archivo JSON por tenant (ver `TenantRoleResolver`):
 
 Matriz rol×acción completa en `tests/test_enterprise_rbac_matrix.py`
 (25 tests: 16 casos POLICY + resolución, roundtrip load/save,
-`build_permission_store_for_role`, `authorize_via_jwt` cross-tenant) y
-`tests/test_enterprise_jwt_vault.py` (18 tests).
+`build_permission_store_for_role`, `authorize_via_jwt` cross-tenant),
+`tests/test_enterprise_jwt_vault.py` (18 tests),
+`tests/test_rbac_enforcement.py` (32 tests: matriz `require_op` +
+wiring CLI) y `tests/test_memory_rbac.py` (30 tests: gate mine/search +
+MCP `RBAC_DENIED` con `isError=true`).

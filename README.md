@@ -73,6 +73,27 @@ dxrk-py sync --profile cheap:openrouter/qwen/qwen3-30b-a3b:free
 dxrk-py sync --profile-phase cheap:sdd-design:anthropic/claude-sonnet-4-20250514
 ```
 
+## Enterprise (multi-tenant + RBAC)
+
+Aislamiento local por tenant bajo `~/.dxrk/tenants/{id}/` (dirs `0o750`, archivos `0o600`). Sin servidor ni red.
+
+```bash
+dxrk-py tenant create acme          # crea tenants/acme/
+dxrk-py tenant switch acme          # fija el tenant activo
+dxrk-py --tenant acme query "..."   # cualquier comando bajo ese tenant
+DXRK_TENANT=acme dxrk-py tenant whoami
+```
+
+| Rol | Puede | Defecto |
+|---|---|---|
+| `admin` | lectura + escritura + minería + gestión de tenants | no |
+| `dev` | lectura + escritura + minería (sin borrado de tenants / sudo) | no |
+| `readonly` | solo búsqueda/recuerdo (`fs.read`) | **sí** |
+
+Usuario desconocido → `readonly`. Política por tenant en `roles.json` (`{"users": {"alice": "admin"}, "default_role": "readonly"}`).
+
+Ver [docs/tenants.md](docs/tenants.md) y [docs/rbac.md](docs/rbac.md).
+
 ## Por qué Dxrk
 
 | Característica | Dxrk | Configurar a mano |

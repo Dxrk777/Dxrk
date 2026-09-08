@@ -27,6 +27,7 @@ nav:
   - Multi-tenant: tenants.md
   - RBAC: rbac.md
   - Migración a multi-tenant: migration.md
+  - Migración 0.5 → 1.0: migration-0.5-to-1.0.md
   - Benchmarks: benchmarks.md
   - ADR-002 Separación Memoria: adr/ADR-002-memory-separation.md
   - ADR-003 Hybrid vs Stdlib: adr/ADR-003-hybrid-vs-stdlib.md
