@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dxrk"
-version = "0.2.4"
+version = "1.0.0"
 description = "Dxrk Ecosystem Configurator — supercharge AI coding agents"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -12,7 +12,7 @@ authors = [{ name = "Dxrk777" }]
 license = "MIT"
 keywords = ["ai", "agents", "cli", "tui", "claude-code", "opencode", "mcp", "rag", "sdd", "textual"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "Operating System :: MacOS",
