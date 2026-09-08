@@ -6,6 +6,8 @@ from __future__ import annotations
 import os
 import sys
 
+from dxrk.security.enforcement import require_op, resolve_user
+
 from .registry import Command, CommandContext, Registry
 
 
@@ -49,6 +51,11 @@ def register_memory_command(reg: Registry) -> None:
     """Registers the `dxrk memory` command."""
 
     def run(ctx: CommandContext) -> int:
+        try:
+            require_op(ctx.tenant_id, resolve_user(), "read")
+        except PermissionError as exc:
+            ctx.err.write(f"Error: {exc}\n")
+            return 1
         out = ctx.out
         total_kb, available_kb = _meminfo()
         rss_kb = _process_rss_kb()

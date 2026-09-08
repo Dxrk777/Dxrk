@@ -7,6 +7,7 @@ import os
 import shutil
 from pathlib import Path
 
+from dxrk.security.enforcement import require_op, resolve_user
 from dxrk.security.jwt import validate_id
 from dxrk.tenant.migration import ensure_tenant, is_migrated, migrate_legacy_to_default, tenant_root
 
@@ -108,6 +109,11 @@ def register_tenant_command(reg: Registry) -> None:
         return 0
 
     def create_run(ctx: CommandContext) -> int:
+        try:
+            require_op(_effective_tenant(ctx), resolve_user(), "manage")
+        except PermissionError as exc:
+            ctx.err.write(f"Error: {exc}\n")
+            return 1
         tid = ctx.args[0].strip() if ctx.args else ""
         if not validate_id(tid):
             ctx.err.write(f"Error: invalid tenant id {tid!r}\n")
@@ -154,6 +160,11 @@ def register_tenant_command(reg: Registry) -> None:
         return 0
 
     def delete_run(ctx: CommandContext) -> int:
+        try:
+            require_op(_effective_tenant(ctx), resolve_user(), "manage")
+        except PermissionError as exc:
+            ctx.err.write(f"Error: {exc}\n")
+            return 1
         tid = ctx.args[0].strip() if ctx.args else ""
         if not validate_id(tid):
             ctx.err.write(f"Error: invalid tenant id {tid!r}\n")
