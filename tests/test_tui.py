@@ -116,6 +116,46 @@ class TestAppState:
         assert STATE.backups == []
 
 
+class TestStateProxy:
+    """STATE reenvia al ContextVar actual (compat tras R11)."""
+
+    def test_proxy_read_reflects_ctx(self):
+        from dxrk.tui.context import TUIContext, get_ctx, set_ctx
+
+        previous = get_ctx()
+        set_ctx(TUIContext(version="proxy-read"))
+        try:
+            assert STATE.version == "proxy-read"
+            assert repr(STATE) == repr(get_ctx())
+        finally:
+            set_ctx(previous)
+
+    def test_proxy_write_propagates_to_ctx(self):
+        from dxrk.tui.context import TUIContext, get_ctx, set_ctx
+
+        previous = get_ctx()
+        set_ctx(TUIContext(version="test"))
+        try:
+            STATE.version = "via-proxy"
+            assert get_ctx().version == "via-proxy"
+            STATE.tenant_id = "acme"
+            assert get_ctx().tenant_id == "acme"
+        finally:
+            set_ctx(previous)
+
+    def test_proxy_follows_ctx_switch(self):
+        from dxrk.tui.context import TUIContext, get_ctx, set_ctx
+
+        previous = get_ctx()
+        try:
+            set_ctx(TUIContext(version="one"))
+            assert STATE.version == "one"
+            set_ctx(TUIContext(version="two"))
+            assert STATE.version == "two"
+        finally:
+            set_ctx(previous)
+
+
 # ── Pilot integration tests ─────────────────────────────────────────────
 
 

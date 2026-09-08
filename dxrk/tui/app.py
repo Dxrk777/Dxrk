@@ -293,7 +293,6 @@ class AgentsScreen(Screen):
             yield Static("[bold]Select Agents to Install[/]", id="agents-title")
             with VerticalScroll(id="agent-list"):
                 for i, (aid, name, desc) in enumerate(AGENT_OPTIONS):
-                    # TODO(R11): migrate remaining STATE.* to get_ctx() / self.app.ctx
                     checked = " " if aid not in get_ctx().selected_agents else "✓"
                     yield Static(f"{'[' if i == 0 else ' '}{checked}{']' if i == 0 else ' '} {name}")
             yield Static("")
@@ -563,7 +562,6 @@ class CompleteScreen(Screen):
         with Container(id="complete-container"):
             yield Static("[bold green]✓ Installation Complete[/]", id="complete-title")
             yield Static("")
-            # TODO(R11): migrate to get_ctx() fully; keeping STATE for backward compat
             yield Static(f"Agents configured: {len(get_ctx().selected_agents) or 'N/A'}")
             yield Static(f"Components installed: {len(get_ctx().selected_components) or 'N/A'}")
             yield Static("")
