@@ -1,0 +1,1416 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Dxrk Ecosystem Configurator — supercharge AI coding agents">
+      
+      
+      
+        <link rel="canonical" href="https://dxrk777.github.io/Dxrk/1.0/adr/ADR-002-memory-separation/">
+      
+      
+        <link rel="prev" href="../../benchmarks/">
+      
+      
+        <link rel="next" href="../ADR-003-hybrid-vs-stdlib/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>ADR-002 Separación Memoria - Dxrk</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  
+<meta property="og:type" content="website" />
+<meta property="og:title" content="ADR-002 Separación Memoria - Dxrk" />
+<meta property="og:description" content="Dxrk Ecosystem Configurator — supercharge AI coding agents" />
+<meta property="og:image" content="https://dxrk777.github.io/Dxrk/1.0/assets/images/social/adr/ADR-002-memory-separation.png" />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:url" content="https://dxrk777.github.io/Dxrk/1.0/adr/ADR-002-memory-separation/" />
+<meta property="twitter:card" content="summary_large_image" />
+<meta property="twitter:title" content="ADR-002 Separación Memoria - Dxrk" />
+<meta property="twitter:description" content="Dxrk Ecosystem Configurator — supercharge AI coding agents" />
+<meta property="twitter:image" content="https://dxrk777.github.io/Dxrk/1.0/assets/images/social/adr/ADR-002-memory-separation.png" />
+</head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="purple">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#adr-002-separacion-dxrkmemory-vs-autonomylearner-vs-ragstore" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Dxrk" class="md-header__button md-logo" aria-label="Dxrk" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Dxrk
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ADR-002 Separación Memoria
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Dxrk777/Dxrk" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Dxrk" class="md-nav__button md-logo" aria-label="Dxrk" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Dxrk
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Dxrk777/Dxrk" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inicio
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uso
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../intended-usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uso previsto
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agentes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Componentes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arquitectura
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DxrkMemory 2.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tenants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rbac/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RBAC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migración a multi-tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migration-0.5-to-1.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migración 0.5 → 1.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-002 Separación Memoria
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-002 Separación Memoria
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#contexto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contexto
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Contexto">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#problema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Problema
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decisión
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Decisión">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-dxrkmemory-canonico-para-memoria-de-agente-verbatim" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1) dxrk/memory — canónico para memoria de agente (verbatim)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-dxrkautonomylearner-patrones-de-autonomia-aislado" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2) dxrk/autonomy/learner — patrones de autonomía (aislado)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-dxrkrag-indexado-de-codebase-aislado" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3) dxrk/rag — indexado de codebase (aislado)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reglas-de-frontera" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reglas de frontera
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alternativas-consideradas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alternativas consideradas
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Alternativas consideradas">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-fusion-completa-un-unico-store-rechazada" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A) Fusión completa — un único store (rechazada)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-sqlite-compartido-colecciones-separadas-rechazada" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B) SQLite compartido, colecciones separadas (rechazada)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-shared-vector-store-todo-a-embeddings-rechazada" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        C) Shared vector store — todo a embeddings (rechazada)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d-aislamiento-con-puentes-opcionales-elegida" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D) Aislamiento con puentes opcionales — elegida
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consecuencias" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consecuencias
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Consecuencias">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#positivas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Positivas
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#negativas-costes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Negativas / Costes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#neutras" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Neutras
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#plan-de-migracion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Plan de migración
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Plan de migración">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rollback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rollback
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#referencias" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Referencias
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ADR-003-hybrid-vs-stdlib/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-003 Hybrid vs Stdlib
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MIGRATION_3.3.5_3.7.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migración 3.3.5 → 3.7.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dx/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DX Top 1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../platforms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plataformas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="adr-002-separacion-dxrkmemory-vs-autonomylearner-vs-ragstore">ADR-002: Separación DxrkMemory vs Autonomy/Learner vs RAG/Store</h1>
+<table>
+<thead>
+<tr>
+<th>Campo</th>
+<th>Valor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Título</strong></td>
+<td>Separación DxrkMemory vs autonomy/learner vs rag/store — aislamiento de 3 sistemas</td>
+</tr>
+<tr>
+<td><strong>Estado</strong></td>
+<td><strong>Accepted</strong></td>
+</tr>
+<tr>
+<td><strong>Fecha</strong></td>
+<td>2026-08-27</td>
+</tr>
+<tr>
+<td><strong>Autores</strong></td>
+<td>Dxrk Core</td>
+</tr>
+<tr>
+<td><strong>Relacionado</strong></td>
+<td><code>docs/memory.md</code>, <code>docs/MIGRATION_3.3.5_3.7.1.md</code>, <code>dxrk/memory</code>, <code>dxrk/autonomy/learner.py</code>, <code>dxrk/rag</code></td>
+</tr>
+<tr>
+<td><strong>Supersede</strong></td>
+<td>N/A (primera decisión formal de frontera memoria)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="contexto">Contexto</h2>
+<p>Dxrk acumula tres subsistemas con “memoria” en el nombre pero con <strong>propósitos, contratos y dependencias radicalmente distintos</strong>:</p>
+<ol>
+<li><strong><code>dxrk/memory</code> — DxrkMemory 2.0</strong> (<code>AgentMemory</code>, <code>Palace</code>, <code>KnowledgeGraph</code>, <code>Dialect</code> AAAK)</li>
+<li><strong>13 módulos, ~4652 LOC, stdlib-only</strong> (<code>sqlite3</code> FTS5 <code>trigram → porter → unicode61</code>, WAL, <code>hybrid_search</code> BM25).</li>
+<li>Modelo <strong>palace/wings/rooms/drawers</strong> verbatim (<code>DrawerRecord.make_id</code> <code>sha256[:24]</code>), <code>chunking 800/100</code>, <code>KnowledgeGraph</code> temporal (<code>valid_from</code>/<code>valid_to</code>), <code>MemoryStack</code> L0-L3 wake-up <strong>600–900 tok</strong>.</li>
+<li>Persistencia canónica del agente: <code>~/.dxrk/palace/sqlite_palace.db</code> (<code>0o600</code>), locks <code>~/.dxrk/locks</code> con <code>reap 900 s</code>, <code>SIGTERM → SystemExit</code>, <code>O_NONBLOCK+S_ISREG</code> anti-FIFO.</li>
+<li>
+<p><strong>Zero external deps</strong>: sin <code>chromadb</code>, sin <code>hnswlib</code>, sin <code>onnx</code>, sin <code>numpy</code>. Import instantáneo (&lt;50 ms cold). Paridad <code>mempalace 3.7.1</code> stdlib-only verificada (<code>979</code> reemplazos <code>engram|mempal → dxrk</code>, grep global <code>0</code>).</p>
+</li>
+<li>
+<p><strong><code>dxrk/autonomy/learner.py</code> — Learner</strong> (<code>Learner</code>, <code>MemoryItem</code>, <code>Pattern</code>, <code>ErrorEntry</code>)</p>
+</li>
+<li>Memoria <strong>de patrones de autonomía</strong>, no verbatim. Registra <code>input/output/success/error/fixed_by/tags/tokens/latency_ms</code> en <code>list[MemoryItem]</code> con <code>max_items</code> (por defecto <code>1000</code>, evicción FIFO).</li>
+<li>Persistencia: <strong>JSON</strong> <code>~/.dxrk/memories.json</code> / <code>.dxrk/memories.json</code> (<code>0o600</code>, <code>0o750</code> dir), <code>threading.RLock</code>, <code>hashlib.sha256(input+output+now)[:16]</code> para <code>id</code>.</li>
+<li>API: <code>record()</code>, <code>suggest(input)</code> (top-5 por <code>success_rate</code>), <code>recent_memories(n)</code>, <code>top_errors(n)</code>, <code>_learn_pattern</code> (trigger = primeras 10 palabras).</li>
+<li>
+<p><strong>Sin FTS, sin vectores, sin embeddings</strong>. Diseñado para <code>autonomy/evolution</code> y <code>permissions</code> — feedback loop de ejecución.</p>
+</li>
+<li>
+<p><strong><code>dxrk/rag</code> — Code RAG</strong> (<code>chunker.py</code>, <code>indexer.py</code>, <code>store.py</code> <code>VectorStore</code>, <code>embedder.py</code> <code>OpenAIEmbedder</code>)</p>
+</li>
+<li>Indexado <strong>de codebase</strong> (no memoria de agente). <code>Chunk</code> (<code>text</code>, <code>file_path</code>, <code>start_line</code>, <code>end_line</code>, <code>language</code>), <code>VectorStore</code> in-memory + JSON opcional (<code>cosine_similarity</code> puro <code>math</code>), <code>OpenAIEmbedder</code> (<code>text-embedding-3-small</code>, <code>1536d</code>, <code>MAX_BATCH 256</code>, <code>urllib.request</code> stdlib).</li>
+<li>Persistencia: <code>VectorRecord(id, chunk, embedding: list[float])</code> en dict + <code>SearchResult(score)</code>. <strong>Requiere <code>OPENAI_API_KEY</code></strong> para <code>embed()</code>; sin clave, <code>VectorStore</code> opera vacío o con embeddings pre-cargados.</li>
+<li>Propósito: <code>RAG.query()</code> alimenta contexto al agente durante <code>sdd-*</code>, <code>plan</code>, <code>commit</code>.</li>
+</ol>
+<h3 id="problema">Problema</h3>
+<p>Se evaluó <strong>fusionar</strong> los tres en un único “memory store” (un <code>sqlite</code> o un <code>VectorStore</code> compartido, <code>DxrkMemory</code> como fachada universal). La fusión parecía reducir duplicación (<code>store</code> vs <code>palace</code>, <code>MemoryItem</code> vs <code>MemoryEntry</code>) y habilitar búsqueda unificada.</p>
+<p>Pero la fusión introduce acoplamientos incompatibles:</p>
+<ul>
+<li><strong>Dependencias</strong>: <code>dxrk/memory</code> es <strong>stdlib-only</strong> por diseño (instalación <code>pip install dxrk</code> sin extras, offline, instantáneo). <code>dxrk/rag</code> depende opcionalmente de <strong>OpenAI API + vectores densos</strong> (<code>urllib</code>, network, API key). Fusionar contaminaría <code>memory</code> con deps de red/modelo, rompiendo el contrato <code>zero-deps</code> y el cold-start &lt;50 ms.</li>
+<li><strong>Zero-trace</strong>: <code>dxrk/memory</code> garantiza <code>grep -rn engram|mempal → 0</code> (compat <code>LEGACY_COLLECTION</code> ofuscada <code>chr-join</code>). Mezclar tablas <code>learner.memories</code> o <code>rag.vectors</code> en <code>sqlite_palace.db</code> re-expondría superficies de <code>where</code>/<code>json_extract</code> a semánticas incompatibles y complicaría el <code>LEGACY</code> <code>mempalace_drawers</code> → <code>dxrk_drawers</code>.</li>
+<li><strong>Semántica</strong>: verbatim (<code>drawers</code> con <code>filed_at</code>, <code>wing/room</code>, <code>BM25</code>) ≠ patrones (<code>MemoryItem</code> con <code>success_rate</code>, <code>error</code>, <code>tokens</code>) ≠ chunks de código (<code>Chunk</code> con <code>start_line/end_line</code>). Unificar tipos fuerza <code>Any</code>/<code>Optional</code> masivos y viola mypy estricto.</li>
+<li><strong>Multi-tenant futuro</strong>: <code>Palace</code> está diseñado para <strong>un DB por palacio</strong> (<code>palace_path/sqlite_palace.db</code>), aislable por proyecto/usuario. <code>Learner</code> y <code>RAG</code> tienen ciclos de vida distintos (learner por repo local <code>.dxrk/</code>, RAG por índice efímero). Compartir DB acoplaría <code>vacuum</code>, <code>WAL</code>, <code>chmod</code> y <code>mine_palace_lock</code> a dominios que no lo necesitan.</li>
+<li><strong>Operacional</strong>: <code>Palace.mine</code> (re-mine honesty <code>1654cd2</code>, <code>chunk_total</code> <code>759b8f1</code>, <code>FIFO guard</code> <code>db29959</code>) y <code>reap_stale_dxrk_locks</code> (<code>27212e5</code>) son críticos para memoria verbatim; no aplican a <code>Learner</code> (JSON append) ni a <code>VectorStore</code> (in-memory). Unificar complica <code>try/except</code> de purga parcial y <code>DRAWER_UPSERT_BATCH_SIZE 500</code>.</li>
+</ul>
+<hr />
+<h2 id="decision">Decisión</h2>
+<p><strong>AISLAR — tres sistemas independientes, contratos explícitos, puentes opcionales sin acoplamiento de almacenamiento.</strong></p>
+<h3 id="1-dxrkmemory-canonico-para-memoria-de-agente-verbatim">1) <code>dxrk/memory</code> — canónico para memoria de agente (verbatim)</h3>
+<ul>
+<li><strong>Source of truth</strong> para todo lo que el agente debe recordar verbatim: decisiones, contexto de proyecto, conversaciones, <code>AAAK</code>, grafo temporal.</li>
+<li>Stack: <code>Palace</code> + <code>SqliteBackend</code> (FTS5 <code>trigram</code> + BM25 híbrido), <code>KnowledgeGraph</code> (<code>~/.dxrk/knowledge_graph.sqlite3</code>), <code>Dialect</code>, <code>MemoryStack</code> L0-L3.</li>
+<li>Contrato: <code>stdlib-only</code>, <code>sqlite_palace.db</code> por palacio, <code>WAL</code>, <code>0o600</code>, <code>hybrid_search(since, before)</code> con <code>pool 3×/15×</code>, <code>mine()</code> con locks <code>~/.dxrk/locks</code>.</li>
+<li><strong>No importa learner ni rag</strong>. Expone <code>AgentMemory(path=dir)</code> como fachada que delega a <code>Palace</code>; <code>*.json</code> legacy solo para tests.</li>
+</ul>
+<h3 id="2-dxrkautonomylearner-patrones-de-autonomia-aislado">2) <code>dxrk/autonomy/learner</code> — patrones de autonomía (aislado)</h3>
+<ul>
+<li><strong>Scope</strong>: solo <code>autonomy</code> (<code>evolution</code>, <code>verifier</code>, <code>permissions</code>, <code>swarm</code>). <code>MemoryItem(max_items=1000)</code> en <code>.dxrk/memories.json</code>.</li>
+<li><strong>Aislado</strong>: no lee/escribe <code>sqlite_palace.db</code>. No depende de <code>Palace</code> ni de <code>VectorStore</code>.</li>
+<li><strong>Puente opcional (export, no storage coupling)</strong>: via <strong>hooks</strong> (<code>dxrk/memory/hooks_cli.py</code>, <code>~/.config/dxrk/hooks.json</code>) el learner puede <strong>exportar</strong> un <code>MemoryItem</code> exitoso a <code>Palace</code> como <code>DrawerRecord</code> (<code>wing=autonomy</code>, <code>room=pattern</code>, <code>source_file=learner:&lt;id&gt;</code>), pero <strong>sin transacción compartida</strong>. Es fire-and-forget: si <code>Palace</code> está down, el learner no falla.</li>
+<li>Futura multi-tenancy: cada repo tiene su <code>.dxrk/memories.json</code>; cada usuario su <code>~/.dxrk/</code> — sin colisión con <code>palace_path</code>.</li>
+</ul>
+<h3 id="3-dxrkrag-indexado-de-codebase-aislado">3) <code>dxrk/rag</code> — indexado de codebase (aislado)</h3>
+<ul>
+<li><strong>Scope</strong>: solo RAG de código (<code>chunker → indexer → VectorStore → embedder</code>). <code>VectorStore(dimensions, persist_path="")</code> in-memory + JSON opcional.</li>
+<li><strong>Aislado</strong>: no persiste en <code>sqlite_palace.db</code>. No comparte tablas con <code>DxrkMemory</code>.</li>
+<li><strong>Puente opcional (enrichment, no storage coupling)</strong>: <code>AgentMemory.store(entry)</code> acepta <code>rag: object</code> inyectado (<code>is_enabled()</code>, <code>query(text, k)</code>). Si <code>rag</code> está habilitado, <code>store()</code> <strong>enriquece</strong> <code>entry.embedding</code> con <code>rag.query(entry.content, 1)</code> <strong>antes</strong> del <code>upsert</code> a <code>Palace</code>. Es <strong>enrichment de embedding</strong>, no coupling de storage: <code>Palace</code> sigue siendo el store; <code>RAG</code> solo provee el vector si hay <code>OPENAI_API_KEY</code>. Sin <code>rag</code> o sin clave, <code>store()</code> funciona idéntico (BM25 puro).</li>
+<li><code>RAG</code> no lee <code>Palace</code>; <code>Palace</code> no lee <code>VectorStore</code>. Búsqueda unificada se hace <strong>a nivel aplicación</strong> (orquestador llama a ambos y hace <code>hybrid_rank</code> si quiere), no a nivel DB.</li>
+</ul>
+<h3 id="reglas-de-frontera">Reglas de frontera</h3>
+<table>
+<thead>
+<tr>
+<th>Regla</th>
+<th>Descripción</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>R1: stdlib-only</strong></td>
+<td><code>dxrk/memory</code> no añade deps (<code>openai</code>, <code>numpy</code>, <code>chromadb</code>). <code>rag/embedder</code> y <code>learner</code> pueden tener deps de red pero no las propagan a <code>memory</code>.</td>
+</tr>
+<tr>
+<td><strong>R2: DB por dominio</strong></td>
+<td><code>memory</code> → <code>sqlite_palace.db</code> (WAL). <code>learner</code> → <code>.dxrk/memories.json</code>. <code>rag</code> → <code>VectorStore</code> in-memory/JSON (<code>persist_path</code> opcional). Nunca compartir archivo DB.</td>
+</tr>
+<tr>
+<td><strong>R3: No read-through</strong></td>
+<td>Ningún sistema hace <code>import</code> del store interno de otro para leer. Solo puentes explícitos (<code>hooks</code> export, <code>rag</code> enrichment) con contratos <code>Protocol</code>/<code>is_enabled</code>.</td>
+</tr>
+<tr>
+<td><strong>R4: Zero-trace</strong></td>
+<td><code>memory</code> mantiene <code>grep engram|mempal == 0</code> (salvo <code>chr-join</code> LEGACY). <code>learner</code>/<code>rag</code> no reintroducen esos strings en <code>memory</code>.</td>
+</tr>
+<tr>
+<td><strong>R5: Multi-tenant ready</strong></td>
+<td><code>palace_path</code> por proyecto/usuario. <code>learner</code> por repo. <code>rag</code> por índice. Aislamiento permite <code>chmod 0o600</code> y <code>mine_palace_lock</code> sin interferencia.</td>
+</tr>
+<tr>
+<td><strong>R6: Fallback sin regresión</strong></td>
+<td>Si <code>rag</code> no está configurado o <code>Palace</code> falla, <code>AgentMemory._use_sqlite</code> cae a JSON legacy; <code>learner</code> sigue en JSON; <code>rag</code> sigue vacío. Ningún fallo en puente rompe el otro sistema.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="alternativas-consideradas">Alternativas consideradas</h2>
+<h3 id="a-fusion-completa-un-unico-store-rechazada">A) Fusión completa — un único store (rechazada)</h3>
+<p>Un <code>SqliteBackend</code> único con tablas <code>drawers</code>, <code>memories</code>, <code>vectors</code> o un <code>VectorStore</code> único con <code>metadata.kind in {drawer, pattern, chunk}</code>. Búsqueda unificada <code>hybrid_search</code> sobre todo.</p>
+<ul>
+<li><strong>Rechazo</strong>: contamina <code>stdlib-only</code> con <code>openai</code>/<code>numpy</code>; mezcla semánticas (<code>filed_at</code> vs <code>success_rate</code> vs <code>start_line</code>); acopla <code>WAL</code>/<code>FTS5</code>/<code>HNSW</code> a dominios que no lo necesitan; rompe <code>zero-trace</code> y <code>migrate</code> (<code>MIGRATION_3.3.5_3.7.1.md</code>); riesgo de <code>vacuum</code>/lock contention; testing explosivo (mock de OpenAI para tests de memoria verbatim).</li>
+</ul>
+<h3 id="b-sqlite-compartido-colecciones-separadas-rechazada">B) SQLite compartido, colecciones separadas (rechazada)</h3>
+<p>Un <code>sqlite_palace.db</code> con <code>collection_name in {dxrk_drawers, learner_memories, rag_chunks}</code> via <code>Palace.get_collection()</code>.</p>
+<ul>
+<li><strong>Rechazo</strong>: aunque separa por colección, sigue compartiendo <strong>archivo, WAL, <code>mine_palace_lock</code>, <code>chmod</code>, <code>health()</code></strong> y el <code>backend</code> registry. <code>Learner</code> (JSON <code>max_items 1000</code>) no necesita FTS5 ni <code>reap_stale_dxrk_locks</code>; <code>RAG</code> (cosine <code>VectorStore</code>) no necesita <code>FTS5 trigram</code> ni <code>BM25</code>. El coste es acoplamiento operacional sin beneficio: vaciar <code>learner</code> implica <code>DELETE FROM embeddings WHERE collection='learner'</code> con <code>json_extract</code> — frágil vs <code>os.truncate</code> JSON.</li>
+</ul>
+<h3 id="c-shared-vector-store-todo-a-embeddings-rechazada">C) Shared vector store — todo a embeddings (rechazada)</h3>
+<p><code>Palace</code> migrado a <code>VectorStore</code> + <code>OpenAIEmbedder</code> (HNSW/Chroma-lite), <code>Learner</code> y <code>RAG</code> como namespaces del mismo <code>VectorStore</code>.</p>
+<ul>
+<li><strong>Rechazo</strong>: requiere <code>OPENAI_API_KEY</code> para que <code>memory</code> funcione (offline roto); <code>chroma</code>/<code>hnsw</code> pesados vs <code>sqlite3</code> stdlib; cold-start &gt;&gt;50 ms; <code>onnx</code> warmup; <code>numpy</code> 2.x compat (ver <code>MIGRATION_3.3.5_3.7.1.md</code> “No portados”); <code>zero-trace</code> perdido. Contradice flagship <strong>stdlib-only</strong>.</li>
+</ul>
+<h3 id="d-aislamiento-con-puentes-opcionales-elegida">D) Aislamiento con puentes opcionales — <strong>elegida</strong></h3>
+<p>Ver <strong>Decisión</strong>. Mantiene <code>stdlib-only</code>, <code>zero-trace</code>, <code>WAL</code>/<code>FTS5</code> intactos; permite <code>rag</code> enrichment y <code>learner</code> export sin acoplamiento de storage; multi-tenant trivial.</p>
+<hr />
+<h2 id="consecuencias">Consecuencias</h2>
+<h3 id="positivas">Positivas</h3>
+<ul>
+<li><strong>Stdlib-only preservado</strong>: <code>pip install dxrk</code> sin extras, offline, &lt;50 ms cold. <code>memory</code> testeable sin mocks de red (<code>tests/test_memory.py 19 passed</code>).</li>
+<li><strong>Zero-trace</strong>: <code>grep -rn engram|mempal dxrk/memory → 0</code> se mantiene; <code>LEGACY_COLLECTION</code> ofuscado <code>chr-join</code> no se expande a otros dominios.</li>
+<li><strong>Evolución independiente</strong>: <code>Palace</code> puede iterar (<code>chunk_total</code>, <code>reap</code>, <code>FIFO guard</code>) sin tocar <code>Learner</code>/<code>RAG</code>; <code>RAG</code> puede cambiar modelo (<code>text-embedding-3-small → 3-large</code>) sin migrar <code>sqlite_palace.db</code>.</li>
+<li><strong>Multi-tenant</strong>: aislar <code>palace_path</code> por proyecto/usuario, <code>learner</code> por repo <code>.dxrk/</code>, <code>rag</code> por índice — sin <code>mine_palace_lock</code> cruzado ni <code>WAL</code> compartido.</li>
+<li><strong>Testing simple</strong>: <code>memory</code> tests stdlib; <code>learner</code> tests JSON; <code>rag</code> tests con <code>VectorStore</code> mock sin tocar <code>Palace</code>.</li>
+<li><strong>Seguridad</strong>: <code>chmod 0o600</code> y <code>0o750</code> por archivo; <code>O_NONBLOCK</code>/<code>S_ISREG</code> solo donde aplica; superficie de ataque mínima.</li>
+</ul>
+<h3 id="negativas-costes">Negativas / Costes</h3>
+<ul>
+<li><strong>Duplicación aparente</strong>: <code>MemoryEntry</code> vs <code>MemoryItem</code> vs <code>Chunk</code> — tres dataclasses similares. Mitigado: semánticas distintas justifican tipos distintos; mypy estricto lo exige.</li>
+<li><strong>Búsqueda no unificada por defecto</strong>: orquestador debe llamar <code>Palace.search</code> + <code>VectorStore.Search</code> + <code>Learner.suggest</code> y rankear. Mitigado: puentes <code>rag</code> enrichment y <code>hooks</code> export cubren 80% sin query federada.</li>
+<li><strong>Docs adicionales</strong>: hay que documentar frontera (este ADR + <code>docs/memory.md</code> “Relación con Autonomy y RAG”). Coste menor.</li>
+</ul>
+<h3 id="neutras">Neutras</h3>
+<ul>
+<li><code>AgentMemory(rag=...)</code> enrichment sigue disponible pero <strong>opcional</strong> y sin coupling de storage. No requiere <code>RAG</code> para que <code>memory</code> funcione.</li>
+</ul>
+<hr />
+<h2 id="plan-de-migracion">Plan de migración</h2>
+<p>No hay migración de datos — los tres sistemas ya están aislados en <code>main</code>. Este ADR <strong>formaliza</strong> el estado actual como decisión.</p>
+<table>
+<thead>
+<tr>
+<th>Paso</th>
+<th>Acción</th>
+<th>Estado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Verificar aislamiento: <code>grep -rn "from dxrk.rag" dxrk/memory</code> → 0 (salvo <code>__init__.py: rag: object</code> Protocol), <code>grep -rn "from dxrk.autonomy" dxrk/memory</code> → 0</td>
+<td>✅ Hecho</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Verificar <code>rag</code> no importa <code>palace</code>: <code>grep -rn "palace\|SqliteBackend" dxrk/rag</code> → 0</td>
+<td>✅ Hecho</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Verificar <code>learner</code> no importa <code>memory</code>/<code>rag</code>: <code>grep -rn "from dxrk.memory\|from dxrk.rag" dxrk/autonomy/learner.py</code> → 0</td>
+<td>✅ Hecho</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Documentar puente <code>AgentMemory.store</code> enrichment: <code>dxrk/memory/__init__.py:148-157</code> (<code>self._rag.is_enabled()/query() → entry.embedding</code>)</td>
+<td>✅ Hecho</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Documentar puente <code>learner → palace</code> via hooks: <code>dxrk/memory/hooks_cli.py</code> + <code>~/.config/dxrk/hooks.json</code> (export fire-and-forget)</td>
+<td>✅ Existente, referenciado aquí</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Añadir sección <code>docs/memory.md: Relación con Autonomy y RAG</code> (~30 líneas) con referencia a este ADR</td>
+<td>⏳ Este ADR</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Añadir entrada <code>mkdocs.yml</code> <code>nav: ADR-002: adr/ADR-002-memory-separation.md</code></td>
+<td>⏳ Este ADR</td>
+</tr>
+<tr>
+<td>8</td>
+<td>CI: <code>uv run python -m pytest -q tests/test_memory.py</code> (19 passed) + <code>grep zero-trace</code></td>
+<td>✅ Sin regresión</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Futuro multi-tenant: <code>Palace(palace_path=per_user/per_project)</code> ya soportado; <code>Learner(path=.dxrk/memories.json)</code> por repo; <code>VectorStore(persist_path=per_index)</code> por índice. Sin cambios.</td>
+<td>N/A</td>
+</tr>
+</tbody>
+</table>
+<h3 id="rollback">Rollback</h3>
+<p>Si se decide fusionar en el futuro, este ADR se marca <code>Superseded</code> por <code>ADR-00X</code> y se diseña migración explícita (dump <code>memories.json</code> → <code>dxrk_drawers</code> con <code>wing=autonomy</code>, re-index <code>VectorStore</code> → <code>sqlite_fts</code>). No se hace sin ADR nuevo.</p>
+<hr />
+<h2 id="referencias">Referencias</h2>
+<ul>
+<li><code>dxrk/memory/__init__.py</code> — <code>AgentMemory</code> fachada + <code>rag</code> enrichment (<code>store:148-157</code>, <code>search:272-278</code>)</li>
+<li><code>dxrk/memory/palace.py</code> — <code>Palace.mine</code>, <code>mine_lock</code>, <code>mine_palace_lock</code>, <code>reap_stale_dxrk_locks</code>, <code>chunk_text</code>, <code>Fifo guard</code></li>
+<li><code>dxrk/memory/backend/sqlite.py</code> — <code>SqliteBackend</code>, <code>FTS5 trigram</code>, <code>WAL</code>, <code>BM25</code></li>
+<li><code>dxrk/autonomy/learner.py</code> — <code>Learner</code>, <code>MemoryItem(max_items)</code>, <code>suggest</code>, <code>top_errors</code>, <code>.dxrk/memories.json</code></li>
+<li><code>dxrk/rag/store.py</code> — <code>VectorStore</code>, <code>VectorRecord</code>, <code>cosine_similarity</code></li>
+<li><code>dxrk/rag/embedder.py</code> — <code>OpenAIEmbedder</code>, <code>DEFAULT_EMBEDDING_MODEL text-embedding-3-small</code></li>
+<li><code>dxrk/rag/chunker.py</code>, <code>dxrk/rag/indexer.py</code> — chunking/indexado de codebase</li>
+<li><code>dxrk/memory/hooks_cli.py</code> — hooks <code>export</code> learner → palace (fire-and-forget)</li>
+<li><code>docs/memory.md</code> — DxrkMemory 2.0 flagship stdlib-only (13 módulos, 4652 LOC)</li>
+<li><code>docs/MIGRATION_3.3.5_3.7.1.md</code> — paridad mempalace 3.7.1, no portados <code>HNSW</code>/<code>numpy2</code>/<code>onnx</code></li>
+<li><code>mkdocs.yml</code> — <code>nav</code> incluye <code>ADR-002</code></li>
+</ul>
+<blockquote>
+<p><strong>Verificación</strong>: <code>uv run python -m pytest -q tests/test_memory.py</code> → <code>19 passed</code>; <code>grep -rn "engram\|mempal" dxrk/memory --include="*.py" | wc -l</code> → <code>0</code>; <code>grep -rn "from dxrk.memory" dxrk/autonomy/learner.py dxrk/rag</code> → <code>0</code>.</p>
+</blockquote>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../../benchmarks/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Benchmarks">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Benchmarks
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../ADR-003-hybrid-vs-stdlib/" class="md-footer__link md-footer__link--next" aria-label="Next: ADR-003 Hybrid vs Stdlib">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                ADR-003 Hybrid vs Stdlib
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.top", "navigation.footer", "content.code.copy", "toc.integrate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
