@@ -46,7 +46,15 @@ jobs:
 
       - name: Test (pytest + coverage)
         shell: bash
-        run: uv run pytest -q --cov-report=xml
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            # Sin gate de cobertura en Windows: los tests POSIX-only se
+            # skipean por diseno y el 80% es inalcanzable ahi. El gate
+            # aplica en ubuntu/macos (ver AGENTS.md).
+            uv run pytest -q -o addopts=""
+          else
+            uv run pytest -q --cov-report=xml
+          fi
 
       - name: Upload coverage report
         if: matrix.os == 'ubuntu-latest'
