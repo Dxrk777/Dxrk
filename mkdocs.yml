@@ -26,6 +26,7 @@ nav:
   - Componentes: components.md
   - Arquitectura: architecture.md
   - DxrkMemory 2.0: memory.md
+  - Enterprise (Cortex + Autonomous): enterprise.md
   - Multi-tenant: tenants.md
   - RBAC: rbac.md
   - Migración a multi-tenant: migration.md
