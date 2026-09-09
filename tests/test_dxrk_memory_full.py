@@ -830,7 +830,7 @@ class TestScanProject:
         fifo_path = tmp_path / "realfifo"
         try:
             os.mkfifo(fifo_path)
-        except (OSError, NotImplementedError):
+        except (OSError, NotImplementedError, AttributeError):
             pytest.skip("mkfifo not available")
         (tmp_path / "ok2.md").write_text("ok")
         files = scan_project(tmp_path)
@@ -1148,9 +1148,10 @@ class TestBackendSqlite:
         cur = conn.execute("PRAGMA journal_mode;")
         mode = cur.fetchone()[0]
         assert mode.lower() == "wal"
-        # perms
-        st = db_path.stat().st_mode
-        assert stat.S_IMODE(st) == 0o600
+        # perms POSIX-only: en Windows st_mode es emulado y chmod es no-op
+        if sys.platform != "win32":
+            st = db_path.stat().st_mode
+            assert stat.S_IMODE(st) == 0o600
         conn.close()
         be.close()
 

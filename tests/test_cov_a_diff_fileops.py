@@ -26,7 +26,9 @@ def plain_colors():
 
 
 def _write(path: str, content: str) -> None:
-    with open(path, "w", encoding="utf-8") as fh:
+    # newline="": bytes exactos en todas las plataformas (en Windows el modo
+    # texto traduciria \n a \r\n y romperia asserts por linea)
+    with open(path, "w", encoding="utf-8", newline="") as fh:
         fh.write(content)
 
 
@@ -1123,6 +1125,7 @@ class TestFileopsPath:
         assert out == ""
         assert str(err) == "fileops: path contains null byte"
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="resolucion de ruta absoluta POSIX-only")
     def test_resolve_abs(self):
         out, err = fop.ResolvePath("/a/./b", "/tmp")
         assert err is None
@@ -1171,7 +1174,7 @@ class TestFileopsPath:
         out2, _ = fop.ExpandHome("~")
         assert out2 == "/home/u"
         out3, _ = fop.ExpandHome("~/a/b")
-        assert out3 == "/home/u/a/b"
+        assert out3 == os.path.join("/home/u", "a/b")
         out4, _ = fop.ExpandHome("~other/x")
         assert out4 == "~other/x"
         out5, _ = fop.ExpandHome("plain")
@@ -1253,7 +1256,7 @@ class TestFileopsPath:
         monkeypatch.delenv("XDG_CACHE_HOME", raising=False)
         monkeypatch.setenv("HOME", "/home/u")
         out2, _ = fop.UserCacheDir()
-        assert out2 == "/home/u/.cache"
+        assert out2 == os.path.join("/home/u", ".cache")
         monkeypatch.delenv("HOME", raising=False)
         out3, err3 = fop.UserCacheDir()
         assert out3 == ""
@@ -1266,7 +1269,7 @@ class TestFileopsPath:
         monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
         monkeypatch.setenv("HOME", "/home/u")
         out2, _ = fop.UserConfigDir()
-        assert out2 == "/home/u/.config"
+        assert out2 == os.path.join("/home/u", ".config")
         monkeypatch.delenv("HOME", raising=False)
         out3, err3 = fop.UserConfigDir()
         assert out3 == ""
@@ -1274,8 +1277,8 @@ class TestFileopsPath:
 
     def test_clean_abs_trailing(self):
         assert fop.CleanPath("") == "."
-        assert fop.EnsureTrailingSep("/a") == "/a/"
-        assert fop.EnsureTrailingSep("/a/") == "/a/"
+        assert fop.EnsureTrailingSep("/a") == "/a" + os.sep
+        assert fop.EnsureTrailingSep("/a" + os.sep) == "/a" + os.sep
 
     def test_abs_error(self, monkeypatch):
         monkeypatch.setattr(os.path, "abspath", lambda *a, **k: (_ for _ in ()).throw(OSError("boom")))

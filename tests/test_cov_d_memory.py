@@ -695,6 +695,9 @@ class TestPalaceHelpers:
         assert lp.endswith(".lock")
         assert (tmp_path / "zlocks").is_dir()
 
+    @pytest.mark.skipif(
+        sys.platform == "win32", reason="flock re-entrada misma-handle es POSIX-only (msvcrt la rechaza)"
+    )
     def test_mine_lock_file_ops(self, tmp_path: Path):
         import dxrk.memory.palace as pal
 
@@ -802,7 +805,7 @@ class TestPalaceHelpers:
         with pal.mine_palace_lock(pp):
             assert True
         # conflict via mocked flock raising
-        import fcntl
+        fcntl = pytest.importorskip("fcntl")
 
         real_flock = fcntl.flock
         with pal.mine_palace_lock(pp):
@@ -1589,7 +1592,7 @@ class TestPalaceExtraA:
         assert lp.endswith(".lock")
 
     def test_lock_blocking_variants(self, tmp_path: Path):
-        import fcntl
+        fcntl = pytest.importorskip("fcntl")
 
         import dxrk.memory.palace as pal
 
@@ -1746,7 +1749,7 @@ class TestPalaceExtraA:
             assert True
 
     def test_mine_palace_unlock_fail_ignored(self, tmp_path: Path, monkeypatch):
-        import fcntl
+        fcntl = pytest.importorskip("fcntl")
 
         import dxrk.memory.palace as pal
 

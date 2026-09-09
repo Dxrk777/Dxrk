@@ -16,7 +16,8 @@ from dxrk import backup
 
 def _touch(path: str, content: str = "hello") -> str:
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w") as f:
+    # newline="": bytes exactos en todas las plataformas
+    with open(path, "w", newline="") as f:
         f.write(content)
     return path
 
@@ -383,6 +384,7 @@ class TestBackupSource:
         assert backup.BackupSource.SYNC.label() == "sync"
         assert backup.BackupSource.UPGRADE.label() == "upgrade"
         assert backup.BackupSource.UNINSTALL.label() == "uninstall"
+
 
 import sys
 

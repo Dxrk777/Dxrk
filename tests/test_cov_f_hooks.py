@@ -1077,8 +1077,11 @@ class TestDetachedPopen:
         monkeypatch.setattr(os, "name", "nt")
         monkeypatch.setattr(subprocess, "DETACHED_PROCESS", 1, raising=False)
         monkeypatch.setattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 2, raising=False)
+        # en Windows real existe un tercer flag (CREATE_BREAKAWAY_FROM_JOB):
+        # fijarlo tambien para un resultado determinista en todas las plataformas
+        monkeypatch.setattr(subprocess, "CREATE_BREAKAWAY_FROM_JOB", 4, raising=False)
         kw = hc._detached_popen_kwargs()
-        assert kw["creationflags"] == 3
+        assert kw["creationflags"] == 7
 
 
 class TestDxrkPython:
@@ -1101,12 +1104,15 @@ class TestDxrkPython:
 
     def test_project_venv(self, monkeypatch):
         monkeypatch.delenv("DXRK_PYTHON", raising=False)
+        # sufijo con separadores de la plataforma (en Windows str(Path) usa \)
+        venv_rel = os.path.join("dxrk", "venv", "bin", "python")
 
         def _fake(self):
-            return str(self).endswith("dxrk/venv/bin/python")
+            return str(self).endswith(venv_rel)
 
         monkeypatch.setattr(Path, "is_file", _fake)
-        assert hc._dxrk_python() == str(Path(hc.__file__).resolve().parents[1] / "venv" / "bin" / "python")
+        want = Path(hc.__file__).resolve().parents[1] / "venv" / "bin" / "python"
+        assert hc._dxrk_python() == str(want)
 
     def test_fallback(self, monkeypatch):
         monkeypatch.delenv("DXRK_PYTHON", raising=False)

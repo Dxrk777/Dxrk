@@ -19,6 +19,7 @@ from __future__ import annotations
 import base64
 import json
 import stat
+import sys
 from pathlib import Path
 
 import pytest
@@ -150,9 +151,10 @@ def test_load_save_roundtrip_isolated(tmp_path: Path, monkeypatch: pytest.Monkey
     assert data == {"users": {"alice": "admin", "bob": "dev"}, "default_role": "dev"}
     # default_role persistido gobierna a desconocidos
     assert resolver.resolve("stranger") == "dev"
-    # fichero endurecido 0o600
-    mode = stat.S_IMODE(resolver.roles_path.stat().st_mode)
-    assert mode == 0o600
+    # fichero endurecido 0o600 (POSIX-only: en Windows chmod es no-op)
+    if sys.platform != "win32":
+        mode = stat.S_IMODE(resolver.roles_path.stat().st_mode)
+        assert mode == 0o600
     # recarga desde nueva instancia
     fresh = TenantRoleResolver("acme")
     assert fresh.resolve("alice") == "admin"

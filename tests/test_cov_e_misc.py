@@ -602,7 +602,9 @@ class TestA2aMisc:
 
 def _touch(path: str, content: str = "hello") -> str:
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w") as f:
+    # newline="": bytes exactos en todas las plataformas (ver _write en
+    # test_cov_a_diff_fileops.py)
+    with open(path, "w", newline="") as f:
         f.write(content)
     return path
 
@@ -823,7 +825,8 @@ class TestBackupRestore:
 
     def test_restore_compressed_absolute_snapshot_rejected(self, tmp_path, monkeypatch) -> None:
         manifest, _ = self._flat_snapshot(tmp_path, monkeypatch)
-        manifest.entries[0].snapshot_path = "/abs/evil.txt"
+        # absoluta en ambas plataformas ("/abs/..." no es absoluta en Windows)
+        manifest.entries[0].snapshot_path = os.path.abspath("evil.txt")
         with pytest.raises(ValueError, match="absolute"):
             backup.RestoreService().restore(manifest)
 
@@ -1499,7 +1502,8 @@ class TestFileToolsMeta:
     def test_validate_abs_path_types(self) -> None:
         assert filetools._validate_abs_path("") is not None
         assert filetools._validate_abs_path(123) is not None
-        assert filetools._validate_abs_path("/ok") is None
+        # "/ok" no es absoluta en Windows; abspath si lo es en ambas
+        assert filetools._validate_abs_path(os.path.abspath("ok")) is None
 
     def test_read_bytes_limit(self, tmp_path) -> None:
         target = _touch(str(tmp_path / "a.txt"), "0123456789")

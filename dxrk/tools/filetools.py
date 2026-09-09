@@ -292,7 +292,10 @@ def _execute_glob(_ctx: Any, input_: dict[str, Any] | None) -> tuple[Any, str | 
         for name in names:
             full = os.path.join(root, name)
             try:
-                if _match_path(pattern, full):
+                # _match_path usa '/' como separador: normalizar ambos lados
+                # (no-op en POSIX, en Windows os.walk produce '\')
+                norm_pattern = pattern.replace(os.sep, "/")
+                if _match_path(norm_pattern, full.replace(os.sep, "/")):
                     files.append(full)
             except Exception:
                 return None, f"walk: invalid pattern {pattern!r}"

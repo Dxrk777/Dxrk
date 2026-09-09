@@ -362,7 +362,11 @@ def test_pool_monitor_start_stop_idempotent() -> None:
     # second start should be no-op
     m.Start()
     assert m.IsRunning() is True
-    time.sleep(0.07)
+    # el hilo del monitor puede tardar en arrancar en CI cargado: esperar con
+    # deadline en vez de sleep fijo (flaky en macOS con sleep(0.07))
+    deadline = time.monotonic() + 5.0
+    while not calls and time.monotonic() < deadline:
+        time.sleep(0.01)
     m.Stop()
     assert m.IsRunning() is False
     # second stop no-op

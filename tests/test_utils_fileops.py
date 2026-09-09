@@ -16,7 +16,8 @@ _ERR = f.FileopsError
 
 
 def _write(path: str, content: str) -> None:
-    with open(path, "w") as fh:
+    # newline="": bytes exactos en todas las plataformas
+    with open(path, "w", newline="") as fh:
         fh.write(content)
 
 
