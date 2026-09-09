@@ -4,10 +4,12 @@ Tómate en serio la seguridad de Dxrk. Reportar vulnerabilidades de forma respon
 
 ## Versiones soportadas
 
-| Versión | Soportada |
-| ------- | --------- |
-| 0.1.x   | ✅ Sí     |
-| < 0.1   | ❌ No     |
+| Versión | Soportada          |
+| ------- | ------------------ |
+| 1.0.x   | ✅ Sí              |
+| 0.2.x   | ✅ Sí              |
+| 0.1.x   | ❌ No (actualizar) |
+| < 0.1   | ❌ No              |
 
 ## Reportar una vulnerabilidad
 

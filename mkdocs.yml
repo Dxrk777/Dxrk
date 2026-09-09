@@ -56,5 +56,7 @@ plugins:
   - search
   - social
   - mkdocstrings:
-      default:
-        show_source: true
+      handlers:
+        python:
+          options:
+            show_source: true

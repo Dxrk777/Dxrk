@@ -1,5 +1,7 @@
 # Multi-tenant en Dxrk
 
+![Demo multi-tenant 30s](assets/demo_tenant.gif)
+
 Dxrk aísla todos los datos por tenant bajo un layout de filesystem canónico.
 Sin servidor, sin red: solo directorios con permisos restrictivos (diseño
 detallado en `adr/ADR-002-memory-separation.md`, roadmap §3.3).

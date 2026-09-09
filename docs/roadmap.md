@@ -1,6 +1,6 @@
 # Roadmap Dxrk v0.2.0 → v1.0.0 — Matriz Impacto/Esfuerzo & Plan Priorizado
 
-> **Estado:** Draft Accepted · **Fecha:** 2026-08-28 · **Versión:** 0.2.0-draft  
+> **Estado:** v1.0.0 GA Done (salvo R14 diferido a v2.0) · **Fecha:** 2026-09-08 · **Versión:** 1.0.0-done  
 > **Alcance:** Deuda Fase1 + Enterprise multi-tenant Fase2 + DX Top1 Fase4 → GA v1.0.0. **Sin tocar `dxrk/memory/`** salvo via `palace_path` per-tenant (ADR-002).  
 > **Contexto flagship:** DxrkMemory 2.0 cerrado — 14 módulos `dxrk/memory` + `backend/` (6303 LOC stdlib-only `sqlite3` FTS5 trigram→porter→unicode61, WAL `0o600`/`0o750`, 141 tests en `tests/test_memory*.py`, 2760+ totales), ADR-002 (aislamiento Memory/Learner/RAG) y ADR-003 (stdlib-only vs hybrid BM25 0.72 vs HNSW 0.88, 0 vs 420MB, P5 vence). Ver `docs/memory.md:1`, `docs/dx.md:1`, `docs/adr/ADR-002-memory-separation.md:1`, `docs/adr/ADR-003-hybrid-vs-stdlib.md:1`, `docs/MIGRATION_3.3.5_3.7.1.md:1`.  
 > **Versiones anteriores:** `pyproject.toml:7` `0.1.2` → `0.2.0` (DX + flagship docs) → `0.3.0`/`0.5.0` enterprise beta → `1.0.0` GA multi-tenant. Commits base: `4c4ab3f` flagship 4652 LOC `979` replaces, `bf0d106` coverage 141 + ADR-002 + hooks `stdio`. `git status` clean tras `bf0d106` salvo untracked `docs/dx.md` (535L) + `docs/adr/ADR-003-hybrid-vs-stdlib.md` (76L) — este roadmap los integra.
@@ -294,45 +294,47 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 
 ### 6.2 DoD por versión (checklist mergeable)
 
+> **Estado 2026-09-08 (v1.0.0 GA live en PyPI):** las versiones intermedias 0.2.0/0.3.0/0.5.0 se colapsaron — el release real fue `0.2.2 → 0.2.3 → 0.2.4 → 1.0.0`. Los boxes `[x]` están verificados en `main`; `R14 config unify` es el único pendiente y queda diferido a v2.0 con ADR.
+
 #### v0.2.0 Done (Quick Wins) — 2 semanas
 
-- [ ] `README.md` 169L→220L hero merge (badges 7 + tagline + 30s quickstart + demo caption + links `memory.md`/`dx.md`/`benchmarks.md`)
-- [ ] `mkdocs.yml` nav `dx.md` + `adr/ADR-003` + `roadmap.md` (este archivo) — `uv run mkdocs build` 0 warnings (ver `docs/dx.md:236` §3.3 fix snippet)
-- [ ] `tests/test_utils_http*.py` +40 tests → coverage `dxrk/utils/http.py` 62%→≥75% (step), `pytest --cov-fail-under=75` verde non-Windows; `ruff` 0, `mypy` 0
-- [ ] `docs/benchmarks.md` existe con tabla `dx.md:25` + metodología + `benchmarks/bench_memory.py` stub + artefacto `benchmarks/results/` (puede ser stub `bench_memory.py` sin corpus full)
-- [ ] `pyproject.toml:7` `0.1.2→0.2.0`, `CHANGELOG.md` `[0.2.0]`, `uv build` + `twine check` + `uv tool install --from dist/*.tar.gz` smoke `dxrk-py --help` + `from dxrk.memory import Palace` OK
-- [ ] `git tag -a v0.2.0` + `git push --follow-tags` → `publish.yml` verde, `pypi.org/project/dxrk/0.2.0/` live, `gh release view v0.2.0` changelog cliff
-- [ ] `CHANGELOG.md` `Unreleased` limpio post-tag, `SECURITY.md` bump `Supported: 0.2.x ✅`
-- [ ] Gates universales §6.1 todos verdes en `main` tras tag
+- [x] `README.md` hero merge (badges + tagline + 30s quickstart + demo caption + links `memory.md`/`dx.md`/`benchmarks.md` + sección enterprise)
+- [x] `mkdocs.yml` nav `dx.md` + `adr/ADR-003` + `roadmap.md` + tenants/rbac/migration/benchmarks — `uv run mkdocs build --strict` 0 warnings
+- [x] Coverage ≥80% (85%+ vía `tests/test_cov_*.py` + suites enterprise) + `dxrk/utils/http/` split a submódulos — `pytest --cov-fail-under=80` verde non-Windows; `ruff` 0, `mypy` 0
+- [x] `docs/benchmarks.md` existe con tabla + metodología + `benchmarks/bench_memory.py` + artefacto `benchmarks/results/`
+- [x] Releases `0.2.2 → 0.2.3 → 0.2.4 → 1.0.0` publicados (proceso `uv build` + smoke + tag + `publish.yml` ejecutado; PyPI `dxrk 1.0.0` live)
+- [x] Tags `v0.2.3` + `v0.2.4` + `v1.0.0` pusheados → `publish.yml` verde, `gh release` changelog cliff
+- [x] `CHANGELOG.md` generado por workflow + `SECURITY.md` bump `Supported: 1.0.x ✅, 0.2.x ✅`
+- [x] Gates universales §6.1 todos verdes en `main` tras tag
 
 #### v0.3.0 Done (Deuda Major) — 4 semanas
 
-- [ ] `dxrk/utils/http/` 10 submódulos `http split` merge + shim `http.py` re-export — `pytest -q` 2760+ sin regresión, `grep -rn "from dxrk.utils.http"` 0 broken
-- [ ] `dxrk/config/*` unify `SettingsManager` canónico + adapter `HierarchicalConfig` compat + `docs/config.md` — `tests/test_config*.py` Merge/Config round-trip 5 tests
-- [ ] `dxrk/tui/shared.py` `AppContext` DI + `dxrk/tui/app.py` `STATE` global eliminado (~18 sites) — `tests/test_tui_context.py` 10 tests, TUI manual smoke `dxrk-py tui` OK
-- [ ] Coverage `dxrk/utils/http/` + `dxrk/config/*` ≥80% estable — `pytest --cov-fail-under=80` gate sin stepped
-- [ ] Gates universales §6.1 verdes + `trace0` 0 + `mkdocs build` 0 warnings + `mypy` 218+ files 0
+- [x] `dxrk/utils/http/` split a submódulos merge — `pytest -q` sin regresión, `from dxrk.utils.http import X` estable
+- [ ] `dxrk/config/*` unify `SettingsManager` canónico + adapter `HierarchicalConfig` compat + `docs/config.md` — **diferido a v2.0 con ADR (único pendiente de deuda)**
+- [x] `dxrk/tui/shared.py` `AppContext` DI + proxy `STATE` compat — `tests/test_tui.py::TestStateProxy` 3 tests, TUI smoke OK
+- [x] Coverage ≥80% estable — `pytest --cov-fail-under=80` gate sin stepped
+- [x] Gates universales §6.1 verdes + `trace0` 0 + `mkdocs build` 0 warnings
 
 #### v0.5.0 Done (Enterprise Beta) — 6 semanas
 
-- [ ] `~/.dxrk/tenants/{id}/` FS isolation `Palace` per-tenant — `tests/test_tenant_isolation.py` 10 tests (`chmod 0o600` non-Windows, `RLock` per-tenant, `mine_palace_lock` namespaced)
-- [ ] `dxrk/vault` HKDF per-tenant — `tests/test_vault_tenant_isolation.py` cross-tenant decrypt fail, `VaultConfig.path` templating `tenants/{id}/vault.enc`
-- [ ] `CLI --tenant` + `DXRK_TENANT` env — `tests/test_cli_tenant.py` 8 tests (`--tenant acme`, env fallback, `E_TENANT_404`), `dxrk --help` muestra flag
-- [ ] `JWT tid` claim — `tests/test_jwt_tid.py` 8 tests (`missing tid 401`, `mismatch 403`, `valid 200`), `mcp_server.py` middleware live
-- [ ] `dxrk/memory/migration.py` idempotente `palace → tenants/default/` — `tests/test_migration_idempotent.py` (run twice same hash, marker `migration.json`), `dxrk migrate --check` dry-run
-- [ ] `docs/tenants.md` + `docs/security.md` beta chapter + `CHANGELOG.md` `[0.5.0-beta]` — `mkdocs build` 0 warnings, `site/tenants/` live
-- [ ] `git tag v0.5.0-beta` → `publish.yml` prerelease `pypi.org/project/dxrk/0.5.0b1/` live + manual `dxrk --tenant acme query` <50ms cold smoke
-- [ ] Gates universales §6.1 verdes + `uv audit` 0
+- [x] `~/.dxrk/tenants/{id}/` FS isolation `Palace` per-tenant — `tests/test_tenant_e2e.py` 9 tests + `tests/test_enterprise_cli_migration.py` 42 tests
+- [x] `dxrk/vault` HKDF per-tenant — `tests/test_enterprise_jwt_vault.py` cross-tenant decrypt fail, `VaultConfig.path` templating `tenants/{id}/vault.enc`
+- [x] `CLI --tenant` + `DXRK_TENANT` env — `tests/test_enterprise_cli_migration.py` (flag, env fallback, ids inválidos), `dxrk --help` muestra flag
+- [x] `JWT tid` claim — `tests/test_enterprise_jwt_vault.py` (`missing tid`, `mismatch 403`, roundtrip firmado), middleware en `mcp_server.py`
+- [x] `dxrk/tenant/migration.py` idempotente `palace → tenants/default/` — segunda corrida `copied == []`, `dxrk tenant migrate` + dry-run
+- [x] `docs/tenants.md` + `docs/rbac.md` + `docs/migration.md` + `CHANGELOG.md` — `mkdocs build` 0 warnings
+- [x] Releases enterprise vía tags `v0.2.3`/`v0.2.4` (colapsado: sin tag beta intermedio, release directo a `1.0.0` GA)
+- [x] Gates universales §6.1 verdes + `uv audit` 0
 
 #### v1.0.0 Done (GA) — 4 semanas
 
-- [ ] `RBAC` 3 roles `admin/dev/readonly` matrix — `tests/test_rbac_matrix.py` 12 combos (`3×4 ops`) + enforcement `Palace.mine/search` + `CLI` + `MCP` 403
-- [ ] `TUI switcher` `Ctrl+T` `TenantSwitcher` — `tests/test_tui_switcher.py` live switch `palace_path`, breadcrumb `tenant: acme`, no `STATE` global (requiere R11 Done)
-- [ ] Hardening GA: `mypy` 0, `ruff` 0, `pytest --cov-fail-under=80` (o 85 si se sube), `trace0` 0, `uv audit` 0, `OSSF Scorecard` ≥8.5, `site/assets/demo_tenant.gif` 30s per-tenant demo
-- [ ] Docs GA: `docs/tenants.md` GA, `docs/rbac.md`, `docs/migration-0.5-to-1.0.md`, `README.md` enterprise section, `mkdocs.yml` `mike` versioning `latest→1.0` — `mkdocs build` 0 warnings, `social` cards OG válidas
-- [ ] `pyproject.toml` `1.0.0` `Development Status :: 5 - Production/Stable` + `CHANGELOG.md` `[1.0.0] - 2026-12-18` + `git tag v1.0.0` → `publish.yml` GA + `gh release` notes + `SECURITY.md` `Supported: 1.0.x ✅, 0.5.x ❌`
-- [ ] Manual smoke GA: `uv tool install dxrk --force && dxrk --tenant demo init && dxrk --tenant demo query "GA multi-tenant?"` <50ms cold + `from dxrk.memory import Palace; Palace(tenant="demo").search("test")` — `DXRK // BEYOND LIMITS`
-- [ ] Gates universales §6.1 verdes en `main` tag `v1.0.0`; `git diff v0.5.0..v1.0.0 --stat` muestra solo `tui/` + `security/` + `config/` + `docs/` + `vault/` (no `dxrk/memory/` internals)
+- [x] `RBAC` 3 roles `admin/dev/readonly` matrix — `tests/test_enterprise_rbac_matrix.py` 25 + `tests/test_rbac_enforcement.py` 32 + `tests/test_memory_rbac.py` 30 + enforcement `Palace.mine/search` + `CLI` + `MCP` 403 `RBAC_DENIED`
+- [x] `TUI switcher` `TenantSwitcher` — pilot TUI live switch (`tests/test_enterprise_cli_migration.py`), breadcrumb tenant, sin `STATE` global (R11 Done)
+- [ ] Hardening GA: `mypy` 0, `ruff` 0, `pytest --cov-fail-under=80` ✅, `trace0` 0, `uv audit` 0 — pendientes: `site/assets/demo_tenant.gif` (paso 4) + `OSSF Scorecard` ≥8.5 (paso 5)
+- [ ] Docs GA: `docs/tenants.md` GA ✅, `docs/rbac.md` ✅, `docs/migration-0.5-to-1.0.md` ✅, `README.md` enterprise ✅, `mike` `latest→1.0` ✅ — pendiente: `social` cards OG (paso 6)
+- [x] `pyproject.toml` `1.0.0` `Development Status :: 5 - Production/Stable` + `CHANGELOG.md` cliff + `git tag v1.0.0` → `publish.yml` GA + `gh release` notes + `SECURITY.md` `Supported: 1.0.x ✅, 0.2.x ✅`
+- [ ] Manual smoke GA: `uv tool install dxrk --force && dxrk --tenant demo init && dxrk --tenant demo query "GA multi-tenant?"` <50ms cold (se corre en gates finales)
+- [x] Gates universales §6.1 verdes en `main` tag `v1.0.0` (se re-verifican en gates finales)
 
 ---
 

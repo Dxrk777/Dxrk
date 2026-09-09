@@ -94,6 +94,8 @@ Usuario desconocido → `readonly`. Política por tenant en `roles.json` (`{"use
 
 Ver [docs/tenants.md](docs/tenants.md) y [docs/rbac.md](docs/rbac.md).
 
+![Demo multi-tenant](docs/assets/demo_tenant.gif)
+
 ## Por qué Dxrk
 
 | Característica | Dxrk | Configurar a mano |
