@@ -11,6 +11,7 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment: pypi
     steps:
       - uses: actions/checkout@v7
 
@@ -25,9 +26,11 @@ jobs:
       - name: Build package
         run: uv build
 
+      # Trusted Publishing (OIDC): sin tokens. Requiere el publisher
+      # registrado en PyPI (proyecto dxrk → Settings → Publishing →
+      # GitHub: owner Dxrk777, repo Dxrk, workflow publish.yml).
+      # uv usa OIDC automáticamente al no haber credenciales.
       - name: Publish to PyPI
-        env:
-          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: uv publish
 
       - name: Generate changelog

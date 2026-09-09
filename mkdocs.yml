@@ -19,6 +19,8 @@ theme:
 nav:
   - Inicio: index.md
   - Uso: usage.md
+  - Tutorial (10 min): tutorial.md
+  - Comparativa: comparison.md
   - Uso previsto: intended-usage.md
   - Agentes: agents.md
   - Componentes: components.md
@@ -29,8 +31,10 @@ nav:
   - Migración a multi-tenant: migration.md
   - Migración 0.5 → 1.0: migration-0.5-to-1.0.md
   - Benchmarks: benchmarks.md
+  - Configuración: config.md
   - ADR-002 Separación Memoria: adr/ADR-002-memory-separation.md
   - ADR-003 Hybrid vs Stdlib: adr/ADR-003-hybrid-vs-stdlib.md
+  - ADR-004 Unificación Config: adr/ADR-004-config-unify.md
   - Migración 3.3.5 → 3.7.1: MIGRATION_3.3.5_3.7.1.md
   - DX Top 1: dx.md
   - Plataformas: platforms.md

@@ -2,7 +2,7 @@
 
 ## Skills
 
-Dxrk gestiona un registry de skills curadas (`dxrk-py skill-registry refresh`),
+Dxrk gestiona un registry de skills curadas (`dxrk-py install --component skills`),
 usadas por los agentes para tareas especializadas (SDD, memoria, batch, etc.).
 
 ## Servidores MCP
@@ -33,8 +33,8 @@ declara con nombre, comando y argumentos, y queda disponible para el agente.
 
 ## Conmutador de proveedores
 
-Dxrk asigna modelos por fase del workflow (cheap / balanced / quality) y por
-proveedor, mediante `dxrk-py sync --profile ...` y `--profile-phase ...`.
+Dxrk centraliza la configuración de modelos en `config.yaml` (sección `model`,
+ver [config.md](config.md)); `dxrk-py sync` la propaga a los agentes instalados.
 
 ## Utilerías
 

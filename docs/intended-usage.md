@@ -19,22 +19,22 @@ En lugar de configurar cada agente a mano, Dxrk:
 dxrk-py install --agent claude-code --preset full-dxrk
 # dentro del proyecto:
 /sdd-init
-dxrk-py skill-registry refresh
+dxrk-py install --component skills
 ```
 
 ### Trabajo diario
 
 ```bash
-dxrk-py plan "refactor del módulo de auth"
-dxrk-py commit
-dxrk-py pr
+python -m dxrk.memory search "decision pendiente"
+dxrk-py sync --agent claude-code --dry-run
 ```
 
-### Modelos baratos para tareas rutinarias
+### Modelos por proyecto
+
+El proveedor vive en `config.yaml` (sección `model`, ver `config.md`):
 
 ```bash
-dxrk-py sync --profile cheap:openrouter/qwen/qwen3-30b-a3b:free
-dxrk-py sync --profile-phase cheap:sdd-design:anthropic/claude-sonnet-4-20250514
+dxrk-py sync --agent claude-code --dry-run
 ```
 
 ## Cuándo NO usar Dxrk

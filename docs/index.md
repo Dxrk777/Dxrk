@@ -23,10 +23,10 @@ pip install dxrk
 dxrk-py install --agent claude-code --preset full-dxrk
 
 # Consulta tu base de conocimiento
-dxrk-py query "¿cómo configuro mi stack?"
+python -m dxrk.memory search "configuro mi stack"
 
-# Sincroniza perfiles de modelos
-dxrk-py sync --profile cheap:openrouter/qwen/qwen3-30b-a3b:free
+# Sincroniza tu configuracion (vista previa)
+dxrk-py sync --agent claude-code --dry-run
 ```
 
 ## Documentación

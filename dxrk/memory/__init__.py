@@ -355,8 +355,13 @@ class AgentMemory:
                     for rid, doc, meta, dist in zip(ids, docs, metas, dists):
                         if not isinstance(meta, dict):
                             meta = {}
-                        if query and query.lower() not in str(doc or "").lower():
-                            continue
+                        # FTS ya rankeo; el post-filtro solo descarta falsos
+                        # positivos del trigram: basta que TODOS los tokens
+                        # esten presentes (AND), no la frase contigua.
+                        if query:
+                            doc_low = str(doc or "").lower()
+                            if not all(t in doc_low for t in query.lower().split()):
+                                continue
                         if date_active and not filed_at_in_window(meta.get("filed_at"), since_dt, before_dt):
                             continue
                         if mem_type and int(mem_type) != 0:

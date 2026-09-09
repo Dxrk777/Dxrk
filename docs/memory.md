@@ -179,8 +179,8 @@ print(f"scanned {len(files)} files, gitignore={matcher is not None}")
 ### CLI relacionado
 
 ```bash
-dxrk-py query "¿qué arquitectura decidimos para memoria?"   # vía AgentMemory
-uv run pytest tests/test_memory.py -q                        # 19 passed
+python -m dxrk.memory search "arquitectura memoria"   # vía AgentMemory
+uv run python -m pytest tests/test_memory.py -q       # 19 passed
 ```
 
 ---

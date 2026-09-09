@@ -31,6 +31,11 @@ DEFAULT_PALACE_PATH = os.environ.get("DXRK_MEMORY_PATH") or str(Path.home() / ".
 def _resolve_palace(palace: str | None) -> str:
     if palace and palace.strip():
         return str(Path(palace).expanduser().resolve())
+    # env en call-time (no el DEFAULT import-time): los tests que fijan
+    # DXRK_MEMORY_PATH con monkeypatch deben redirigir de verdad.
+    env = (os.environ.get("DXRK_MEMORY_PATH") or "").strip()
+    if env:
+        return str(Path(env).expanduser().resolve())
     if DEFAULT_PALACE_PATH.strip():
         return str(Path(DEFAULT_PALACE_PATH).expanduser().resolve())
     return str(Path.home() / ".dxrk" / "memory")

@@ -54,9 +54,13 @@ def _cmd_search(args: list[str]) -> int:
     except Exception as exc:
         print(f"search denied: {exc}", file=sys.stderr)
         return 1
+    from pathlib import Path
+
     from dxrk.memory import AgentMemory
 
-    mem = AgentMemory()
+    # mismo palace que _cmd_mine: sin path, AgentMemory queda en modo
+    # solo-memoria y search siempre devuelve [] aunque haya datos minados.
+    mem = AgentMemory(Path.home() / ".dxrk" / "memory")
     res = mem.search(project_id=ns.wing or "default", query=ns.query, limit=ns.n)
     import json
 

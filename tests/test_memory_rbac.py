@@ -98,6 +98,25 @@ class TestCheckMcpOp:
         _check_mcp_op("dxrk_memory_nope", {})  # no raise: _handle_tool responde unknown tool
 
 
+class TestResolvePalace:
+    def test_env_honored_at_call_time(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        # regresion: DEFAULT_PALACE_PATH se evaluaba a import-time, asi que
+        # fijar DXRK_MEMORY_PATH en tests no redirigia nada y los tests MCP
+        # escribian en el palace real de ~/.dxrk.
+        from dxrk.memory import mcp_server
+
+        target = tmp_path / "env_pal"
+        monkeypatch.setenv("DXRK_MEMORY_PATH", str(target))
+        assert mcp_server._resolve_palace(None) == str(target.resolve())
+
+    def test_explicit_arg_wins_over_env(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        from dxrk.memory import mcp_server
+
+        monkeypatch.setenv("DXRK_MEMORY_PATH", str(tmp_path / "env_pal"))
+        explicit = tmp_path / "explicit_pal"
+        assert mcp_server._resolve_palace(str(explicit)) == str(explicit.resolve())
+
+
 class TestHandleTool:
     def test_add_drawer_denied(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         _iso_home(tmp_path, monkeypatch)
@@ -166,6 +185,29 @@ class TestMemoryCli:
         code = mem_cli._cmd_search(["hola"])
         assert code == 0
         capsys.readouterr()  # sin resultados en palace vacio, sin error
+
+    def test_search_finds_mined_content(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+    ) -> None:
+        # regresion: search en proceso fresco leia AgentMemory() sin path
+        # (solo-memoria) y devolvia [] aunque el palace tuviera datos.
+        _iso_home(tmp_path, monkeypatch)
+        proj = tmp_path / "proj"
+        proj.mkdir()
+        (proj / "notas.py").write_text(
+            '"""Modulo de notas de prueba para el smoke mine-search."""\nMSG = "Hola Mundo memoria de prueba"\nVALOR = 42\n',
+            encoding="utf-8",
+        )
+        assert mem_cli._cmd_mine([str(proj)]) == 0
+        capsys.readouterr()
+        assert mem_cli._cmd_search(["Hola Mundo"]) == 0
+        out = capsys.readouterr().out
+        assert "Hola Mundo" in out
+        # regresion 2: el post-filtro exigia la frase contigua y descartaba
+        # matches FTS legitimos multi-palabra no contiguos ("Mundo prueba"
+        # no es substring del doc aunque ambos tokens estan presentes).
+        assert mem_cli._cmd_search(["Mundo prueba"]) == 0
+        assert "Hola Mundo" in capsys.readouterr().out
 
     def test_search_readonly_allowed(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         _iso_home(tmp_path, monkeypatch)

@@ -34,20 +34,19 @@ dxrk-py install --agent claude-code --preset full-dxrk
 Consultar contexto o memoria:
 
 ```bash
-dxrk-py query "explica qué es Spec-Driven Development"
+python -m dxrk.memory search "Spec-Driven Development"
 ```
 
-Sincronizar perfiles de modelos por proveedor y por fase:
+Sincronizar tu configuración (vista previa con `--dry-run`):
 
 ```bash
-dxrk-py sync --profile cheap:openrouter/qwen/qwen3-30b-a3b:free
-dxrk-py sync --profile-phase cheap:sdd-design:anthropic/claude-sonnet-4-20250514
+dxrk-py sync --agent claude-code --dry-run
 ```
 
 ## Configuración por proyecto
 
 - `/sdd-init`: inicia el workflow Spec-Driven Development en el proyecto.
-- `dxrk-py skill-registry refresh`: regenera el registro de skills.
+- `dxrk-py install --component skills`: instala las skills curadas.
 
 ## Memoria
 

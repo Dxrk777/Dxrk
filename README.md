@@ -23,9 +23,10 @@
 ## 30s Quickstart
 
 ```bash
-uv tool install dxrk && dxrk-py init          # 1) instala + detecta 42 agentes
-uv run python -c "from dxrk.memory import Palace; print(Palace('~/.dxrk/palace').search('hybrid BM25', n_results=5))"  # 2) indexa + busca (FTS5 trigram+WAL, BM25, <50ms cold)
-dxrk-py query "¿qué arquitectura decidimos para memoria?"  # 3) CLI query — Graph temporal + AAAK 600–900 tok
+uv tool install dxrk                                            # 1) instala (42 agentes, memoria, MCP)
+dxrk-py install --agent claude-code --preset full-dxrk --dry-run  # 2) vista previa del setup
+python -m dxrk.memory mine ./mi-proyecto                        # 3) indexa tu codigo (FTS5 + BM25, offline)
+python -m dxrk.memory search "arquitectura memoria"             # 4) busca (AND de tokens; ver docs/tutorial.md)
 ```
 > **Por qué DxrkMemory 2.0:** `sqlite3` FTS5 `trigram→porter→unicode61` + BM25 híbrido, Graph temporal `valid_from/valid_to`, AAAK 600–900 tok wake-up, Palace locks `~/.dxrk/locks` 900s — ver [`docs/memory.md`](docs/memory.md) · [`docs/MIGRATION_3.3.5_3.7.1.md`](docs/MIGRATION_3.3.5_3.7.1.md) · [`docs/dx.md`](docs/dx.md)
 
@@ -63,14 +64,12 @@ uv run dxrk-py --help
 # Instala y configura un agente con el preset completo
 dxrk-py install --agent claude-code --preset full-dxrk
 
-# Consulta tu memoria persistente
-dxrk-py query "¿qué arquitectura decidimos para el módulo de memoria?"
+# Indexa y consulta tu memoria persistente
+python -m dxrk.memory mine ./mi-proyecto
+python -m dxrk.memory search "arquitectura memoria"
 
-# Cambia de proveedor de modelos
-dxrk-py sync --profile cheap:openrouter/qwen/qwen3-30b-a3b:free
-
-# Asigna modelos por fase de desarrollo
-dxrk-py sync --profile-phase cheap:sdd-design:anthropic/claude-sonnet-4-20250514
+# Sincroniza tu configuracion (vista previa)
+dxrk-py sync --agent claude-code --dry-run
 ```
 
 ## Enterprise (multi-tenant + RBAC)
@@ -80,7 +79,7 @@ Aislamiento local por tenant bajo `~/.dxrk/tenants/{id}/` (dirs `0o750`, archivo
 ```bash
 dxrk-py tenant create acme          # crea tenants/acme/
 dxrk-py tenant switch acme          # fija el tenant activo
-dxrk-py --tenant acme query "..."   # cualquier comando bajo ese tenant
+dxrk-py --tenant acme tenant whoami # cualquier comando bajo ese tenant
 DXRK_TENANT=acme dxrk-py tenant whoami
 ```
 
@@ -102,9 +101,9 @@ Ver [docs/tenants.md](docs/tenants.md) y [docs/rbac.md](docs/rbac.md).
 |---|---|---|
 | Instalar un agente de IA | `dxrk-py install --agent claude-code` | Documentación, paths, symlinks, permisos |
 | 42 agentes configurados | 1 comando | Horas de setup manual |
-| Memoria persistente | `dxrk-py query "..."` | Buscar soluciones hechas a medida |
-| Skills curadas + MCP | `dxrk-py skill-registry refresh` | Scraping manual de repos |
-| Cambiar de proveedor | `dxrk-py sync --profile cheap:...` | Editar config de cada agente |
+| Memoria persistente | `python -m dxrk.memory search "..."` | Buscar soluciones hechas a medida |
+| Skills curadas + MCP | `dxrk-py install --component skills` | Scraping manual de repos |
+| Cambiar de proveedor | `config.yaml` (`model.provider`, ver docs/config.md) | Editar config de cada agente |
 | Workflows Git | `/commit`, `/branch`, `/pr` | Comandos largos manuales |
 
 ## Agentes soportados (42)
@@ -127,9 +126,9 @@ Ver [docs/tenants.md](docs/tenants.md) y [docs/rbac.md](docs/rbac.md).
 
 - 🧠 **DxrkMemory 2.0 — Flagship top1 local-first stdlib-only** — `dxrk/memory` 13 archivos 4652 LOC `sqlite3` **FTS5 `trigram`+WAL** sin `chromadb`/sin `onnx`/sin `numpy`; `chr-join` LEGACY `dxrk_drawers` compat, `0` traces `engram`/`mempal` (979 reemplazos + 7 `git mv`), **fidelity 3.7.1** (388 files / 50+ commits `359c579`): re-mine honesty `1654cd2`/`759b8f1`, FIFO `O_NONBLOCK`+`S_ISREG` `db29959`, orphan lock reap `27212e5` `~/.dxrk/locks` 900 s, `since`/`before` `5036e3c` pool 3×/15×, SIGTERM. Hybrid **BM25** + closet boost, **Graph** temporal `valid_from`/`valid_to`+`as_of`, dialecto **AAAK** `compress`/`decode`, **Layers** wake-up **600–900 tok** (L0 100 + L1 500–800) — [`docs/memory.md`](docs/memory.md) · [`docs/MIGRATION_3.3.5_3.7.1.md`](docs/MIGRATION_3.3.5_3.7.1.md) · `from dxrk.memory import AgentMemory, Palace, KnowledgeGraph` — verif. `uv run pytest tests/test_memory.py -q` **19 passed**
 - ✅ **Spec-Driven Development** — workflow completo con `/sdd-init`, skill registry, hooks y permisos
-- ✅ **Skills curadas** — `dxrk-py skill-registry refresh`
+- ✅ **Skills curadas** — `dxrk-py install --component skills`
 - ✅ **35+ servidores MCP** — configurables vía `.mcp.json`
-- ✅ **Conmutador de modelos** — perfiles `cheap` / `balanced` / `quality` con asignación por fase (`sdd-design`, `spec`, `tasks`)
+- ✅ **Conmutador de modelos** — `model.provider` en `config.yaml`, `dxrk-py sync` lo propaga
 - ✅ **TUI Textual** — detección de agentes instalados en tiempo real
 - ✅ **Workflows Git** — conventional commits, PRs con revisión automática y keybindings
 
@@ -172,7 +171,8 @@ La memoria es local y persistente; los proveedores de modelos se configuran con 
 Sí, macOS, Linux y Windows (ver [platforms.md](docs/platforms.md)).
 
 **¿Cómo cambio de modelo en mitad de un proyecto?**
-`dxrk-py sync --profile <perfil>` y Dxrk actualiza la configuración de todos los agentes.
+Editando `model.provider` en tu `config.yaml` (ver [docs/config.md](docs/config.md));
+`dxrk-py sync` propaga tu configuración a los agentes instalados.
 
 ## Roadmap
 

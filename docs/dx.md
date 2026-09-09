@@ -321,9 +321,9 @@ git commit -m "chore(release): v0.2.0 DxrkMemory 2.0 + Top1 DX"
 git tag -a v0.2.0 -m "v0.2.0 DxrkMemory 2.0 flagship + Top1 DX"
 git push origin main --follow-tags
 
-# 9) verify publish (trusted publishing OIDC)
-# .github/workflows/publish.yml usa: uv publish con UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-# Si migra a Trusted Publishing (recomendado Top1), configurar en PyPI: publisher = GitHub Actions (Dxrk777/Dxrk, workflow publish.yml, env pypi)
+# 9) verify publish (Trusted Publishing OIDC, sin tokens)
+# .github/workflows/publish.yml usa: uv publish con OIDC (permissions id-token: write, environment pypi).
+# Publisher registrado en PyPI: GitHub Dxrk777/Dxrk, workflow publish.yml, environment pypi.
 # Ver en https://pypi.org/project/dxrk/ que 0.2.0 aparece + readme renderiza + classifiers ok
 
 # 10) post-publish
