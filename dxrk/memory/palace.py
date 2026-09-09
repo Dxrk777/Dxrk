@@ -350,7 +350,7 @@ def _lock_mine_lock_file(lock_file, *, blocking: bool) -> bool:  # type: ignore[
 
     flags = fcntl.LOCK_EX  # type: ignore[attr-defined]
     if not blocking:
-        flags |= fcntl.LOCK_NB
+        flags |= fcntl.LOCK_NB  # type: ignore[attr-defined]
     try:
         fcntl.flock(lock_file, flags)  # type: ignore[attr-defined]
     except BlockingIOError:
@@ -462,9 +462,7 @@ def _cleanup_dxrk_lock_file(lock_path: str | Path) -> None:
     _cleanup_mine_lock_file(str(lock_path))
 
 
-def reap_stale_dxrk_locks(
-    *, min_age_seconds: int = 3600, tenant_id: str | None = None
-) -> tuple[int, int]:
+def reap_stale_dxrk_locks(*, min_age_seconds: int = 3600, tenant_id: str | None = None) -> tuple[int, int]:
     """Best-effort GC for orphaned per-source-file mine locks (port of 27212e5).
 
     Reuses _cleanup_mine_lock_file for actual removal — same nonblocking flock
@@ -601,7 +599,7 @@ def mine_palace_lock(palace_path: str, tenant_id: str | None = None) -> Generato
             import fcntl  # type: ignore[import-not-found]
 
             try:
-                fcntl.flock(lf, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                fcntl.flock(lf, fcntl.LOCK_EX | fcntl.LOCK_NB)  # type: ignore[attr-defined]
                 acquired = True
             except BlockingIOError as exc:
                 raise RuntimeError(f"palace {resolved} is held by another writer") from exc
@@ -621,7 +619,7 @@ def mine_palace_lock(palace_path: str, tenant_id: str | None = None) -> Generato
                 else:
                     import fcntl  # type: ignore[import-not-found]
 
-                    fcntl.flock(lf, fcntl.LOCK_UN)
+                    fcntl.flock(lf, fcntl.LOCK_UN)  # type: ignore[attr-defined]
             except Exception:
                 pass
         lf.close()

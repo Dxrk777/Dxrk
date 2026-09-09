@@ -35,9 +35,7 @@ def create_archive(archive_path: str, entries: list[ArchiveEntry]) -> None:
     os.makedirs(os.path.dirname(archive_path), exist_ok=True)
     with tarfile.open(archive_path, "w:gz") as tar:
         for entry in entries:
-            info = tar.gettarinfo(
-                entry.source_path, arcname=entry.rel_path.replace(os.sep, "/")
-            )
+            info = tar.gettarinfo(entry.source_path, arcname=entry.rel_path.replace(os.sep, "/"))
             if info is None:
                 continue
             with open(entry.source_path, "rb") as f:
@@ -48,30 +46,20 @@ def create_archive(archive_path: str, entries: list[ArchiveEntry]) -> None:
 def extract_archive(archive_path: str, dest_dir: str) -> list[ArchiveEntry]:
     extracted: list[ArchiveEntry] = []
     with tarfile.open(archive_path, "r:gz") as tar:
+        # Resolve the base once: dest_dir may itself sit under a symlinked
+        # path (macOS: /var -> /private/var, /tmp -> /private/tmp), so the
+        # containment check must compare resolved-against-resolved.
+        clean_base = os.path.realpath(dest_dir)
         for member in tar:
             if not member.isfile():
                 continue
-            dest_path = os.path.join(
-                dest_dir, os.path.normpath(member.name.replace("/", os.sep))
-            )
-            clean_dest = (
-                os.path.realpath(dest_path)
-                if os.path.exists(dest_path)
-                else os.path.normpath(dest_path)
-            )
-            clean_base = (
-                os.path.realpath(dest_dir)
-                if os.path.exists(dest_dir)
-                else os.path.normpath(dest_dir) + os.sep
-            )
-            if not clean_dest.startswith(clean_base):
-                raise ValueError(
-                    f"archive entry {member.name!r} escapes destination directory"
-                )
-            if clean_dest == os.path.normpath(dest_dir):
-                raise ValueError(
-                    f"archive entry {member.name!r} resolves to destination directory itself"
-                )
+            rel = os.path.normpath(member.name.replace("/", os.sep))
+            dest_path = os.path.join(dest_dir, rel)
+            clean_dest = os.path.normpath(os.path.join(clean_base, rel))
+            if clean_dest == clean_base:
+                raise ValueError(f"archive entry {member.name!r} resolves to destination directory itself")
+            if not clean_dest.startswith(clean_base + os.sep):
+                raise ValueError(f"archive entry {member.name!r} escapes destination directory")
             os.makedirs(os.path.dirname(dest_path), exist_ok=True)
             tar.extract(member, os.path.dirname(dest_path), filter="data")
             extracted.append(
@@ -255,8 +243,7 @@ def delete_backup(manifest: Manifest) -> None:
         raise ValueError("backup has no root directory")
     if not is_root_dir_under_backup_root(manifest.root_dir):
         raise ValueError(
-            f"backup RootDir {manifest.root_dir!r} is outside the expected backup directory"
-            " \u2014 refusing to delete"
+            f"backup RootDir {manifest.root_dir!r} is outside the expected backup directory \u2014 refusing to delete"
         )
     shutil.rmtree(manifest.root_dir)
 
@@ -507,18 +494,13 @@ class RestoreService:
                         )
                     resolved = ManifestEntry(
                         original_path=entry.original_path,
-                        snapshot_path=os.path.join(
-                            tmp_dir, entry.snapshot_path.replace("/", os.sep)
-                        ),
+                        snapshot_path=os.path.join(tmp_dir, entry.snapshot_path.replace("/", os.sep)),
                         existed=True,
                         mode=entry.mode,
                     )
                     self._restore_entry(resolved, trusted_snapshot=True)
                 else:
-                    if not (
-                        os.path.isabs(entry.original_path)
-                        and _is_path_under_home(entry.original_path)
-                    ):
+                    if not (os.path.isabs(entry.original_path) and _is_path_under_home(entry.original_path)):
                         raise ValueError(
                             f"manifest entry has invalid OriginalPath {entry.original_path!r}: "
                             "must be an absolute path under the user home directory"
@@ -535,10 +517,7 @@ class RestoreService:
             if entry.existed:
                 self._restore_entry(entry, trusted_snapshot=False)
             else:
-                if not (
-                    os.path.isabs(entry.original_path)
-                    and _is_path_under_home(entry.original_path)
-                ):
+                if not (os.path.isabs(entry.original_path) and _is_path_under_home(entry.original_path)):
                     raise ValueError(
                         f"manifest entry has invalid OriginalPath {entry.original_path!r}: "
                         "must be an absolute path under the user home directory"
@@ -549,10 +528,7 @@ class RestoreService:
                     pass
 
     def _restore_entry(self, entry: ManifestEntry, trusted_snapshot: bool) -> None:
-        if not (
-            os.path.isabs(entry.original_path)
-            and _is_path_under_home(entry.original_path)
-        ):
+        if not (os.path.isabs(entry.original_path) and _is_path_under_home(entry.original_path)):
             raise ValueError(
                 f"manifest entry has invalid OriginalPath {entry.original_path!r}: "
                 "must be an absolute path under the user home directory"
