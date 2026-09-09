@@ -10,29 +10,31 @@
       
       
       
-        <link rel="canonical" href="https://dxrk777.github.io/Dxrk/1.0/">
+        <link rel="canonical" href="https://dxrk777.github.io/Dxrk/1.0/adr/ADR-004-config-unify/">
       
       
+        <link rel="prev" href="../ADR-003-hybrid-vs-stdlib/">
       
-        <link rel="next" href="usage/">
+      
+        <link rel="next" href="../../MIGRATION_3.3.5_3.7.1/">
       
       
         
       
       
-      <link rel="icon" href="assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
-        <title>Dxrk</title>
+        <title>ADR-004 Unificación Config - Dxrk</title>
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
-        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -51,9 +53,9 @@
       
     
     
-      <link rel="stylesheet" href="assets/_mkdocstrings.css">
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
     
-    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -61,17 +63,17 @@
     
   
 <meta property="og:type" content="website" />
-<meta property="og:title" content="Dxrk" />
+<meta property="og:title" content="ADR-004 Unificación Config - Dxrk" />
 <meta property="og:description" content="Dxrk Ecosystem Configurator — supercharge AI coding agents" />
-<meta property="og:image" content="https://dxrk777.github.io/Dxrk/1.0/assets/images/social/index.png" />
+<meta property="og:image" content="https://dxrk777.github.io/Dxrk/1.0/assets/images/social/adr/ADR-004-config-unify.png" />
 <meta property="og:image:type" content="image/png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
-<meta property="og:url" content="https://dxrk777.github.io/Dxrk/1.0/" />
+<meta property="og:url" content="https://dxrk777.github.io/Dxrk/1.0/adr/ADR-004-config-unify/" />
 <meta property="twitter:card" content="summary_large_image" />
-<meta property="twitter:title" content="Dxrk" />
+<meta property="twitter:title" content="ADR-004 Unificación Config - Dxrk" />
 <meta property="twitter:description" content="Dxrk Ecosystem Configurator — supercharge AI coding agents" />
-<meta property="twitter:image" content="https://dxrk777.github.io/Dxrk/1.0/assets/images/social/index.png" />
+<meta property="twitter:image" content="https://dxrk777.github.io/Dxrk/1.0/assets/images/social/adr/ADR-004-config-unify.png" />
 </head>
   
   
@@ -89,7 +91,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#dxrk" class="md-skip">
+        <a href="#adr-004-unificacion-del-sistema-de-configuracion-plan-v20" class="md-skip">
           Skip to content
         </a>
       
@@ -105,7 +107,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="." title="Dxrk" class="md-header__button md-logo" aria-label="Dxrk" data-md-component="logo">
+    <a href="../.." title="Dxrk" class="md-header__button md-logo" aria-label="Dxrk" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -125,7 +127,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Inicio
+              ADR-004 Unificación Config
             
           </span>
         </div>
@@ -217,7 +219,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--integrated" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="." title="Dxrk" class="md-nav__button md-logo" aria-label="Dxrk" data-md-component="logo">
+    <a href="../.." title="Dxrk" class="md-nav__button md-logo" aria-label="Dxrk" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -244,37 +246,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Inicio
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="." class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -290,70 +265,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#instalacion" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Instalación
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#uso-rapido" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Uso rápido
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#documentacion" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Documentación
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#licencia" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Licencia
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -365,7 +276,7 @@
   
   
     <li class="md-nav__item">
-      <a href="usage/" class="md-nav__link">
+      <a href="../../usage/" class="md-nav__link">
         
   
   
@@ -392,7 +303,7 @@
   
   
     <li class="md-nav__item">
-      <a href="tutorial/" class="md-nav__link">
+      <a href="../../tutorial/" class="md-nav__link">
         
   
   
@@ -419,7 +330,7 @@
   
   
     <li class="md-nav__item">
-      <a href="comparison/" class="md-nav__link">
+      <a href="../../comparison/" class="md-nav__link">
         
   
   
@@ -446,7 +357,7 @@
   
   
     <li class="md-nav__item">
-      <a href="intended-usage/" class="md-nav__link">
+      <a href="../../intended-usage/" class="md-nav__link">
         
   
   
@@ -473,7 +384,7 @@
   
   
     <li class="md-nav__item">
-      <a href="agents/" class="md-nav__link">
+      <a href="../../agents/" class="md-nav__link">
         
   
   
@@ -500,7 +411,7 @@
   
   
     <li class="md-nav__item">
-      <a href="components/" class="md-nav__link">
+      <a href="../../components/" class="md-nav__link">
         
   
   
@@ -527,7 +438,7 @@
   
   
     <li class="md-nav__item">
-      <a href="architecture/" class="md-nav__link">
+      <a href="../../architecture/" class="md-nav__link">
         
   
   
@@ -554,7 +465,7 @@
   
   
     <li class="md-nav__item">
-      <a href="memory/" class="md-nav__link">
+      <a href="../../memory/" class="md-nav__link">
         
   
   
@@ -581,7 +492,7 @@
   
   
     <li class="md-nav__item">
-      <a href="tenants/" class="md-nav__link">
+      <a href="../../tenants/" class="md-nav__link">
         
   
   
@@ -608,7 +519,7 @@
   
   
     <li class="md-nav__item">
-      <a href="rbac/" class="md-nav__link">
+      <a href="../../rbac/" class="md-nav__link">
         
   
   
@@ -635,7 +546,7 @@
   
   
     <li class="md-nav__item">
-      <a href="migration/" class="md-nav__link">
+      <a href="../../migration/" class="md-nav__link">
         
   
   
@@ -662,7 +573,7 @@
   
   
     <li class="md-nav__item">
-      <a href="migration-0.5-to-1.0/" class="md-nav__link">
+      <a href="../../migration-0.5-to-1.0/" class="md-nav__link">
         
   
   
@@ -689,7 +600,7 @@
   
   
     <li class="md-nav__item">
-      <a href="benchmarks/" class="md-nav__link">
+      <a href="../../benchmarks/" class="md-nav__link">
         
   
   
@@ -716,7 +627,7 @@
   
   
     <li class="md-nav__item">
-      <a href="config/" class="md-nav__link">
+      <a href="../../config/" class="md-nav__link">
         
   
   
@@ -743,7 +654,7 @@
   
   
     <li class="md-nav__item">
-      <a href="adr/ADR-002-memory-separation/" class="md-nav__link">
+      <a href="../ADR-002-memory-separation/" class="md-nav__link">
         
   
   
@@ -770,7 +681,7 @@
   
   
     <li class="md-nav__item">
-      <a href="adr/ADR-003-hybrid-vs-stdlib/" class="md-nav__link">
+      <a href="../ADR-003-hybrid-vs-stdlib/" class="md-nav__link">
         
   
   
@@ -794,10 +705,37 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="adr/ADR-004-config-unify/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-004 Unificación Config
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -813,6 +751,70 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#contexto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contexto
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision-propuesta" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decisión (propuesta)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alternativas-consideradas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alternativas consideradas
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consecuencias" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consecuencias
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -824,7 +826,7 @@
   
   
     <li class="md-nav__item">
-      <a href="MIGRATION_3.3.5_3.7.1/" class="md-nav__link">
+      <a href="../../MIGRATION_3.3.5_3.7.1/" class="md-nav__link">
         
   
   
@@ -851,7 +853,7 @@
   
   
     <li class="md-nav__item">
-      <a href="dx/" class="md-nav__link">
+      <a href="../../dx/" class="md-nav__link">
         
   
   
@@ -878,7 +880,7 @@
   
   
     <li class="md-nav__item">
-      <a href="platforms/" class="md-nav__link">
+      <a href="../../platforms/" class="md-nav__link">
         
   
   
@@ -905,7 +907,7 @@
   
   
     <li class="md-nav__item">
-      <a href="roadmap/" class="md-nav__link">
+      <a href="../../roadmap/" class="md-nav__link">
         
   
   
@@ -932,7 +934,7 @@
   
   
     <li class="md-nav__item">
-      <a href="api/" class="md-nav__link">
+      <a href="../../api/" class="md-nav__link">
         
   
   
@@ -972,40 +974,78 @@
   
 
 
-<h1 id="dxrk">Dxrk</h1>
-<p><strong>Ecosistema, Frameworks y Workflows para agentes de IA</strong></p>
-<p><strong>Dxrk</strong> es un configurador y orquestador de ecosistemas para agentes de IA. En un solo comando instala, configura y sincroniza <strong>42 agentes de IA</strong>, memoria persistente, skills curadas, servidores MCP y conmutador de modelos para tu stack de desarrollo completo.</p>
+<h1 id="adr-004-unificacion-del-sistema-de-configuracion-plan-v20">ADR-004: Unificación del sistema de configuración — Plan v2.0</h1>
 <ul>
-<li>🐍 <strong>Python 3.13+</strong> con TUI moderna basada en <a href="https://textual.textualize.io/">Textual</a></li>
-<li>🤖 Configura <strong>42 agentes</strong> con un solo comando</li>
-<li>🧠 Memoria persistente con búsqueda semántica</li>
-<li>🔄 Conmutador de proveedores y modelos con perfiles <code>cheap</code> / <code>balanced</code> / <code>quality</code></li>
-<li>🛠️ Workflows de desarrollo completos (Git, commit, review, PR)</li>
+<li><strong>Status:</strong> Proposed (diferido a v2.0)</li>
+<li><strong>Date:</strong> 2026-09-09</li>
+<li><strong>Deciders:</strong> Dxrk Principal Architect</li>
+<li><strong>Context:</strong> Fase post-GA v1.0.0 — deuda técnica documentada en roadmap (R14, v0.3.0)</li>
 </ul>
-<h2 id="instalacion">Instalación</h2>
-<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>dxrk
-</code></pre></div>
-<h2 id="uso-rapido">Uso rápido</h2>
-<div class="highlight"><pre><span></span><code><span class="c1"># Instala y configura un agente con el preset completo</span>
-dxrk-py<span class="w"> </span>install<span class="w"> </span>--agent<span class="w"> </span>claude-code<span class="w"> </span>--preset<span class="w"> </span>full-dxrk
-
-<span class="c1"># Consulta tu base de conocimiento</span>
-python<span class="w"> </span>-m<span class="w"> </span>dxrk.memory<span class="w"> </span>search<span class="w"> </span><span class="s2">&quot;configuro mi stack&quot;</span>
-
-<span class="c1"># Sincroniza tu configuracion (vista previa)</span>
-dxrk-py<span class="w"> </span>sync<span class="w"> </span>--agent<span class="w"> </span>claude-code<span class="w"> </span>--dry-run
-</code></pre></div>
-<h2 id="documentacion">Documentación</h2>
+<h2 id="contexto">Contexto</h2>
+<p>El paquete <code>dxrk/config/</code> (v1.0.0) contiene <strong>tres capas</strong> con orígenes distintos:</p>
+<table>
+<thead>
+<tr>
+<th>Módulo</th>
+<th>Líneas</th>
+<th>Modelo</th>
+<th>Formato</th>
+<th>API</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>config.py</code></td>
+<td>733</td>
+<td>Jerárquico tipado (<code>HierarchicalConfig</code>: model/api/auth/session/tools/ui/advanced)</td>
+<td>YAML (<code>/etc/dxrk/config.yaml</code>, <code>~/.dxrk/config.yaml</code>, <code>.dxrk/config.yaml</code>) + env <code>DXRK_*</code></td>
+<td><code>CamelCase</code> (espejo Go: <code>Get/Set/Load/Save/Validate/Watch</code>)</td>
+</tr>
+<tr>
+<td><code>settings.py</code></td>
+<td>213</td>
+<td>Clave-valor plano (<code>SettingsManager</code> + stores con prioridad 0–200)</td>
+<td>JSON (<code>~/.dxrk/settings.json</code>, <code>.dxrk/settings.json</code>)</td>
+<td><code>CamelCase</code> Go-style (<code>Get/Set/Delete/List/Save/Load</code>)</td>
+</tr>
+<tr>
+<td><code>unified.py</code></td>
+<td>281</td>
+<td>Fachada: <code>UnifiedConfig</code> + adaptador <code>ConfigSettingsStore</code> (prioridad 150, tenant)</td>
+<td>delega a ambas capas</td>
+<td><code>snake_case</code> + alias <code>CamelCase</code></td>
+</tr>
+</tbody>
+</table>
+<p>La fachada <code>UnifiedConfig</code> ya define la <strong>escalera de prioridad real</strong> (1 CLI flags → 9 defaults), pero:</p>
+<ol>
+<li><strong>Doble persistencia</strong>: YAML + JSON, dos formatos, dos rutas, dos formas de corromperse.</li>
+<li><strong>Doble API</strong>: <code>snake_case</code> nuevo vs <code>CamelCase</code> legado — el código llama a ambas.</li>
+<li><strong>Rutas no tenant-aware</strong>: <code>config.yaml</code> es global/usuario/proyecto; solo <code>settings</code> tiene store tenant (prioridad 150). <code>DXRK_TENANT</code> no afecta a <code>config.py</code>.</li>
+<li><strong><code>_SECTION_FIELDS</code> duplicado</strong>: <code>unified.py:18-26</code> re-lista los campos de las secciones que <code>config.py</code> ya define como dataclasses — divergencia garantizada.</li>
+</ol>
+<p>El smoke GA (v1.0.0) confirmó que el sistema <strong>funciona</strong>; esto es deuda de diseño, no bug.</p>
+<h2 id="decision-propuesta">Decisión (propuesta)</h2>
+<p><strong>Unificar en v2.0 bajo una sola API <code>snake_case</code> y una sola capa de persistencia, sin romper v1.x:</strong></p>
+<ol>
+<li><code>UnifiedConfig</code> pasa a ser <strong>la</strong> API pública (<code>dxrk config get/set</code>, Python <code>get_typed/get_raw</code>). <code>ConfigManager</code> y <code>SettingsManager</code> quedan como internals.</li>
+<li>Persistencia única: <strong>YAML jerárquico</strong> como fuente de verdad; <code>settings.json</code> se migra una vez vía <code>tenant migrate</code>-style (<code>config migrate</code>) y queda como legacy read-only.</li>
+<li>Rutas tenant-aware: <code>~/.dxrk/tenants/&lt;tid&gt;/config.yaml</code> entra en la escalera entre proyecto y usuario.</li>
+<li><code>CamelCase</code> se depreca con shims (no se borra en v2.0; se borra en v3.0).</li>
+<li><code>_SECTION_FIELDS</code> se genera por introspección de los dataclasses (<code>dataclasses.fields</code>), cero duplicación.</li>
+</ol>
+<h2 id="alternativas-consideradas">Alternativas consideradas</h2>
 <ul>
-<li><a href="usage/">Uso</a></li>
-<li><a href="intended-usage/">Uso previsto</a></li>
-<li><a href="agents/">Agentes soportados</a></li>
-<li><a href="components/">Componentes</a></li>
-<li><a href="architecture/">Arquitectura</a></li>
-<li><a href="platforms/">Plataformas</a></li>
+<li><strong>Mantener las tres capas para siempre</strong>: rechazado — la divergencia <code>_SECTION_FIELDS</code> vs dataclasses ya es un bug latente, y doble persistencia duplica los paths de corrupción.</li>
+<li><strong>Big-bang en v1.x</strong>: rechazado — rompería <code>dxrk config</code> CLI y los stores tenant en pleno GA. v2.0 con migración idempotente es el vehículo correcto.</li>
+<li><strong>JSON como formato único</strong>: rechazado — YAML ya soporta comentarios y es lo que edita el usuario a mano; JSON queda para stores internos.</li>
 </ul>
-<h2 id="licencia">Licencia</h2>
-<p>MIT — consulta <a href="https://github.com/Dxrk777/Dxrk/blob/main/LICENSE">LICENSE</a>.</p>
+<h2 id="consecuencias">Consecuencias</h2>
+<ul>
+<li>v2.0 requiere comando <code>dxrk config migrate</code> (idempotente, dry-run, backup) siguiendo el patrón de <code>tenant migrate</code>.</li>
+<li>Tests: matriz de precedencia 9 niveles (una por nivel) + roundtrip YAML→objeto→YAML.</li>
+<li><code>docs/config.md</code> documenta el estado v1.x (escalera, archivos, env vars) y apunta a este ADR para v2.0.</li>
+</ul>
 
 
 
@@ -1040,15 +1080,31 @@ dxrk-py<span class="w"> </span>sync<span class="w"> </span>--agent<span class="w
       
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
+          
+          <a href="../ADR-003-hybrid-vs-stdlib/" class="md-footer__link md-footer__link--prev" aria-label="Previous: ADR-003 Hybrid vs Stdlib">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                ADR-003 Hybrid vs Stdlib
+              </div>
+            </div>
+          </a>
+        
         
           
-          <a href="usage/" class="md-footer__link md-footer__link--next" aria-label="Next: Uso">
+          <a href="../../MIGRATION_3.3.5_3.7.1/" class="md-footer__link md-footer__link--next" aria-label="Next: Migración 3.3.5 → 3.7.1">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Uso
+                Migración 3.3.5 → 3.7.1
               </div>
             </div>
             <div class="md-footer__button md-icon">
@@ -1085,10 +1141,10 @@ dxrk-py<span class="w"> </span>sync<span class="w"> </span>--agent<span class="w
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.top", "navigation.footer", "content.code.copy", "toc.integrate"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.top", "navigation.footer", "content.code.copy", "toc.integrate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>

@@ -303,6 +303,60 @@
   
   
     <li class="md-nav__item">
+      <a href="../tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial (10 min)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparativa
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../intended-usage/" class="md-nav__link">
         
   
@@ -573,6 +627,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuración
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../adr/ADR-002-memory-separation/" class="md-nav__link">
         
   
@@ -608,6 +689,33 @@
     
   
     ADR-003 Hybrid vs Stdlib
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/ADR-004-config-unify/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-004 Unificación Config
   
 
     
@@ -1542,9 +1650,9 @@ git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </sp
 git<span class="w"> </span>tag<span class="w"> </span>-a<span class="w"> </span>v0.2.0<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;v0.2.0 DxrkMemory 2.0 flagship + Top1 DX&quot;</span>
 git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>main<span class="w"> </span>--follow-tags
 
-<span class="c1"># 9) verify publish (trusted publishing OIDC)</span>
-<span class="c1"># .github/workflows/publish.yml usa: uv publish con UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}</span>
-<span class="c1"># Si migra a Trusted Publishing (recomendado Top1), configurar en PyPI: publisher = GitHub Actions (Dxrk777/Dxrk, workflow publish.yml, env pypi)</span>
+<span class="c1"># 9) verify publish (Trusted Publishing OIDC, sin tokens)</span>
+<span class="c1"># .github/workflows/publish.yml usa: uv publish con OIDC (permissions id-token: write, environment pypi).</span>
+<span class="c1"># Publisher registrado en PyPI: GitHub Dxrk777/Dxrk, workflow publish.yml, environment pypi.</span>
 <span class="c1"># Ver en https://pypi.org/project/dxrk/ que 0.2.0 aparece + readme renderiza + classifiers ok</span>
 
 <span class="c1"># 10) post-publish</span>

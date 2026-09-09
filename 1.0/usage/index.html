@@ -16,7 +16,7 @@
         <link rel="prev" href="..">
       
       
-        <link rel="next" href="../intended-usage/">
+        <link rel="next" href="../tutorial/">
       
       
         
@@ -433,6 +433,60 @@
   
   
     <li class="md-nav__item">
+      <a href="../tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial (10 min)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparativa
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../intended-usage/" class="md-nav__link">
         
   
@@ -703,6 +757,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuración
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../adr/ADR-002-memory-separation/" class="md-nav__link">
         
   
@@ -738,6 +819,33 @@
     
   
     ADR-003 Hybrid vs Stdlib
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/ADR-004-config-unify/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-004 Unificación Config
   
 
     
@@ -924,16 +1032,15 @@ uv<span class="w"> </span>run<span class="w"> </span>dxrk-py<span class="w"> </s
 <div class="highlight"><pre><span></span><code>dxrk-py<span class="w"> </span>install<span class="w"> </span>--agent<span class="w"> </span>claude-code<span class="w"> </span>--preset<span class="w"> </span>full-dxrk
 </code></pre></div>
 <p>Consultar contexto o memoria:</p>
-<div class="highlight"><pre><span></span><code>dxrk-py<span class="w"> </span>query<span class="w"> </span><span class="s2">&quot;explica qué es Spec-Driven Development&quot;</span>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>dxrk.memory<span class="w"> </span>search<span class="w"> </span><span class="s2">&quot;Spec-Driven Development&quot;</span>
 </code></pre></div>
-<p>Sincronizar perfiles de modelos por proveedor y por fase:</p>
-<div class="highlight"><pre><span></span><code>dxrk-py<span class="w"> </span>sync<span class="w"> </span>--profile<span class="w"> </span>cheap:openrouter/qwen/qwen3-30b-a3b:free
-dxrk-py<span class="w"> </span>sync<span class="w"> </span>--profile-phase<span class="w"> </span>cheap:sdd-design:anthropic/claude-sonnet-4-20250514
+<p>Sincronizar tu configuración (vista previa con <code>--dry-run</code>):</p>
+<div class="highlight"><pre><span></span><code>dxrk-py<span class="w"> </span>sync<span class="w"> </span>--agent<span class="w"> </span>claude-code<span class="w"> </span>--dry-run
 </code></pre></div>
 <h2 id="configuracion-por-proyecto">Configuración por proyecto</h2>
 <ul>
 <li><code>/sdd-init</code>: inicia el workflow Spec-Driven Development en el proyecto.</li>
-<li><code>dxrk-py skill-registry refresh</code>: regenera el registro de skills.</li>
+<li><code>dxrk-py install --component skills</code>: instala las skills curadas.</li>
 </ul>
 <h2 id="memoria">Memoria</h2>
 <p>La memoria persistente usa el binario <code>dxrk-memory</code> (repo <code>Dxrk777/dxrk-memory</code>):</p>
@@ -995,13 +1102,13 @@ dxrk-py<span class="w"> </span>sync<span class="w"> </span>--profile-phase<span 
         
         
           
-          <a href="../intended-usage/" class="md-footer__link md-footer__link--next" aria-label="Next: Uso previsto">
+          <a href="../tutorial/" class="md-footer__link md-footer__link--next" aria-label="Next: Tutorial (10 min)">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Uso previsto
+                Tutorial (10 min)
               </div>
             </div>
             <div class="md-footer__button md-icon">

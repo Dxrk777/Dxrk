@@ -303,6 +303,60 @@
   
   
     <li class="md-nav__item">
+      <a href="../tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial (10 min)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparativa
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../intended-usage/" class="md-nav__link">
         
   
@@ -708,6 +762,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuración
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../adr/ADR-002-memory-separation/" class="md-nav__link">
         
   
@@ -743,6 +824,33 @@
     
   
     ADR-003 Hybrid vs Stdlib
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/ADR-004-config-unify/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-004 Unificación Config
   
 
     
@@ -912,7 +1020,7 @@
 
 <h1 id="componentes">Componentes</h1>
 <h2 id="skills">Skills</h2>
-<p>Dxrk gestiona un registry de skills curadas (<code>dxrk-py skill-registry refresh</code>),
+<p>Dxrk gestiona un registry de skills curadas (<code>dxrk-py install --component skills</code>),
 usadas por los agentes para tareas especializadas (SDD, memoria, batch, etc.).</p>
 <h2 id="servidores-mcp">Servidores MCP</h2>
 <p>Dxrk configura hasta 35 servidores MCP vía <code>.mcp.json</code>. Cada servidor se
@@ -939,8 +1047,8 @@ declara con nombre, comando y argumentos, y queda disponible para el agente.</p>
   métricas y verificación automática de cambios.</li>
 </ul>
 <h2 id="conmutador-de-proveedores">Conmutador de proveedores</h2>
-<p>Dxrk asigna modelos por fase del workflow (cheap / balanced / quality) y por
-proveedor, mediante <code>dxrk-py sync --profile ...</code> y <code>--profile-phase ...</code>.</p>
+<p>Dxrk centraliza la configuración de modelos en <code>config.yaml</code> (sección <code>model</code>,
+ver <a href="../config/">config.md</a>); <code>dxrk-py sync</code> la propaga a los agentes instalados.</p>
 <h2 id="utilerias">Utilerías</h2>
 <ul>
 <li><code>dxrk/utils/diff.py</code>: diff LCS con formateadores (unified, side-by-side, HTML, JSON).</li>

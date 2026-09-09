@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://dxrk777.github.io/Dxrk/1.0/intended-usage/">
       
       
-        <link rel="prev" href="../usage/">
+        <link rel="prev" href="../comparison/">
       
       
         <link rel="next" href="../agents/">
@@ -300,6 +300,60 @@
       
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial (10 min)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparativa
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
     
   
   
@@ -408,10 +462,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#modelos-baratos-para-tareas-rutinarias" class="md-nav__link">
+  <a href="#modelos-por-proyecto" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Modelos baratos para tareas rutinarias
+        Modelos por proyecto
       
     </span>
   </a>
@@ -703,6 +757,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuración
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../adr/ADR-002-memory-separation/" class="md-nav__link">
         
   
@@ -738,6 +819,33 @@
     
   
     ADR-003 Hybrid vs Stdlib
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/ADR-004-config-unify/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-004 Unificación Config
   
 
     
@@ -921,16 +1029,15 @@ En lugar de configurar cada agente a mano, Dxrk:</p>
 <div class="highlight"><pre><span></span><code>dxrk-py<span class="w"> </span>install<span class="w"> </span>--agent<span class="w"> </span>claude-code<span class="w"> </span>--preset<span class="w"> </span>full-dxrk
 <span class="c1"># dentro del proyecto:</span>
 /sdd-init
-dxrk-py<span class="w"> </span>skill-registry<span class="w"> </span>refresh
+dxrk-py<span class="w"> </span>install<span class="w"> </span>--component<span class="w"> </span>skills
 </code></pre></div>
 <h3 id="trabajo-diario">Trabajo diario</h3>
-<div class="highlight"><pre><span></span><code>dxrk-py<span class="w"> </span>plan<span class="w"> </span><span class="s2">&quot;refactor del módulo de auth&quot;</span>
-dxrk-py<span class="w"> </span>commit
-dxrk-py<span class="w"> </span>pr
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>dxrk.memory<span class="w"> </span>search<span class="w"> </span><span class="s2">&quot;decision pendiente&quot;</span>
+dxrk-py<span class="w"> </span>sync<span class="w"> </span>--agent<span class="w"> </span>claude-code<span class="w"> </span>--dry-run
 </code></pre></div>
-<h3 id="modelos-baratos-para-tareas-rutinarias">Modelos baratos para tareas rutinarias</h3>
-<div class="highlight"><pre><span></span><code>dxrk-py<span class="w"> </span>sync<span class="w"> </span>--profile<span class="w"> </span>cheap:openrouter/qwen/qwen3-30b-a3b:free
-dxrk-py<span class="w"> </span>sync<span class="w"> </span>--profile-phase<span class="w"> </span>cheap:sdd-design:anthropic/claude-sonnet-4-20250514
+<h3 id="modelos-por-proyecto">Modelos por proyecto</h3>
+<p>El proveedor vive en <code>config.yaml</code> (sección <code>model</code>, ver <code>config.md</code>):</p>
+<div class="highlight"><pre><span></span><code>dxrk-py<span class="w"> </span>sync<span class="w"> </span>--agent<span class="w"> </span>claude-code<span class="w"> </span>--dry-run
 </code></pre></div>
 <h2 id="cuando-no-usar-dxrk">Cuándo NO usar Dxrk</h2>
 <ul>
@@ -976,7 +1083,7 @@ y permisos lo hace.</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../usage/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Uso">
+          <a href="../comparison/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Comparativa">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -986,7 +1093,7 @@ y permisos lo hace.</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Uso
+                Comparativa
               </div>
             </div>
           </a>

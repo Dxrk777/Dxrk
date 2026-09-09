@@ -303,6 +303,60 @@
   
   
     <li class="md-nav__item">
+      <a href="../tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial (10 min)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparativa
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../intended-usage/" class="md-nav__link">
         
   
@@ -791,6 +845,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuración
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../adr/ADR-002-memory-separation/" class="md-nav__link">
         
   
@@ -826,6 +907,33 @@
     
   
     ADR-003 Hybrid vs Stdlib
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/ADR-004-config-unify/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-004 Unificación Config
   
 
     
@@ -1319,8 +1427,8 @@
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;scanned </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span><span class="si">}</span><span class="s2"> files, gitignore=</span><span class="si">{</span><span class="n">matcher</span><span class="w"> </span><span class="ow">is</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="kc">None</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 </code></pre></div>
 <h3 id="cli-relacionado">CLI relacionado</h3>
-<div class="highlight"><pre><span></span><code>dxrk-py<span class="w"> </span>query<span class="w"> </span><span class="s2">&quot;¿qué arquitectura decidimos para memoria?&quot;</span><span class="w">   </span><span class="c1"># vía AgentMemory</span>
-uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_memory.py<span class="w"> </span>-q<span class="w">                        </span><span class="c1"># 19 passed</span>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>dxrk.memory<span class="w"> </span>search<span class="w"> </span><span class="s2">&quot;arquitectura memoria&quot;</span><span class="w">   </span><span class="c1"># vía AgentMemory</span>
+uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests/test_memory.py<span class="w"> </span>-q<span class="w">       </span><span class="c1"># 19 passed</span>
 </code></pre></div>
 <hr />
 <h2 id="benchmarks-wake-up-estimados-local-first">Benchmarks wake-up (estimados, local-first)</h2>
