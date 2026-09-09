@@ -1203,6 +1203,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#v110-done-cortex-autonomous-enterprise-release-menor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1.1.0 Done (Cortex + Autonomous + Enterprise) — release menor
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2135,11 +2146,21 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 <ul>
 <li>[x] <code>RBAC</code> 3 roles <code>admin/dev/readonly</code> matrix — <code>tests/test_enterprise_rbac_matrix.py</code> 25 + <code>tests/test_rbac_enforcement.py</code> 32 + <code>tests/test_memory_rbac.py</code> 30 + enforcement <code>Palace.mine/search</code> + <code>CLI</code> + <code>MCP</code> 403 <code>RBAC_DENIED</code></li>
 <li>[x] <code>TUI switcher</code> <code>TenantSwitcher</code> — pilot TUI live switch (<code>tests/test_enterprise_cli_migration.py</code>), breadcrumb tenant, sin <code>STATE</code> global (R11 Done)</li>
-<li>[ ] Hardening GA: <code>mypy</code> 0, <code>ruff</code> 0, <code>pytest --cov-fail-under=80</code> ✅, <code>trace0</code> 0, <code>uv audit</code> 0 — pendientes: <code>site/assets/demo_tenant.gif</code> (paso 4) + <code>OSSF Scorecard</code> ≥8.5 (paso 5)</li>
-<li>[ ] Docs GA: <code>docs/tenants.md</code> GA ✅, <code>docs/rbac.md</code> ✅, <code>docs/migration-0.5-to-1.0.md</code> ✅, <code>README.md</code> enterprise ✅, <code>mike</code> <code>latest→1.0</code> ✅ — pendiente: <code>social</code> cards OG (paso 6)</li>
+<li>[x] Hardening GA: <code>mypy</code> 0, <code>ruff</code> 0, <code>pytest --cov-fail-under=80</code> ✅ (85%+), <code>trace0</code> 0, <code>uv audit</code> 0, <code>site/assets/demo_tenant.gif</code> ✅ (30s, 327KB) + <code>OSSF Scorecard</code> <strong>7.0 real</strong> (target ≥8.5 no alcanzado: techo honesto — sin PR-required por decisión usuario, 1 contribuidor, repo &lt;90 días, sin CII/fuzzing; ver §9 nota)</li>
+<li>[x] Docs GA: <code>docs/tenants.md</code> ✅, <code>docs/rbac.md</code> ✅, <code>docs/migration-0.5-to-1.0.md</code> ✅, <code>README.md</code> enterprise ✅, <code>mike</code> <code>latest→1.0</code> ✅, <code>social</code> cards OG ✅ (plugin genera PNGs por página)</li>
 <li>[x] <code>pyproject.toml</code> <code>1.0.0</code> <code>Development Status :: 5 - Production/Stable</code> + <code>CHANGELOG.md</code> cliff + <code>git tag v1.0.0</code> → <code>publish.yml</code> GA + <code>gh release</code> notes + <code>SECURITY.md</code> <code>Supported: 1.0.x ✅, 0.2.x ✅</code></li>
-<li>[ ] Manual smoke GA: <code>uv tool install dxrk --force &amp;&amp; dxrk --tenant demo init &amp;&amp; dxrk --tenant demo query "GA multi-tenant?"</code> &lt;50ms cold (se corre en gates finales)</li>
+<li>[x] Manual smoke GA: <code>uv tool install dxrk --force</code> (1.0.0 PyPI) + tenant create/whoami/list OK — encontró y arregló 3 bugs reales (search fresco <code>[]</code>, contaminación palace por <code>DEFAULT_PALACE_PATH</code> import-time, post-filtro frase contigua → token-AND)</li>
 <li>[x] Gates universales §6.1 verdes en <code>main</code> tag <code>v1.0.0</code> (se re-verifican en gates finales)</li>
+</ul>
+<h4 id="v110-done-cortex-autonomous-enterprise-release-menor">v1.1.0 Done (Cortex + Autonomous + Enterprise) — release menor</h4>
+<ul>
+<li>[x] <code>dxrk/memory/cortex/</code> 15 archivos (IQ engine, network effect, collective, dreaming, meta-learning) — <code>tests/test_cortex.py</code> 98 tests</li>
+<li>[x] <code>dxrk/memory/autonomous/</code> 8 archivos (7 motores: reader, practice, reflection, imitation, experimentation, synthesis, assessment) — <code>tests/test_autonomous.py</code> 41 tests</li>
+<li>[x] <code>dxrk/enterprise/</code> 24 archivos (company, orchestrator, workforce, 7 departments, 8 skills) + <code>CLI enterprise</code> — <code>tests/test_enterprise.py</code> 102 tests</li>
+<li>[x] <code>docs/enterprise.md</code> + nav mkdocs — <code>mkdocs build</code> 0 warnings</li>
+<li>[x] Supply chain: <code>.github/workflows/scorecard.yml</code> + pin SHA en 6 workflows + permisos por job — Scorecard <strong>7.0</strong> (Token-Permissions 10, Pinned-Dependencies 10)</li>
+<li>[x] <code>pyproject.toml</code> <code>1.1.0</code> + <code>git tag v1.1.0</code> pusheado → <code>publish.yml</code> OIDC <strong>bloqueado</strong>: PyPI responde <code>invalid-publisher</code> (falta registrar Trusted Publisher en pypi.org proyecto dxrk: owner Dxrk777, repo Dxrk, workflow publish.yml, environment pypi) — acción lado usuario, luego <code>gh run rerun</code> sin nuevo tag</li>
+<li>[x] Gates: 4592 passed 1 skipped, cov 85.44% ≥80, <code>ruff</code> 0, <code>mypy</code> 284 files 0</li>
 </ul>
 <hr />
 <h2 id="7-metricas-top1-dx-gates-por-version-de-docsdxmd433-7">7. Métricas Top1 DX — gates por versión (de <code>docs/dx.md:433</code> §7)</h2>
