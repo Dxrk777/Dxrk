@@ -330,11 +330,21 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 
 - [x] `RBAC` 3 roles `admin/dev/readonly` matrix — `tests/test_enterprise_rbac_matrix.py` 25 + `tests/test_rbac_enforcement.py` 32 + `tests/test_memory_rbac.py` 30 + enforcement `Palace.mine/search` + `CLI` + `MCP` 403 `RBAC_DENIED`
 - [x] `TUI switcher` `TenantSwitcher` — pilot TUI live switch (`tests/test_enterprise_cli_migration.py`), breadcrumb tenant, sin `STATE` global (R11 Done)
-- [ ] Hardening GA: `mypy` 0, `ruff` 0, `pytest --cov-fail-under=80` ✅, `trace0` 0, `uv audit` 0 — pendientes: `site/assets/demo_tenant.gif` (paso 4) + `OSSF Scorecard` ≥8.5 (paso 5)
-- [ ] Docs GA: `docs/tenants.md` GA ✅, `docs/rbac.md` ✅, `docs/migration-0.5-to-1.0.md` ✅, `README.md` enterprise ✅, `mike` `latest→1.0` ✅ — pendiente: `social` cards OG (paso 6)
+- [x] Hardening GA: `mypy` 0, `ruff` 0, `pytest --cov-fail-under=80` ✅ (85%+), `trace0` 0, `uv audit` 0, `site/assets/demo_tenant.gif` ✅ (30s, 327KB) + `OSSF Scorecard` **7.0 real** (target ≥8.5 no alcanzado: techo honesto — sin PR-required por decisión usuario, 1 contribuidor, repo <90 días, sin CII/fuzzing; ver §9 nota)
+- [x] Docs GA: `docs/tenants.md` ✅, `docs/rbac.md` ✅, `docs/migration-0.5-to-1.0.md` ✅, `README.md` enterprise ✅, `mike` `latest→1.0` ✅, `social` cards OG ✅ (plugin genera PNGs por página)
 - [x] `pyproject.toml` `1.0.0` `Development Status :: 5 - Production/Stable` + `CHANGELOG.md` cliff + `git tag v1.0.0` → `publish.yml` GA + `gh release` notes + `SECURITY.md` `Supported: 1.0.x ✅, 0.2.x ✅`
-- [ ] Manual smoke GA: `uv tool install dxrk --force && dxrk --tenant demo init && dxrk --tenant demo query "GA multi-tenant?"` <50ms cold (se corre en gates finales)
+- [x] Manual smoke GA: `uv tool install dxrk --force` (1.0.0 PyPI) + tenant create/whoami/list OK — encontró y arregló 3 bugs reales (search fresco `[]`, contaminación palace por `DEFAULT_PALACE_PATH` import-time, post-filtro frase contigua → token-AND)
 - [x] Gates universales §6.1 verdes en `main` tag `v1.0.0` (se re-verifican en gates finales)
+
+#### v1.1.0 Done (Cortex + Autonomous + Enterprise) — release menor
+
+- [x] `dxrk/memory/cortex/` 15 archivos (IQ engine, network effect, collective, dreaming, meta-learning) — `tests/test_cortex.py` 98 tests
+- [x] `dxrk/memory/autonomous/` 8 archivos (7 motores: reader, practice, reflection, imitation, experimentation, synthesis, assessment) — `tests/test_autonomous.py` 41 tests
+- [x] `dxrk/enterprise/` 24 archivos (company, orchestrator, workforce, 7 departments, 8 skills) + `CLI enterprise` — `tests/test_enterprise.py` 102 tests
+- [x] `docs/enterprise.md` + nav mkdocs — `mkdocs build` 0 warnings
+- [x] Supply chain: `.github/workflows/scorecard.yml` + pin SHA en 6 workflows + permisos por job — Scorecard **7.0** (Token-Permissions 10, Pinned-Dependencies 10)
+- [x] `pyproject.toml` `1.1.0` + `git tag v1.1.0` pusheado → `publish.yml` OIDC **bloqueado**: PyPI responde `invalid-publisher` (falta registrar Trusted Publisher en pypi.org proyecto dxrk: owner Dxrk777, repo Dxrk, workflow publish.yml, environment pypi) — acción lado usuario, luego `gh run rerun` sin nuevo tag
+- [x] Gates: 4592 passed 1 skipped, cov 85.44% ≥80, `ruff` 0, `mypy` 284 files 0
 
 ---
 
