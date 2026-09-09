@@ -40,6 +40,7 @@ def register_all() -> Registry:
         diff,
         doctor,
         effort,
+        enterprise,
         export,
         fast,
         files,
@@ -81,6 +82,7 @@ def register_all() -> Registry:
     diff.register_diff_command(reg)
     doctor.register_doctor_command(reg)
     effort.register_effort_command(reg)
+    enterprise.register_enterprise_command(reg)
     export.register_export_command(reg)
     fast.register_fast_command(reg)
     files.register_files_command(reg)

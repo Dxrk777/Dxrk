@@ -89,6 +89,18 @@ def main() -> None:
     tenant_sub.add_parser("whoami", help="Show tenant ID")
     tenant_sub.add_parser("migrate", help="Migrate legacy data")
 
+    # dxrk enterprise
+    enterprise_parser = sub.add_parser("enterprise", help="Dxrk Enterprise, la empresa de IA")
+    enterprise_sub = enterprise_parser.add_subparsers(dest="enterprise_command")
+    enterprise_sub.add_parser("start", help="Iniciar empresa")
+    enterprise_sub.add_parser("stop", help="Detener empresa")
+    enterprise_sub.add_parser("status", help="Ver estado")
+    execute_p = enterprise_sub.add_parser("execute", help="Ejecutar tarea")
+    execute_p.add_argument("task", help="Task description")
+    execute_p.add_argument("department", nargs="?", help="Department ID (optional)")
+    enterprise_sub.add_parser("skills", help="Listar skills")
+    enterprise_sub.add_parser("report", help="Generar reporte")
+
     # early tenant resolution via DXRK_TENANT / --tenant, validated via validate_id
     pre_args, _ = parser.parse_known_args()
     tenant_id = str(getattr(pre_args, "tenant", "") or "").strip()
@@ -152,6 +164,10 @@ def main() -> None:
         _run_tenant_cli(args)
         return
 
+    if args.command == "enterprise":
+        _run_enterprise_cli(args)
+        return
+
     if args.command:
         print(f"Command '{args.command}' not yet implemented")
         return
@@ -172,6 +188,25 @@ def _run_tenant_cli(args: argparse.Namespace) -> None:
             argv.append(str(tid))
         if getattr(args, "force", False):
             argv.append("--force")
+    code = reg.execute(argv)
+    if code != 0:
+        sys.exit(code)
+
+
+def _run_enterprise_cli(args: argparse.Namespace) -> None:
+    from dxrk.commands import register_all
+
+    reg = register_all()
+    argv: list[str] = ["enterprise"]
+    ec = getattr(args, "enterprise_command", None)
+    if ec:
+        argv.append(str(ec))
+        task = getattr(args, "task", None)
+        if task:
+            argv.append(str(task))
+        dept = getattr(args, "department", None)
+        if dept:
+            argv.append(str(dept))
     code = reg.execute(argv)
     if code != 0:
         sys.exit(code)
