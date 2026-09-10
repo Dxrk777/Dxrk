@@ -5,6 +5,7 @@ from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any, TypedDict
 
+from dxrk import __version__
 from dxrk.models import (
     AgentID,
     ComponentID,
@@ -49,7 +50,7 @@ class TUIContext:
     All mutable fields use default_factory to avoid shared-state leaks.
     """
 
-    version: str = "dev"
+    version: str = __version__
     detection: DetectionResult | None = None
     selected_agents: list[AgentID] = field(default_factory=list)
     selected_components: list[ComponentID] = field(default_factory=list)

@@ -22,6 +22,7 @@ from textual.widgets import (
     Static,
 )
 
+from dxrk import __version__
 from dxrk.models import (
     AgentID,
     ModelAssignment,
@@ -790,7 +791,7 @@ class DxrkApp(App):
     """
 
     TITLE = "Dxrk"
-    SUB_TITLE = "vdev"
+    SUB_TITLE = f"v{__version__}"
     BINDINGS = [
         Binding("t", "tenant_switcher", "Tenants"),
     ]
@@ -964,7 +965,7 @@ class DxrkApp(App):
         self.push_screen("welcome")
 
 
-def run(version: str = "dev") -> None:
+def run(version: str = __version__) -> None:
     ctx = TUIContext(version=version)
     ctx_var.set(ctx)
     # Legacy sync: STATE is proxy -> also reflects ctx, explicit for clarity

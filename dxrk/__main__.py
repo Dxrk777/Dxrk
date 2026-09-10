@@ -118,7 +118,9 @@ def main() -> None:
     else:
         logging.basicConfig(level=logging.WARNING)
 
-    version = os.environ.get("DXRK_VERSION", "dev")
+    from dxrk import __version__
+
+    version = os.environ.get("DXRK_VERSION") or __version__
 
     if args.version or args.command == "version":
         print(f"Dxrk v{version}")
