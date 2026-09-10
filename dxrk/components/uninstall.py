@@ -15,6 +15,7 @@ from typing import Any, cast
 
 from dxrk.components import filemerge
 from dxrk.components import gga as _gga
+from dxrk.components import persona as _persona
 from dxrk.components import sdd as _sdd
 from dxrk.models import AgentID, ComponentID, DxrkMemoryUninstallScope
 
@@ -140,7 +141,7 @@ class Service:
         plan = self._build_plan(all_agents, _ALL_MANAGED_COMPONENTS)
         result = self._execute_plan(plan, all_agents)
         result.ManualActions.append(
-            "To completely remove gentle-ai from your system, delete the executable (e.g., rm -f $(which gentle-ai))"
+            "To completely remove dxrk from your system, delete the executable (e.g., rm -f $(which dxrk-py))"
         )
         return result
 
@@ -245,6 +246,13 @@ class Service:
                 if adapter.agent == AgentID.OPENCODE:
                     paths.append(["agent", "dxrk"])
                 ops.append(_rewrite_json_file(sp, *paths))
+            try:
+                legacy_paths = adapter.legacy_system_prompt_files(home)
+            except AttributeError:
+                legacy_paths = []
+            for legacy_path in legacy_paths:
+                targets.append(legacy_path)
+                ops.append(_remove_managed_legacy_file(legacy_path))
 
         elif component_id == ComponentID.CONTEXT7:
             targets.extend(_context7_targets(adapter, home))
@@ -316,6 +324,13 @@ class Service:
                         lambda c: _remove_markdown_sections(c, "sdd-orchestrator", "strict-tdd-mode"),
                     )
                 )
+            try:
+                legacy_paths = adapter.legacy_system_prompt_files(home)
+            except AttributeError:
+                legacy_paths = []
+            for legacy_path in legacy_paths:
+                targets.append(legacy_path)
+                ops.append(_remove_managed_legacy_file(legacy_path))
             if adapter.supports_slash_commands:
                 commands_dir = adapter.commands_dir(home)
                 asset_dir = "opencode/commands"
@@ -557,6 +572,28 @@ def _rewrite_toml_file(path: str, mutate: Callable[[str], tuple[str, bool]]) -> 
 def _remove_file(path: str) -> Operation:
     def apply(p: str) -> tuple[bool, bool, str | None]:
         if not os.path.exists(p):
+            return False, False, None
+        try:
+            os.remove(p)
+            return True, True, None
+        except OSError as e:
+            return False, False, str(e)
+
+    return Operation(OpType.REMOVE_FILE, path, apply)
+
+
+def _remove_managed_legacy_file(path: str) -> Operation:
+    """Remove a previous-release file only if it carries our fingerprints."""
+
+    def apply(p: str) -> tuple[bool, bool, str | None]:
+        try:
+            with open(p, encoding="utf-8") as f:
+                data = f.read()
+        except FileNotFoundError:
+            return False, False, None
+        except OSError as e:
+            return False, False, str(e)
+        if not _persona.is_managed_legacy_content(data):
             return False, False, None
         try:
             os.remove(p)

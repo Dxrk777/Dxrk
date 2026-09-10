@@ -342,7 +342,7 @@ class AgentsScreen(Screen):
 # ── Persona Screen ────────────────────────────────────────────────────
 
 PERSONA_OPTIONS = [
-    (PersonaID.DXRK, "Gentleman", "Full SDD ecosystem with orchestrator, skills, MCP"),
+    (PersonaID.DXRK, "Dxrk", "Full SDD ecosystem with orchestrator, skills, MCP"),
     (PersonaID.NEUTRAL, "Neutral", "Basic configuration without orchestration"),
     (PersonaID.CUSTOM, "Custom", "Manual selection of all options"),
 ]
@@ -398,7 +398,7 @@ class PersonaScreen(Screen):
 PRESET_OPTIONS = [
     (
         PresetID.FULL_DXRK,
-        "Full Gentleman",
+        "Full Dxrk",
         "Complete ecosystem: all components + agents",
     ),
     (PresetID.ECOSYSTEM_ONLY, "Ecosystem Only", "Components only, no agents"),

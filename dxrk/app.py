@@ -23,7 +23,7 @@ __all__ = [
     "run_cli",
 ]
 
-APP_NAME = "gentle-ai"
+APP_NAME = "dxrk"
 VERSION = "dev"
 
 HELP_TEXT = """dxrk — AI Gentle Stack ({version})
@@ -79,10 +79,10 @@ class SelfUpdateChecker:
         if reason is not None:
             return None
 
-        results = check_filtered(self.version, self.profile, ["gentle-ai"])
+        results = check_filtered(self.version, self.profile, ["dxrk"])
         target: UpdateResult | None = None
         for r in results:
-            if r.tool.name == "gentle-ai":
+            if r.tool.name == "dxrk":
                 target = r
                 break
 
@@ -200,9 +200,7 @@ def run_cli(args: list[str]) -> int:
 
             for r in report.results:
                 if r.err:
-                    print(
-                        f"upgrade failed for {r.tool_name!r}: {r.err}", file=sys.stderr
-                    )
+                    print(f"upgrade failed for {r.tool_name!r}: {r.err}", file=sys.stderr)
                     return 1
             return 0
 
@@ -210,9 +208,7 @@ def run_cli(args: list[str]) -> int:
             install_result = run_install(args[1:], detection)
             if install_result.dry_run:
                 print("Dry-run: install plan built successfully")
-            elif install_result.verify and not getattr(
-                install_result.verify, "ready", True
-            ):
+            elif install_result.verify and not getattr(install_result.verify, "ready", True):
                 print("Post-apply verification failed")
                 return 1
             return 0
@@ -234,7 +230,7 @@ def run_cli(args: list[str]) -> int:
 
         else:
             print(
-                f"unknown command {cmd!r} — run 'gentle-ai help' for available commands",
+                f"unknown command {cmd!r} — run 'dxrk-py help' for available commands",
                 file=sys.stderr,
             )
             return 1

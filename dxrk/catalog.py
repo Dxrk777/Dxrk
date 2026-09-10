@@ -44,9 +44,7 @@ class Component:
 
 
 class Skill:
-    def __init__(
-        self, id: SkillID, name: str = "", category: str = "", priority: str = ""
-    ) -> None:
+    def __init__(self, id: SkillID, name: str = "", category: str = "", priority: str = "") -> None:
         self.id = id
         self.name = name
         self.category = category
@@ -81,12 +79,8 @@ _ALL_AGENTS = [
         tier=SupportTier.FULL,
         config_path="~/.gemini",
     ),
-    Agent(
-        id=AgentID.CODEX, name="Codex", tier=SupportTier.FULL, config_path="~/.codex"
-    ),
-    Agent(
-        id=AgentID.CURSOR, name="Cursor", tier=SupportTier.FULL, config_path="~/.cursor"
-    ),
+    Agent(id=AgentID.CODEX, name="Codex", tier=SupportTier.FULL, config_path="~/.codex"),
+    Agent(id=AgentID.CURSOR, name="Cursor", tier=SupportTier.FULL, config_path="~/.cursor"),
     Agent(
         id=AgentID.VSCODE_COPILOT,
         name="VS Code Copilot",
@@ -105,9 +99,7 @@ _ALL_AGENTS = [
         tier=SupportTier.FULL,
         config_path="~/.codeium/windsurf",
     ),
-    Agent(
-        id=AgentID.KIMI, name="Kimi Code", tier=SupportTier.FULL, config_path="~/.kimi"
-    ),
+    Agent(id=AgentID.KIMI, name="Kimi Code", tier=SupportTier.FULL, config_path="~/.kimi"),
     Agent(
         id=AgentID.QWEN_CODE,
         name="Qwen Code",
@@ -167,12 +159,8 @@ _MVP_COMPONENTS = [
         name="Memory",
         description="Persistent cross-session memory",
     ),
-    Component(
-        id=ComponentID.SDD, name="SDD", description="Spec-driven development workflow"
-    ),
-    Component(
-        id=ComponentID.SKILLS, name="Skills", description="Curated coding skill library"
-    ),
+    Component(id=ComponentID.SDD, name="SDD", description="Spec-driven development workflow"),
+    Component(id=ComponentID.SKILLS, name="Skills", description="Curated coding skill library"),
     Component(
         id=ComponentID.CONTEXT7,
         name="Context7",
@@ -181,7 +169,7 @@ _MVP_COMPONENTS = [
     Component(
         id=ComponentID.PERSONA,
         name="Persona",
-        description="Gentleman, neutral or custom behavior",
+        description="Dxrk, neutral or custom behavior",
     ),
     Component(
         id=ComponentID.PERMISSIONS,
@@ -191,12 +179,12 @@ _MVP_COMPONENTS = [
     Component(
         id=ComponentID.DXRK_GUARDIAN,
         name="GGA",
-        description="Gentleman Guardian Angel AI provider switcher",
+        description="Dxrk Guardian Angel AI provider switcher",
     ),
     Component(
         id=ComponentID.THEME,
         name="Theme",
-        description="Gentleman Kanagawa theme overlay",
+        description="Dxrk Kanagawa theme overlay",
     ),
     Component(
         id=ComponentID.CLAUDE_THEME,
@@ -205,8 +193,8 @@ _MVP_COMPONENTS = [
     ),
     Component(
         id=ComponentID.OPENCODE_DXRK_LOGO,
-        name="OpenCode Gentle Logo",
-        description="Braille rose home logo plugin",
+        name="OpenCode Dxrk Logo",
+        description="Braille Dxrk home logo plugin",
     ),
 ]
 
@@ -288,9 +276,7 @@ _MVP_SKILLS = [
     Skill(SkillID.PYTEST_SKILL, "pytest-skill", _CAT_TESTING, _PRIORITY_P1),
     Skill(SkillID.PYDANTIC_AI, "pydantic-ai", _CAT_LANGUAGE, _PRIORITY_P1),
     Skill(SkillID.JAVA_SCRIPT_PRO, "javascript-pro", _CAT_LANGUAGE, _PRIORITY_P1),
-    Skill(
-        SkillID.JAVA_SCRIPT_MASTERY, "javascript-mastery", _CAT_LANGUAGE, _PRIORITY_P1
-    ),
+    Skill(SkillID.JAVA_SCRIPT_MASTERY, "javascript-mastery", _CAT_LANGUAGE, _PRIORITY_P1),
     Skill(
         SkillID.JAVA_SCRIPT_DESIGN,
         "javascript-design-patterns",
@@ -319,9 +305,7 @@ _MVP_SKILLS = [
     Skill(SkillID.GO_PLAYWRIGHT, "go-playwright", _CAT_LANGUAGE, _PRIORITY_P2),
     Skill(SkillID.GO_ROD_MASTER, "go-rod-master", _CAT_LANGUAGE, _PRIORITY_P2),
     Skill(SkillID.GRPC_GOLANG, "grpc-golang", _CAT_LANGUAGE, _PRIORITY_P2),
-    Skill(
-        SkillID.TEMPORAL_GOLANG_PRO, "temporal-golang-pro", _CAT_LANGUAGE, _PRIORITY_P2
-    ),
+    Skill(SkillID.TEMPORAL_GOLANG_PRO, "temporal-golang-pro", _CAT_LANGUAGE, _PRIORITY_P2),
     Skill(SkillID.JAVA_PRO, "java-pro", _CAT_LANGUAGE, _PRIORITY_P1),
     Skill(SkillID.SPRINGBOOT_PRO, "springboot-pro", _CAT_LANGUAGE, _PRIORITY_P1),
     Skill(
@@ -365,9 +349,7 @@ _MVP_SKILLS = [
     Skill(SkillID.CSS_PRO, "css-pro", _CAT_WEB, _PRIORITY_P2),
     Skill(SkillID.HTML_PRO, "html-pro", _CAT_WEB, _PRIORITY_P2),
     Skill(SkillID.FRONTEND_ARCH, "frontend-architecture", _CAT_WEB, _PRIORITY_P1),
-    Skill(
-        SkillID.REACT_COMP_PERF, "react-component-performance", _CAT_WEB, _PRIORITY_P2
-    ),
+    Skill(SkillID.REACT_COMP_PERF, "react-component-performance", _CAT_WEB, _PRIORITY_P2),
     Skill(
         SkillID.REACT_COMPONENT_PERF2,
         "react-component-performance-2",
@@ -375,9 +357,7 @@ _MVP_SKILLS = [
         _PRIORITY_P2,
     ),
     Skill(SkillID.DOCKER_EXPERT, "docker-expert", _CAT_DEVOPS, _PRIORITY_P0),
-    Skill(
-        SkillID.KUBERNETES_ARCHITECT, "kubernetes-architect", _CAT_DEVOPS, _PRIORITY_P0
-    ),
+    Skill(SkillID.KUBERNETES_ARCHITECT, "kubernetes-architect", _CAT_DEVOPS, _PRIORITY_P0),
     Skill(SkillID.TERRAFORM_PATTERNS, "terraform-patterns", _CAT_DEVOPS, _PRIORITY_P1),
     Skill(SkillID.AWS_ARCHITECT, "aws-architect", _CAT_DEVOPS, _PRIORITY_P1),
     Skill(SkillID.CLOUD_ARCHITECT, "cloud-architect", _CAT_DEVOPS, _PRIORITY_P1),
@@ -396,13 +376,9 @@ _MVP_SKILLS = [
     Skill(SkillID.GITOPS_WORKFLOW, "gitops-workflow", _CAT_DEVOPS, _PRIORITY_P2),
     Skill(SkillID.ARGO_CD_PRO, "argocd-pro", _CAT_DEVOPS, _PRIORITY_P2),
     Skill(SkillID.HELM_CHART_BUILDER, "helm-chart-builder", _CAT_DEVOPS, _PRIORITY_P2),
-    Skill(
-        SkillID.HELM_CHART_BUILDER2, "helm-chart-builder-2", _CAT_DEVOPS, _PRIORITY_P2
-    ),
+    Skill(SkillID.HELM_CHART_BUILDER2, "helm-chart-builder-2", _CAT_DEVOPS, _PRIORITY_P2),
     Skill(SkillID.AWS_LAMBDA_PRO, "aws-lambda-pro", _CAT_DEVOPS, _PRIORITY_P2),
-    Skill(
-        SkillID.PROMPT_ENGINEERING, "prompt-engineering-patterns", _CAT_AI, _PRIORITY_P0
-    ),
+    Skill(SkillID.PROMPT_ENGINEERING, "prompt-engineering-patterns", _CAT_AI, _PRIORITY_P0),
     Skill(SkillID.PROMPT_ENGINEERING2, "prompt-engineering", _CAT_AI, _PRIORITY_P2),
     Skill(SkillID.AGENT_DESIGNER, "agent-designer", _CAT_AI, _PRIORITY_P0),
     Skill(SkillID.MEMORY_SYSTEMS, "memory-systems", _CAT_AI, _PRIORITY_P1),
@@ -410,9 +386,7 @@ _MVP_SKILLS = [
     Skill(SkillID.LLM_EVALUATION, "llm-evaluation", _CAT_AI, _PRIORITY_P1),
     Skill(SkillID.RAG_ARCHITECT, "rag-architect", _CAT_AI, _PRIORITY_P1),
     Skill(SkillID.RAG_ENGINEER, "rag-engineer", _CAT_AI, _PRIORITY_P1),
-    Skill(
-        SkillID.AI_ENGINEERING_TOOLKIT, "ai-engineering-toolkit", _CAT_AI, _PRIORITY_P1
-    ),
+    Skill(SkillID.AI_ENGINEERING_TOOLKIT, "ai-engineering-toolkit", _CAT_AI, _PRIORITY_P1),
     Skill(SkillID.FINE_TUNING_PRO, "fine-tuning-pro", _CAT_AI, _PRIORITY_P2),
     Skill(SkillID.LANG_CHAIN_PRO, "langchain-pro", _CAT_AI, _PRIORITY_P2),
     Skill(SkillID.EMBEDDING_PRO, "embedding-pro", _CAT_AI, _PRIORITY_P2),
@@ -423,9 +397,7 @@ _MVP_SKILLS = [
     Skill(SkillID.HUGGING_FACE_CLI, "hugging-face-cli", _CAT_AI, _PRIORITY_P2),
     Skill(SkillID.LANG_GRAPH, "langgraph", _CAT_AI, _PRIORITY_P2),
     Skill(SkillID.DATA_ENGINEER, "data-engineer", _CAT_DATA, _PRIORITY_P1),
-    Skill(
-        SkillID.DATA_PIPELINE, "data-engineering-data-pipeline", _CAT_DATA, _PRIORITY_P1
-    ),
+    Skill(SkillID.DATA_PIPELINE, "data-engineering-data-pipeline", _CAT_DATA, _PRIORITY_P1),
     Skill(
         SkillID.POSTGRES_BEST_PRACTICES,
         "postgres-best-practices",
@@ -460,9 +432,7 @@ _MVP_SKILLS = [
         _CAT_SECURITY,
         _PRIORITY_P1,
     ),
-    Skill(
-        SkillID.API_SECURITY, "api-security-best-practices", _CAT_SECURITY, _PRIORITY_P1
-    ),
+    Skill(SkillID.API_SECURITY, "api-security-best-practices", _CAT_SECURITY, _PRIORITY_P1),
     Skill(
         SkillID.CONTAINER_SECURITY,
         "container-security-hardening",
@@ -470,9 +440,7 @@ _MVP_SKILLS = [
         _PRIORITY_P2,
     ),
     Skill(SkillID.CLOUD_SECURITY, "cloud-security", _CAT_SECURITY, _PRIORITY_P2),
-    Skill(
-        SkillID.PENETRATION_TESTING, "penetration-testing", _CAT_SECURITY, _PRIORITY_P2
-    ),
+    Skill(SkillID.PENETRATION_TESTING, "penetration-testing", _CAT_SECURITY, _PRIORITY_P2),
     Skill(SkillID.TDD_GUIDE, "tdd-guide", _CAT_TESTING, _PRIORITY_P1),
     Skill(SkillID.E2E_TESTING, "e2e-testing", _CAT_TESTING, _PRIORITY_P1),
     Skill(SkillID.K6_LOAD_TESTING, "k6-load-testing", _CAT_TESTING, _PRIORITY_P2),
@@ -528,9 +496,7 @@ _MVP_SKILLS = [
     Skill(SkillID.WORD_DOCX, "word-docx", _CAT_DOCUMENTS, _PRIORITY_P1),
     Skill(SkillID.EXCEL_XLSX, "excel-xlsx", _CAT_DOCUMENTS, _PRIORITY_P1),
     Skill(SkillID.PPTX_DECK, "pptx-deck-creation", _CAT_DOCUMENTS, _PRIORITY_P2),
-    Skill(
-        SkillID.PRODUCT_MANAGEMENT, "product-management", _CAT_BUSINESS, _PRIORITY_P2
-    ),
+    Skill(SkillID.PRODUCT_MANAGEMENT, "product-management", _CAT_BUSINESS, _PRIORITY_P2),
     Skill(SkillID.AGILE_SCRUM, "agile-scrum", _CAT_BUSINESS, _PRIORITY_P2),
     Skill(SkillID.OKR_TRACKING, "okr-tracking", _CAT_BUSINESS, _PRIORITY_P2),
     Skill(SkillID.TECHNICAL_WRITING, "technical-writing", _CAT_WRITING, _PRIORITY_P1),
@@ -544,21 +510,15 @@ _MVP_SKILLS = [
         _CAT_QUALITY,
         _PRIORITY_P1,
     ),
-    Skill(
-        SkillID.REFACTORING_PATTERNS, "refactoring-patterns", _CAT_QUALITY, _PRIORITY_P1
-    ),
+    Skill(SkillID.REFACTORING_PATTERNS, "refactoring-patterns", _CAT_QUALITY, _PRIORITY_P1),
     Skill(
         SkillID.ERROR_HANDLING_PATTERNS,
         "error-handling-patterns",
         _CAT_QUALITY,
         _PRIORITY_P1,
     ),
-    Skill(
-        SkillID.SYSTEMATIC_DEBUGGING, "systematic-debugging", _CAT_QUALITY, _PRIORITY_P1
-    ),
-    Skill(
-        SkillID.CODE_SIMPLIFICATION, "code-simplification", _CAT_QUALITY, _PRIORITY_P2
-    ),
+    Skill(SkillID.SYSTEMATIC_DEBUGGING, "systematic-debugging", _CAT_QUALITY, _PRIORITY_P1),
+    Skill(SkillID.CODE_SIMPLIFICATION, "code-simplification", _CAT_QUALITY, _PRIORITY_P2),
     Skill(
         SkillID.OBSERVABILITY,
         "observability-and-instrumentation",
@@ -572,9 +532,7 @@ _MVP_SKILLS = [
         _PRIORITY_P2,
     ),
     Skill(SkillID.POSTMORTEM, "postmortem", _CAT_OBSERVABILITY, _PRIORITY_P2),
-    Skill(
-        SkillID.CHAOS_ENGINEERING, "chaos-engineering", _CAT_OBSERVABILITY, _PRIORITY_P2
-    ),
+    Skill(SkillID.CHAOS_ENGINEERING, "chaos-engineering", _CAT_OBSERVABILITY, _PRIORITY_P2),
     Skill(SkillID.ACCESSIBILITY, "accessibility", _CAT_WEB, _PRIORITY_P1),
     Skill(SkillID.ARCH_DECISION, "arch-decision", _CAT_ARCHITECTURE, _PRIORITY_P1),
     Skill(SkillID.CI_CD, "ci-cd", _CAT_DEVOPS, _PRIORITY_P1),
@@ -611,42 +569,28 @@ _MVP_SKILLS = [
     Skill(SkillID.DXRK_LOOP, "dxrk-loop", _CAT_DXRK, _PRIORITY_P1),
     Skill(SkillID.DXRK_LOREM_IPSUM, "dxrk-lorem-ipsum", _CAT_DXRK, _PRIORITY_P2),
     Skill(SkillID.DXRK_PARALLELS_E2E, "dxrk-parallels-e2e", _CAT_DXRK, _PRIORITY_P1),
-    Skill(
-        SkillID.DXRK_PARALLELS_SMOKE, "dxrk-parallels-smoke", _CAT_DXRK, _PRIORITY_P1
-    ),
-    Skill(
-        SkillID.DXRK_PRE_RELEASE, "dxrk-pre-release-testing", _CAT_DXRK, _PRIORITY_P0
-    ),
+    Skill(SkillID.DXRK_PARALLELS_SMOKE, "dxrk-parallels-smoke", _CAT_DXRK, _PRIORITY_P1),
+    Skill(SkillID.DXRK_PRE_RELEASE, "dxrk-pre-release-testing", _CAT_DXRK, _PRIORITY_P0),
     Skill(SkillID.DXRK_PR_MAINTAINER, "dxrk-pr-maintainer", _CAT_DXRK, _PRIORITY_P0),
     Skill(SkillID.DXRK_QA_TESTING, "dxrk-qa-testing", _CAT_DXRK, _PRIORITY_P0),
     Skill(SkillID.DXRK_RELEASE, "dxrk-release-maintainer", _CAT_DXRK, _PRIORITY_P0),
     Skill(SkillID.DXRK_REMEMBER, "dxrk-remember", _CAT_DXRK, _PRIORITY_P1),
-    Skill(
-        SkillID.DXRK_SCHEDULE_AGENTS, "dxrk-schedule-agents", _CAT_DXRK, _PRIORITY_P1
-    ),
+    Skill(SkillID.DXRK_SCHEDULE_AGENTS, "dxrk-schedule-agents", _CAT_DXRK, _PRIORITY_P1),
     Skill(SkillID.DXRK_SECRET_SCAN, "dxrk-secret-scanning", _CAT_DXRK, _PRIORITY_P0),
-    Skill(
-        SkillID.DXRK_SECURITY_TRIAGE, "dxrk-security-triage", _CAT_DXRK, _PRIORITY_P0
-    ),
+    Skill(SkillID.DXRK_SECURITY_TRIAGE, "dxrk-security-triage", _CAT_DXRK, _PRIORITY_P0),
     Skill(SkillID.DXRK_SIMPLIFY, "dxrk-simplify", _CAT_DXRK, _PRIORITY_P1),
-    Skill(
-        SkillID.DXRK_SKILL_GENERATOR, "dxrk-skill-generator", _CAT_DXRK, _PRIORITY_P1
-    ),
+    Skill(SkillID.DXRK_SKILL_GENERATOR, "dxrk-skill-generator", _CAT_DXRK, _PRIORITY_P1),
     Skill(SkillID.DXRK_SKILLIFY, "dxrk-skillify", _CAT_DXRK, _PRIORITY_P1),
     Skill(SkillID.DXRK_STUCK, "dxrk-stuck", _CAT_DXRK, _PRIORITY_P1),
     Skill(SkillID.DXRK_TESTBOX, "dxrk-testbox", _CAT_DXRK, _PRIORITY_P0),
     Skill(SkillID.DXRK_TESTING, "dxrk-testing", _CAT_DXRK, _PRIORITY_P0),
     Skill(SkillID.DXRK_TEST_MEMORY, "dxrk-test-memory", _CAT_DXRK, _PRIORITY_P1),
     Skill(SkillID.DXRK_TEST_OPTIMIZE, "dxrk-test-optimize", _CAT_DXRK, _PRIORITY_P1),
-    Skill(
-        SkillID.DXRK_TEST_PERFORMANCE, "dxrk-test-performance", _CAT_DXRK, _PRIORITY_P1
-    ),
+    Skill(SkillID.DXRK_TEST_PERFORMANCE, "dxrk-test-performance", _CAT_DXRK, _PRIORITY_P1),
     Skill(SkillID.DXRK_UPDATE_CONFIG, "dxrk-update-config", _CAT_DXRK, _PRIORITY_P1),
     Skill(SkillID.DXRK_VERIFY, "dxrk-verify", _CAT_DXRK, _PRIORITY_P0),
     Skill(SkillID.TYPE_SCRIPT_EXPERT, "typescript-expert", _CAT_LANGUAGE, _PRIORITY_P1),
-    Skill(
-        SkillID.NODEJS_BACKEND, "nodejs-backend-patterns", _CAT_LANGUAGE, _PRIORITY_P1
-    ),
+    Skill(SkillID.NODEJS_BACKEND, "nodejs-backend-patterns", _CAT_LANGUAGE, _PRIORITY_P1),
     Skill(
         SkillID.NODEJS_BEST_PRACTICES,
         "nodejs-best-practices",
@@ -657,20 +601,14 @@ _MVP_SKILLS = [
     Skill(SkillID.DRIZZLE_ORM, "drizzle-orm-expert", _CAT_LANGUAGE, _PRIORITY_P2),
     Skill(SkillID.PRISMA_EXPERT, "prisma-expert", _CAT_LANGUAGE, _PRIORITY_P2),
     Skill(SkillID.RUBY_PRO, "ruby-pro", _CAT_LANGUAGE, _PRIORITY_P2),
-    Skill(
-        SkillID.PYTHON_TESTING, "python-testing-patterns", _CAT_TESTING, _PRIORITY_P1
-    ),
+    Skill(SkillID.PYTHON_TESTING, "python-testing-patterns", _CAT_TESTING, _PRIORITY_P1),
     Skill(SkillID.ANGULAR, "angular", _CAT_WEB, _PRIORITY_P2),
-    Skill(
-        SkillID.ANGULAR_BEST_PRACTICES, "angular-best-practices", _CAT_WEB, _PRIORITY_P2
-    ),
+    Skill(SkillID.ANGULAR_BEST_PRACTICES, "angular-best-practices", _CAT_WEB, _PRIORITY_P2),
     Skill(SkillID.SVELTE_KIT, "sveltekit", _CAT_WEB, _PRIORITY_P2),
     Skill(SkillID.TAILWIND_PATTERNS, "tailwind-patterns", _CAT_WEB, _PRIORITY_P1),
     Skill(SkillID.REACT_STATE_MGMT, "react-state-management", _CAT_WEB, _PRIORITY_P1),
     Skill(SkillID.AWS_SERVERLESS_EDA, "aws-serverless-eda", _CAT_DEVOPS, _PRIORITY_P1),
-    Skill(
-        SkillID.AWS_PENETRATION, "aws-penetration-testing", _CAT_SECURITY, _PRIORITY_P2
-    ),
+    Skill(SkillID.AWS_PENETRATION, "aws-penetration-testing", _CAT_SECURITY, _PRIORITY_P2),
     Skill(SkillID.AZURE_CLOUD, "azure-cloud-architect", _CAT_DEVOPS, _PRIORITY_P2),
     Skill(SkillID.DOCKER_DEVELOPMENT, "docker-development", _CAT_DEVOPS, _PRIORITY_P1),
     Skill(
@@ -679,15 +617,9 @@ _MVP_SKILLS = [
         _CAT_DEVOPS,
         _PRIORITY_P1,
     ),
-    Skill(
-        SkillID.CI_CD_AND_AUTOMATION, "ci-cd-and-automation", _CAT_DEVOPS, _PRIORITY_P1
-    ),
-    Skill(
-        SkillID.KUBERNETES_DEPLOY, "kubernetes-deployment", _CAT_DEVOPS, _PRIORITY_P1
-    ),
-    Skill(
-        SkillID.KUBERNETES_OPERATOR, "kubernetes-operator", _CAT_DEVOPS, _PRIORITY_P2
-    ),
+    Skill(SkillID.CI_CD_AND_AUTOMATION, "ci-cd-and-automation", _CAT_DEVOPS, _PRIORITY_P1),
+    Skill(SkillID.KUBERNETES_DEPLOY, "kubernetes-deployment", _CAT_DEVOPS, _PRIORITY_P1),
+    Skill(SkillID.KUBERNETES_OPERATOR, "kubernetes-operator", _CAT_DEVOPS, _PRIORITY_P2),
     Skill(SkillID.SPARK_OPTIMIZATION, "spark-optimization", _CAT_DATA, _PRIORITY_P2),
     Skill(SkillID.SNOWFLAKE, "snowflake-development", _CAT_DATA, _PRIORITY_P2),
     Skill(SkillID.AI_AGENTS_ARCHITECT, "ai-agents-architect", _CAT_AI, _PRIORITY_P0),
@@ -703,9 +635,7 @@ _MVP_SKILLS = [
         _PRIORITY_P2,
     ),
     Skill(SkillID.EMBEDDING_STRATEGIES, "embedding-strategies", _CAT_AI, _PRIORITY_P2),
-    Skill(
-        SkillID.LANG_CHAIN_ARCHITECT, "langchain-architecture", _CAT_AI, _PRIORITY_P2
-    ),
+    Skill(SkillID.LANG_CHAIN_ARCHITECT, "langchain-architecture", _CAT_AI, _PRIORITY_P2),
     Skill(SkillID.DATABASE_ARCHITECT, "database-architect", _CAT_DATA, _PRIORITY_P1),
     Skill(SkillID.DATABASE_OPTIMIZER, "database-optimizer", _CAT_DATA, _PRIORITY_P1),
     Skill(SkillID.SQL_DATABASE, "sql-database-assistant", _CAT_DATA, _PRIORITY_P1),
@@ -743,9 +673,7 @@ _MVP_SKILLS = [
         _CAT_SECURITY,
         _PRIORITY_P2,
     ),
-    Skill(
-        SkillID.SECRETS_MANAGEMENT, "secrets-management", _CAT_SECURITY, _PRIORITY_P1
-    ),
+    Skill(SkillID.SECRETS_MANAGEMENT, "secrets-management", _CAT_SECURITY, _PRIORITY_P1),
     Skill(
         SkillID.API_SECURITY_TESTING,
         "api-security-testing",
@@ -776,9 +704,7 @@ _MVP_SKILLS = [
         _CAT_ARCHITECTURE,
         _PRIORITY_P1,
     ),
-    Skill(
-        SkillID.BACKEND_ARCHITECT, "backend-architect", _CAT_ARCHITECTURE, _PRIORITY_P1
-    ),
+    Skill(SkillID.BACKEND_ARCHITECT, "backend-architect", _CAT_ARCHITECTURE, _PRIORITY_P1),
     Skill(
         SkillID.DOMAIN_DRIVEN_DESIGN,
         "domain-driven-design",
@@ -811,25 +737,19 @@ _MVP_SKILLS = [
     Skill(SkillID.PDF, "pdf", _CAT_DOCUMENTS, _PRIORITY_P1),
     Skill(SkillID.PDF_OFFICIAL, "pdf-official", _CAT_DOCUMENTS, _PRIORITY_P1),
     Skill(SkillID._3D_WEB_EXPERIENCE, "3d-web-experience", _CAT_MEDIA, _PRIORITY_P2),
-    Skill(
-        SkillID.THREE_JS_FUNDAMENTALS, "threejs-fundamentals", _CAT_MEDIA, _PRIORITY_P2
-    ),
+    Skill(SkillID.THREE_JS_FUNDAMENTALS, "threejs-fundamentals", _CAT_MEDIA, _PRIORITY_P2),
     Skill(SkillID.THREE_JS_ANIMATION, "threejs-animation", _CAT_MEDIA, _PRIORITY_P2),
     Skill(SkillID.AI_STUDIO_IMAGE, "ai-studio-image", _CAT_MEDIA, _PRIORITY_P2),
     Skill(SkillID.AUDIO_TRANSCRIBER, "audio-transcriber", _CAT_MEDIA, _PRIORITY_P2),
     Skill(SkillID.DEMO_VIDEO, "demo-video", _CAT_MEDIA, _PRIORITY_P2),
-    Skill(
-        SkillID.AGILE_PRODUCT_OWNER, "agile-product-owner", _CAT_BUSINESS, _PRIORITY_P2
-    ),
+    Skill(SkillID.AGILE_PRODUCT_OWNER, "agile-product-owner", _CAT_BUSINESS, _PRIORITY_P2),
     Skill(
         SkillID.PRODUCT_MANAGER_TOOL,
         "product-manager-toolkit",
         _CAT_BUSINESS,
         _PRIORITY_P2,
     ),
-    Skill(
-        SkillID.PRODUCT_STRATEGIST, "product-strategist", _CAT_BUSINESS, _PRIORITY_P2
-    ),
+    Skill(SkillID.PRODUCT_STRATEGIST, "product-strategist", _CAT_BUSINESS, _PRIORITY_P2),
     Skill(SkillID.SCRUM_MASTER, "scrum-master", _CAT_BUSINESS, _PRIORITY_P2),
     Skill(SkillID.CONTENT_HUMANIZER, "content-humanizer", _CAT_WRITING, _PRIORITY_P1),
     Skill(SkillID.DEV_REL_CONTENT, "devrel-content", _CAT_WRITING, _PRIORITY_P2),
@@ -859,9 +779,7 @@ _MVP_SKILLS = [
         _PRIORITY_P2,
     ),
     Skill(SkillID.DEBUGGING_CODE, "debugging-code", _CAT_QUALITY, _PRIORITY_P1),
-    Skill(
-        SkillID.DEBUGGING_STRATEGIES, "debugging-strategies", _CAT_QUALITY, _PRIORITY_P1
-    ),
+    Skill(SkillID.DEBUGGING_STRATEGIES, "debugging-strategies", _CAT_QUALITY, _PRIORITY_P1),
     Skill(SkillID.DEBUGGING_TOOLKIT, "debugging-toolkit", _CAT_QUALITY, _PRIORITY_P1),
     Skill(
         SkillID.DEBUGGING_RECOVERY,
@@ -869,9 +787,7 @@ _MVP_SKILLS = [
         _CAT_QUALITY,
         _PRIORITY_P1,
     ),
-    Skill(
-        SkillID.PERFORMANCE_ENGINEER, "performance-engineer", _CAT_QUALITY, _PRIORITY_P1
-    ),
+    Skill(SkillID.PERFORMANCE_ENGINEER, "performance-engineer", _CAT_QUALITY, _PRIORITY_P1),
     Skill(
         SkillID.PERFORMANCE_OPTIM,
         "performance-optimization",
@@ -884,9 +800,7 @@ _MVP_SKILLS = [
         _CAT_QUALITY,
         _PRIORITY_P1,
     ),
-    Skill(
-        SkillID.PERFORMANCE_PROFILER, "performance-profiler", _CAT_QUALITY, _PRIORITY_P2
-    ),
+    Skill(SkillID.PERFORMANCE_PROFILER, "performance-profiler", _CAT_QUALITY, _PRIORITY_P2),
     Skill(
         SkillID.PERFORMANCE_PROFILING,
         "performance-profiling",
@@ -903,9 +817,7 @@ _MVP_SKILLS = [
     Skill(SkillID.N8N_CODE_TOOL, "n8n-code-tool", _CAT_DEVOPS, _PRIORITY_P2),
     Skill(SkillID.N8N_ERROR_HANDLING, "n8n-error-handling", _CAT_DEVOPS, _PRIORITY_P2),
     Skill(SkillID.NOTION_AUTOMATION, "notion-automation", _CAT_DEVOPS, _PRIORITY_P2),
-    Skill(
-        SkillID.NOTION_TEMPLATE, "notion-template-business", _CAT_DEVOPS, _PRIORITY_P2
-    ),
+    Skill(SkillID.NOTION_TEMPLATE, "notion-template-business", _CAT_DEVOPS, _PRIORITY_P2),
     Skill(SkillID.FIGMA_AUTOMATION, "figma-automation", _CAT_DEVOPS, _PRIORITY_P2),
     Skill(
         SkillID.GITHUB_ACTIONS_DEBUGGER,
@@ -930,15 +842,11 @@ _MVP_SKILLS = [
     Skill(SkillID.HF_MCP, "hf-mcp", _CAT_AI, _PRIORITY_P2),
     Skill(SkillID.MERCURY_MCP, "mercury-mcp", _CAT_AI, _PRIORITY_P2),
     Skill(SkillID.ENV_GUIDE, "environment-setup-guide", _CAT_DEVOPS, _PRIORITY_P1),
-    Skill(
-        SkillID.ENV_SECRETS_MANAGER, "env-secrets-manager", _CAT_SECURITY, _PRIORITY_P1
-    ),
+    Skill(SkillID.ENV_SECRETS_MANAGER, "env-secrets-manager", _CAT_SECURITY, _PRIORITY_P1),
     Skill(SkillID.CODEX_PROFILES, "codex-profiles", _CAT_QUALITY, _PRIORITY_P2),
     Skill(SkillID.CODEX_REVIEW, "codex-review", _CAT_QUALITY, _PRIORITY_P2),
     Skill(SkillID.CODEX_SUBAGENT, "codex-subagent", _CAT_QUALITY, _PRIORITY_P2),
-    Skill(
-        SkillID.CODE_REVIEW_OPT, "code-review-optimization", _CAT_QUALITY, _PRIORITY_P2
-    ),
+    Skill(SkillID.CODE_REVIEW_OPT, "code-review-optimization", _CAT_QUALITY, _PRIORITY_P2),
 ]
 
 

@@ -6,6 +6,7 @@ Persona content injection into system prompts.
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass, field
 
@@ -20,16 +21,16 @@ class InjectionResult:
     Files: list[str] = field(default_factory=list)
 
 
-_OUTPUT_STYLE_OVERLAY_JSON = b'{\n  "outputStyle": "Gentleman"\n}\n'
+_OUTPUT_STYLE_OVERLAY_JSON = b'{\n  "outputStyle": "Dxrk"\n}\n'
 
 _OPENCODE_AGENT_OVERLAY_JSON = (
     b'{\n  "agent": {\n'
-    b'    "gentleman": {\n      "mode": "primary",\n'
-    b'      "description": "Senior Architect mentor - helpful first, challenging when it matters",\n'
+    b'    "dxrk": {\n      "mode": "primary",\n'
+    b'      "description": "Dxrk mentor - helpful first, challenging when it matters",\n'
     b'      "prompt": "{file:./AGENTS.md}",\n'
     b'      "tools": {\n        "write": true,\n        "edit": true\n      }\n    },\n'
     b'    "sdd-orchestrator": {\n      "mode": "all",\n'
-    b'      "description": "Gentleman personality + SDD delegate-only orchestrator",\n'
+    b'      "description": "Dxrk personality + SDD delegate-only orchestrator",\n'
     b'      "prompt": "{file:./AGENTS.md}",\n'
     b'      "tools": {\n        "read": true,\n        "write": true,\n        "edit": true,\n        "bash": true\n      }\n    }\n  }\n}\n'
 )
@@ -117,12 +118,49 @@ def _clean_legacy_vscode_persona(home_dir: str) -> bool:
     return cleaned
 
 
+_MANAGED_LEGACY_FINGERPRINTS = (
+    "<!-- dxrk:",
+    "Gentle AI Persona",
+    "Senior Architect",
+)
+
+
+def is_managed_legacy_content(data: str) -> bool:
+    """True when file content was written by a previous Dxrk release."""
+    return any(fp in data for fp in _MANAGED_LEGACY_FINGERPRINTS)
+
+
+def clean_legacy_prompt_files(home_dir: str, adapter) -> bool:
+    """Remove previous-release prompt files managed by Dxrk (one-time).
+
+    Only removes files whose content carries our managed fingerprints, so
+    user-authored files with the same legacy name are left untouched.
+    """
+    try:
+        legacy_paths = adapter.legacy_system_prompt_files(home_dir)
+    except (AttributeError, OSError, TypeError):
+        return False
+    cleaned = False
+    for old_path in legacy_paths or []:
+        try:
+            with open(old_path, encoding="utf-8") as f:
+                data = f.read()
+        except (FileNotFoundError, OSError):
+            continue
+        if not is_managed_legacy_content(data):
+            continue
+        try:
+            os.remove(old_path)
+            cleaned = True
+        except OSError:
+            pass
+    return cleaned
+
+
 # ─── Managed section preservation ──────────────────────────────────────────
 
 
-def _preserve_managed_sections(
-    existing: str, new_persona: str, persona: PersonaID
-) -> tuple[str, bool]:
+def _preserve_managed_sections(existing: str, new_persona: str, persona: PersonaID) -> tuple[str, bool]:
     if not existing or persona == PersonaID.DXRK:
         return "", False
     idx = existing.find("<!-- dxrk:")
@@ -161,6 +199,34 @@ def _wrap_steering_file(content: str) -> str:
 # ─── Main inject function ──────────────────────────────────────────────────
 
 
+_LEGACY_AGENT_KEY = "gentleman"
+_AGENT_KEY = "dxrk"
+
+
+def _migrate_legacy_agent_key(settings_path: str) -> bool:
+    """Rename legacy agent.gentleman to agent.dxrk (one-time, idempotent).
+
+    Deep-merge never removes keys, so without this the old key would stay
+    orphaned in settings files written by previous releases. Only renames
+    when the new key is absent; user-managed duplicates are left alone.
+    """
+    try:
+        with open(settings_path, encoding="utf-8") as f:
+            data = json.load(f)
+    except (FileNotFoundError, ValueError, OSError):
+        return False
+    if not isinstance(data, dict):
+        return False
+    agents = data.get("agent")
+    if not isinstance(agents, dict):
+        return False
+    if _LEGACY_AGENT_KEY not in agents or _AGENT_KEY in agents:
+        return False
+    agents[_AGENT_KEY] = agents.pop(_LEGACY_AGENT_KEY)
+    wr = filemerge.write_file_atomic(settings_path, (json.dumps(data, indent=2) + "\n").encode("utf-8"), 0o644)
+    return wr.Changed
+
+
 def inject(home_dir: str, adapter, persona: PersonaID) -> InjectionResult:
     if not adapter.supports_system_prompt:
         return InjectionResult()
@@ -169,6 +235,8 @@ def inject(home_dir: str, adapter, persona: PersonaID) -> InjectionResult:
 
     files: list[str] = []
     changed = False
+    cleaned = clean_legacy_prompt_files(home_dir, adapter)
+    changed = changed or cleaned
     content = _persona_content(adapter.agent, persona)
     if not content:
         return InjectionResult()
@@ -197,24 +265,18 @@ def inject(home_dir: str, adapter, persona: PersonaID) -> InjectionResult:
                 healed = ""
             healed = filemerge.strip_legacy_atl_block(healed)
             updated = filemerge.inject_markdown_section(healed, "persona", content)
-            wr = filemerge.write_file_atomic(
-                prompt_path, updated.encode("utf-8"), 0o644
-            )
+            wr = filemerge.write_file_atomic(prompt_path, updated.encode("utf-8"), 0o644)
             changed = changed or wr.Changed
             files.append(prompt_path)
         else:
             existing = _read_file_or_empty(prompt_path)
             preserved, ok = _preserve_managed_sections(existing, content, persona)
             if ok:
-                wr = filemerge.write_file_atomic(
-                    prompt_path, preserved.encode("utf-8"), 0o644
-                )
+                wr = filemerge.write_file_atomic(prompt_path, preserved.encode("utf-8"), 0o644)
                 changed = changed or wr.Changed
                 files.append(prompt_path)
             else:
-                wr = filemerge.write_file_atomic(
-                    prompt_path, content.encode("utf-8"), 0o644
-                )
+                wr = filemerge.write_file_atomic(prompt_path, content.encode("utf-8"), 0o644)
                 changed = changed or wr.Changed
                 files.append(prompt_path)
 
@@ -226,31 +288,21 @@ def inject(home_dir: str, adapter, persona: PersonaID) -> InjectionResult:
         except OSError:
             pass
         existing = _read_file_or_empty(prompt_path)
-        preserved, ok = _preserve_managed_sections(
-            existing, _wrap_instructions_file(content), persona
-        )
+        preserved, ok = _preserve_managed_sections(existing, _wrap_instructions_file(content), persona)
         if ok:
-            wr = filemerge.write_file_atomic(
-                prompt_path, preserved.encode("utf-8"), 0o644
-            )
+            wr = filemerge.write_file_atomic(prompt_path, preserved.encode("utf-8"), 0o644)
         else:
-            wr = filemerge.write_file_atomic(
-                prompt_path, _wrap_instructions_file(content).encode("utf-8"), 0o644
-            )
+            wr = filemerge.write_file_atomic(prompt_path, _wrap_instructions_file(content).encode("utf-8"), 0o644)
         changed = changed or wr.Changed
         files.append(prompt_path)
 
     elif sps == SystemPromptStrategy.STEERING_FILE:
         prompt_path = adapter.system_prompt_file(home_dir)
         existing = _read_file_or_empty(prompt_path)
-        preserved, ok = _preserve_managed_sections(
-            existing, _wrap_steering_file(content), persona
-        )
+        preserved, ok = _preserve_managed_sections(existing, _wrap_steering_file(content), persona)
         steering_content = preserved if ok else _wrap_steering_file(content)
         os.makedirs(os.path.dirname(prompt_path), mode=0o755, exist_ok=True)
-        wr = filemerge.write_file_atomic(
-            prompt_path, steering_content.encode("utf-8"), 0o644
-        )
+        wr = filemerge.write_file_atomic(prompt_path, steering_content.encode("utf-8"), 0o644)
         changed = changed or wr.Changed
         files.append(prompt_path)
 
@@ -285,22 +337,16 @@ def inject(home_dir: str, adapter, persona: PersonaID) -> InjectionResult:
         if persona == PersonaID.DXRK:
             output_style_content = _must_read("kimi/output-style-dxrk.md")
         output_style_path = os.path.join(config_dir, "output-style.md")
-        wr2 = filemerge.write_file_atomic(
-            output_style_path, output_style_content.encode("utf-8"), 0o644
-        )
+        wr2 = filemerge.write_file_atomic(output_style_path, output_style_content.encode("utf-8"), 0o644)
         changed = changed or wr2.Changed
         files.append(output_style_path)
 
     # 2. OpenCode/Kilocode tab-switchable agents
-    if (
-        adapter.agent in (AgentID.OPENCODE, AgentID.KILOCODE)
-        and persona != PersonaID.CUSTOM
-    ):
+    if adapter.agent in (AgentID.OPENCODE, AgentID.KILOCODE) and persona != PersonaID.CUSTOM:
         settings_path = adapter.settings_path(home_dir)
         if settings_path:
-            agent_result, _ = _merge_json_file(
-                settings_path, _OPENCODE_AGENT_OVERLAY_JSON
-            )
+            changed = _migrate_legacy_agent_key(settings_path) or changed
+            agent_result, _ = _merge_json_file(settings_path, _OPENCODE_AGENT_OVERLAY_JSON)
             changed = changed or agent_result.Changed
             files.append(settings_path)
 
@@ -310,26 +356,20 @@ def inject(home_dir: str, adapter, persona: PersonaID) -> InjectionResult:
         if output_style_dir:
             output_style_path = os.path.join(output_style_dir, "dxrk.md")
             output_style_content = _must_read("claude/output-style-dxrk.md")
-            style_result = filemerge.write_file_atomic(
-                output_style_path, output_style_content.encode("utf-8"), 0o644
-            )
+            style_result = filemerge.write_file_atomic(output_style_path, output_style_content.encode("utf-8"), 0o644)
             changed = changed or style_result.Changed
             files.append(output_style_path)
 
         settings_path = adapter.settings_path(home_dir)
         if settings_path:
-            settings_result, _ = _merge_json_file(
-                settings_path, _OUTPUT_STYLE_OVERLAY_JSON
-            )
+            settings_result, _ = _merge_json_file(settings_path, _OUTPUT_STYLE_OVERLAY_JSON)
             changed = changed or settings_result.Changed
             files.append(settings_path)
 
     return InjectionResult(Changed=changed, Files=files)
 
 
-def _merge_json_file(
-    path: str, overlay: bytes
-) -> tuple[filemerge.WriteResult, bytes | None]:
+def _merge_json_file(path: str, overlay: bytes) -> tuple[filemerge.WriteResult, bytes | None]:
     base_json = _os_read_file(path)
     merged = filemerge.merge_json_objects(base_json, overlay)
     wr = filemerge.write_file_atomic(path, merged, 0o644)

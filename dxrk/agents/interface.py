@@ -40,6 +40,10 @@ class Adapter(ABC):
     def system_prompt_file(self, home_dir: str = "") -> str:
         return ""
 
+    def legacy_system_prompt_files(self, home_dir: str = "") -> list[str]:
+        """Prompt files written by previous releases (for one-time cleanup)."""
+        return []
+
     def skills_dir(self, home_dir: str = "") -> str:
         return ""
 

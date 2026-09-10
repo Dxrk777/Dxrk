@@ -20,6 +20,9 @@ from dxrk.components.assets import (
 from dxrk.components.assets import (
     sdd_commands_asset_dir,
 )
+from dxrk.components.persona import (
+    clean_legacy_prompt_files as _clean_legacy_prompt_files,
+)
 from dxrk.models import (
     AgentID,
     ClaudeModelAlias,
@@ -75,9 +78,7 @@ def profile_phase_order() -> list[str]:
     return list(_PROFILE_PHASE_ORDER)
 
 
-def resolve_profile_strategy(
-    home_dir: str, explicit: SDDProfileStrategyID
-) -> SDDProfileStrategyID:
+def resolve_profile_strategy(home_dir: str, explicit: SDDProfileStrategyID) -> SDDProfileStrategyID:
     if explicit:
         return explicit
     if has_external_profile_files(home_dir):
@@ -187,9 +188,7 @@ def _extract_model_from_agent(agent_map: dict[str, Any]) -> ModelAssignment:
 
 def generate_profile_overlay(profile: Profile, home_dir: str) -> bytes:
     if not profile.name or profile.name == "default":
-        raise ValueError(
-            "GenerateProfileOverlay: profile name must be non-empty and not 'default'"
-        )
+        raise ValueError("GenerateProfileOverlay: profile name must be non-empty and not 'default'")
 
     suffix = f"-{profile.name}"
     orchestrator_key = f"sdd-orchestrator{suffix}"
@@ -307,11 +306,7 @@ def _render_profile_model_assignments_section(profile: Profile) -> str:
     lines.append("| Phase | Model | Reason |\n")
     lines.append("|-------|-------|--------|\n")
 
-    orch_model = (
-        profile.orchestrator_model.full_id()
-        if profile.orchestrator_model.provider_id
-        else "—"
-    )
+    orch_model = profile.orchestrator_model.full_id() if profile.orchestrator_model.provider_id else "—"
     lines.append(f"| orchestrator | {orch_model} | Coordinates, makes decisions |\n")
 
     phase_reasons = {
@@ -337,9 +332,7 @@ def _render_profile_model_assignments_section(profile: Profile) -> str:
 
 def remove_profile_agents(settings_path: str, profile_name: str) -> None:
     if not profile_name or profile_name == "default":
-        raise ValueError(
-            f"RemoveProfileAgents: cannot remove default profile (name={profile_name!r})"
-        )
+        raise ValueError(f"RemoveProfileAgents: cannot remove default profile (name={profile_name!r})")
 
     try:
         with open(settings_path) as f:
@@ -481,19 +474,11 @@ def opencode_commands() -> list[OpenCodeCommand]:
             "Continue next pending artifact",
             "/sdd-continue ${change-name}",
         ),
-        OpenCodeCommand(
-            "sdd-explore", "Explore an idea before committing", "/sdd-explore ${topic}"
-        ),
-        OpenCodeCommand(
-            "sdd-ff", "Generate all planning artifacts", "/sdd-ff ${change-name}"
-        ),
+        OpenCodeCommand("sdd-explore", "Explore an idea before committing", "/sdd-explore ${topic}"),
+        OpenCodeCommand("sdd-ff", "Generate all planning artifacts", "/sdd-ff ${change-name}"),
         OpenCodeCommand("sdd-apply", "Implement tasks", "/sdd-apply ${change-name}"),
-        OpenCodeCommand(
-            "sdd-verify", "Verify implementation", "/sdd-verify ${change-name}"
-        ),
-        OpenCodeCommand(
-            "sdd-archive", "Archive completed change", "/sdd-archive ${change-name}"
-        ),
+        OpenCodeCommand("sdd-verify", "Verify implementation", "/sdd-verify ${change-name}"),
+        OpenCodeCommand("sdd-archive", "Archive completed change", "/sdd-archive ${change-name}"),
         OpenCodeCommand("sdd-onboard", "Guided SDD walkthrough", "/sdd-onboard"),
     ]
 
@@ -548,9 +533,7 @@ def _find_project_root(dir: str) -> str | None:
             if os.path.isfile(os.path.join(current, marker)):
                 return current
         for marker in _STRONG_PROJECT_MARKERS:
-            if os.path.isfile(os.path.join(current, marker)) or os.path.isdir(
-                os.path.join(current, marker)
-            ):
+            if os.path.isfile(os.path.join(current, marker)) or os.path.isdir(os.path.join(current, marker)):
                 return current
         if os.path.isfile(os.path.join(current, "package.json")):
             best_candidate = current
@@ -591,13 +574,7 @@ def inject(
     **extra: Any,
 ) -> InjectionResult:
     if options is None:
-        opts = InjectOptions(
-            **{
-                k: v
-                for k, v in extra.items()
-                if k in InjectOptions.__dataclass_fields__
-            }
-        )
+        opts = InjectOptions(**{k: v for k, v in extra.items() if k in InjectOptions.__dataclass_fields__})
     else:
         opts = options
 
@@ -606,15 +583,14 @@ def inject(
 
     files: list[str] = []
     changed = False
+    changed = _clean_legacy_prompt_files(home_dir, adapter) or changed
 
     # 1. Inject SDD orchestrator into system prompt (non-OpenCode agents)
     if adapter.agent not in (AgentID.OPENCODE, AgentID.KILOCODE):
         sps = adapter.system_prompt_strategy
 
         if sps == SystemPromptStrategy.MARKDOWN_SECTIONS:
-            result = _inject_markdown_sections(
-                home_dir, adapter, opts.claude_model_assignments
-            )
+            result = _inject_markdown_sections(home_dir, adapter, opts.claude_model_assignments)
             changed = changed or result.Changed
             files.extend(result.Files)
 
@@ -634,9 +610,7 @@ def inject(
             config_dir = adapter.global_config_dir(home_dir)
             content = _must_read(_sdd_orchestrator_asset(adapter.agent))
             module_path = os.path.join(config_dir, "sdd-orchestrator.md")
-            wr = filemerge.write_file_atomic(
-                module_path, content.encode("utf-8"), 0o644
-            )
+            wr = filemerge.write_file_atomic(module_path, content.encode("utf-8"), 0o644)
             changed = changed or wr.Changed
             files.append(module_path)
 
@@ -646,20 +620,14 @@ def inject(
             config_dir = adapter.global_config_dir(home_dir)
             content = "Strict TDD Mode: enabled"
             module_path = os.path.join(config_dir, "strict-tdd-mode.md")
-            wr = filemerge.write_file_atomic(
-                module_path, content.encode("utf-8"), 0o644
-            )
+            wr = filemerge.write_file_atomic(module_path, content.encode("utf-8"), 0o644)
             changed = changed or wr.Changed
             files.append(module_path)
         else:
             prompt_path = adapter.system_prompt_file(home_dir)
             existing = _read_file_or_empty(prompt_path)
-            updated = filemerge.inject_markdown_section(
-                existing, "strict-tdd-mode", "Strict TDD Mode: enabled"
-            )
-            wr = filemerge.write_file_atomic(
-                prompt_path, updated.encode("utf-8"), 0o644
-            )
+            updated = filemerge.inject_markdown_section(existing, "strict-tdd-mode", "Strict TDD Mode: enabled")
+            wr = filemerge.write_file_atomic(prompt_path, updated.encode("utf-8"), 0o644)
             changed = changed or wr.Changed
             if prompt_path not in files:
                 files.append(prompt_path)
@@ -673,9 +641,7 @@ def inject(
                 fpath = os.path.join(asset_dir, fname)
                 content = _must_read(fpath)
                 out_path = os.path.join(commands_dir, fname)
-                wr = filemerge.write_file_atomic(
-                    out_path, content.encode("utf-8"), 0o644
-                )
+                wr = filemerge.write_file_atomic(out_path, content.encode("utf-8"), 0o644)
                 changed = changed or wr.Changed
                 files.append(out_path)
 
@@ -697,9 +663,7 @@ def inject(
                 opts.preserve_opencode_orchestrator_prompt,
             )
 
-            assignments = (
-                opts.opencode_model_assignments if sdd_mode == SDDModeID.MULTI else {}
-            )
+            assignments = opts.opencode_model_assignments if sdd_mode == SDDModeID.MULTI else {}
             if sdd_mode == SDDModeID.MULTI and assignments:
                 root_model_id = _read_opencode_root_model(settings_path)
                 existing_agent_keys = _read_existing_agent_models(settings_path)
@@ -736,9 +700,7 @@ def inject(
             for fname in shared_files:
                 content = _must_read(f"skills/_shared/{fname}")
                 out_path = os.path.join(skill_dir, "_shared", fname)
-                wr = filemerge.write_file_atomic(
-                    out_path, content.encode("utf-8"), 0o644
-                )
+                wr = filemerge.write_file_atomic(out_path, content.encode("utf-8"), 0o644)
                 changed = changed or wr.Changed
                 files.append(out_path)
 
@@ -764,9 +726,7 @@ def inject(
                         continue
                     content = _must_read(f"{embedded_dir}/{fname}")
                     out_path = os.path.join(skill_dir, skill_name, fname)
-                    wr = filemerge.write_file_atomic(
-                        out_path, content.encode("utf-8"), 0o644
-                    )
+                    wr = filemerge.write_file_atomic(out_path, content.encode("utf-8"), 0o644)
                     changed = changed or wr.Changed
                     files.append(out_path)
 
@@ -774,9 +734,7 @@ def inject(
     if hasattr(adapter, "supports_workflows") and adapter.supports_workflows:
         project_root = _find_project_root(opts.workspace_dir)
         if project_root:
-            workflows_dir = os.path.join(
-                project_root, ".windsurf", "workflows"
-            )  # default
+            workflows_dir = os.path.join(project_root, ".windsurf", "workflows")  # default
             if hasattr(adapter, "workflows_dir"):
                 workflows_dir = adapter.workflows_dir(project_root)
             embed_dir = "windsurf/workflows"  # default
@@ -785,9 +743,7 @@ def inject(
             for fname in os.listdir(os.path.join(_asset_root, embed_dir)):
                 content = _must_read(f"{embed_dir}/{fname}")
                 out_path = os.path.join(workflows_dir, fname)
-                wr = filemerge.write_file_atomic(
-                    out_path, content.encode("utf-8"), 0o644
-                )
+                wr = filemerge.write_file_atomic(out_path, content.encode("utf-8"), 0o644)
                 changed = changed or wr.Changed
                 files.append(out_path)
 
@@ -807,17 +763,11 @@ def inject(
                     or opts.claude_model_assignments.get("default")
                     or "sonnet"
                 )
-                content = content.replace(
-                    "{{KIRO_MODEL}}", adapter.kiro_model_id(ClaudeModelAlias(alias))
-                )
+                content = content.replace("{{KIRO_MODEL}}", adapter.kiro_model_id(ClaudeModelAlias(alias)))
             if hasattr(adapter, "claude_model_id"):
                 phase = fname.rsplit(".", 1)[0]
-                alias = _resolve_claude_model_alias(
-                    opts.claude_model_assignments, phase
-                )
-                content = content.replace(
-                    "{{CLAUDE_MODEL}}", adapter.claude_model_id(alias)
-                )
+                alias = _resolve_claude_model_alias(opts.claude_model_assignments, phase)
+                content = content.replace("{{CLAUDE_MODEL}}", adapter.claude_model_id(alias))
             out_path = os.path.join(agents_dir, fname)
             wr = filemerge.write_file_atomic(out_path, content.encode("utf-8"), 0o644)
             changed = changed or wr.Changed
@@ -863,9 +813,7 @@ def _inline_opencode_sdd_prompts(
                 continue
             placeholder = f"__PROMPT_FILE_{phase}__"
             if agent_raw.get("prompt") == placeholder:
-                agent_raw["prompt"] = (
-                    "{file:" + os.path.join(prompt_dir, f"{phase}.md") + "}"
-                )
+                agent_raw["prompt"] = "{file:" + os.path.join(prompt_dir, f"{phase}.md") + "}"
 
     return (json.dumps(overlay, indent=2) + "\n").encode("utf-8")
 
@@ -949,17 +897,17 @@ def _inject_model_assignments(
         elif root_model_id:
             agent_def["model"] = root_model_id
 
-    # Mirror orchestrator model to gentleman
+    # Mirror orchestrator model to dxrk
     orch_assignment = assignments.get("sdd-orchestrator")
     if (
         orch_assignment
         and orch_assignment.provider_id
         and orch_assignment.model_id
-        and existing_agent_keys.get("gentleman")
+        and (existing_agent_keys.get("dxrk") or existing_agent_keys.get("gentleman"))
     ):
-        if "gentleman" not in agents_raw:
-            agents_raw["gentleman"] = {}
-        gent = agents_raw["gentleman"]
+        if "dxrk" not in agents_raw:
+            agents_raw["dxrk"] = {}
+        gent = agents_raw["dxrk"]
         if isinstance(gent, dict):
             gent["model"] = orch_assignment.full_id()
 
@@ -1017,9 +965,7 @@ def _inject_claude_model_assignments(content: str, assignments: dict[str, str]) 
     return content[:start] + "\n" + replacement + content[end:]
 
 
-def _resolve_claude_model_alias(
-    assignments: dict[str, str], phase: str
-) -> ClaudeModelAlias:
+def _resolve_claude_model_alias(assignments: dict[str, str], phase: str) -> ClaudeModelAlias:
     from dxrk.models import claude_model_preset_balanced
 
     merged = claude_model_preset_balanced()
@@ -1056,9 +1002,7 @@ def _render_claude_model_assignments_section(assignments: Mapping[str, str]) -> 
     return "".join(lines)
 
 
-def _inject_markdown_sections(
-    home_dir: str, adapter, assignments: dict[str, str]
-) -> InjectionResult:
+def _inject_markdown_sections(home_dir: str, adapter, assignments: dict[str, str]) -> InjectionResult:
     prompt_path = adapter.system_prompt_file(home_dir)
     content = _must_read("claude/sdd-orchestrator.md")
     if assignments:
@@ -1067,10 +1011,7 @@ def _inject_markdown_sections(
     existing = _read_file_or_empty(prompt_path)
     existing = filemerge.strip_legacy_atl_block(existing)
 
-    if (
-        _has_sdd_orchestrator(existing)
-        and "<!-- dxrk:sdd-orchestrator -->" not in existing
-    ):
+    if _has_sdd_orchestrator(existing) and "<!-- dxrk:sdd-orchestrator -->" not in existing:
         existing = _strip_bare_orchestrator_section(existing)
 
     updated = filemerge.inject_markdown_section(existing, "sdd-orchestrator", content)
@@ -1139,7 +1080,7 @@ def _inject_file_append(home_dir: str, adapter) -> InjectionResult:
         and not existing.strip()
     ):
         if adapter.system_prompt_strategy == SystemPromptStrategy.INSTRUCTIONS_FILE:
-            existing = '---\nname: Gentle AI Persona\ndescription: Gentleman persona with SDD orchestration and Memory Protocol\napplyTo: "**"\n---\n'
+            existing = '---\nname: Dxrk AI Persona\ndescription: Dxrk persona with SDD orchestration and Memory Protocol\napplyTo: "**"\n---\n'
         else:
             existing = "---\ninclusion: always\n---\n"
 
@@ -1260,9 +1201,7 @@ def read_current_model_assignments(settings_path: str) -> dict[str, ModelAssignm
 _asset_root = os.path.join(os.path.dirname(__file__), "..", "assets")
 
 
-def _merge_json_file(
-    path: str, overlay: bytes
-) -> tuple[filemerge.WriteResult, bytes | None]:
+def _merge_json_file(path: str, overlay: bytes) -> tuple[filemerge.WriteResult, bytes | None]:
     try:
         with open(path, "rb") as f:
             base_json = f.read()

@@ -36,7 +36,10 @@ class CursorAdapter(Adapter):
         return str(Path(home_dir) / ".cursor" / "rules")
 
     def system_prompt_file(self, home_dir: str = "") -> str:
-        return str(Path(home_dir) / ".cursor" / "rules" / "gentle-ai.mdc")
+        return str(Path(home_dir) / ".cursor" / "rules" / "dxrk.mdc")
+
+    def legacy_system_prompt_files(self, home_dir: str = "") -> list[str]:
+        return [str(Path(home_dir) / ".cursor" / "rules" / "gentle-ai.mdc")]
 
     def skills_dir(self, home_dir: str = "") -> str:
         return str(Path(home_dir) / ".cursor" / "skills")

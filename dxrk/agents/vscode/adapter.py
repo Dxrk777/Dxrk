@@ -44,9 +44,10 @@ class VSCodeAdapter(Adapter):
         return str(Path(_vscode_user_dir(home_dir)) / "prompts")
 
     def system_prompt_file(self, home_dir: str = "") -> str:
-        return str(
-            Path(_vscode_user_dir(home_dir)) / "prompts" / "gentle-ai.instructions.md"
-        )
+        return str(Path(_vscode_user_dir(home_dir)) / "prompts" / "dxrk.instructions.md")
+
+    def legacy_system_prompt_files(self, home_dir: str = "") -> list[str]:
+        return [str(Path(_vscode_user_dir(home_dir)) / "prompts" / "gentle-ai.instructions.md")]
 
     def skills_dir(self, home_dir: str = "") -> str:
         return str(Path(home_dir) / ".copilot" / "skills")

@@ -44,7 +44,10 @@ class KiroAdapter(Adapter):
         return str(Path(home_dir) / ".kiro" / "steering")
 
     def system_prompt_file(self, home_dir: str = "") -> str:
-        return str(Path(home_dir) / ".kiro" / "steering" / "gentle-ai.md")
+        return str(Path(home_dir) / ".kiro" / "steering" / "dxrk.md")
+
+    def legacy_system_prompt_files(self, home_dir: str = "") -> list[str]:
+        return [str(Path(home_dir) / ".kiro" / "steering" / "gentle-ai.md")]
 
     def skills_dir(self, home_dir: str = "") -> str:
         return str(Path(home_dir) / ".kiro" / "skills")

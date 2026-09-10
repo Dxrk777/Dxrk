@@ -38,7 +38,7 @@ export type OpencodeClient = ReturnType<typeof createOpencodeClient>
 async function refreshSkillRegistry(directory: string, log: (level: "info" | "warn" | "error", message: string) => void): Promise<void> {
   await new Promise<void>((resolve) => {
     execFile(
-      "gentle-ai",
+      "dxrk-py",
       ["skill-registry", "refresh", "--quiet", "--no-gitignore", "--cwd", directory],
       { timeout: 10_000 },
       (error) => {
