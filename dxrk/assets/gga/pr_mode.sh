@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # ============================================================================
-# Gentleman Guardian Angel - PR Mode Functions
+# Dxrk Guardian Angel - PR Mode Functions
 # ============================================================================
 # Handles PR-scoped code review:
 # - detect_base_branch(): Auto-detect main/master/develop
