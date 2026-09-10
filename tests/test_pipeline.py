@@ -153,9 +153,7 @@ class TestRunner:
 
     def test_emits_failure_event(self):
         events: list[ProgressEvent] = []
-        runner = Runner(
-            failure_policy=FailurePolicy.STOP_ON_ERROR, on_progress=events.append
-        )
+        runner = Runner(failure_policy=FailurePolicy.STOP_ON_ERROR, on_progress=events.append)
         steps = [FakeStep("s1", "fail")]
         runner.run(Stage.PREPARE, steps)
         assert len(events) == 2
@@ -347,9 +345,7 @@ class TestResolveComponentInstall:
             package_manager = "brew"
 
         cmds = resolve_component_install(BrewProfile(), "DXRK_MEMORY")
-        assert len(cmds) == 2
-        assert cmds[0] == ["brew", "tap", "Dxrk777/homebrew-tap"]
-        assert cmds[1] == ["brew", "install", "DXRK_MEMORY"]
+        assert cmds == []
 
     def test_memory_go(self):
         class LinuxProfile:
@@ -357,16 +353,16 @@ class TestResolveComponentInstall:
             os = "linux"
 
         cmds = resolve_component_install(LinuxProfile(), "DXRK_MEMORY")
-        assert len(cmds) == 1
-        assert "go" in cmds[0][0]
+        assert cmds == []
 
     def test_gga_brew(self):
         class BrewProfile:
             package_manager = "brew"
 
         cmds = resolve_component_install(BrewProfile(), "DXRK_GUARDIAN")
-        assert len(cmds) == 1
-        assert cmds[0] == ["brew", "install", "DXRK_GUARDIAN"]
+        assert len(cmds) == 2
+        assert cmds[0] == ["brew", "tap", "gentleman-programming/homebrew-tap"]
+        assert cmds[1] == ["brew", "install", "gga"]
 
     def test_unknown_component(self):
         class AnyProfile:
@@ -384,7 +380,7 @@ class TestResolveComponentInstall:
             package_manager = "brew"
 
         cmds = resolve_component_install(BrewProfile(), ComponentID.DXRK_MEMORY)
-        assert len(cmds) == 2
+        assert cmds == []
 
 
 class TestStageResult:

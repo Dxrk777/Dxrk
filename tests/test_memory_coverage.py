@@ -1110,15 +1110,14 @@ class TestInstallCommand:
         profile.package_manager = "brew"
         result = memory.install_command(profile)
         assert isinstance(result, list)
-        assert len(result) > 0
-        assert isinstance(result[0], list)
+        assert result == []
 
     def test_non_brew(self):
         profile = MagicMock()
         profile.package_manager = "apt"
         result = memory.install_command(profile)
         assert isinstance(result, list)
-        assert len(result) > 0
+        assert result == []
 
 
 # ═══════════════════════════════════════════════════════════════════════════

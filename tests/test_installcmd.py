@@ -65,12 +65,8 @@ class TestValidateGoForModuleInstall:
         with pytest.raises(InstallError, match="export GO111MODULE=on"):
             validate_go_for_module_install(profile)
 
-    def test_go111module_off_on_windows_returns_error_with_powershell_fix(
-        self, monkeypatch
-    ):
-        monkeypatch.setattr(
-            "dxrk.installcmd._cmd_look_path", lambda _: r"C:\Go\bin\go.exe"
-        )
+    def test_go111module_off_on_windows_returns_error_with_powershell_fix(self, monkeypatch):
+        monkeypatch.setattr("dxrk.installcmd._cmd_look_path", lambda _: r"C:\Go\bin\go.exe")
         monkeypatch.setattr(
             "dxrk.installcmd._get_go_version_output",
             lambda: _go_version("1.24.0", "windows/amd64"),
@@ -101,13 +97,18 @@ class TestValidateGoForModuleInstall:
         validate_go_for_module_install(profile)
 
 
-class TestMemoryBrewBypassesGoValidation:
-    def test_brew_memory_resolves_without_go(self, monkeypatch):
-        monkeypatch.setattr("dxrk.installcmd._cmd_look_path", lambda _: None)
+class TestMemoryHasNoBinaryDistribution:
+    def test_brew_memory_raises(self):
         resolver = new_resolver()
         profile = PlatformProfile(os="darwin", package_manager="brew")
-        cmds = resolver.resolve_component_install(profile, ComponentID.DXRK_MEMORY)
-        assert cmds
+        with pytest.raises(InstallError, match="no prebuilt binary"):
+            resolver.resolve_component_install(profile, ComponentID.DXRK_MEMORY)
+
+    def test_linux_memory_raises(self):
+        resolver = new_resolver()
+        profile = PlatformProfile(os="linux", package_manager="apt")
+        with pytest.raises(InstallError, match="no prebuilt binary"):
+            resolver.resolve_component_install(profile, ComponentID.DXRK_MEMORY)
 
 
 class TestResolveDependencyInstall:
@@ -119,21 +120,15 @@ class TestResolveDependencyInstall:
                 [["brew", "install", "somepkg"]],
             ),
             (
-                PlatformProfile(
-                    os="linux", linux_distro="ubuntu", package_manager="apt"
-                ),
+                PlatformProfile(os="linux", linux_distro="ubuntu", package_manager="apt"),
                 [["sudo", "apt-get", "install", "-y", "somepkg"]],
             ),
             (
-                PlatformProfile(
-                    os="linux", linux_distro="arch", package_manager="pacman"
-                ),
+                PlatformProfile(os="linux", linux_distro="arch", package_manager="pacman"),
                 [["sudo", "pacman", "-S", "--noconfirm", "somepkg"]],
             ),
             (
-                PlatformProfile(
-                    os="linux", linux_distro="fedora", package_manager="dnf"
-                ),
+                PlatformProfile(os="linux", linux_distro="fedora", package_manager="dnf"),
                 [["sudo", "dnf", "install", "-y", "somepkg"]],
             ),
             (
@@ -158,9 +153,7 @@ class TestResolveDependencyInstall:
 
     def test_unsupported_package_manager_returns_error(self):
         resolver = new_resolver()
-        profile = PlatformProfile(
-            os="linux", linux_distro="ubuntu", package_manager="zypper"
-        )
+        profile = PlatformProfile(os="linux", linux_distro="ubuntu", package_manager="zypper")
         with pytest.raises(InstallError, match="unsupported package manager"):
             resolver.resolve_dependency_install(profile, "somepkg")
 
@@ -226,9 +219,7 @@ class TestResolveAgentInstall:
                 ],
             ),
             (
-                PlatformProfile(
-                    os="linux", linux_distro="ubuntu", package_manager="apt"
-                ),
+                PlatformProfile(os="linux", linux_distro="ubuntu", package_manager="apt"),
                 AgentID.CLAUDE_CODE,
                 [
                     [
@@ -260,9 +251,7 @@ class TestResolveAgentInstall:
                 ],
             ),
             (
-                PlatformProfile(
-                    os="linux", linux_distro="arch", package_manager="pacman"
-                ),
+                PlatformProfile(os="linux", linux_distro="arch", package_manager="pacman"),
                 AgentID.CLAUDE_CODE,
                 [
                     [
@@ -299,9 +288,7 @@ class TestResolveAgentInstall:
                 [["brew", "install", "opencode"]],
             ),
             (
-                PlatformProfile(
-                    os="linux", linux_distro="ubuntu", package_manager="apt"
-                ),
+                PlatformProfile(os="linux", linux_distro="ubuntu", package_manager="apt"),
                 AgentID.OPENCODE,
                 [
                     [
@@ -333,9 +320,7 @@ class TestResolveAgentInstall:
                 ],
             ),
             (
-                PlatformProfile(
-                    os="linux", linux_distro="arch", package_manager="pacman"
-                ),
+                PlatformProfile(os="linux", linux_distro="arch", package_manager="pacman"),
                 AgentID.OPENCODE,
                 [
                     [
@@ -349,9 +334,7 @@ class TestResolveAgentInstall:
                 ],
             ),
             (
-                PlatformProfile(
-                    os="linux", linux_distro="fedora", package_manager="dnf"
-                ),
+                PlatformProfile(os="linux", linux_distro="fedora", package_manager="dnf"),
                 AgentID.OPENCODE,
                 [
                     [
@@ -383,9 +366,7 @@ class TestResolveAgentInstall:
                 ],
             ),
             (
-                PlatformProfile(
-                    os="windows", package_manager="winget", npm_writable=True
-                ),
+                PlatformProfile(os="windows", package_manager="winget", npm_writable=True),
                 AgentID.CLAUDE_CODE,
                 [
                     [
@@ -450,17 +431,13 @@ class TestResolveAgentInstall:
 
 
 class TestValidateAgentInstallPreflight:
-    def test_kimi_on_unsupported_platform_returns_error_before_uv_lookup(
-        self, monkeypatch
-    ):
+    def test_kimi_on_unsupported_platform_returns_error_before_uv_lookup(self, monkeypatch):
         calls: list[str] = []
         monkeypatch.setattr(
             "dxrk.installcmd._cmd_look_path",
             lambda name: calls.append(name) or None,
         )
-        profile = PlatformProfile(
-            os="linux", linux_distro="unknown", package_manager="", supported=False
-        )
+        profile = PlatformProfile(os="linux", linux_distro="unknown", package_manager="", supported=False)
         with pytest.raises(InstallError) as excinfo:
             validate_agent_install_preflight(profile, AgentID.KIMI)
         assert "not supported on this platform" in str(excinfo.value)
@@ -508,14 +485,11 @@ class TestValidateAgentInstallPreflight:
 
 
 class TestResolveComponentInstall:
-    def test_dxrk_memory_on_darwin_uses_brew_tap_and_install(self):
+    def test_dxrk_memory_on_darwin_raises_no_binary(self):
         resolver = new_resolver()
         profile = PlatformProfile(os="darwin", package_manager="brew")
-        cmds = resolver.resolve_component_install(profile, ComponentID.DXRK_MEMORY)
-        assert cmds == [
-            ["brew", "tap", "Dxrk777/homebrew-tap"],
-            ["brew", "install", "dxrk-memory"],
-        ]
+        with pytest.raises(InstallError, match="no prebuilt binary"):
+            resolver.resolve_component_install(profile, ComponentID.DXRK_MEMORY)
 
     @pytest.mark.parametrize(
         "profile",
@@ -528,16 +502,16 @@ class TestResolveComponentInstall:
     )
     def test_dxrk_memory_on_other_platforms_returns_error(self, profile):
         resolver = new_resolver()
-        with pytest.raises(InstallError, match="dxrk-memory on"):
+        with pytest.raises(InstallError, match="no prebuilt binary"):
             resolver.resolve_component_install(profile, ComponentID.DXRK_MEMORY)
 
-    def test_dxrk_guardian_on_darwin_uses_brew_tap_and_reinstall(self):
+    def test_dxrk_guardian_on_darwin_uses_brew_tap_and_install(self):
         resolver = new_resolver()
         profile = PlatformProfile(os="darwin", package_manager="brew")
         cmds = resolver.resolve_component_install(profile, ComponentID.DXRK_GUARDIAN)
         assert cmds == [
-            ["brew", "tap", "Dxrk777/homebrew-tap"],
-            ["brew", "reinstall", "dxrk-guardian"],
+            ["brew", "tap", "gentleman-programming/homebrew-tap"],
+            ["brew", "install", "gga"],
         ]
 
     @pytest.mark.parametrize(
@@ -556,7 +530,7 @@ class TestResolveComponentInstall:
             [
                 "git",
                 "clone",
-                "https://github.com/Dxrk777/dxrk-guardian-angel.git",
+                "https://github.com/Gentleman-Programming/gentleman-guardian-angel.git",
                 "/tmp/dxrk-guardian-angel",
             ],
             ["bash", "/tmp/dxrk-guardian-angel/install.sh"],
@@ -576,7 +550,7 @@ class TestResolveComponentInstall:
             [
                 "git",
                 "clone",
-                "https://github.com/Dxrk777/dxrk-guardian-angel.git",
+                "https://github.com/Gentleman-Programming/gentleman-guardian-angel.git",
                 clone_dst,
             ],
             [
@@ -587,10 +561,7 @@ class TestResolveComponentInstall:
                 ),
             ],
         ]
-        assert (
-            resolver.resolve_component_install(profile, ComponentID.DXRK_GUARDIAN)
-            == want
-        )
+        assert resolver.resolve_component_install(profile, ComponentID.DXRK_GUARDIAN) == want
 
     def test_unsupported_component_returns_error(self):
         resolver = new_resolver()

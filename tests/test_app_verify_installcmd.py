@@ -147,9 +147,7 @@ class TestRunCli:
         assert "Error" in err
 
     def test_detect_failure(self, capsys, monkeypatch):
-        monkeypatch.setattr(
-            "dxrk.app.detect", lambda: (_ for _ in ()).throw(Exception("boom"))
-        )
+        monkeypatch.setattr("dxrk.app.detect", lambda: (_ for _ in ()).throw(Exception("boom")))
 
         class FakeResult:
             system = PlatformProfile(os="darwin", supported=True)
@@ -289,9 +287,7 @@ class TestBuildReport:
 class TestRenderReport:
     def test_output_format(self):
         results = [
-            CheckResult(
-                id="git", description="Git installed", status=CheckStatus.PASSED
-            ),
+            CheckResult(id="git", description="Git installed", status=CheckStatus.PASSED),
             CheckResult(id="node", status=CheckStatus.FAILED, error="not found"),
         ]
         report = build_report(results)
@@ -338,9 +334,7 @@ class TestPostInstallVerifier:
 class TestProfileResolverAgentInstall:
     def test_claude_code_default(self):
         resolver = ProfileResolver()
-        profile = PlatformProfile(
-            os="darwin", package_manager="brew", npm_writable=True
-        )
+        profile = PlatformProfile(os="darwin", package_manager="brew", npm_writable=True)
         cmds = resolver.resolve_agent_install(profile, AgentID.CLAUDE_CODE)
         assert cmds == [
             [
@@ -377,9 +371,7 @@ class TestProfileResolverAgentInstall:
         resolver = ProfileResolver()
         profile = PlatformProfile(os="linux", package_manager="apt", npm_writable=True)
         cmds = resolver.resolve_agent_install(profile, AgentID.OPENCODE)
-        assert cmds == [
-            ["npm", "install", "-g", "--ignore-scripts", "opencode-ai@1.14.48"]
-        ]
+        assert cmds == [["npm", "install", "-g", "--ignore-scripts", "opencode-ai@1.14.48"]]
 
     def test_opencode_unsupported_raises(self):
         resolver = ProfileResolver()
@@ -391,9 +383,7 @@ class TestProfileResolverAgentInstall:
         resolver = ProfileResolver()
         profile = PlatformProfile(os="darwin", package_manager="brew")
         cmds = resolver.resolve_agent_install(profile, AgentID.KILOCODE)
-        assert cmds == [
-            ["npm", "install", "-g", "--ignore-scripts", "@kilocode/cli@7.2.52"]
-        ]
+        assert cmds == [["npm", "install", "-g", "--ignore-scripts", "@kilocode/cli@7.2.52"]]
 
     def test_kimi(self):
         resolver = ProfileResolver()
@@ -415,25 +405,24 @@ class TestProfileResolverAgentInstall:
 
 
 class TestProfileResolverComponentInstall:
-    def test_memory_brew(self):
+    def test_memory_brew_raises_no_binary(self):
         resolver = ProfileResolver()
         profile = PlatformProfile(os="darwin", package_manager="brew")
-        cmds = resolver.resolve_component_install(profile, ComponentID.DXRK_MEMORY)
-        assert len(cmds) == 2
-        assert ["brew", "tap", "Dxrk777/homebrew-tap"] in cmds
-        assert ["brew", "install", "dxrk-memory"] in cmds
+        with pytest.raises(InstallError, match="no prebuilt binary"):
+            resolver.resolve_component_install(profile, ComponentID.DXRK_MEMORY)
 
     def test_memory_not_brew_raises(self):
         resolver = ProfileResolver()
         profile = PlatformProfile(os="linux", package_manager="apt")
-        with pytest.raises(InstallError, match="dxrk-memory on"):
+        with pytest.raises(InstallError, match="no prebuilt binary"):
             resolver.resolve_component_install(profile, ComponentID.DXRK_MEMORY)
 
     def test_gga_brew(self):
         resolver = ProfileResolver()
         profile = PlatformProfile(os="darwin", package_manager="brew")
         cmds = resolver.resolve_component_install(profile, ComponentID.DXRK_GUARDIAN)
-        assert ["brew", "reinstall", "dxrk-guardian"] in cmds
+        assert ["brew", "tap", "gentleman-programming/homebrew-tap"] in cmds
+        assert ["brew", "install", "gga"] in cmds
 
     def test_unknown_component_raises(self):
         resolver = ProfileResolver()
@@ -565,6 +554,7 @@ class TestGitBashPath:
         )
         path = git_bash_path()
         assert path != ""
+
 
 import sys
 

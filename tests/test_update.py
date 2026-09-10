@@ -22,7 +22,6 @@ from dxrk.update import (
     _detect_npm_package_version,
     _DXRK_GUARDIAN_hint,
     _dxrk_hint,
-    _DXRK_MEMORY_hint,
     _execute_one,
     _go_arch,
     _install_script_url,
@@ -246,17 +245,17 @@ class TestDxrkHint:
     def test_darwin(self):
         p = MagicMock()
         p.os = "darwin"
-        assert _dxrk_hint(p) == "brew upgrade dxrk"
+        assert _dxrk_hint(p) == "uv tool upgrade dxrk"
 
     def test_linux(self):
         p = MagicMock()
         p.os = "linux"
-        assert "curl -fsSL" in _dxrk_hint(p)
+        assert _dxrk_hint(p) == "uv tool upgrade dxrk"
 
     def test_windows(self):
         p = MagicMock()
         p.os = "windows"
-        assert "irm" in _dxrk_hint(p)
+        assert _dxrk_hint(p) == "uv tool upgrade dxrk"
 
     def test_unknown_os(self):
         p = MagicMock()
@@ -264,23 +263,19 @@ class TestDxrkHint:
         assert _dxrk_hint(p) == ""
 
 
-class TestMemoryHint:
-    def test_brew(self):
+class TestMemoryHintRemoved:
+    def test_no_hint_for_retired_memory_binary(self):
         p = MagicMock()
         p.package_manager = "brew"
-        assert _DXRK_MEMORY_hint(p) == "brew upgrade DXRK_MEMORY"
-
-    def test_not_brew(self):
-        p = MagicMock()
-        p.package_manager = "apt"
-        assert "dxrk upgrade" in _DXRK_MEMORY_hint(p)
+        t = ToolInfo(name="DXRK_MEMORY")
+        assert update_hint(t, p) == ""
 
 
 class TestGgaHint:
     def test_brew(self):
         p = MagicMock()
         p.package_manager = "brew"
-        assert _DXRK_GUARDIAN_hint(p) == "brew upgrade DXRK_GUARDIAN"
+        assert _DXRK_GUARDIAN_hint(p) == "brew upgrade gga"
 
     def test_not_brew(self):
         p = MagicMock()
@@ -294,13 +289,13 @@ class TestUpdateHint:
         p.os = "darwin"
         p.package_manager = "brew"
         t = ToolInfo(name="dxrk")
-        assert "brew upgrade dxrk" in update_hint(t, p)
+        assert "uv tool upgrade dxrk" in update_hint(t, p)
 
     def test_memory(self):
         p = MagicMock()
         p.package_manager = "brew"
         t = ToolInfo(name="DXRK_MEMORY")
-        assert update_hint(t, p) == "brew upgrade DXRK_MEMORY"
+        assert update_hint(t, p) == ""
 
     def test_opencode_plugin(self):
         p = MagicMock()
