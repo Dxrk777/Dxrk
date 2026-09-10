@@ -228,3 +228,49 @@ class TestMemoryCli:
         _iso_home(tmp_path, monkeypatch)
         assert mem_cli.main(["bogus"]) == 2
         assert mem_cli.main([]) == 0
+
+
+def _mk_proj(tmp_path: Path) -> Path:
+    proj = tmp_path / "proj"
+    proj.mkdir(exist_ok=True)
+    (proj / "notas.py").write_text(
+        '"""Modulo de notas de prueba para el smoke mine-search."""\nMSG = "Hola Mundo memoria de prueba"\nVALOR = 42\n',
+        encoding="utf-8",
+    )
+    return proj
+
+
+class TestTenantAwareMineSearch:
+    def test_resolver_paths(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        home = _iso_home(tmp_path, monkeypatch)
+        assert mem_cli._palace_dir_for_cli() == home / ".dxrk" / "memory"
+        monkeypatch.setenv("DXRK_TENANT", "acme")
+        assert mem_cli._palace_dir_for_cli() == home / ".dxrk" / "tenants" / "acme" / "palace"
+
+    def test_mine_search_roundtrip_under_tenant(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+    ) -> None:
+        # regresion: _cmd_mine/_cmd_search hardcodeaban ~/.dxrk/memory
+        # e ignoraban DXRK_TENANT (los datos de todos los tenants se mezclaban).
+        home = _iso_home(tmp_path, monkeypatch)
+        _seed_tenant("acme", {"dev": "dev"})
+        _as_user(monkeypatch, "acme", "dev")
+        assert mem_cli._cmd_mine([str(_mk_proj(tmp_path))]) == 0
+        capsys.readouterr()
+        assert (home / ".dxrk" / "tenants" / "acme" / "palace").exists()
+        assert not (home / ".dxrk" / "memory").exists()  # nada fuga al global
+        assert mem_cli._cmd_search(["Hola Mundo"]) == 0
+        assert "Hola Mundo" in capsys.readouterr().out
+
+    def test_cross_tenant_isolation(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+    ) -> None:
+        _iso_home(tmp_path, monkeypatch)
+        _seed_tenant("acme", {"dev": "dev"})
+        _seed_tenant("bob", {"bob": "dev"})
+        _as_user(monkeypatch, "acme", "dev")
+        assert mem_cli._cmd_mine([str(_mk_proj(tmp_path))]) == 0
+        capsys.readouterr()
+        _as_user(monkeypatch, "bob", "bob")
+        assert mem_cli._cmd_search(["Hola Mundo"]) == 0
+        assert "Hola Mundo" not in capsys.readouterr().out  # bob no ve datos de acme
