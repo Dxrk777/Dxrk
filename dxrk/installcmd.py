@@ -56,23 +56,15 @@ CommandSequence = list[list[str]]
 
 
 class Resolver(Protocol):
-    def resolve_agent_install(
-        self, profile: PlatformProfile, agent: AgentID
-    ) -> CommandSequence: ...
+    def resolve_agent_install(self, profile: PlatformProfile, agent: AgentID) -> CommandSequence: ...
 
-    def resolve_component_install(
-        self, profile: PlatformProfile, component: ComponentID
-    ) -> CommandSequence: ...
+    def resolve_component_install(self, profile: PlatformProfile, component: ComponentID) -> CommandSequence: ...
 
-    def resolve_dependency_install(
-        self, profile: PlatformProfile, dependency: str
-    ) -> CommandSequence: ...
+    def resolve_dependency_install(self, profile: PlatformProfile, dependency: str) -> CommandSequence: ...
 
 
 class ProfileResolver:
-    def resolve_agent_install(
-        self, profile: PlatformProfile, agent: AgentID
-    ) -> CommandSequence:
+    def resolve_agent_install(self, profile: PlatformProfile, agent: AgentID) -> CommandSequence:
         if agent == AgentID.CLAUDE_CODE:
             return _resolve_claude_code_install(profile)
         if agent == AgentID.OPENCODE:
@@ -83,20 +75,14 @@ class ProfileResolver:
             return _resolve_kimi_install(profile)
         raise InstallError(f'install command is not supported for agent "{agent}"')
 
-    def resolve_component_install(
-        self, profile: PlatformProfile, component: ComponentID
-    ) -> CommandSequence:
+    def resolve_component_install(self, profile: PlatformProfile, component: ComponentID) -> CommandSequence:
         if component == ComponentID.DXRK_MEMORY:
             return _resolve_dxrk_memory_install(profile)
         if component == ComponentID.DXRK_GUARDIAN:
             return _resolve_dxrk_guardian_install(profile)
-        raise InstallError(
-            f'install command is not supported for component "{component}"'
-        )
+        raise InstallError(f'install command is not supported for component "{component}"')
 
-    def resolve_dependency_install(
-        self, profile: PlatformProfile, dependency: str
-    ) -> CommandSequence:
+    def resolve_dependency_install(self, profile: PlatformProfile, dependency: str) -> CommandSequence:
         if not dependency:
             raise InstallError("dependency name is required")
 
@@ -121,9 +107,7 @@ class ProfileResolver:
                     _FLAG_PKG_AGREEMENTS,
                 ]
             ]
-        raise InstallError(
-            f'unsupported package manager "{pm}" for os="{profile.os}" distro="{profile.linux_distro}"'
-        )
+        raise InstallError(f'unsupported package manager "{pm}" for os="{profile.os}" distro="{profile.linux_distro}"')
 
 
 def new_resolver() -> Resolver:
@@ -151,9 +135,7 @@ def _resolve_kilocode_install(profile: PlatformProfile) -> CommandSequence:
 
 def _resolve_kimi_install(profile: PlatformProfile) -> CommandSequence:
     if not profile.supported:
-        raise InstallError(
-            f"kimi is not supported on this platform ({profile.os}/{profile.linux_distro})"
-        )
+        raise InstallError(f"kimi is not supported on this platform ({profile.os}/{profile.linux_distro})")
     return [["uv", "tool", _INSTALL, "--python", "3.13", "kimi-cli"]]
 
 
@@ -167,9 +149,7 @@ def _resolve_opencode_install(profile: PlatformProfile) -> CommandSequence:
             return [[_NPM, _INSTALL, _FLAG_GLOBAL, _IGNORE_SCRIPTS, pkg]]
         return [[_SUDO, _NPM, _INSTALL, _FLAG_GLOBAL, _IGNORE_SCRIPTS, pkg]]
     if pm == _WINGET:
-        return [
-            [_NPM, _INSTALL, _FLAG_GLOBAL, _IGNORE_SCRIPTS, f"opencode-ai@{OpenCode}"]
-        ]
+        return [[_NPM, _INSTALL, _FLAG_GLOBAL, _IGNORE_SCRIPTS, f"opencode-ai@{OpenCode}"]]
     raise InstallError(
         f'unsupported platform for opencode: os="{profile.os}" distro="{profile.linux_distro}" pm="{pm}"'
     )
@@ -181,23 +161,22 @@ def _resolve_opencode_install(profile: PlatformProfile) -> CommandSequence:
 
 
 def _resolve_dxrk_memory_install(profile: PlatformProfile) -> CommandSequence:
-    if profile.package_manager == _BREW:
-        return [
-            [_BREW, "tap", "Dxrk777/homebrew-tap"],
-            [_BREW, _INSTALL, "dxrk-memory"],
-        ]
+    # No live binary distribution exists for the external memory helper
+    # (no formula, no releases): Dxrk uses its native Python memory instead.
     raise InstallError(
-        f'dxrk-memory on "{profile.os}"/"{profile.package_manager}" uses direct binary download '
-        "— use dxrkmemory.DownloadLatestBinary() instead of CommandSequence"
+        "dxrk-memory has no prebuilt binary distribution — Dxrk uses its native "
+        "Python memory (dxrk.memory), no download needed"
     )
 
 
 def _resolve_dxrk_guardian_install(profile: PlatformProfile) -> CommandSequence:
+    # Upstream lives at Gentleman-Programming/gentleman-guardian-angel
+    # (installs the `gga` binary; Dxrk bridges it via a DXRK_GUARDIAN shim).
     pm = profile.package_manager
     if pm == _BREW:
         return [
-            [_BREW, "tap", "Dxrk777/homebrew-tap"],
-            [_BREW, "reinstall", "dxrk-guardian"],
+            [_BREW, "tap", "gentleman-programming/homebrew-tap"],
+            [_BREW, _INSTALL, "gga"],
         ]
     if pm in ("apt", _PACMAN, _DNF):
         tmp_dir = "/tmp/dxrk-guardian-angel"
@@ -206,7 +185,7 @@ def _resolve_dxrk_guardian_install(profile: PlatformProfile) -> CommandSequence:
             [
                 "git",
                 "clone",
-                "https://github.com/Dxrk777/dxrk-guardian-angel.git",
+                "https://github.com/Gentleman-Programming/gentleman-guardian-angel.git",
                 tmp_dir,
             ],
             ["bash", f"{tmp_dir}/install.sh"],
@@ -224,7 +203,7 @@ def _resolve_dxrk_guardian_install(profile: PlatformProfile) -> CommandSequence:
             [
                 "git",
                 "clone",
-                "https://github.com/Dxrk777/dxrk-guardian-angel.git",
+                "https://github.com/Gentleman-Programming/gentleman-guardian-angel.git",
                 clone_dst,
             ],
             [bash, _bash_script_path(profile, os.path.join(clone_dst, "install.sh"))],
@@ -248,16 +227,12 @@ def validate_agent_install_preflight(profile: PlatformProfile, agent: AgentID) -
 
 def _validate_pi_install_preflight() -> None:
     if _cmd_look_path("pi") is None:
-        raise InstallError(
-            "Pi requires the `pi` executable in PATH before installing Dxrk AI Pi packages"
-        )
+        raise InstallError("Pi requires the `pi` executable in PATH before installing Dxrk AI Pi packages")
 
 
 def _validate_kimi_install_preflight(profile: PlatformProfile) -> None:
     if not profile.supported:
-        raise InstallError(
-            f"kimi is not supported on this platform ({profile.os}/{profile.linux_distro})"
-        )
+        raise InstallError(f"kimi is not supported on this platform ({profile.os}/{profile.linux_distro})")
 
     if _cmd_look_path("uv") is None:
         raise InstallError(

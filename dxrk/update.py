@@ -114,24 +114,16 @@ class UpgradeReport:
 
 Tools: list[ToolInfo] = [
     ToolInfo(
-        name="gentle-ai",
+        name="dxrk",
         owner="Dxrk777",
-        repo="gentle-ai",
+        repo="Dxrk",
         detect_cmd=None,
         version_prefix="v",
         install_method=InstallMethod.BINARY,
     ),
     ToolInfo(
-        name="memory",
-        owner="Dxrk777",
-        repo="memory",
-        detect_cmd=["memory", "version"],
-        version_prefix="v",
-        install_method=InstallMethod.BINARY,
-    ),
-    ToolInfo(
         name="gga",
-        owner="Dxrk777",
+        owner="Gentleman-Programming",
         repo="gentleman-guardian-angel",
         detect_cmd=["gga", "--version"],
         version_prefix="v",
@@ -286,7 +278,7 @@ def fetch_latest_release(owner: str, repo: str, timeout_sec: int = 10) -> GitHub
     url = f"https://api.github.com/repos/{owner}/{repo}/releases/latest"
     req = urllib.request.Request(url)
     req.add_header("Accept", "application/vnd.github+json")
-    req.add_header("User-Agent", "gentle-ai-update-check")
+    req.add_header("User-Agent", "dxrk-update-check")
     token = _resolve_github_token()
     if token:
         req.add_header("Authorization", f"Bearer {token}")
@@ -394,7 +386,6 @@ def _check_single_tool(tool: ToolInfo, current_build_version: str, profile: Plat
 def update_hint(tool: ToolInfo, profile: PlatformProfile) -> str:
     hints: dict[str, str] = {
         "dxrk": _dxrk_hint(profile),
-        "DXRK_MEMORY": _DXRK_MEMORY_hint(profile),
         "DXRK_GUARDIAN": _DXRK_GUARDIAN_hint(profile),
         "opencode-subagent-statusline": "Restart/reload OpenCode; plugins are registered in ~/.config/opencode/tui.json",
         "opencode-sdd-memory-manage": "Restart/reload OpenCode; plugins are registered in ~/.config/opencode/tui.json",
@@ -403,24 +394,15 @@ def update_hint(tool: ToolInfo, profile: PlatformProfile) -> str:
 
 
 def _dxrk_hint(profile: PlatformProfile) -> str:
-    os_map = {
-        "darwin": "brew upgrade dxrk",
-        "linux": "curl -fsSL https://raw.githubusercontent.com/Dxrk777/Dxrk/main/scripts/install.sh | bash",
-        "windows": "irm https://raw.githubusercontent.com/Dxrk777/Dxrk/main/scripts/install.ps1 | iex",
-    }
-    return os_map.get(profile.os, "")
-
-
-def _DXRK_MEMORY_hint(profile: PlatformProfile) -> str:
-    if profile.package_manager == "brew":
-        return "brew upgrade DXRK_MEMORY"
-    return "dxrk upgrade (downloads pre-built binary)"
+    if profile.os not in ("darwin", "linux", "windows"):
+        return ""
+    return "uv tool upgrade dxrk"
 
 
 def _DXRK_GUARDIAN_hint(profile: PlatformProfile) -> str:
     if profile.package_manager == "brew":
-        return "brew upgrade DXRK_GUARDIAN"
-    return "See https://github.com/Dxrk777/gentleman-guardian-angel"
+        return "brew upgrade gga"
+    return "See https://github.com/Gentleman-Programming/gentleman-guardian-angel"
 
 
 # CLI render
@@ -913,24 +895,14 @@ def _go_install_upgrade(tool: ToolInfo, latest_version: str) -> None:
 
 
 def _binary_upgrade(r: UpdateResult, profile: PlatformProfile) -> None:
-    if r.tool.name == "memory":
-        _memory_binary_upgrade(profile)
-        return
-
+    if r.tool.name == "dxrk":
+        # Dxrk ships via PyPI (uv tool), not as a GitHub release asset.
+        raise ManualFallbackError("upgrade 'dxrk': run `uv tool upgrade dxrk`")
     if profile.os == "windows":
         hint = r.update_hint or f"Download manually from https://github.com/Dxrk777/{r.tool.repo}/releases"
         raise ManualFallbackError(f"upgrade {r.tool.name!r} on Windows requires manual update: {hint}")
 
     _download_and_replace(r, profile)
-
-
-def _memory_binary_upgrade(profile: PlatformProfile) -> None:
-    # NOTE: original uses memory.DownloadLatestBinary(profile).
-    # This is an external dependency not yet ported. Raise a manual fallback.
-    raise ManualFallbackError(
-        "memory auto-downloader not available in Python port yet. "
-        "Run: gentle-ai upgrade or download from https://github.com/Dxrk777/memory/releases"
-    )
 
 
 def _download_and_replace(r: UpdateResult, profile: PlatformProfile) -> None:

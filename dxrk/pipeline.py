@@ -369,35 +369,24 @@ def resolve_component_install(profile: Any, component_id: Any) -> list[list[str]
     cid = ComponentID(component_id) if not isinstance(component_id, ComponentID) else component_id
 
     if cid == ComponentID.DXRK_MEMORY:
-        if profile.package_manager == "brew":
-            return [
-                ["brew", "tap", "Dxrk777/homebrew-tap"],
-                ["brew", "install", "DXRK_MEMORY"],
-            ]
-        return [
-            [
-                "go",
-                "install",
-                "github.com/Dxrk777/memory/cmd/memory@latest",
-            ],
-        ]
+        # No live binary distribution exists for the external memory helper:
+        # Dxrk uses its native Python memory (dxrk.memory) instead.
+        # Returning [] lets callers fall back to native memory with a warning.
+        return []
 
     if cid == ComponentID.DXRK_GUARDIAN:
+        # Upstream lives at Gentleman-Programming/gentleman-guardian-angel
+        # (installs the `gga` binary; Dxrk bridges it via a DXRK_GUARDIAN shim).
         if profile.package_manager == "brew":
-            return [["brew", "install", "DXRK_GUARDIAN"]]
-        if profile.os == "linux":
             return [
-                [
-                    "bash",
-                    "-c",
-                    "$(curl -fsSL https://raw.githubusercontent.com/Dxrk777/gentleman-guardian-angel/main/install.sh)",
-                ],
+                ["brew", "tap", "gentleman-programming/homebrew-tap"],
+                ["brew", "install", "gga"],
             ]
         return [
             [
                 "bash",
                 "-c",
-                "$(curl -fsSL https://raw.githubusercontent.com/gentleman-programming/gga/main/install.sh)",
+                "$(curl -fsSL https://raw.githubusercontent.com/Gentleman-Programming/gentleman-guardian-angel/main/install.sh)",
             ],
         ]
 

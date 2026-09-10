@@ -7,6 +7,7 @@ Config, install, runtime file management.
 from __future__ import annotations
 
 import os
+import shutil
 from dataclasses import dataclass
 
 from dxrk.components import filemerge
@@ -97,9 +98,9 @@ def inject(home_dir: str, agent_ids: list[AgentID]) -> InjectionResult:
 
     agents_content = assets_read("gga/AGENTS.md") or ""
     apath = agents_template_path(home_dir)
-    agents_result = filemerge.write_file_atomic(
-        apath, agents_content.encode("utf-8"), 0o644
-    )
+    agents_result = filemerge.write_file_atomic(apath, agents_content.encode("utf-8"), 0o644)
+
+    ensure_dxrk_guardian_shim(home_dir)
 
     return InjectionResult(
         ConfigFile=cpath,
@@ -107,6 +108,35 @@ def inject(home_dir: str, agent_ids: list[AgentID]) -> InjectionResult:
         ConfigChanged=config_result.Changed,
         AgentsChanged=agents_result.Changed,
     )
+
+
+def ensure_dxrk_guardian_shim(home_dir: str) -> None:
+    """Bridge the upstream `gga` binary to the `DXRK_GUARDIAN` name.
+
+    Upstream (Gentleman-Programming/gentleman-guardian-angel) installs `gga`
+    reading `~/.config/gga/config`, while Dxrk hooks invoke `DXRK_GUARDIAN`
+    with `~/.config/DXRK_GUARDIAN/config`. Link both names — but only when the
+    legacy paths do not exist yet, never overwriting user files. No-op when
+    `gga` is absent.
+    """
+    gga_bin = shutil.which("gga")
+    if gga_bin is None:
+        return
+    bin_dir = os.path.join(home_dir, ".local", "bin")
+    link = os.path.join(bin_dir, "DXRK_GUARDIAN")
+    try:
+        if not os.path.lexists(link):
+            os.makedirs(bin_dir, exist_ok=True)
+            os.symlink(gga_bin, link)
+    except OSError:
+        pass
+    gga_cfg = os.path.join(home_dir, ".config", "gga")
+    dxrk_cfg = os.path.join(home_dir, ".config", "DXRK_GUARDIAN")
+    try:
+        if not os.path.lexists(gga_cfg) and os.path.isdir(dxrk_cfg):
+            os.symlink(dxrk_cfg, gga_cfg)
+    except OSError:
+        pass
 
 
 def install_command(profile: PlatformProfile) -> list[list[str]]:
