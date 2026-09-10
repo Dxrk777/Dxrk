@@ -61,3 +61,4 @@ entities.json
 # Build artifacts
 site/
 .cache/
+build/
