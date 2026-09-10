@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 from dxrk.tui.screens.agents import AgentsScreen
 from dxrk.tui.screens.backups import BackupsScreen
+from dxrk.tui.screens.chat import ChatScreen
 from dxrk.tui.screens.complete import CompleteScreen
 from dxrk.tui.screens.dependency_tree import DependencyTreeScreen
 from dxrk.tui.screens.detection import DetectionScreen
@@ -11,6 +12,7 @@ from dxrk.tui.screens.tenant_switcher import TenantSwitcherScreen
 __all__ = [
     "AgentsScreen",
     "BackupsScreen",
+    "ChatScreen",
     "CompleteScreen",
     "DependencyTreeScreen",
     "DetectionScreen",

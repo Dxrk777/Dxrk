@@ -38,6 +38,7 @@ from dxrk.tui.screens.backups import (
     RenameBackupScreen,
     RestoreConfirmScreen,
 )
+from dxrk.tui.screens.chat import ChatScreen
 from dxrk.tui.screens.dependency_tree import DependencyTreeScreen
 from dxrk.tui.screens.installing import InstallingScreen
 from dxrk.tui.screens.review import ReviewScreen
@@ -96,6 +97,7 @@ class WelcomeScreen(Screen):
         Binding("escape", "back", "Back", show=False),
         Binding("q", "quit", "Quit"),
         Binding("t", "tenant_switcher", "Tenants"),
+        Binding("c", "chat", "Chat"),
     ]
 
     cursor = reactive(0)
@@ -930,6 +932,7 @@ class DxrkApp(App):
         "delete_confirm": DeleteConfirmScreen,
         "rename_backup": RenameBackupScreen,
         "tenant_switcher": TenantSwitcherScreen,
+        "chat": ChatScreen,
         # Placeholders for missing screens
         "upgrade": PlaceholderScreen,
         "sync": PlaceholderScreen,
@@ -960,6 +963,9 @@ class DxrkApp(App):
 
     def action_tenant_switcher(self) -> None:
         self.push_screen("tenant_switcher")
+
+    def action_chat(self) -> None:
+        self.push_screen("chat")
 
     def on_mount(self) -> None:
         self.push_screen("welcome")
