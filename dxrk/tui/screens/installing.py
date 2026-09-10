@@ -22,6 +22,9 @@ class InstallingScreen(Screen):
             yield RichLog(id="install-log", highlight=True, max_lines=20)
         yield Footer()
 
+    def on_mount(self) -> None:
+        self.install()
+
     @work
     async def install(self) -> None:
         from dxrk.models import Selection
