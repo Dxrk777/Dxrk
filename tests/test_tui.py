@@ -59,9 +59,7 @@ class TestSCREENSCompleteness:
         }
         implemented = flow_names - planned_screens
         missing = implemented - registered
-        assert not missing, (
-            f"Screens referenced in SCREEN_FLOW but missing from SCREENS: {missing}"
-        )
+        assert not missing, f"Screens referenced in SCREEN_FLOW but missing from SCREENS: {missing}"
 
     def test_no_orphan_screen_names(self):
         """Every name in SCREENS must be in SCREEN_FLOW."""
@@ -72,9 +70,7 @@ class TestSCREENSCompleteness:
         registered = set(app.SCREENS.keys())
         known = set(SCREEN_FLOW.keys())
         missing_from_flow = registered - known
-        assert not missing_from_flow, (
-            f"Screens in SCREENS but missing from SCREEN_FLOW: {missing_from_flow}"
-        )
+        assert not missing_from_flow, f"Screens in SCREENS but missing from SCREEN_FLOW: {missing_from_flow}"
 
     def test_welcome_has_first_screen(self):
         """Welcome screen should have no backward."""
@@ -190,6 +186,8 @@ class TestAppLifecycle:
         with patch("dxrk.tui.app.detect", return_value=None):
             async with _make_app().run_test() as pilot:
                 await pilot.pause()
+                await pilot.press("down")
+                await pilot.pause()
                 await pilot.press("enter")
                 await pilot.pause()
                 assert isinstance(pilot.app.screen, InlineDetectionScreen)
@@ -232,6 +230,8 @@ class TestDetectionScreen:
         InlineDetectionScreen.call_from_thread = lambda *a, **kw: None
         with patch("dxrk.tui.app.detect", return_value=MagicMock()):
             async with _make_app().run_test() as pilot:
+                await pilot.press("down")
+                await pilot.pause()
                 await pilot.press("enter")
                 await pilot.pause()
                 assert isinstance(pilot.app.screen, InlineDetectionScreen)
@@ -257,6 +257,8 @@ class TestDetectionScreen:
         InlineDetectionScreen.call_from_thread = lambda *a, **kw: None
         with patch("dxrk.tui.app.detect", return_value=MagicMock()):
             async with _make_app().run_test() as pilot:
+                await pilot.press("down")
+                await pilot.pause()
                 await pilot.press("enter")
                 await pilot.pause()
                 await pilot.press("escape")

@@ -68,6 +68,7 @@ class OptionCard(Container):
 # ── Welcome Screen ────────────────────────────────────────────────────
 
 WELCOME_OPTIONS = [
+    ("Express Install", "Install everything at once (Full Dxrk)"),
     ("Install / Configure", "Set up agents, components, and tools"),
     ("Upgrade", "Upgrade installed components"),
     ("Sync", "Sync configuration to disk"),
@@ -143,6 +144,7 @@ class WelcomeScreen(Screen):
     def action_select(self) -> None:
         label = WELCOME_OPTIONS[self.cursor][0]
         mapping = {
+            "Express Install": "__express__",
             "Install / Configure": "detection",
             "Upgrade": "upgrade",
             "Sync": "sync",
@@ -158,8 +160,37 @@ class WelcomeScreen(Screen):
         target = mapping.get(label, "__quit__")
         if target == "__quit__":
             self.app.exit()
+        elif target == "__express__":
+            self.action_express_install()
         else:
             self.app.push_screen(target)
+
+    def action_express_install(self) -> None:
+        """One-shot install: Full Dxrk preset + detected agents, no wizard.
+
+        Reuses the exact CLI one-shot logic (normalize_install_flags with
+        empty flags), so TUI Express and `dxrk-py install` behave identically.
+        """
+        from dxrk.cli.install import InstallFlags, normalize_install_flags
+
+        ctx = get_ctx()
+        detection = ctx.detection
+        if detection is None:
+            from dxrk.system import detect
+
+            detection = detect()
+            ctx.detection = detection
+        inp = normalize_install_flags(InstallFlags(), detection)
+        sel = inp.selection
+        ctx.selected_agents = list(sel.agents)
+        ctx.selected_components = list(sel.components)
+        ctx.selected_skills = list(sel.skills)
+        ctx.persona = sel.persona
+        ctx.preset = sel.preset
+        ctx.sdd_mode = sel.sdd_mode
+        ctx.strict_tdd = False
+        ctx.model_assignments = {}
+        self.app.push_screen("installing")
 
     def action_back(self) -> None:
         pass
