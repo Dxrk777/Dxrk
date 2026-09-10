@@ -204,3 +204,72 @@ class TestChatScreen:
         from dxrk.tui.app import DxrkApp
 
         assert DxrkApp.SCREENS["chat"] is ChatScreen
+
+
+class TestChatResponsiveness:
+    async def test_send_runs_off_event_loop_and_ui_stays_usable(self):
+        import threading
+
+        from dxrk.tui.app import DxrkApp
+        from dxrk.tui.context import TUIContext, ctx_var
+
+        main_thread = threading.current_thread()
+        entered = threading.Event()
+        release = threading.Event()
+        seen: list[threading.Thread] = []
+
+        class SlowBackend(FakeBackend):
+            def send(self, message: str) -> ChatMessage:
+                seen.append(threading.current_thread())
+                entered.set()
+                assert release.wait(timeout=10)
+                return ChatMessage(role="assistant", text="slow reply")
+
+        ctx = TUIContext(version="1.1.0")
+        ctx_var.set(ctx)
+        app = DxrkApp(ctx)
+        async with app.run_test() as pilot:
+            await app.push_screen(ChatScreen(backend=SlowBackend()))
+            await pilot.pause()
+            composer = app.screen.query_one("#chat-composer")
+            composer.focus()
+            await pilot.press(*"ping")
+            await pilot.press("enter")
+            assert entered.wait(timeout=10)
+            # The UI must stay usable while the backend works.
+            await pilot.press(*"abc")
+            await pilot.pause()
+            assert "abc" in composer.value
+            release.set()
+            for _ in range(20):
+                await pilot.pause()
+                if "slow reply" in [m.text for m in app.screen.history]:
+                    break
+            assert "slow reply" in [m.text for m in app.screen.history]
+        assert seen
+        assert all(t is not main_thread for t in seen)
+
+    async def test_brackets_render_literally(self):
+        from textual.widgets import RichLog
+
+        from dxrk.tui.app import DxrkApp
+        from dxrk.tui.context import TUIContext, ctx_var
+
+        ctx = TUIContext(version="1.1.0")
+        ctx_var.set(ctx)
+        app = DxrkApp(ctx)
+        async with app.run_test() as pilot:
+            await app.push_screen(ChatScreen(backend=FakeBackend("reply with [/bad tag")))
+            await pilot.pause()
+            composer = app.screen.query_one("#chat-composer")
+            composer.focus()
+            composer.value = "unclosed [bracket"
+            await pilot.press("enter")
+            for _ in range(20):
+                await pilot.pause()
+                if "reply with [/bad tag" in [m.text for m in app.screen.history]:
+                    break
+            log = app.screen.query_one("#chat-transcript", RichLog)
+            rendered = "\n".join(str(line) for line in log.lines)
+            assert "unclosed [bracket" in rendered
+            assert "reply with [/bad tag" in rendered

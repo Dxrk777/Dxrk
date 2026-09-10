@@ -7,6 +7,9 @@ worker so the UI never blocks. Local /commands never touch the backend.
 
 from __future__ import annotations
 
+import asyncio
+
+from rich.text import Text
 from textual import on
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -54,15 +57,19 @@ class ChatScreen(Screen):
 
     def _write_user(self, text: str) -> None:
         self.history.append(ChatMessage(role="user", text=text))
-        self.query_one("#chat-transcript", RichLog).write(f"[bold cyan]you:[/] {text}")
+        line = Text.from_markup("[bold cyan]you:[/] ")
+        line.append(text)
+        self.query_one("#chat-transcript", RichLog).write(line)
 
     def _write_assistant(self, text: str) -> None:
         self.history.append(ChatMessage(role="assistant", text=text))
-        self.query_one("#chat-transcript", RichLog).write(f"[bold green]dxrk:[/] {text}")
+        line = Text.from_markup("[bold green]dxrk:[/] ")
+        line.append(text)
+        self.query_one("#chat-transcript", RichLog).write(line)
 
     def _write_system(self, text: str) -> None:
         self.history.append(ChatMessage(role="system", text=text))
-        self.query_one("#chat-transcript", RichLog).write(f"[dim]{text}[/]")
+        self.query_one("#chat-transcript", RichLog).write(Text(text))
 
     @on(Input.Submitted, "#chat-composer")
     def _on_composer_submitted(self, event: Input.Submitted) -> None:
@@ -82,7 +89,9 @@ class ChatScreen(Screen):
         self.run_worker(self._deliver(text), exclusive=True)
 
     async def _deliver(self, text: str) -> None:
-        reply = self.backend.send(text)
+        # send() blocks on a subprocess: run it in a thread so the UI
+        # stays responsive while the agent works.
+        reply = await asyncio.to_thread(self.backend.send, text)
         self._drop_thinking()
         if reply.role == "system":
             self._write_system(reply.text)
@@ -96,11 +105,15 @@ class ChatScreen(Screen):
             log.clear()
             for msg in self.history:
                 if msg.role == "user":
-                    log.write(f"[bold cyan]you:[/] {msg.text}")
+                    line = Text.from_markup("[bold cyan]you:[/] ")
+                    line.append(msg.text)
+                    log.write(line)
                 elif msg.role == "assistant":
-                    log.write(f"[bold green]dxrk:[/] {msg.text}")
+                    line = Text.from_markup("[bold green]dxrk:[/] ")
+                    line.append(msg.text)
+                    log.write(line)
                 else:
-                    log.write(f"[dim]{msg.text}[/]")
+                    log.write(Text(msg.text))
 
     def action_clear(self) -> None:
         self.history.clear()
