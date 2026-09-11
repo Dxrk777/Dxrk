@@ -3,7 +3,7 @@
 
 Sends user messages to the `opencode run` CLI (non-interactive) and parses
 `--format json` events into plain text chunks. Local slash commands
-(/help, /memory, /clear, /model, /session) run without the backend.
+(/help, /memory, /clear, /model, /free, /session) run without the backend.
 """
 
 from __future__ import annotations
@@ -35,6 +35,10 @@ def find_opencode_binary() -> str:
 
 
 _TEXT_KEYS = ("text", "delta", "content")
+
+
+# Verified free default: opencode provider, cost 0, no user token needed.
+FREE_DEFAULT_MODEL = "opencode/big-pickle"
 
 
 def collect_text_chunks(payload: object, _depth: int = 0) -> list[str]:
@@ -160,6 +164,12 @@ class ChatBackend:
                 )
             self.model = arg
             return SlashResult(handled=True, reply=f"modelo cambiado a {arg}")
+        if name == "free":
+            self.model = FREE_DEFAULT_MODEL
+            return SlashResult(
+                handled=True,
+                reply=f"modelo gratuito activado: {FREE_DEFAULT_MODEL} (costo 0, sin token)",
+            )
         if name == "session":
             if not arg:
                 return SlashResult(
@@ -200,6 +210,7 @@ _HELP_TEXT = """Comandos:
 /help ............ muestra esta lista
 /memory <query> .. busca en la memoria de Dxrk (tenant actual)
 /model [name] .... muestra o cambia el proveedor/modelo (p. ej. /model anthropic/claude)
+/free ............ activa el modelo gratuito verificado (costo 0, sin token)
 /session [id] .... muestra o retoma una sesión de opencode por id
 /clear ........... borra la conversación
 Todo lo demás se envía al agente."""

@@ -6,6 +6,7 @@ from dxrk.tui.screens.complete import CompleteScreen
 from dxrk.tui.screens.dependency_tree import DependencyTreeScreen
 from dxrk.tui.screens.detection import DetectionScreen
 from dxrk.tui.screens.installing import InstallingScreen
+from dxrk.tui.screens.providers import ProvidersScreen
 from dxrk.tui.screens.review import ReviewScreen
 from dxrk.tui.screens.tenant_switcher import TenantSwitcherScreen
 
@@ -17,6 +18,7 @@ __all__ = [
     "DependencyTreeScreen",
     "DetectionScreen",
     "InstallingScreen",
+    "ProvidersScreen",
     "ReviewScreen",
     "TenantSwitcherScreen",
 ]

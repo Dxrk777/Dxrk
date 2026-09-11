@@ -17,7 +17,7 @@ from textual.containers import Container
 from textual.screen import Screen
 from textual.widgets import Footer, Input, RichLog, Static
 
-from dxrk.tui.chat_backend import ChatBackend, ChatMessage
+from dxrk.tui.chat_backend import FREE_DEFAULT_MODEL, ChatBackend, ChatMessage
 
 
 class ChatScreen(Screen):
@@ -34,7 +34,7 @@ class ChatScreen(Screen):
         classes: str | None = None,
     ) -> None:
         super().__init__(name=name, id=id, classes=classes)
-        self.backend = backend or ChatBackend()
+        self.backend = backend or ChatBackend(model=FREE_DEFAULT_MODEL)
         self.history: list[ChatMessage] = []
 
     def compose(self) -> ComposeResult:

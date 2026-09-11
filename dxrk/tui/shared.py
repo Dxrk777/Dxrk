@@ -86,6 +86,7 @@ SCREEN_FLOW: dict[str, dict[str, str | None]] = {
     "uninstall": {"forward": None, "backward": "uninstall_mode"},
     "tenant_switcher": {"forward": None, "backward": "welcome"},
     "chat": {"forward": None, "backward": "welcome"},
+    "providers": {"forward": None, "backward": "welcome"},
 }
 
 NEXT = {k: v["forward"] for k, v in SCREEN_FLOW.items()}

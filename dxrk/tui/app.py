@@ -14,6 +14,7 @@ from textual.binding import Binding
 from textual.containers import Container, Vertical, VerticalScroll
 from textual.reactive import reactive
 from textual.screen import ModalScreen, Screen
+from textual.theme import Theme
 from textual.widgets import (
     Button,
     Footer,
@@ -41,10 +42,28 @@ from dxrk.tui.screens.backups import (
 from dxrk.tui.screens.chat import ChatScreen
 from dxrk.tui.screens.dependency_tree import DependencyTreeScreen
 from dxrk.tui.screens.installing import InstallingScreen
+from dxrk.tui.screens.providers import ProvidersScreen
 from dxrk.tui.screens.review import ReviewScreen
 from dxrk.tui.screens.tenant_switcher import TenantSwitcherScreen
 
 log = logging.getLogger(__name__)
+
+
+DXRK_GOTHIC = Theme(
+    name="dxrk-gothic",
+    primary="#9d0208",  # sangre
+    secondary="#5a189a",  # violeta arcano
+    warning="#ffaa00",
+    error="#ff0033",
+    success="#4ade80",
+    accent="#ff4d6d",  # rosa neón punk
+    foreground="#e8e0d0",  # hueso
+    background="#0c0612",  # negro violáceo
+    surface="#150b1e",
+    panel="#1a0e26",
+    boost="#2a1740",
+    dark=True,
+)
 
 
 # ── Helper Widgets ────────────────────────────────────────────────────
@@ -99,6 +118,7 @@ class WelcomeScreen(Screen):
         Binding("q", "quit", "Salir"),
         Binding("t", "tenant_switcher", "Tenants"),
         Binding("c", "chat", "Chat"),
+        Binding("p", "providers", "IAs"),
     ]
 
     cursor = reactive(0)
@@ -964,6 +984,7 @@ class DxrkApp(App):
         "rename_backup": RenameBackupScreen,
         "tenant_switcher": TenantSwitcherScreen,
         "chat": ChatScreen,
+        "providers": ProvidersScreen,
         # Placeholders for missing screens
         "upgrade": PlaceholderScreen,
         "sync": PlaceholderScreen,
@@ -980,8 +1001,9 @@ class DxrkApp(App):
         "skill_picker": PlaceholderScreen,
     }
 
-    def __init__(self, ctx: TUIContext | None = None, **kwargs: Any) -> None:
+    def __init__(self, ctx: TUIContext | None = None, initial_screen: str = "welcome", **kwargs: Any) -> None:
         super().__init__(**kwargs)
+        self.initial_screen = initial_screen
         if ctx is not None:
             self.ctx: TUIContext = ctx
             ctx_var.set(self.ctx)
@@ -991,6 +1013,8 @@ class DxrkApp(App):
         # Sync legacy STATE proxy is automatic (STATE forwards to ctx_var),
         # but keep instance sub-title in sync for display.
         self.SUB_TITLE = f"v{self.ctx.version}"
+        self.register_theme(DXRK_GOTHIC)
+        self.theme = "dxrk-gothic"
 
     def action_tenant_switcher(self) -> None:
         self.push_screen("tenant_switcher")
@@ -998,14 +1022,17 @@ class DxrkApp(App):
     def action_chat(self) -> None:
         self.push_screen("chat")
 
+    def action_providers(self) -> None:
+        self.push_screen("providers")
+
     def on_mount(self) -> None:
-        self.push_screen("welcome")
+        self.push_screen(self.initial_screen)
 
 
-def run(version: str = __version__) -> None:
+def run(version: str = __version__, initial_screen: str = "welcome") -> None:
     ctx = TUIContext(version=version)
     ctx_var.set(ctx)
     # Legacy sync: STATE is proxy -> also reflects ctx, explicit for clarity
     # (kept for tests that import STATE)
-    app = DxrkApp(ctx)
+    app = DxrkApp(ctx, initial_screen=initial_screen)
     app.run()

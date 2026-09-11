@@ -174,7 +174,7 @@ def main() -> None:
         print(f"Command '{args.command}' not yet implemented")
         return
 
-    _launch_tui(version)
+    _launch_single_installer(version)
 
 
 def _run_tenant_cli(args: argparse.Namespace) -> None:
@@ -245,10 +245,47 @@ def _run_install_cli(args) -> None:
         return
 
 
-def _launch_tui(version: str) -> None:
+def _launch_tui(version: str, initial_screen: str = "welcome") -> None:
     from dxrk.tui.app import run as run_tui
 
-    run_tui(version)
+    run_tui(version, initial_screen=initial_screen)
+
+
+def _is_installed(home: str) -> bool:
+    """True cuando una instalación previa registró agentes en el estado."""
+    try:
+        from dxrk.state import read as state_read
+    except ImportError:
+        return False
+    try:
+        st = state_read(home)
+    except (FileNotFoundError, ValueError, OSError):
+        return False
+    return bool(getattr(st, "installed_agents", []))
+
+
+def _launch_single_installer(version: str) -> None:
+    """Instalador único (estilo opencode): instala una vez y abre el chat.
+
+    La primera ejecución corre la instalación completa de una sola vez
+    (la misma lógica que `dxrk-py install` sin banderas) y luego abre el
+    chat. Las siguientes ejecuciones van directo al chat.
+    """
+    import os
+
+    home = os.path.expanduser("~")
+    if not _is_installed(home):
+        from dxrk.cli.run import run_install
+        from dxrk.system import detect
+
+        print("Instalando Dxrk (una sola vez: agentes + componentes + MCP)…")
+        result = run_install([], detect())
+        if result.error:
+            print(f"La instalación reportó errores: {result.error}")
+            print("Se abre Dxrk de todos modos; reintenta con `dxrk-py install`.")
+        else:
+            print("Instalación completa. Abriendo Dxrk…")
+    _launch_tui(version, initial_screen="chat")
 
 
 def _run_sync_cli(args) -> None:
