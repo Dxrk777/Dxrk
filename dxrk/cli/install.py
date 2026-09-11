@@ -641,6 +641,17 @@ class AgentInstallStep(Step):
         commands = adapter.install_command(self._profile)
         if not commands:
             return f"el comando de instalación para {self._agent!r} se resolvió en una secuencia vacía"
+        lead = commands[0][0] if commands[0] else ""
+        if lead and shutil.which(lead) is None:
+            # Sin el binario del agente no se pueden instalar sus plugins;
+            # se omite con aviso en vez de abortar toda la instalación.
+            log.warning(
+                "se omite la instalación de %s: comando %r no encontrado en PATH (instala %s manualmente y reintenta)",
+                self._agent,
+                lead,
+                self._agent,
+            )
+            return None
         return run_command_sequence(commands)
 
 
@@ -864,13 +875,17 @@ class ComponentApplyStep(Step):
             # (the old DXRK_MEMORY formula and Dxrk777/memory releases are gone):
             # Dxrk uses its native Python memory (dxrk.memory) instead.
             if self._profile.package_manager == "brew":
-                log.warning("DXRK_MEMORY no tiene fórmula brew activa; se usará la memoria nativa de Python en su lugar")
+                log.warning(
+                    "DXRK_MEMORY no tiene fórmula brew activa; se usará la memoria nativa de Python en su lugar"
+                )
             elif shutil.which("DXRK_MEMORY") is None:
                 # Download memory binary
                 try:
                     download_latest_binary(self._profile)
                 except Exception as e:
-                    log.warning("binario de memoria no disponible (%s); se usará la memoria nativa de Python en su lugar", e)
+                    log.warning(
+                        "binario de memoria no disponible (%s); se usará la memoria nativa de Python en su lugar", e
+                    )
 
             setup_mode = parse_setup_mode(os.environ.get("GENTLE_AI_MEMORY_SETUP_MODE", ""))
             setup_strict = parse_setup_strict(os.environ.get("GENTLE_AI_MEMORY_SETUP_STRICT", ""))
@@ -2048,7 +2063,9 @@ def render_dry_run(result: InstallResult) -> str:
 
     if result.resolved:
         lines.append(f"Orden de componentes: {_join_component_ids(result.resolved.ordered_components)}")
-        lines.append(f"Dependencias agregadas automáticamente: {_join_component_ids(result.resolved.added_dependencies)}")
+        lines.append(
+            f"Dependencias agregadas automáticamente: {_join_component_ids(result.resolved.added_dependencies)}"
+        )
 
     if result.review and result.review.platform_decision:
         lines.append(f"Decisión de plataforma: {_format_platform_decision(result.review.platform_decision)}")

@@ -60,3 +60,44 @@ def test_paid_ranking_best_first():
         "github-copilot",
     ]
     assert "big-pickle" in backend.FREE_PROVIDERS[0].detail
+
+
+class TestAgentInstallStepSkip:
+    def _step(self, monkeypatch, tmp_path, commands):
+        from types import SimpleNamespace
+
+        from dxrk.cli.install import AgentInstallStep
+        from dxrk.models import AgentID
+        from dxrk.system import PlatformProfile
+
+        class FakeAdapter:
+            agent = AgentID.PI
+            supports_auto_install = True
+
+            def detect(self, home_dir):
+                return SimpleNamespace(installed=False)
+
+            def install_command(self, profile):
+                return commands
+
+        class FakeReg:
+            def get(self, aid):
+                return FakeAdapter()
+
+        monkeypatch.setattr("dxrk.agents.factory.create_registry", lambda: FakeReg())
+        profile = PlatformProfile(os="linux", linux_distro="ubuntu", package_manager="apt")
+        return AgentInstallStep("s", AgentID.PI, str(tmp_path), profile)
+
+    def test_skips_when_lead_binary_missing(self, monkeypatch, tmp_path, caplog):
+        import logging
+
+        step = self._step(monkeypatch, tmp_path, [["dxrk-noexiste-bin-xyz", "install", "x"]])
+        with caplog.at_level(logging.WARNING, logger="dxrk.cli.install"):
+            assert step.run() is None
+        assert "se omite la instalación" in caplog.text
+
+    def test_runs_when_lead_binary_present(self, monkeypatch, tmp_path):
+        import sys
+
+        step = self._step(monkeypatch, tmp_path, [[sys.executable, "-c", "pass"]])
+        assert step.run() is None
