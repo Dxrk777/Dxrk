@@ -32,7 +32,10 @@ class CodexAdapter(Adapter):
         return True
 
     def install_command(self, profile) -> list[list[str]]:
-        return [["npx", "--yes", "@openai/codex"]]
+        # NOTE: `npx --yes <pkg>` downloads AND executes the bin; codex's bin
+        # demands a TTY ("stdin is not a terminal") and fails headless, which
+        # aborts the whole install pipeline. `npm install -g` only installs.
+        return [["npm", "install", "-g", "@openai/codex"]]
 
     def global_config_dir(self, home_dir: str = "") -> str:
         return str(Path(home_dir) / ".codex")
