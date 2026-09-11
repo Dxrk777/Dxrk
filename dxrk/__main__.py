@@ -275,16 +275,18 @@ def _launch_single_installer(version: str) -> None:
 
     home = os.path.expanduser("~")
     if not _is_installed(home):
-        from dxrk.cli.run import run_install
+        from dxrk.cli.install import run_install
         from dxrk.system import detect
 
         print("Instalando Dxrk (una sola vez: agentes + componentes + MCP)…", flush=True)
         result = run_install([], detect())
         if result.error:
             print(f"La instalación reportó errores: {result.error}", flush=True)
-            print("Se abre Dxrk de todos modos; reintenta con `dxrk-py install`.", flush=True)
-        else:
+        if _is_installed(home):
             print("Instalación completa. Abriendo Dxrk…", flush=True)
+        else:
+            print("La instalación no pudo completarse; se abre Dxrk de todos modos.", flush=True)
+            print("Reintenta con `dxrk-py install` para ver el detalle.", flush=True)
     _launch_tui(version, initial_screen="chat")
 
 

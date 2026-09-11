@@ -685,6 +685,17 @@ def inject(
                 changed = changed or profile_result[0].Changed
                 profile_result[1]
 
+            # Managed OpenCode plugin expected by verify/uninstall: copy the
+            # background-agents.ts asset (OpenCode only, not KiloCode).
+            if adapter.agent == AgentID.OPENCODE:
+                plugin_dir = os.path.join(home_dir, ".config", "opencode", "plugins")
+                os.makedirs(plugin_dir, mode=0o755, exist_ok=True)
+                plugin_src = _must_read("opencode/plugins/background-agents.ts")
+                plugin_out = os.path.join(plugin_dir, "background-agents.ts")
+                wr = filemerge.write_file_atomic(plugin_out, plugin_src.encode("utf-8"), 0o644)
+                changed = changed or wr.Changed
+                files.append(plugin_out)
+
     # 3. SDD skill files
     if adapter.supports_skills:
         skill_dir = adapter.skills_dir(home_dir)
