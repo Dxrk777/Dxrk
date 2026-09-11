@@ -4,6 +4,7 @@ from pathlib import Path
 
 from dxrk.agents.interface import Adapter, DetectResult
 from dxrk.models import AgentID, MCPStrategy, SupportTier, SystemPromptStrategy
+from dxrk.versions import Kilocode
 
 
 class KiloCodeAdapter(Adapter):
@@ -32,7 +33,7 @@ class KiloCodeAdapter(Adapter):
         return True
 
     def install_command(self, profile) -> list[list[str]]:
-        return [["npm", "install", "-g", "@anthropic-ai/claude-code-kilo"]]
+        return [["npm", "install", "-g", f"@kilocode/cli@{Kilocode}"]]
 
     def global_config_dir(self, home_dir: str = "") -> str:
         return str(Path(home_dir) / ".config" / "kilo")
