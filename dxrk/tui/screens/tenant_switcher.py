@@ -48,19 +48,19 @@ class TenantSwitcherScreen(ModalScreen[None]):
     """
 
     BINDINGS = [
-        Binding("up,k", "cursor_up", "Up", show=False),
-        Binding("down,j", "cursor_down", "Down", show=False),
-        Binding("enter", "switch", "Switch"),
-        Binding("c", "create", "Create"),
-        Binding("escape", "back", "Back"),
-        Binding("t", "back", "Back", show=False),
+        Binding("up,k", "cursor_up", "Arriba", show=False),
+        Binding("down,j", "cursor_down", "Abajo", show=False),
+        Binding("enter", "switch", "Cambiar"),
+        Binding("c", "create", "Crear"),
+        Binding("escape", "back", "Atrás"),
+        Binding("t", "back", "Atrás", show=False),
     ]
 
     cursor: reactive[int] = reactive(0)
 
     def compose(self) -> ComposeResult:
         with Container(id="tenant-switcher-container"):
-            yield Static("[bold]Tenant Switcher[/]", id="tenant-switcher-title")
+            yield Static("[bold]Selector de tenant[/]", id="tenant-switcher-title")
             yield Static(_tenant_badge_text(), id="tenant-badge")
             yield Static("")
             with VerticalScroll(id="tenant-list"):
@@ -68,9 +68,9 @@ class TenantSwitcherScreen(ModalScreen[None]):
             yield Static("")
             # inline create row: Input + hint
             yield Input(
-                placeholder="new tenant id (a-z,0-9,-,_) — press c to focus, enter to create", id="tenant-create-input"
+                placeholder="nuevo id de tenant (a-z,0-9,-,_) — pulsa c para enfocar, enter para crear", id="tenant-create-input"
             )
-            yield Static("[dim]j/k: navigate • enter: switch • c: create • esc/back • t: back[/]", id="tenant-help")
+            yield Static("[dim]j/k: navegar • enter: cambiar • c: crear • esc: atrás • t: atrás[/]", id="tenant-help")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -84,12 +84,12 @@ class TenantSwitcherScreen(ModalScreen[None]):
             return Widget._render(self)
         scroll.remove_children()
         if not self._tenants:
-            scroll.mount(Static("[yellow]No tenants yet. Type an id and press c/enter to create.[/]"))
+            scroll.mount(Static("[yellow]Aún no hay tenants. Escribe un id y pulsa c/enter para crear.[/]"))
             return Widget._render(self)
         ctx = get_ctx()
         current = getattr(ctx, "tenant_id", "")
         for i, tid in enumerate(self._tenants):
-            marker = " (active)" if tid == current else ""
+            marker = " (activo)" if tid == current else ""
             prefix = "▸" if i == self.cursor else " "
             style = "[bold green]" if tid == current else ""
             end_style = "[/]" if style else ""
@@ -197,7 +197,7 @@ class TenantSwitcherScreen(ModalScreen[None]):
         if validate_id is not None and not validate_id(tid):
             inp.value = ""
             try:
-                inp.placeholder = f"invalid id {tid!r} — use [a-zA-Z0-9_-] 1..256"
+                inp.placeholder = f"id no válido {tid!r} — usa [a-zA-Z0-9_-] 1..256"
             except Exception:
                 pass
             return

@@ -13,7 +13,7 @@ def register_model_command(reg: Registry) -> None:
     def list_run(ctx: CommandContext) -> int:
         out = ctx.out
         cfg = load_user_config()
-        out.write("Available models:\n")
+        out.write("Modelos disponibles:\n")
         for p in cfg.providers:
             marker = " *" if p.name == cfg.project.default_provider else ""
             out.write(f"  {p.name:<10} {p.model}{marker}\n")
@@ -26,7 +26,7 @@ def register_model_command(reg: Registry) -> None:
             if p.name == cfg.project.default_provider:
                 out.write(f"{p.model}\n")
                 return 0
-        out.write("(none)\n")
+        out.write("(ninguno)\n")
         return 0
 
     def set_run(ctx: CommandContext) -> int:
@@ -41,17 +41,17 @@ def register_model_command(reg: Registry) -> None:
                 found = True
                 break
         if not found:
-            ctx.err.write(f"Error: provider {provider} not found\n")
+            ctx.err.write(f"Error: proveedor {provider} no encontrado\n")
             return 1
         save_user_config(cfg)
-        out.write(f"Set model for {provider} to {model_name}\n")
+        out.write(f"Modelo de {provider} fijado en {model_name}\n")
         return 0
 
-    list_cmd = Command(name="model list", short="List available models", run=list_run)
-    current_cmd = Command(name="model current", short="Show the current model", run=current_run)
+    list_cmd = Command(name="model list", short="Listar los modelos disponibles", run=list_run)
+    current_cmd = Command(name="model current", short="Mostrar el modelo actual", run=current_run)
     set_cmd = Command(
         name="model set",
-        short="Set the model for a provider",
+        short="Fijar el modelo de un proveedor",
         min_args=2,
         max_args=2,
         run=set_run,

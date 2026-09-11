@@ -59,17 +59,17 @@ def register_agents_command(reg: Registry) -> None:
         out = ctx.out
         agents = _scan_agent_dirs(ctx.cwd)
         if not agents:
-            out.write("No agents found.\n")
-            out.write("Add agent files under ~/.dxrk/agents or .dxrk/agents.\n")
+            out.write("No se encontraron agentes.\n")
+            out.write("Agrega archivos de agentes en ~/.dxrk/agents o .dxrk/agents.\n")
             return 0
-        out.write("NAME\tDESCRIPTION\tPATH\n")
+        out.write("NOMBRE\tDESCRIPCIÓN\tRUTA\n")
         for name, path, description in agents:
             out.write(f"{name}\t{description}\t{path}\n")
         return 0
 
     cmd = Command(
         name="agents",
-        short="List available agents",
+        short="Listar los agentes disponibles",
         run=run,
     )
     reg.add_command(cmd)

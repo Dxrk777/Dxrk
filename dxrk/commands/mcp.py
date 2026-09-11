@@ -36,13 +36,11 @@ def register_mcp_command(reg: Registry) -> None:
         out = ctx.out
         servers = load_mcp_state()
         if not servers:
-            out.write("No MCP servers configured.\n")
+            out.write("No hay servidores MCP configurados.\n")
             return 0
-        out.write("NAME\tSTATUS\tCOMMAND\n")
+        out.write("NOMBRE\tESTADO\tCOMANDO\n")
         for name, info in sorted(servers.items()):
-            out.write(
-                f"{name}\t{info.get('status', 'configured')}\t{info.get('command', '')}\n"
-            )
+            out.write(f"{name}\t{info.get('status', 'configured')}\t{info.get('command', '')}\n")
         return 0
 
     def add_run(ctx: CommandContext) -> int:
@@ -50,12 +48,12 @@ def register_mcp_command(reg: Registry) -> None:
         name = ctx.args[0]
         command = ctx.args[1] if len(ctx.args) > 1 else ctx.flag_str("command")
         if not command:
-            ctx.err.write("Error: command required (argument or --command)\n")
+            ctx.err.write("Error: se requiere el comando (argumento o --command)\n")
             return 1
         servers = load_mcp_state()
         servers[name] = {"command": command, "status": "configured"}
         save_mcp_state(servers)
-        out.write(f"Added MCP server {name}\n")
+        out.write(f"Servidor MCP {name} agregado\n")
         return 0
 
     def remove_run(ctx: CommandContext) -> int:
@@ -63,25 +61,25 @@ def register_mcp_command(reg: Registry) -> None:
         name = ctx.args[0]
         servers = load_mcp_state()
         if name not in servers:
-            ctx.err.write(f"Error: MCP server {name} not found\n")
+            ctx.err.write(f"Error: servidor MCP {name} no encontrado\n")
             return 1
         del servers[name]
         save_mcp_state(servers)
-        out.write(f"Removed MCP server {name}\n")
+        out.write(f"Servidor MCP {name} eliminado\n")
         return 0
 
-    list_cmd = Command(name="mcp list", short="List configured MCP servers", run=list_run)
+    list_cmd = Command(name="mcp list", short="Listar los servidores MCP configurados", run=list_run)
     add_cmd = Command(
         name="mcp add",
-        short="Add an MCP server",
+        short="Agregar un servidor MCP",
         min_args=1,
         max_args=1,
         flags={
-            "command": Flag("command", default="", help="Server command"),
+            "command": Flag("command", default="", help="Comando del servidor"),
         },
         run=add_run,
     )
-    remove_cmd = Command(name="mcp remove", short="Remove an MCP server", min_args=1, max_args=1, run=remove_run)
+    remove_cmd = Command(name="mcp remove", short="Eliminar un servidor MCP", min_args=1, max_args=1, run=remove_run)
     reg.add_command(list_cmd)
     reg.add_command(add_cmd)
     reg.add_command(remove_cmd)

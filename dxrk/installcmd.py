@@ -73,18 +73,18 @@ class ProfileResolver:
             return _resolve_kilocode_install(profile)
         if agent == AgentID.KIMI:
             return _resolve_kimi_install(profile)
-        raise InstallError(f'install command is not supported for agent "{agent}"')
+        raise InstallError(f'comando de instalación no compatible con el agente "{agent}"')
 
     def resolve_component_install(self, profile: PlatformProfile, component: ComponentID) -> CommandSequence:
         if component == ComponentID.DXRK_MEMORY:
             return _resolve_dxrk_memory_install(profile)
         if component == ComponentID.DXRK_GUARDIAN:
             return _resolve_dxrk_guardian_install(profile)
-        raise InstallError(f'install command is not supported for component "{component}"')
+        raise InstallError(f'comando de instalación no compatible con el componente "{component}"')
 
     def resolve_dependency_install(self, profile: PlatformProfile, dependency: str) -> CommandSequence:
         if not dependency:
-            raise InstallError("dependency name is required")
+            raise InstallError("se requiere el nombre de la dependencia")
 
         pm = profile.package_manager
         if pm == _BREW:
@@ -107,7 +107,7 @@ class ProfileResolver:
                     _FLAG_PKG_AGREEMENTS,
                 ]
             ]
-        raise InstallError(f'unsupported package manager "{pm}" for os="{profile.os}" distro="{profile.linux_distro}"')
+        raise InstallError(f'gestor de paquetes no compatible "{pm}" para os="{profile.os}" distro="{profile.linux_distro}"')
 
 
 def new_resolver() -> Resolver:
@@ -135,7 +135,7 @@ def _resolve_kilocode_install(profile: PlatformProfile) -> CommandSequence:
 
 def _resolve_kimi_install(profile: PlatformProfile) -> CommandSequence:
     if not profile.supported:
-        raise InstallError(f"kimi is not supported on this platform ({profile.os}/{profile.linux_distro})")
+        raise InstallError(f"kimi no es compatible con esta plataforma ({profile.os}/{profile.linux_distro})")
     return [["uv", "tool", _INSTALL, "--python", "3.13", "kimi-cli"]]
 
 
@@ -151,7 +151,7 @@ def _resolve_opencode_install(profile: PlatformProfile) -> CommandSequence:
     if pm == _WINGET:
         return [[_NPM, _INSTALL, _FLAG_GLOBAL, _IGNORE_SCRIPTS, f"opencode-ai@{OpenCode}"]]
     raise InstallError(
-        f'unsupported platform for opencode: os="{profile.os}" distro="{profile.linux_distro}" pm="{pm}"'
+        f'plataforma no compatible para opencode: os="{profile.os}" distro="{profile.linux_distro}" pm="{pm}"'
     )
 
 
@@ -164,8 +164,8 @@ def _resolve_dxrk_memory_install(profile: PlatformProfile) -> CommandSequence:
     # No live binary distribution exists for the external memory helper
     # (no formula, no releases): Dxrk uses its native Python memory instead.
     raise InstallError(
-        "dxrk-memory has no prebuilt binary distribution — Dxrk uses its native "
-        "Python memory (dxrk.memory), no download needed"
+        "dxrk-memory no tiene distribución binaria precompilada — Dxrk usa su memoria "
+        "nativa de Python (dxrk.memory), no se necesita descarga"
     )
 
 
@@ -209,7 +209,7 @@ def _resolve_dxrk_guardian_install(profile: PlatformProfile) -> CommandSequence:
             [bash, _bash_script_path(profile, os.path.join(clone_dst, "install.sh"))],
         ]
     raise InstallError(
-        f'unsupported platform for dxrk-guardian: os="{profile.os}" distro="{profile.linux_distro}" pm="{pm}"'
+        f'plataforma no compatible para dxrk-guardian: os="{profile.os}" distro="{profile.linux_distro}" pm="{pm}"'
     )
 
 
@@ -227,17 +227,17 @@ def validate_agent_install_preflight(profile: PlatformProfile, agent: AgentID) -
 
 def _validate_pi_install_preflight() -> None:
     if _cmd_look_path("pi") is None:
-        raise InstallError("Pi requires the `pi` executable in PATH before installing Dxrk AI Pi packages")
+        raise InstallError("Pi requiere el ejecutable `pi` en PATH antes de instalar los paquetes Dxrk AI Pi")
 
 
 def _validate_kimi_install_preflight(profile: PlatformProfile) -> None:
     if not profile.supported:
-        raise InstallError(f"kimi is not supported on this platform ({profile.os}/{profile.linux_distro})")
+        raise InstallError(f"kimi no es compatible con esta plataforma ({profile.os}/{profile.linux_distro})")
 
     if _cmd_look_path("uv") is None:
         raise InstallError(
-            "Kimi requires Astral uv, but `uv` was not found in PATH.\n"
-            f"Install uv and retry:\n  {_uv_install_hint(profile)}"
+            "Kimi requiere Astral uv, pero no se encontró `uv` en PATH.\n"
+            f"Instala uv e inténtalo de nuevo:\n  {_uv_install_hint(profile)}"
         )
 
 
@@ -276,15 +276,15 @@ def _get_go_version_output() -> str:
 def validate_go_for_module_install(profile: PlatformProfile) -> None:
     if _cmd_look_path("go") is None:
         raise InstallError(
-            "Go 1.24+ is required to install DxrkMemory but was not found in PATH.\n"
-            "Please install Go from https://go.dev/dl/ and restart your terminal."
+            "Se requiere Go 1.24+ para instalar DxrkMemory, pero no se encontró en PATH.\n"
+            "Instala Go desde https://go.dev/dl/ y reinicia la terminal."
         )
 
     out = _get_go_version_output()
     if not out:
         raise InstallError(
-            "Go 1.24+ is required but could not verify the installed version.\n"
-            "Please ensure Go is properly installed: https://go.dev/dl/"
+            "Se requiere Go 1.24+, pero no se pudo verificar la versión instalada.\n"
+            "Asegúrate de que Go esté instalado correctamente: https://go.dev/dl/"
         )
 
     parts = out.split()
@@ -299,15 +299,15 @@ def validate_go_for_module_install(profile: PlatformProfile) -> None:
                 major = minor = 0
             if major < 1 or (major == 1 and minor < 24):
                 raise InstallError(
-                    f"Go 1.24+ is required to install DxrkMemory, but found go{version_str}.\n"
-                    "Please update Go: https://go.dev/dl/"
+                    f"Se requiere Go 1.24+ para instalar DxrkMemory, pero se encontró go{version_str}.\n"
+                    "Actualiza Go: https://go.dev/dl/"
                 )
 
     if _os_getenv("GO111MODULE") == "off":
-        fix = "export GO111MODULE=on  # then retry"
+        fix = "export GO111MODULE=on  # e inténtalo de nuevo"
         if profile.os == _OS_WINDOWS:
-            fix = '$env:GO111MODULE = "on"  # PowerShell, then retry'
-        raise InstallError(f"go modules are disabled (GO111MODULE=off).\nRun: {fix}")
+            fix = '$env:GO111MODULE = "on"  # PowerShell, e inténtalo de nuevo'
+        raise InstallError(f"los módulos de go están deshabilitados (GO111MODULE=off).\nEjecuta: {fix}")
 
 
 # ---------------------------------------------------------------------------

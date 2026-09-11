@@ -15,20 +15,18 @@ def register_branch_command(reg: Registry) -> None:
         wd = ctx.cwd
 
         if not git_dir(wd).ok:
-            ctx.err.write("Error: not a git repository\n")
+            ctx.err.write("Error: no es un repositorio git\n")
             return 1
 
         if ctx.flag_bool("delete"):
             name = ctx.args[0] if ctx.args else ""
             if not name:
-                ctx.err.write("Error: branch name required for delete\n")
+                ctx.err.write("Error: se requiere el nombre de la rama para eliminar\n")
                 return 1
             flag = "-D" if ctx.flag_bool("force") else "-d"
             result = run_git(wd, "branch", flag, name)
             if not result.ok:
-                ctx.err.write(
-                    f"Error: delete branch: {result.err.strip() or result.out.strip()}\n"
-                )
+                ctx.err.write(f"Error: al eliminar la rama: {result.err.strip() or result.out.strip()}\n")
                 return 1
             out.write(result.out)
             return 0
@@ -36,13 +34,11 @@ def register_branch_command(reg: Registry) -> None:
         if ctx.flag_bool("switch"):
             name = ctx.args[0] if ctx.args else ""
             if not name:
-                ctx.err.write("Error: branch name required for switch\n")
+                ctx.err.write("Error: se requiere el nombre de la rama para cambiar\n")
                 return 1
             result = run_git(wd, "checkout", name)
             if not result.ok:
-                ctx.err.write(
-                    f"Error: switch branch: {result.err.strip() or result.out.strip()}\n"
-                )
+                ctx.err.write(f"Error: al cambiar de rama: {result.err.strip() or result.out.strip()}\n")
                 return 1
             out.write(result.out)
             return 0
@@ -50,35 +46,33 @@ def register_branch_command(reg: Registry) -> None:
         if ctx.flag_bool("create"):
             name = ctx.args[0] if ctx.args else ""
             if not name:
-                ctx.err.write("Error: branch name required for create\n")
+                ctx.err.write("Error: se requiere el nombre de la rama para crear\n")
                 return 1
             result = run_git(wd, "checkout", "-b", name)
             if not result.ok:
-                ctx.err.write(
-                    f"Error: create branch: {result.err.strip() or result.out.strip()}\n"
-                )
+                ctx.err.write(f"Error: al crear la rama: {result.err.strip() or result.out.strip()}\n")
                 return 1
             out.write(result.out)
             return 0
 
         result = run_git(wd, "branch")
         if not result.ok:
-            ctx.err.write(
-                f"Error: list branches: {result.err.strip() or result.out.strip()}\n"
-            )
+            ctx.err.write(f"Error: al listar las ramas: {result.err.strip() or result.out.strip()}\n")
             return 1
         out.write(result.out)
         return 0
 
     cmd = Command(
         name="branch",
-        short="List, switch, create, or delete branches",
+        short="Listar, cambiar, crear o eliminar ramas",
         flags={
-            "list": Flag("list", is_bool=True, default=False, shorthand="l", help="List branches"),
-            "switch": Flag("switch", is_bool=True, default=False, shorthand="s", help="Switch to a branch"),
-            "delete": Flag("delete", is_bool=True, default=False, shorthand="d", help="Delete a branch"),
-            "create": Flag("create", is_bool=True, default=False, shorthand="c", help="Create and switch to a branch"),
-            "force": Flag("force", is_bool=True, default=False, help="Force delete"),
+            "list": Flag("list", is_bool=True, default=False, shorthand="l", help="Listar las ramas"),
+            "switch": Flag("switch", is_bool=True, default=False, shorthand="s", help="Cambiar a una rama"),
+            "delete": Flag("delete", is_bool=True, default=False, shorthand="d", help="Eliminar una rama"),
+            "create": Flag(
+                "create", is_bool=True, default=False, shorthand="c", help="Crear una rama y cambiar a ella"
+            ),
+            "force": Flag("force", is_bool=True, default=False, help="Forzar la eliminación"),
         },
         run=run,
     )

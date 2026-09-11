@@ -291,10 +291,10 @@ def fetch_latest_release(owner: str, repo: str, timeout_sec: int = 10) -> GitHub
             )
     except urllib.error.HTTPError as e:
         if e.code == 403:
-            raise RuntimeError("GitHub API rate limit exceeded (HTTP 403)") from e
+            raise RuntimeError("Límite de la API de GitHub excedido (HTTP 403)") from e
         if e.code == 404:
-            raise RuntimeError(f"No releases found for {owner}/{repo} (HTTP 404)") from e
-        raise RuntimeError(f"GitHub API returned HTTP {e.code} for {owner}/{repo}") from e
+            raise RuntimeError(f"No se encontraron releases para {owner}/{repo} (HTTP 404)") from e
+        raise RuntimeError(f"La API de GitHub devolvió HTTP {e.code} para {owner}/{repo}") from e
 
 
 # Check
@@ -387,8 +387,8 @@ def update_hint(tool: ToolInfo, profile: PlatformProfile) -> str:
     hints: dict[str, str] = {
         "dxrk": _dxrk_hint(profile),
         "DXRK_GUARDIAN": _DXRK_GUARDIAN_hint(profile),
-        "opencode-subagent-statusline": "Restart/reload OpenCode; plugins are registered in ~/.config/opencode/tui.json",
-        "opencode-sdd-memory-manage": "Restart/reload OpenCode; plugins are registered in ~/.config/opencode/tui.json",
+        "opencode-subagent-statusline": "Reinicia/recarga OpenCode; los plugins están registrados en ~/.config/opencode/tui.json",
+        "opencode-sdd-memory-manage": "Reinicia/recarga OpenCode; los plugins están registrados en ~/.config/opencode/tui.json",
     }
     return hints.get(tool.name, "")
 
@@ -402,7 +402,7 @@ def _dxrk_hint(profile: PlatformProfile) -> str:
 def _DXRK_GUARDIAN_hint(profile: PlatformProfile) -> str:
     if profile.package_manager == "brew":
         return "brew upgrade gga"
-    return "See https://github.com/Gentleman-Programming/gentleman-guardian-angel"
+    return "Ver https://github.com/Gentleman-Programming/gentleman-guardian-angel"
 
 
 # CLI render
@@ -410,7 +410,7 @@ def _DXRK_GUARDIAN_hint(profile: PlatformProfile) -> str:
 
 def render_cli(results: list[UpdateResult]) -> str:
     lines: list[str] = []
-    lines.append("Update Check")
+    lines.append("Verificación de actualizaciones")
     lines.append("============")
     lines.append("")
 
@@ -421,7 +421,7 @@ def render_cli(results: list[UpdateResult]) -> str:
         status = _status_icon(r.status)
         installed = r.installed_version or "-"
         latest = r.latest_version or "-"
-        line = f"  {status} {r.tool.name:<12s}  installed: {installed:<10s}  latest: {latest:<10s}"
+        line = f"  {status} {r.tool.name:<12s}  instalada: {installed:<10s}  última: {latest:<10s}"
 
         if r.status == UpdateStatus.UPDATE_AVAILABLE:
             updates_available += 1
@@ -429,20 +429,20 @@ def render_cli(results: list[UpdateResult]) -> str:
                 line += f"  {r.update_hint}"
         elif r.status == UpdateStatus.CHECK_FAILED:
             checks_failed += 1
-            line += "  check failed"
+            line += "  verificación fallida"
 
         lines.append(line)
 
     lines.append("")
 
     if updates_available > 0 and checks_failed > 0:
-        lines.append(f"{updates_available} update(s) available. {checks_failed} check(s) failed.")
+        lines.append(f"{updates_available} actualización(es) disponible(s). {checks_failed} verificación(es) fallida(s).")
     elif updates_available > 0:
-        lines.append(f"{updates_available} update(s) available.")
+        lines.append(f"{updates_available} actualización(es) disponible(s).")
     elif checks_failed > 0:
-        lines.append(f"Update check incomplete: {checks_failed} tool(s) failed to check.")
+        lines.append(f"Verificación incompleta: {checks_failed} herramienta(s) no se pudieron verificar.")
     else:
-        lines.append("All tools are up to date!")
+        lines.append("¡Todas las herramientas están actualizadas!")
 
     return "\n".join(lines)
 
@@ -493,16 +493,16 @@ def upgrade_icon(status: ToolUpgradeStatus) -> str:
 
 def render_upgrade_report(report: UpgradeReport) -> str:
     lines: list[str] = []
-    header = "Upgrade (dry-run)" if report.dry_run else "Upgrade"
+    header = "Actualización (simulación)" if report.dry_run else "Actualización"
     lines.append(header)
     lines.append("=" * len(header))
     lines.append("")
-    lines.append("  Upgrades managed tool binaries only.")
-    lines.append("  Agent configs are preserved \u2014 no install or sync is performed.")
+    lines.append("  Solo actualiza los binarios de las herramientas gestionadas.")
+    lines.append("  Las configuraciones de agentes se conservan \u2014 no se ejecuta install ni sync.")
     lines.append("")
 
     if not report.results:
-        lines.append("  No upgrades available. All managed tools are up to date.")
+        lines.append("  No hay actualizaciones disponibles. Todas las herramientas gestionadas están actualizadas.")
         return "\n".join(lines)
 
     succeeded = 0
@@ -518,15 +518,15 @@ def render_upgrade_report(report: UpgradeReport) -> str:
             succeeded += 1
         elif r.status == ToolUpgradeStatus.FAILED:
             err_msg = r.err or ""
-            line += f"  FAILED: {err_msg}"
+            line += f"  FALLÓ: {err_msg}"
             failed += 1
         elif r.status == ToolUpgradeStatus.SKIPPED:
             if r.manual_hint:
-                line += f"  manual update required: {r.manual_hint}"
+                line += f"  se requiere actualización manual: {r.manual_hint}"
             elif report.dry_run:
-                line += f"  {r.old_version} \u2192 {r.new_version}  (dry-run)"
+                line += f"  {r.old_version} \u2192 {r.new_version}  (simulación)"
             else:
-                line += "  skipped"
+                line += "  omitido"
             skipped += 1
 
         lines.append(line)
@@ -534,20 +534,20 @@ def render_upgrade_report(report: UpgradeReport) -> str:
     lines.append("")
 
     if report.backup_id:
-        lines.append(f"  Config backup: {report.backup_id}")
+        lines.append(f"  Copia de configuración: {report.backup_id}")
     if report.backup_warning:
-        lines.append(f"  WARNING: {report.backup_warning}")
+        lines.append(f"  ADVERTENCIA: {report.backup_warning}")
 
     if report.dry_run:
         actionable = sum(1 for r in report.results if r.status == ToolUpgradeStatus.SKIPPED and not r.manual_hint)
         if actionable > 0:
-            lines.append(f"  {actionable} upgrade(s) pending. Run without --dry-run to apply.")
+            lines.append(f"  {actionable} actualización(es) pendiente(s). Ejecuta sin --dry-run para aplicarlas.")
         if (skipped - actionable) > 0:
-            lines.append(f"  {skipped - actionable} tool(s) require manual attention (see hints above).")
+            lines.append(f"  {skipped - actionable} herramienta(s) requieren atención manual (ver sugerencias arriba).")
         if actionable == 0 and skipped == 0:
-            lines.append("  No actionable upgrades found.")
+            lines.append("  No se encontraron actualizaciones aplicables.")
     else:
-        lines.append(f"  {succeeded} succeeded, {failed} failed, {skipped} skipped.")
+        lines.append(f"  {succeeded} correctas, {failed} fallidas, {skipped} omitidas.")
 
     return "\n".join(lines)
 
@@ -744,7 +744,7 @@ def execute_with_options(
         from dxrk.backup import Snapshotter
         from dxrk.backup import write_manifest as bw_manifest
 
-        sp = CLISpinner(pw, "Creating pre-upgrade backup") if pw else None
+        sp = CLISpinner(pw, "Creando copia previa a la actualización") if pw else None
         snapshot_dir = os.path.join(
             home_dir,
             ".gentle-ai",
@@ -755,7 +755,7 @@ def execute_with_options(
             snap = Snapshotter()
             manifest = snap.create(snapshot_dir, config_paths_for_backup(home_dir))
             manifest.source = BackupSrc.UPGRADE
-            manifest.description = "pre-upgrade snapshot"
+            manifest.description = "instantánea previa a la actualización"
             manifest.created_by_version = AppVersion
             manifest_path = os.path.join(snapshot_dir, BManifestFilename)
             bw_manifest(manifest_path, manifest)
@@ -765,7 +765,7 @@ def execute_with_options(
         except (OSError, ValueError) as e:
             if sp:
                 sp.finish(False)
-            backup_warning = f"pre-upgrade backup failed \u2014 upgrade will run without a backup: {e}"
+            backup_warning = f"la copia previa a la actualización falló \u2014 la actualización continuará sin copia: {e}"
 
     # Build results
     tool_results: list[ToolUpgradeResult] = []
@@ -778,7 +778,7 @@ def execute_with_options(
                 new_version=r.latest_version,
                 method=effective_method(r.tool, profile),
                 status=ToolUpgradeStatus.SKIPPED,
-                manual_hint=f"source build \u2014 upgrade manually or install a release binary from "
+                manual_hint=f"compilación desde fuente \u2014 actualiza manualmente o instala un binario release desde "
                 f"https://github.com/Dxrk777/{r.tool.repo}/releases",
             )
         )
@@ -791,14 +791,14 @@ def execute_with_options(
                 new_version=r.latest_version,
                 method=effective_method(r.tool, profile),
                 status=ToolUpgradeStatus.SKIPPED,
-                manual_hint=f"installed binary was found but its version could not be determined \u2014 "
-                f"check `{_detect_command_hint(r.tool)}` and reinstall if it is a stale source/dev build",
+                manual_hint=f"se encontró el binario instalado, pero no se pudo determinar su versión \u2014 "
+                f"revisa `{_detect_command_hint(r.tool)}` y reinstala si es una compilación obsoleta de fuente/dev",
             )
         )
 
     for r in executable:
         method = effective_method(r.tool, profile)
-        msg = f"Upgrading {r.tool.name} via {method.value} ({r.installed_version} \u2192 {r.latest_version})"
+        msg = f"Actualizando {r.tool.name} vía {method.value} ({r.installed_version} \u2192 {r.latest_version})"
         sp = CLISpinner(pw, msg) if pw else None
         tool_result = _execute_one(r, profile, dry_run)
         if sp:
@@ -863,8 +863,8 @@ def _run_strategy(r: UpdateResult, profile: PlatformProfile) -> None:
         _opencode_plugin_upgrade(r)
     else:
         raise ManualFallbackError(
-            f"upgrade {r.tool.name!r}: unsupported install method {method.value!r} \u2014 "
-            f"please update manually. See: https://github.com/Dxrk777/{r.tool.repo}"
+            f"actualización de {r.tool.name!r}: método de instalación no compatible {method.value!r} \u2014 "
+            f"actualiza manualmente. Ver: https://github.com/Dxrk777/{r.tool.repo}"
         )
 
 
@@ -882,7 +882,7 @@ def _brew_upgrade(tool_name: str) -> None:
 
 def _go_install_upgrade(tool: ToolInfo, latest_version: str) -> None:
     if not tool.go_import_path:
-        raise RuntimeError(f"upgrade {tool.name!r}: GoImportPath is empty")
+        raise RuntimeError(f"actualización de {tool.name!r}: GoImportPath está vacío")
     target = f"{tool.go_import_path}@v{latest_version}"
     result = subprocess.run(
         ["go", "install", target],
@@ -897,10 +897,10 @@ def _go_install_upgrade(tool: ToolInfo, latest_version: str) -> None:
 def _binary_upgrade(r: UpdateResult, profile: PlatformProfile) -> None:
     if r.tool.name == "dxrk":
         # Dxrk ships via PyPI (uv tool), not as a GitHub release asset.
-        raise ManualFallbackError("upgrade 'dxrk': run `uv tool upgrade dxrk`")
+        raise ManualFallbackError("actualiza 'dxrk': ejecuta `uv tool upgrade dxrk`")
     if profile.os == "windows":
-        hint = r.update_hint or f"Download manually from https://github.com/Dxrk777/{r.tool.repo}/releases"
-        raise ManualFallbackError(f"upgrade {r.tool.name!r} on Windows requires manual update: {hint}")
+        hint = r.update_hint or f"Descarga manualmente desde https://github.com/Dxrk777/{r.tool.repo}/releases"
+        raise ManualFallbackError(f"la actualización de {r.tool.name!r} en Windows requiere actualización manual: {hint}")
 
     _download_and_replace(r, profile)
 
@@ -914,12 +914,12 @@ def _download_and_replace(r: UpdateResult, profile: PlatformProfile) -> None:
 
 def _download(r: UpdateResult, profile: PlatformProfile) -> None:
     if profile.os == "windows":
-        hint = r.update_hint or f"Download from https://github.com/Dxrk777/{r.tool.repo}/releases"
-        raise RuntimeError(f"upgrade {r.tool.name!r} on Windows requires manual update \u2014 {hint}")
+        hint = r.update_hint or f"Descarga desde https://github.com/Dxrk777/{r.tool.repo}/releases"
+        raise RuntimeError(f"la actualización de {r.tool.name!r} en Windows requiere actualización manual \u2014 {hint}")
 
     binary_path = _look_path(r.tool.name)
     if not binary_path:
-        raise RuntimeError(f"locate {r.tool.name!r} binary: not found on PATH")
+        raise RuntimeError(f"no se encontró el binario {r.tool.name!r} en PATH")
 
     asset_url = _resolve_asset_url(r.tool.owner, r.tool.repo, r.latest_version, profile.os)
     tmp_path = binary_path + ".new"
@@ -972,7 +972,7 @@ def _extract_binary_from_tar_gz(stream, binary_name: str, out_path: str) -> None
                     shutil.copyfileobj(tar.extractfile(member), f)  # type: ignore
                 os.chmod(out_path, 0o755)
                 return
-    raise RuntimeError(f"binary {binary_name!r} not found in archive")
+    raise RuntimeError(f"no se encontró el binario {binary_name!r} en el archivo")
 
 
 def _atomic_replace(src: str, dst: str) -> None:
@@ -991,8 +991,8 @@ def _install_script_url(owner: str, repo: str) -> str:
 
 def _script_upgrade(r: UpdateResult, profile: PlatformProfile) -> None:
     if profile.os == "windows":
-        hint = r.update_hint or f"Download manually from https://github.com/{r.tool.owner}/{r.tool.repo}/releases"
-        raise ManualFallbackError(f"upgrade {r.tool.name!r} on Windows requires manual update: {hint}")
+        hint = r.update_hint or f"Descarga manualmente desde https://github.com/{r.tool.owner}/{r.tool.repo}/releases"
+        raise ManualFallbackError(f"la actualización de {r.tool.name!r} en Windows requiere actualización manual: {hint}")
 
     url = _install_script_url(r.tool.owner, r.tool.repo)
     req = urllib.request.Request(url)
@@ -1000,7 +1000,7 @@ def _script_upgrade(r: UpdateResult, profile: PlatformProfile) -> None:
         body = resp.read(_max_script_size + 1)
 
     if len(body) > _max_script_size:
-        raise RuntimeError(f"download install.sh: response body exceeds {_max_script_size} bytes limit")
+        raise RuntimeError(f"descarga de install.sh: el cuerpo de la respuesta supera el límite de {_max_script_size} bytes")
 
     result = subprocess.run(
         ["bash", "-c", body.decode()],
@@ -1009,7 +1009,7 @@ def _script_upgrade(r: UpdateResult, profile: PlatformProfile) -> None:
         timeout=300,
     )
     if result.returncode != 0:
-        raise RuntimeError(f"install.sh failed for {r.tool.name!r}: {result.stderr.strip() or result.stdout.strip()}")
+        raise RuntimeError(f"install.sh falló para {r.tool.name!r}: {result.stderr.strip() or result.stdout.strip()}")
 
 
 def _gga_script_upgrade(r: UpdateResult) -> None:
@@ -1018,8 +1018,8 @@ def _gga_script_upgrade(r: UpdateResult) -> None:
 
 def _gga_script_upgrade_for_os(r: UpdateResult, os_name: str) -> None:
     if os_name == "win32":
-        hint = r.update_hint or f"Download manually from https://github.com/{r.tool.owner}/{r.tool.repo}/releases"
-        raise ManualFallbackError(f"upgrade {r.tool.name!r} on Windows requires manual update: {hint}")
+        hint = r.update_hint or f"Descarga manualmente desde https://github.com/{r.tool.owner}/{r.tool.repo}/releases"
+        raise ManualFallbackError(f"la actualización de {r.tool.name!r} en Windows requiere actualización manual: {hint}")
 
     tmp_dir = tempfile.mkdtemp(prefix="gentle-ai-gga-")
     try:
@@ -1040,7 +1040,7 @@ def _gga_script_upgrade_for_os(r: UpdateResult, os_name: str) -> None:
         )
         if result.returncode != 0:
             raise RuntimeError(
-                f"install.sh failed for {r.tool.name!r}: {result.stderr.strip() or result.stdout.strip()}"
+                f"install.sh falló para {r.tool.name!r}: {result.stderr.strip() or result.stdout.strip()}"
             )
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
@@ -1057,28 +1057,28 @@ def _opencode_plugin_upgrade(r: UpdateResult) -> None:
     home_dir = os.path.expanduser("~")
     if not home_dir or home_dir == "~":
         raise ManualFallbackError(
-            hint=f"{_opencode_manual_hint(r)} Could not resolve the user home directory; update {pkg} manually."
+            hint=f"{_opencode_manual_hint(r)} No se pudo resolver el directorio home del usuario; actualiza {pkg} manualmente."
         )
 
     opencode_dir = os.path.join(home_dir, ".config", "opencode")
     if not os.path.isdir(opencode_dir):
         raise ManualFallbackError(
-            hint=f"{_opencode_manual_hint(r)} OpenCode config directory was not found at {opencode_dir}; "
-            f"{pkg} is not installed/materialized yet."
+            hint=f"{_opencode_manual_hint(r)} No se encontró el directorio de configuración de OpenCode en {opencode_dir}; "
+            f"{pkg} aún no está instalado/materializado."
         )
 
     materialized = _opencode_plugin_registered_or_materialized(opencode_dir, pkg)
     if not materialized:
         raise ManualFallbackError(
-            hint=f"{_opencode_manual_hint(r)} {pkg} is not registered in tui.json and is not present in "
-            f"node_modules; start/reload OpenCode first so it materializes the plugin."
+            hint=f"{_opencode_manual_hint(r)} {pkg} no está registrado en tui.json ni está presente en "
+            f"node_modules; inicia/recarga OpenCode primero para que materialice el plugin."
         )
 
     pm = _select_opencode_package_manager(opencode_dir)
     if pm is None:
         raise ManualFallbackError(
-            hint=f"OpenCode plugin {pkg} can be upgraded from {opencode_dir}, but no supported "
-            f"package manager is available in PATH. Install bun or npm, then run update tools again."
+            hint=f"El plugin de OpenCode {pkg} se puede actualizar desde {opencode_dir}, pero no hay ningún "
+            f"gestor de paquetes compatible disponible en PATH. Instala bun o npm y vuelve a ejecutar la actualización."
         )
 
     target = pkg + "@latest"
@@ -1171,5 +1171,5 @@ def _opencode_manual_hint(r: UpdateResult) -> str:
         return hint
     npm = r.tool.npm_package.strip()
     if npm:
-        return f"OpenCode manages {npm} from tui.json. Restart or reload OpenCode so it refreshes the plugin package."
-    return "OpenCode manages TUI plugin packages from tui.json. Restart or reload OpenCode so it refreshes plugins."
+        return f"OpenCode gestiona {npm} desde tui.json. Reinicia o recarga OpenCode para que actualice el paquete del plugin."
+    return "OpenCode gestiona los paquetes de plugins TUI desde tui.json. Reinicia o recarga OpenCode para que actualice los plugins."

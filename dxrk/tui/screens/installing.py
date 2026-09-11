@@ -16,7 +16,7 @@ class InstallingScreen(Screen):
 
     def compose(self) -> ComposeResult:
         with Container(id="installing-container"):
-            yield Static("[bold]Installing...[/]", id="installing-title")
+            yield Static("[bold]Instalando...[/]", id="installing-title")
             yield LoadingIndicator(id="install-spinner")
             yield ProgressBar(total=100, id="install-progress", show_eta=False)
             yield RichLog(id="install-log", highlight=True, max_lines=20)
@@ -53,7 +53,7 @@ class InstallingScreen(Screen):
             selection=selection,
             on_progress=on_progress,
         )
-        log_widget.write("[green]Installation complete![/]" if success else "[red]Installation failed![/]")
+        log_widget.write("[green]¡Instalación completa![/]" if success else "[red]¡La instalación falló![/]")
         progress.progress = 100
         await asyncio.sleep(1)
         self.app.push_screen("complete")

@@ -11,22 +11,20 @@ def register_vim_command(reg: Registry) -> None:
 
     def run(ctx: CommandContext) -> int:
         out = ctx.out
-        out.write("Editor mode toggled\n")
-        out.write(
-            "Use Escape to switch between INSERT and NORMAL modes when Vim mode is active.\n"
-        )
+        out.write("Modo de editor alternado\n")
+        out.write("Usa Escape para alternar entre los modos INSERT y NORMAL cuando el modo Vim está activo.\n")
         return 0
 
     cmd = Command(
         name="vim",
-        short="Toggle between Vim and Normal editing modes",
+        short="Alternar entre los modos de edición Vim y Normal",
         long=(
-            "Toggle the editor input mode between Vim and Normal (readline).\n\n"
-            "When Vim mode is enabled:\n"
-            "  - Press Escape to toggle between INSERT and NORMAL modes\n"
-            "  - Use standard Vim keybindings in NORMAL mode\n\n"
-            "When Normal mode is enabled:\n"
-            "  - Use standard readline keyboard bindings"
+            "Alternar el modo de entrada del editor entre Vim y Normal (readline).\n\n"
+            "Cuando el modo Vim está activado:\n"
+            "  - Presiona Escape para alternar entre los modos INSERT y NORMAL\n"
+            "  - Usa los atajos estándar de Vim en modo NORMAL\n\n"
+            "Cuando el modo Normal está activado:\n"
+            "  - Usa los atajos estándar de teclado readline"
         ),
         run=run,
     )

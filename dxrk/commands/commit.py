@@ -15,7 +15,7 @@ def register_commit_command(reg: Registry) -> None:
         wd = ctx.cwd
 
         if not git_dir(wd).ok:
-            ctx.err.write("Error: not a git repository\n")
+            ctx.err.write("Error: no es un repositorio git\n")
             return 1
 
         message = ctx.flag_str("message")
@@ -24,21 +24,21 @@ def register_commit_command(reg: Registry) -> None:
             try:
                 message = generate_commit_message(diff, staged=True)
             except Exception as exc:
-                ctx.err.write(f"Error: generate commit message: {exc}\n")
+                ctx.err.write(f"Error: al generar el mensaje de commit: {exc}\n")
                 return 1
 
         staged = git_status_porcelain(wd)
         if staged.ok and staged.out.strip() == "":
-            ctx.err.write("nothing to commit\n")
+            ctx.err.write("no hay nada para confirmar\n")
             return 1
 
         args = ["add", "-A"]
         if not git_dir(wd).ok:
-            ctx.err.write("Error: not a git repository\n")
+            ctx.err.write("Error: no es un repositorio git\n")
             return 1
         add = run_git(wd, *args)
         if not add.ok:
-            ctx.err.write(f"Error: stage files: {add.err.strip() or add.out.strip()}\n")
+            ctx.err.write(f"Error: al preparar los archivos: {add.err.strip() or add.out.strip()}\n")
             return 1
 
         commit_args = ["commit", "-m", message]
@@ -53,10 +53,10 @@ def register_commit_command(reg: Registry) -> None:
 
     cmd = Command(
         name="commit",
-        short="Commit staged changes with a generated message",
+        short="Confirmar los cambios preparados con un mensaje generado",
         flags={
-            "message": Flag("message", default="", shorthand="m", help="Commit message"),
-            "no-verify": Flag("no-verify", is_bool=True, default=False, help="Skip git hooks"),
+            "message": Flag("message", default="", shorthand="m", help="Mensaje de commit"),
+            "no-verify": Flag("no-verify", is_bool=True, default=False, help="Omitir los hooks de git"),
         },
         run=run,
     )

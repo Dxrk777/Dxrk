@@ -34,8 +34,8 @@ class InjectionResult:
 
 def post_install_messages() -> list[str]:
     return [
-        "Run `DXRK_GUARDIAN install` in any git project to set up the pre-commit hook",
-        "Copy `~/.config/DXRK_GUARDIAN/AGENTS.md` to your project root and customize it",
+        "Ejecuta `DXRK_GUARDIAN install` en cualquier proyecto git para configurar el hook pre-commit",
+        "Copia `~/.config/DXRK_GUARDIAN/AGENTS.md` a la raíz de tu proyecto y personalízalo",
     ]
 
 
@@ -173,7 +173,7 @@ def ensure_runtime_assets(home_dir: str) -> None:
     pr_mode_path = runtime_pr_mode_path(home_dir)
     content = assets_read("gga/pr_mode.sh")
     if content is None:
-        raise FileNotFoundError("embedded gga runtime asset pr_mode.sh not found")
+        raise FileNotFoundError("activo de runtime gga integrado pr_mode.sh no encontrado")
     filemerge.write_file_atomic(pr_mode_path, content.encode("utf-8"), 0o755)
 
 
@@ -181,5 +181,5 @@ def ensure_powershell_shim(home_dir: str) -> None:
     ps1_path = runtime_ps1_path(home_dir)
     content = assets_read("gga/gga.ps1")
     if content is None:
-        raise FileNotFoundError("embedded gga runtime asset gga.ps1 not found")
+        raise FileNotFoundError("activo de runtime gga integrado gga.ps1 no encontrado")
     filemerge.write_file_atomic(ps1_path, content.encode("utf-8"), 0o755)

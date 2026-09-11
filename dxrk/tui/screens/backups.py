@@ -13,13 +13,13 @@ from dxrk.tui.context import get_ctx
 
 class BackupsScreen(Screen):
     BINDINGS = [
-        Binding("up,k", "cursor_up", "Up", show=False),
-        Binding("down,j", "cursor_down", "Down", show=False),
-        Binding("enter", "select", "Select"),
-        Binding("escape", "back", "Back"),
-        Binding("r", "rename", "Rename", show=False),
-        Binding("d", "delete", "Delete", show=False),
-        Binding("p", "pin", "Pin", show=False),
+        Binding("up,k", "cursor_up", "Arriba", show=False),
+        Binding("down,j", "cursor_down", "Abajo", show=False),
+        Binding("enter", "select", "Seleccionar"),
+        Binding("escape", "back", "Atrás"),
+        Binding("r", "rename", "Renombrar", show=False),
+        Binding("d", "delete", "Eliminar", show=False),
+        Binding("p", "pin", "Fijar", show=False),
     ]
 
     cursor = reactive(0)
@@ -28,11 +28,11 @@ class BackupsScreen(Screen):
 
     def compose(self) -> ComposeResult:
         with Container(id="backups-container"):
-            yield Static("[bold]Backup Management[/]", id="backups-title")
+            yield Static("[bold]Gestión de copias de seguridad[/]", id="backups-title")
             with VerticalScroll(id="backup-list"):
                 yield Static("")
             yield Static("")
-            yield Static("[dim]j/k: navigate • enter: restore • r: rename • d: delete • p: pin/unpin • esc: back[/]")
+            yield Static("[dim]j/k: navegar • enter: restaurar • r: renombrar • d: eliminar • p: fijar/quitar • esc: atrás[/]")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -44,16 +44,16 @@ class BackupsScreen(Screen):
 
         backups = get_ctx().backups
         if not backups:
-            scroll.mount(Static("[yellow]No backups found yet.[/]"))
+            scroll.mount(Static("[yellow]Aún no hay copias de seguridad.[/]"))
             scroll.mount(Static(""))
-            scroll.mount(Static("  Back"))
+            scroll.mount(Static("  Atrás"))
             return Widget._render(self)
 
         end = self.list_offset + self.MAX_VISIBLE
         end = min(end, len(backups))
 
         if self.list_offset > 0:
-            scroll.mount(Static("[dim]  ↑ more[/]"))
+            scroll.mount(Static("[dim]  ↑ más[/]"))
 
         self._backup_statics = []
         for i in range(self.list_offset, end):
@@ -70,10 +70,10 @@ class BackupsScreen(Screen):
             scroll.mount(s)
 
         if end < len(backups):
-            scroll.mount(Static("[dim]  ↓ more[/]"))
+            scroll.mount(Static("[dim]  ↓ más[/]"))
 
         scroll.mount(Static(""))
-        scroll.mount(Static("  Back"))
+        scroll.mount(Static("  Atrás"))
 
         return Widget._render(self)
 
@@ -150,28 +150,28 @@ class BackupsScreen(Screen):
 
 class RestoreConfirmScreen(Screen):
     BINDINGS = [
-        Binding("up,k", "cursor_up", "Up", show=False),
-        Binding("down,j", "cursor_down", "Down", show=False),
-        Binding("enter", "select", "Select"),
-        Binding("escape", "back", "Back"),
+        Binding("up,k", "cursor_up", "Arriba", show=False),
+        Binding("down,j", "cursor_down", "Abajo", show=False),
+        Binding("enter", "select", "Seleccionar"),
+        Binding("escape", "back", "Atrás"),
     ]
 
     cursor = reactive(0)
 
     def compose(self) -> ComposeResult:
         with Container():
-            yield Static("[bold]Restore Backup[/]")
+            yield Static("[bold]Restaurar copia de seguridad[/]")
             yield Static("")
             snap = getattr(get_ctx(), "selected_backup", None) or {}
-            yield Static(f"[bold]Backup:[/] {snap.get('id', 'unknown')}")
+            yield Static(f"[bold]Copia de seguridad:[/] {snap.get('id', 'unknown')}")
             yield Static(f"[dim]{snap.get('display_label', '')}[/]")
             yield Static("")
-            yield Static("[yellow]This will overwrite your current configuration.[/]")
+            yield Static("[yellow]Esto sobrescribirá tu configuración actual.[/]")
             yield Static("")
-            yield Static("  ▸ Restore")
-            yield Static("   Cancel")
+            yield Static("  ▸ Restaurar")
+            yield Static("   Cancelar")
             yield Static("")
-            yield Static("[dim]j/k: navigate • enter: select • esc: back[/]")
+            yield Static("[dim]j/k: navegar • enter: seleccionar • esc: atrás[/]")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -200,29 +200,29 @@ class RestoreConfirmScreen(Screen):
 
 class DeleteConfirmScreen(Screen):
     BINDINGS = [
-        Binding("up,k", "cursor_up", "Up", show=False),
-        Binding("down,j", "cursor_down", "Down", show=False),
-        Binding("enter", "select", "Select"),
-        Binding("escape", "back", "Back"),
+        Binding("up,k", "cursor_up", "Arriba", show=False),
+        Binding("down,j", "cursor_down", "Abajo", show=False),
+        Binding("enter", "select", "Seleccionar"),
+        Binding("escape", "back", "Atrás"),
     ]
 
     cursor = reactive(0)
 
     def compose(self) -> ComposeResult:
         with Container():
-            yield Static("[bold]Delete Backup[/]")
+            yield Static("[bold]Eliminar copia de seguridad[/]")
             yield Static("")
             snap = getattr(get_ctx(), "selected_backup", None) or {}
-            yield Static(f"[bold]Backup:[/] {snap.get('id', 'unknown')}")
+            yield Static(f"[bold]Copia de seguridad:[/] {snap.get('id', 'unknown')}")
             yield Static(f"[dim]{snap.get('display_label', '')}[/]")
             yield Static("")
-            yield Static("[yellow]Are you sure you want to permanently delete this backup?[/]")
-            yield Static("[yellow]This action cannot be undone.[/]")
+            yield Static("[yellow]¿Seguro que quieres eliminar esta copia de seguridad de forma permanente?[/]")
+            yield Static("[yellow]Esta acción no se puede deshacer.[/]")
             yield Static("")
-            yield Static("  ▸ Delete")
-            yield Static("   Cancel")
+            yield Static("  ▸ Eliminar")
+            yield Static("   Cancelar")
             yield Static("")
-            yield Static("[dim]j/k: navigate • enter: select • esc: back[/]")
+            yield Static("[dim]j/k: navegar • enter: seleccionar • esc: atrás[/]")
         yield Footer()
 
     def action_cursor_up(self) -> None:
@@ -245,25 +245,25 @@ class DeleteConfirmScreen(Screen):
 
 class RenameBackupScreen(Screen):
     BINDINGS = [
-        Binding("enter", "save", "Save"),
-        Binding("escape", "cancel", "Cancel"),
+        Binding("enter", "save", "Guardar"),
+        Binding("escape", "cancel", "Cancelar"),
     ]
 
     def compose(self) -> ComposeResult:
         with Container():
-            yield Static("[bold]Rename Backup[/]")
+            yield Static("[bold]Renombrar copia de seguridad[/]")
             yield Static("")
             snap = getattr(get_ctx(), "selected_backup", None) or {}
-            yield Static(f"[bold]Backup:[/] {snap.get('id', 'unknown')}")
+            yield Static(f"[bold]Copia de seguridad:[/] {snap.get('id', 'unknown')}")
             yield Static(f"[dim]{snap.get('display_label', '')}[/]")
             yield Static("")
             if snap.get("description"):
-                yield Static(f"[dim]Current description:[/] {snap['description']}")
+                yield Static(f"[dim]Descripción actual:[/] {snap['description']}")
                 yield Static("")
-            yield Static("[bold]New description:[/]")
+            yield Static("[bold]Nueva descripción:[/]")
             yield Static("  > ")
             yield Static("")
-            yield Static("[dim]enter: save • esc: cancel[/]")
+            yield Static("[dim]enter: guardar • esc: cancelar[/]")
         yield Footer()
 
     def action_save(self) -> None:

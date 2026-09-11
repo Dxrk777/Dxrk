@@ -127,7 +127,7 @@ def parse_install_flags(args: list[str]) -> InstallFlags:
 
     parsed, unknown = parser.parse_known_args(args)
     if unknown:
-        raise ValueError(f"unexpected install argument {unknown[0]!r}")
+        raise ValueError(f"argumento de install inesperado {unknown[0]!r}")
 
     return InstallFlags(
         agents=_flatten_list(parsed.agents) if parsed.agents else [],
@@ -168,7 +168,7 @@ def _parse_profile_sync_strategy(raw: str) -> str:
         return ""
     if value in ("generated-multi", "external-single-active"):
         return value
-    raise ValueError(f"unsupported sdd-profile-strategy {raw!r} (valid: generated-multi, external-single-active)")
+    raise ValueError(f"sdd-profile-strategy no compatible {raw!r} (válidos: generated-multi, external-single-active)")
 
 
 def _parse_profile_flag(raw: str) -> Profile:
@@ -177,7 +177,7 @@ def _parse_profile_flag(raw: str) -> Profile:
 
     colon_idx = raw.find(":")
     if colon_idx <= 0:
-        raise ValueError(f"--profile {raw!r}: invalid format, expected name:provider/model")
+        raise ValueError(f"--profile {raw!r}: formato no válido, se esperaba name:provider/model")
     name = raw[:colon_idx]
     model_spec = raw[colon_idx + 1 :]
 
@@ -194,20 +194,20 @@ def _parse_profile_phase_flag(raw: str) -> tuple[str, str, ModelAssignment]:
 
     parts = raw.split(":", 2)
     if len(parts) != 3:
-        raise ValueError(f"--profile-phase {raw!r}: invalid format, expected name:phase:provider/model")
+        raise ValueError(f"--profile-phase {raw!r}: formato no válido, se esperaba name:phase:provider/model")
     name, phase, model_spec = parts
 
     if not name:
-        raise ValueError(f"--profile-phase {raw!r}: profile name must not be empty")
+        raise ValueError(f"--profile-phase {raw!r}: el nombre del perfil no debe estar vacío")
     err = validate_profile_name(name)
     if err:
         raise ValueError(f"--profile-phase {raw!r}: {err}")
     if not phase:
-        raise ValueError(f"--profile-phase {raw!r}: phase must not be empty")
+        raise ValueError(f"--profile-phase {raw!r}: la fase no debe estar vacía")
 
     known = profile_phase_order()
     if phase not in known:
-        raise ValueError(f"--profile-phase {raw!r}: unknown phase {phase!r}; valid phases are: {known}")
+        raise ValueError(f"--profile-phase {raw!r}: fase desconocida {phase!r}; las fases válidas son: {known}")
 
     assignment = _parse_model_spec(model_spec)
     return name, phase, assignment
@@ -220,11 +220,11 @@ def _parse_model_spec(spec: str) -> ModelAssignment:
             sep = i
             break
     if sep <= 0:
-        raise ValueError(f"invalid model spec {spec!r}: expected provider/model or provider:model")
+        raise ValueError(f"especificación de modelo no válida {spec!r}: se esperaba provider/model o provider:model")
     provider_id = spec[:sep]
     model_id = spec[sep + 1 :]
     if not provider_id or not model_id:
-        raise ValueError(f"invalid model spec {spec!r}: provider and model must both be non-empty")
+        raise ValueError(f"especificación de modelo no válida {spec!r}: provider y model no deben estar vacíos")
     return ModelAssignment(provider_id=provider_id, model_id=model_id)
 
 
@@ -302,7 +302,7 @@ def parse_sync_flags(args: list[str]) -> SyncFlags:
 
     parsed, unknown = parser.parse_known_args(args)
     if unknown:
-        raise ValueError(f"unexpected sync argument {unknown[0]!r}")
+        raise ValueError(f"argumento de sync inesperado {unknown[0]!r}")
 
     strategy = _parse_profile_sync_strategy(parsed.sdd_profile_strategy or "")
 
@@ -362,7 +362,7 @@ def parse_uninstall_flags(args: list[str]) -> UninstallFlags:
 
     parsed, unknown = parser.parse_known_args(args)
     if unknown:
-        raise ValueError(f"unexpected uninstall argument {unknown[0]!r}")
+        raise ValueError(f"argumento de uninstall inesperado {unknown[0]!r}")
 
     opts = UninstallFlags(
         agents=_flatten_list(parsed.agents_raw) if parsed.agents_raw else [],
@@ -372,9 +372,9 @@ def parse_uninstall_flags(args: list[str]) -> UninstallFlags:
     )
 
     if opts.all and (opts.agents or opts.components):
-        raise ValueError("--all cannot be combined with --agent/--agents or --component/--components")
+        raise ValueError("--all no se puede combinar con --agent/--agents ni --component/--components")
     if not opts.all and not opts.agents:
-        raise ValueError("partial uninstall requires at least one --agent/--agents or use --all")
+        raise ValueError("la desinstalación parcial requiere al menos un --agent/--agents o usa --all")
     return opts
 
 
@@ -405,7 +405,7 @@ def normalize_persona(value: str) -> PersonaID:
     try:
         return PersonaID(v)
     except ValueError:
-        raise ValueError(f"unsupported persona {value!r}")
+        raise ValueError(f"persona no compatible {value!r}")
 
 
 def normalize_preset(value: str) -> PresetID:
@@ -415,7 +415,7 @@ def normalize_preset(value: str) -> PresetID:
     try:
         return PresetID(v)
     except ValueError:
-        raise ValueError(f"unsupported preset {value!r}")
+        raise ValueError(f"preset no compatible {value!r}")
 
 
 def components_for_preset(preset: PresetID) -> list[ComponentID]:
@@ -455,9 +455,9 @@ def normalize_components(values: list[str], preset: PresetID) -> list[ComponentI
         try:
             cid = ComponentID(raw)
         except ValueError:
-            raise ValueError(f"unsupported component {raw!r}")
+            raise ValueError(f"componente no compatible {raw!r}")
         if cid not in allowed:
-            raise ValueError(f"unsupported component {raw!r}")
+            raise ValueError(f"componente no compatible {raw!r}")
         components.append(cid)
     return _unique(components)
 
@@ -475,9 +475,9 @@ def normalize_skills(values: list[str]) -> list[SkillID]:
         try:
             sid = SkillID(raw)
         except ValueError:
-            raise ValueError(f"unsupported skill {raw!r}")
+            raise ValueError(f"skill no compatible {raw!r}")
         if sid not in allowed:
-            raise ValueError(f"unsupported skill {raw!r}")
+            raise ValueError(f"skill no compatible {raw!r}")
         skills.append(sid)
     return _unique(skills)
 
@@ -490,7 +490,7 @@ def normalize_sdd_mode(value: str) -> SDDModeID | None:
         return SDDModeID.SINGLE
     if v == SDDModeID.MULTI:
         return SDDModeID.MULTI
-    raise ValueError(f"unsupported sdd-mode {value!r} (valid: single, multi)")
+    raise ValueError(f"sdd-mode no compatible {value!r} (válidos: single, multi)")
 
 
 def default_agents_from_detection(detection: DetectionResult) -> list[AgentID]:
@@ -519,7 +519,7 @@ def _as_agent_ids(values: list[str]) -> list[AgentID]:
         try:
             result.append(AgentID(v))
         except ValueError:
-            log.warning("unknown agent ID: %s", v)
+            log.warning("ID de agente desconocido: %s", v)
     return result
 
 
@@ -621,7 +621,7 @@ class AgentInstallStep(Step):
         reg = create_registry()
         adapter = reg.get(self._agent)
         if adapter is None:
-            return f"no adapter for agent {self._agent!r}"
+            return f"no hay adaptador para el agente {self._agent!r}"
 
         if not adapter.supports_auto_install:
             return None
@@ -640,7 +640,7 @@ class AgentInstallStep(Step):
             pass
         commands = adapter.install_command(self._profile)
         if not commands:
-            return f"install command for {self._agent!r} resolved to an empty sequence"
+            return f"el comando de instalación para {self._agent!r} se resolvió en una secuencia vacía"
         return run_command_sequence(commands)
 
 
@@ -709,7 +709,7 @@ class CheckDependenciesStep(Step):
             reg = create_registry()
             adapter = reg.get(agent)
             if adapter is None:
-                return f"create adapter for {agent!r}"
+                return f"error al crear adaptador para {agent!r}"
             if not adapter.supports_auto_install:
                 continue
             if self._home_dir:
@@ -760,7 +760,7 @@ class PrepareBackupStep(RollbackStep):
                     shutil.copy2(target, dest)
                     manifest["entries"].append({"source": target, "dest": rel})
                 except OSError as e:
-                    log.warning("backup: could not copy %s: %s", target, e)
+                    log.warning("backup: no se pudo copiar %s: %s", target, e)
         manifest["source"] = self._source
         manifest["description"] = self._description
         manifest["created_by_version"] = self._app_version
@@ -771,7 +771,7 @@ class PrepareBackupStep(RollbackStep):
             with open(manifest_path, "w") as f:
                 json.dump(manifest, f, indent=2)
         except OSError as e:
-            log.warning("backup: could not write manifest: %s", e)
+            log.warning("backup: no se pudo escribir el manifiesto: %s", e)
         self._state["manifest"] = manifest
         return None
 
@@ -789,7 +789,7 @@ class PrepareBackupStep(RollbackStep):
 
                     shutil.copy2(dest, source)
                 except OSError as e:
-                    log.warning("rollback: could not restore %s: %s", source, e)
+                    log.warning("rollback: no se pudo restaurar %s: %s", source, e)
         return None
 
 
@@ -821,7 +821,7 @@ class RollbackRestoreStep(RollbackStep):
                 try:
                     shutil.copy2(dest_path, source)
                 except OSError as e:
-                    log.warning("rollback: could not restore %s: %s", source, e)
+                    log.warning("rollback: no se pudo restaurar %s: %s", source, e)
         return None
 
 
@@ -864,13 +864,13 @@ class ComponentApplyStep(Step):
             # (the old DXRK_MEMORY formula and Dxrk777/memory releases are gone):
             # Dxrk uses its native Python memory (dxrk.memory) instead.
             if self._profile.package_manager == "brew":
-                log.warning("DXRK_MEMORY has no live brew formula; using native Python memory instead")
+                log.warning("DXRK_MEMORY no tiene fórmula brew activa; se usará la memoria nativa de Python en su lugar")
             elif shutil.which("DXRK_MEMORY") is None:
                 # Download memory binary
                 try:
                     download_latest_binary(self._profile)
                 except Exception as e:
-                    log.warning("memory binary unavailable (%s); using native Python memory instead", e)
+                    log.warning("binario de memoria no disponible (%s); se usará la memoria nativa de Python en su lugar", e)
 
             setup_mode = parse_setup_mode(os.environ.get("GENTLE_AI_MEMORY_SETUP_MODE", ""))
             setup_strict = parse_setup_strict(os.environ.get("GENTLE_AI_MEMORY_SETUP_STRICT", ""))
@@ -882,14 +882,14 @@ class ComponentApplyStep(Step):
                     if slug not in attempted_slugs:
                         err = execute_command("memory", "setup", slug)
                         if err and setup_strict:
-                            return f"memory setup for {adapter.agent!r}: {err}"
+                            return f"setup de memoria para {adapter.agent!r}: {err}"
                         attempted_slugs.add(slug)
 
                 from dxrk.components.memory import inject as memory_inject_fn
 
                 res_memory = memory_inject_fn(self._home_dir, adapter)
                 if res_memory.Changed:
-                    log.info("memory injected for %s: %s", adapter.agent, res_memory.Files)
+                    log.info("memoria inyectada para %s: %s", adapter.agent, res_memory.Files)
             return None
 
         if c == ComponentID.CONTEXT7:
@@ -898,7 +898,7 @@ class ComponentApplyStep(Step):
             for adapter in adapters:
                 res_mcp = mcp_inject(self._home_dir, adapter)
                 if res_mcp.Changed:
-                    log.info("context7 injected for %s", adapter.agent)
+                    log.info("context7 inyectado para %s", adapter.agent)
             return None
 
         if c == ComponentID.PERSONA:
@@ -907,7 +907,7 @@ class ComponentApplyStep(Step):
             for adapter in adapters:
                 res_persona = persona_inject(self._home_dir, adapter, self._selection.persona)
                 if res_persona.Changed:
-                    log.info("persona injected for %s", adapter.agent)
+                    log.info("persona inyectada para %s", adapter.agent)
             return None
 
         if c == ComponentID.PERMISSIONS:
@@ -916,7 +916,7 @@ class ComponentApplyStep(Step):
             for adapter in adapters:
                 res_perms = perm_inject(self._home_dir, adapter)
                 if res_perms.Changed:
-                    log.info("permissions injected for %s", adapter.agent)
+                    log.info("permisos inyectados para %s", adapter.agent)
             return None
 
         if c == ComponentID.SDD:
@@ -933,7 +933,7 @@ class ComponentApplyStep(Step):
                 )
                 res_sdd = sdd_inject(self._home_dir, adapter, self._selection.sdd_mode, opts)
                 if res_sdd.Changed:
-                    log.info("sdd injected for %s", adapter.agent)
+                    log.info("sdd inyectado para %s", adapter.agent)
             return None
 
         if c == ComponentID.SKILLS:
@@ -945,7 +945,7 @@ class ComponentApplyStep(Step):
             for adapter in adapters:
                 res_skills = skills_inject(self._home_dir, adapter, skill_ids)
                 if res_skills.Changed:
-                    log.info("skills injected for %s", adapter.agent)
+                    log.info("skills inyectados para %s", adapter.agent)
             return None
 
         if c == ComponentID.DXRK_GUARDIAN:
@@ -976,7 +976,7 @@ class ComponentApplyStep(Step):
                 ensure_dxrk_guardian_shim(self._home_dir)
                 if err:
                     if _gga_available(self._profile):
-                        log.warning("gga install reported error but gga is available: %s", err)
+                        log.warning("la instalación de gga reportó un error, pero gga está disponible: %s", err)
                     else:
                         return err
 
@@ -984,7 +984,7 @@ class ComponentApplyStep(Step):
 
             res_gga = gga_inject(self._home_dir, self._agents)
             log.info(
-                "gga injected: config_changed=%s agents_changed=%s",
+                "gga inyectado: config_changed=%s agents_changed=%s",
                 res_gga.ConfigChanged,
                 res_gga.AgentsChanged,
             )
@@ -996,10 +996,10 @@ class ComponentApplyStep(Step):
             for adapter in adapters:
                 res_theme = theme_inject(self._home_dir, adapter)
                 if res_theme.Changed:
-                    log.info("theme injected for %s", adapter.agent)
+                    log.info("theme inyectado para %s", adapter.agent)
             return None
 
-        return f"component {c!r} is not supported in install runtime"
+        return f"el componente {c!r} no es compatible con el runtime de install"
 
 
 def _gga_available(profile: PlatformProfile) -> bool:
@@ -1102,7 +1102,7 @@ class InstallRuntime:
                 state=self._state,
                 backup_root=self.backup_root,
                 source="install",
-                description="pre-install snapshot",
+                description="instantánea previa a la instalación",
                 app_version=self.app_version,
             ),
         ]
@@ -1455,7 +1455,7 @@ class SyncRuntime:
                 state=self._state,
                 backup_root=self.backup_root,
                 source="sync",
-                description="pre-sync snapshot",
+                description="instantánea previa a la sincronización",
                 app_version=self.app_version,
             ),
         ]
@@ -1577,11 +1577,11 @@ def run_install(args: list[str], detection: DetectionResult) -> InstallResult:
 
     from dxrk.system import format_missing_deps_message
 
-    assert detection.dependencies is not None, "detection did not populate dependencies"
+    assert detection.dependencies is not None, "la detección no proporcionó dependencias"
     if not detection.dependencies.all_present:
         missing = ", ".join(detection.dependencies.missing_required)
         log.warning(
-            "missing dependencies: %s\n%s",
+            "dependencias faltantes: %s\n%s",
             missing,
             format_missing_deps_message(detection.dependencies),
         )
@@ -1600,7 +1600,7 @@ def run_install(args: list[str], detection: DetectionResult) -> InstallResult:
             resolved=result.resolved,
             plan=stage_plan,
             execution=result.execution,
-            error=f"execute install pipeline: {result.execution.error}",
+            error=f"error al ejecutar el pipeline de install: {result.execution.error}",
         )
 
     result.verify = _run_post_apply_verification(home_dir, input_data.selection, resolved)
@@ -1628,7 +1628,7 @@ def run_install(args: list[str], detection: DetectionResult) -> InstallResult:
 
 def _with_post_install_notes(report: _VerifyReport, resolved: ResolvedPlan, profile: PlatformProfile) -> _VerifyReport:
     if _has_component(resolved.ordered_components, ComponentID.DXRK_GUARDIAN) and report.ready:
-        note = "\n\nDXRK_GUARDIAN is now installed globally. To enable project hooks, run in each repo:\n- DXRK_GUARDIAN init\n- DXRK_GUARDIAN install"
+        note = "\n\nDXRK_GUARDIAN ya está instalado globalmente. Para activar los hooks del proyecto, ejecuta en cada repo:\n- DXRK_GUARDIAN init\n- DXRK_GUARDIAN install"
         if note not in report.final_note:
             report.final_note += note
     if _has_component(resolved.ordered_components, ComponentID.DXRK_MEMORY):
@@ -1637,7 +1637,7 @@ def _with_post_install_notes(report: _VerifyReport, resolved: ResolvedPlan, prof
             if not _is_in_path(bin_dir):
                 guidance = _memory_path_guidance(os.environ.get("SHELL", ""))
                 report.final_note += (
-                    f"\n\nThe memory binary was installed to {bin_dir}.\nAdd it to your PATH: {guidance}"
+                    f"\n\nEl binario de memoria se instaló en {bin_dir}.\nAgrégalo a tu PATH: {guidance}"
                 )
     return report
 
@@ -1669,7 +1669,7 @@ def _memory_path_guidance(shell_path: str) -> str:
         return f"echo 'export PATH=\"{bin_dir}:$PATH\"' >> ~/.zshrc && source ~/.zshrc"
     if "bash" in shell_path:
         return f"echo 'export PATH=\"{bin_dir}:$PATH\"' >> ~/.bashrc && source ~/.bashrc"
-    return f"Add {bin_dir} to your shell PATH and restart the terminal."
+    return f"Agrega {bin_dir} al PATH de tu shell y reinicia la terminal."
 
 
 def _has_component(components: list[ComponentID], target: ComponentID) -> bool:
@@ -1696,7 +1696,7 @@ def build_real_stage_plan(
     try:
         rt = InstallRuntime(home_dir, os.getcwd(), selection, resolved, profile, backup_root=backup_root)
     except Exception as e:
-        raise RuntimeError(f"create install runtime: {e}") from e
+        raise RuntimeError(f"error al crear el runtime de install: {e}") from e
     return rt.stage_plan()
 
 
@@ -1843,7 +1843,7 @@ def run_restore(args: list[str], stdout: Any = None) -> str | None:
         elif a in ("--yes", "-yes", "-y"):
             yes_flag = True
         elif a.startswith("-"):
-            raise ValueError(f"unknown flag {a!r}")
+            raise ValueError(f"flag desconocido {a!r}")
         else:
             positional.append(a)
 
@@ -1854,7 +1854,7 @@ def run_restore(args: list[str], stdout: Any = None) -> str | None:
         return None
 
     if not positional:
-        return "usage: dxrk-py restore [--list | latest | <id>] [--yes]"
+        return "uso: dxrk-py restore [--list | latest | <id>] [--yes]"
 
     target = positional[0]
     manifest = _resolve_restore_target(target, backups)
@@ -1862,7 +1862,7 @@ def run_restore(args: list[str], stdout: Any = None) -> str | None:
     if not yes_flag:
         confirmed = _prompt_restore_confirm(manifest, stdout)
         if not confirmed:
-            print("restore cancelled", file=stdout)
+            print("restauración cancelada", file=stdout)
             return None
 
     manifest_dir = manifest.get("_dir", "")
@@ -1878,7 +1878,7 @@ def run_restore(args: list[str], stdout: Any = None) -> str | None:
             shutil.copy2(src_path, dest_path)
 
     label = manifest.get("description", "") or manifest.get("source", "") or target
-    print(f"restore complete — restored backup {target} ({label})", file=stdout)
+    print(f"restauración completa — copia {target} restaurada ({label})", file=stdout)
     return None
 
 
@@ -1911,12 +1911,12 @@ def _list_backups(home_dir: str) -> list[dict[str, Any]]:
 
 def _render_restore_list(backups: list[dict[str, Any]], stdout: Any) -> None:
     if not backups:
-        print("no backups found", file=stdout)
+        print("no se encontraron copias de seguridad", file=stdout)
         return
-    print(f"Available backups ({len(backups)}):", file=stdout)
+    print(f"Copias disponibles ({len(backups)}):", file=stdout)
     for i, m in enumerate(backups):
         bid = m.get("_id", "?")
-        source = m.get("source", "unknown")
+        source = m.get("source", "desconocido")
         count = len(m.get("entries", []))
         version = m.get("created_by_version", "")
         line = f"  [{i + 1}] {bid}  source={source} files={count}"
@@ -1928,21 +1928,21 @@ def _render_restore_list(backups: list[dict[str, Any]], stdout: Any) -> None:
 def _resolve_restore_target(target: str, backups: list[dict[str, Any]]) -> dict[str, Any]:
     if target == "latest":
         if not backups:
-            raise ValueError("no backups available to restore")
+            raise ValueError("no hay copias disponibles para restaurar")
         return backups[0]
     for m in backups:
         if m.get("_id") == target:
             return m
-    raise ValueError(f"backup {target!r} not found — use `dxrk-py restore --list` to see available backups")
+    raise ValueError(f"copia {target!r} no encontrada — usa `dxrk-py restore --list` para ver las copias disponibles")
 
 
 def _prompt_restore_confirm(manifest: dict[str, Any], stdout: Any) -> bool:
     bid = manifest.get("_id", "?")
-    source = manifest.get("source", "unknown")
+    source = manifest.get("source", "desconocido")
     count = len(manifest.get("entries", []))
-    print(f"Restore backup {bid} (source={source}, files={count})?", file=stdout)
+    print(f"¿Restaurar la copia {bid} (source={source}, files={count})?", file=stdout)
     print(
-        "This will overwrite your current configuration. Type 'yes' to confirm: ",
+        "Esto sobrescribirá tu configuración actual. Escribe 'yes' para confirmar: ",
         end="",
         file=stdout,
     )
@@ -1967,7 +1967,7 @@ def run_uninstall(args: list[str], stdout: Any = None) -> Any:
     if not flags.yes:
         confirmed = _prompt_uninstall_confirm(flags, stdout)
         if not confirmed:
-            print("uninstall cancelled", file=stdout)
+            print("desinstalación cancelada", file=stdout)
             return None
 
     from dxrk.components.uninstall import Service
@@ -1985,22 +1985,22 @@ def run_uninstall(args: list[str], stdout: Any = None) -> Any:
 def _prompt_uninstall_confirm(flags: UninstallFlags, stdout: Any) -> bool:
     if flags.all:
         print(
-            "This will remove dxrk managed configuration from all supported agents.",
+            "Esto eliminará la configuración gestionada de dxrk de todos los agentes compatibles.",
             file=stdout,
         )
     else:
         labels = ", ".join(flags.agents)
         print(
-            f"This will remove dxrk managed configuration from: {labels}",
+            f"Esto eliminará la configuración gestionada de dxrk de: {labels}",
             file=stdout,
         )
 
     if flags.components:
-        print(f"Components: {', '.join(flags.components)}", file=stdout)
+        print(f"Componentes: {', '.join(flags.components)}", file=stdout)
     else:
-        print("Components: all managed uninstallable components", file=stdout)
-    print("A backup snapshot will be created before any file is modified.", file=stdout)
-    print("Type 'yes' to confirm: ", end="", file=stdout)
+        print("Componentes: todos los componentes gestionados desinstalables", file=stdout)
+    print("Se creará una instantánea de seguridad antes de modificar cualquier archivo.", file=stdout)
+    print("Escribe 'yes' para confirmar: ", end="", file=stdout)
     try:
         answer = input().strip()
     except EOFError:
@@ -2013,49 +2013,49 @@ def _prompt_uninstall_confirm(flags: UninstallFlags, stdout: Any) -> bool:
 
 def _join_agent_ids(values: list[AgentID]) -> str:
     if not values:
-        return "none"
+        return "ninguno"
     return ",".join(v.value for v in values)
 
 
 def _join_component_ids(values: list[ComponentID]) -> str:
     if not values:
-        return "none"
+        return "ninguno"
     return ",".join(v.value for v in values)
 
 
 def _format_platform_decision(decision: PlatformDecision | None) -> str:
     if decision is None:
-        return "os=unknown distro=n/a package-manager=n/a status=unsupported"
-    os_name = decision.os or "unknown"
+        return "os=desconocido distro=n/a package-manager=n/a status=no compatible"
+    os_name = decision.os or "desconocido"
     distro = decision.linux_distro or "n/a"
     mgr = decision.package_manager or "n/a"
-    status = "supported" if decision.supported else "unsupported"
+    status = "compatible" if decision.supported else "no compatible"
     return f"os={os_name} distro={distro} package-manager={mgr} status={status}"
 
 
 def render_dry_run(result: InstallResult) -> str:
     lines: list[str] = [
-        "AI Gentle Stack dry-run",
+        "AI Gentle Stack (simulación)",
         "=====================",
-        f"Agents: {_join_agent_ids(result.resolved.agents) if result.resolved else 'none'}",
-        f"Unsupported agents: {_join_agent_ids(result.resolved.unsupported_agents) if result.resolved else 'none'}",
+        f"Agentes: {_join_agent_ids(result.resolved.agents) if result.resolved else 'ninguno'}",
+        f"Agentes no compatibles: {_join_agent_ids(result.resolved.unsupported_agents) if result.resolved else 'ninguno'}",
         f"Persona: {result.selection.persona.value if result.selection.persona else ''}",
         f"Preset: {result.selection.preset.value if result.selection.preset else ''}",
     ]
 
     if result.selection.sdd_mode:
-        lines.append(f"SDD mode: {result.selection.sdd_mode.value}")
+        lines.append(f"Modo SDD: {result.selection.sdd_mode.value}")
 
     if result.resolved:
-        lines.append(f"Components order: {_join_component_ids(result.resolved.ordered_components)}")
-        lines.append(f"Auto-added dependencies: {_join_component_ids(result.resolved.added_dependencies)}")
+        lines.append(f"Orden de componentes: {_join_component_ids(result.resolved.ordered_components)}")
+        lines.append(f"Dependencias agregadas automáticamente: {_join_component_ids(result.resolved.added_dependencies)}")
 
     if result.review and result.review.platform_decision:
-        lines.append(f"Platform decision: {_format_platform_decision(result.review.platform_decision)}")
+        lines.append(f"Decisión de plataforma: {_format_platform_decision(result.review.platform_decision)}")
 
     if result.plan:
-        lines.append(f"Prepare steps: {len(result.plan.prepare)}")
-        lines.append(f"Apply steps: {len(result.plan.apply)}")
+        lines.append(f"Pasos de preparación: {len(result.plan.prepare)}")
+        lines.append(f"Pasos de aplicación: {len(result.plan.apply)}")
 
     return "\n".join(lines) + "\n"
 
@@ -2067,35 +2067,35 @@ def render_sync_report(result: SyncResult) -> str:
     lines: list[str] = []
 
     if result.no_op:
-        lines.append("dxrk-py sync — no managed sync actions needed")
+        lines.append("dxrk-py sync — no se necesitan acciones de sincronización gestionadas")
         if not result.agents:
-            lines.append("No agents were discovered or specified. Nothing to sync.")
+            lines.append("No se encontraron ni se especificaron agentes. Nada que sincronizar.")
         else:
-            lines.append(f"Agents: {_join_agent_ids(result.agents)}")
-            lines.append("All managed assets are already up to date. No files changed.")
+            lines.append(f"Agentes: {_join_agent_ids(result.agents)}")
+            lines.append("Todos los recursos gestionados ya están actualizados. Ningún archivo cambió.")
         return "\n".join(lines)
 
     if result.dry_run:
-        lines.append("dxrk-py sync — dry-run")
-        lines.append(f"Agents: {_join_agent_ids(result.agents)}")
+        lines.append("dxrk-py sync — simulación")
+        lines.append(f"Agentes: {_join_agent_ids(result.agents)}")
         comp_parts = [c.value for c in result.selection.components]
         if comp_parts:
-            lines.append(f"Managed components: {', '.join(comp_parts)}")
+            lines.append(f"Componentes gestionados: {', '.join(comp_parts)}")
         if result.plan:
-            lines.append(f"Prepare steps: {len(result.plan.prepare)}")
-            lines.append(f"Apply steps: {len(result.plan.apply)}")
+            lines.append(f"Pasos de preparación: {len(result.plan.prepare)}")
+            lines.append(f"Pasos de aplicación: {len(result.plan.apply)}")
         return "\n".join(lines)
 
-    lines.append("dxrk-py sync — managed sync executed")
-    lines.append(f"Agents synced: {_join_agent_ids(result.agents)}")
+    lines.append("dxrk-py sync — sincronización gestionada ejecutada")
+    lines.append(f"Agentes sincronizados: {_join_agent_ids(result.agents)}")
     comp_parts = [c.value for c in result.selection.components]
     if comp_parts:
-        lines.append(f"Managed components synced: {', '.join(comp_parts)}")
-    lines.append(f"Sync actions executed: {result.files_changed} files changed")
+        lines.append(f"Componentes gestionados sincronizados: {', '.join(comp_parts)}")
+    lines.append(f"Acciones de sincronización ejecutadas: {result.files_changed} archivos cambiados")
 
     if not result.verify.ready:
         lines.append("")
-        lines.append("Post-sync verification:")
+        lines.append("Verificación posterior a la sincronización:")
         lines.append(_render_report(result.verify))
 
     return "\n".join(lines)
@@ -2106,26 +2106,26 @@ def render_sync_report(result: SyncResult) -> str:
 
 def render_uninstall_report(result: Any) -> str:
     lines: list[str] = []
-    lines.append("Managed uninstall complete")
+    lines.append("Desinstalación gestionada completa")
     manifest = getattr(result, "Manifest", {})
     if manifest.get("entries"):
         backup_id = getattr(result, "BackupPath", "")
         if backup_id:
-            lines.append(f"Backup path: {backup_id}")
-    lines.append(f"Changed files: {len(getattr(result, 'ChangedFiles', []))}")
-    lines.append(f"Removed files: {len(getattr(result, 'RemovedFiles', []))}")
-    lines.append(f"Removed directories: {len(getattr(result, 'RemovedDirectories', []))}")
+            lines.append(f"Ruta de la copia: {backup_id}")
+    lines.append(f"Archivos cambiados: {len(getattr(result, 'ChangedFiles', []))}")
+    lines.append(f"Archivos eliminados: {len(getattr(result, 'RemovedFiles', []))}")
+    lines.append(f"Directorios eliminados: {len(getattr(result, 'RemovedDirectories', []))}")
 
     removed = getattr(result, "AgentsRemovedFromState", [])
     if removed:
         labels = ", ".join(a.value for a in removed)
-        lines.append(f"Updated state.json: removed {labels}")
+        lines.append(f"state.json actualizado: se eliminó {labels}")
 
     for section_title, paths in [
-        ("Rewritten files", getattr(result, "ChangedFiles", [])),
-        ("Deleted files", getattr(result, "RemovedFiles", [])),
-        ("Deleted directories", getattr(result, "RemovedDirectories", [])),
-        ("Manual cleanup required", getattr(result, "ManualActions", [])),
+        ("Archivos reescritos", getattr(result, "ChangedFiles", [])),
+        ("Archivos eliminados", getattr(result, "RemovedFiles", [])),
+        ("Directorios eliminados", getattr(result, "RemovedDirectories", [])),
+        ("Limpieza manual requerida", getattr(result, "ManualActions", [])),
     ]:
         if paths:
             lines.append(f"\n{section_title}:")
@@ -2160,11 +2160,11 @@ def _run_post_apply_verification(home_dir: str, selection: Selection, resolved: 
             def make_check(p: str) -> Callable[[], str | None]:
                 def check() -> str | None:
                     if not os.path.exists(p):
-                        return f"file not found: {p}"
+                        return f"archivo no encontrado: {p}"
                     return None
 
                 check._cid = f"verify:file:{p}"  # type: ignore
-                check._desc = "required file exists"  # type: ignore
+                check._desc = "el archivo requerido existe"  # type: ignore
                 return check
 
             checks.append(make_check(current_path))
@@ -2177,7 +2177,7 @@ def _run_post_apply_verification(home_dir: str, selection: Selection, resolved: 
 
         binary_check = lambda: verify_installed()
         binary_check._cid = "verify:memory:binary"  # type: ignore
-        binary_check._desc = "memory binary on PATH"  # type: ignore
+        binary_check._desc = "binario de memoria en PATH"  # type: ignore
         binary_check._soft = True  # type: ignore
         results = _run_checks([binary_check])
         report.checks.extend(results)
@@ -2186,7 +2186,7 @@ def _run_post_apply_verification(home_dir: str, selection: Selection, resolved: 
 
             version_check = lambda: verify_version()
             version_check._cid = "verify:memory:version"  # type: ignore
-            version_check._desc = "memory version returns valid output"  # type: ignore
+            version_check._desc = "la versión de memoria devuelve una salida válida"  # type: ignore
             version_check._soft = True  # type: ignore
             results2 = _run_checks([version_check])
             report.checks.extend(results2)
@@ -2207,11 +2207,11 @@ def _antigravity_collision_check(agents: list[AgentID]) -> list[_VerifyCheck]:
     return [
         _VerifyCheck(
             id="verify:antigravity:rules-collision",
-            description="Antigravity and Gemini CLI share ~/.gemini/GEMINI.md",
+            description="Antigravity y Gemini CLI comparten ~/.gemini/GEMINI.md",
             soft=True,
-            error="both Antigravity and Gemini CLI write rules to ~/.gemini/GEMINI.md\n"
-            "Content is merged, not overwritten.\n"
-            "This is expected behavior. No action required.",
+            error="Antigravity y Gemini CLI escriben reglas en ~/.gemini/GEMINI.md\n"
+            "El contenido se combina, no se sobrescribe.\n"
+            "Este es el comportamiento esperado. No se requiere ninguna acción.",
         ),
     ]
 
@@ -2231,11 +2231,11 @@ def _run_post_sync_verification(home_dir: str, selection: Selection) -> _VerifyR
             def make_check(fp: str) -> Callable[[], str | None]:
                 def check() -> str | None:
                     if not os.path.exists(fp):
-                        return f"synced file not found: {fp}"
+                        return f"archivo sincronizado no encontrado: {fp}"
                     return None
 
                 check._cid = f"verify:sync:file:{fp}"  # type: ignore
-                check._desc = "synced file exists"  # type: ignore
+                check._desc = "el archivo sincronizado existe"  # type: ignore
                 return check
 
             checks.append(make_check(p))

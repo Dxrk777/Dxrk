@@ -31,12 +31,12 @@ def run_doctor(ctx: CommandContext, report: DoctorReport | None = None) -> Docto
 
     def check_git() -> str | None:
         if not git_dir(wd).ok:
-            return "not a git repository"
+            return "no es un repositorio git"
         return None
 
     def check_gh() -> str | None:
         if not detect_gh():
-            return "gh CLI not found"
+            return "CLI gh no encontrada"
         return None
 
     def check_python() -> str | None:
@@ -45,14 +45,14 @@ def run_doctor(ctx: CommandContext, report: DoctorReport | None = None) -> Docto
     def check_config() -> str | None:
         path = os.path.join(os.path.expanduser("~"), ".dxrk", "config.yaml")
         if not os.path.exists(path):
-            return "no user config at ~/.dxrk/config.yaml"
+            return "no hay configuración de usuario en ~/.dxrk/config.yaml"
         return None
 
     checks = [
-        Check(id="git", description="Git repository available", run=check_git, soft=False),
-        Check(id="gh", description="GitHub CLI installed", run=check_gh, soft=True),
-        Check(id="python", description="Python runtime", run=check_python, soft=False),
-        Check(id="config", description="Configuration present", run=check_config, soft=True),
+        Check(id="git", description="Repositorio git disponible", run=check_git, soft=False),
+        Check(id="gh", description="CLI de GitHub instalada", run=check_gh, soft=True),
+        Check(id="python", description="Runtime de Python", run=check_python, soft=False),
+        Check(id="config", description="Configuración presente", run=check_config, soft=True),
     ]
     result = run_checks(checks)
     for line in result.output if hasattr(result, "output") else []:
@@ -67,7 +67,7 @@ def register_doctor_command(reg: Registry) -> None:
         out = ctx.out
         report = run_doctor(ctx)
         if not report.checks:
-            out.write("No checks were run.\n")
+            out.write("No se ejecutó ninguna revisión.\n")
             return 0
         for line in report.checks:
             out.write(line + "\n")
@@ -75,7 +75,7 @@ def register_doctor_command(reg: Registry) -> None:
 
     cmd = Command(
         name="doctor",
-        short="Run health checks",
+        short="Ejecutar revisiones de estado",
         run=run,
     )
     reg.add_command(cmd)

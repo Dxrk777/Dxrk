@@ -92,7 +92,7 @@ def inject(home_dir: str, adapter, skill_ids: list[SkillID]) -> InjectionResult:
             skipped.append(skill_id)
             continue
         if not content.strip():
-            raise ValueError(f"skill {skill_id!r}: embedded asset exists but is empty")
+            raise ValueError(f"skill {skill_id!r}: el activo integrado existe pero está vacío")
 
         out_path = os.path.join(skill_dir, skill_id, "SKILL.md")
         wr = filemerge.write_file_atomic(out_path, content.encode("utf-8"), 0o644)

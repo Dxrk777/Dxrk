@@ -105,7 +105,7 @@ def _clean_legacy_vscode_persona(home_dir: str) -> bool:
         except FileNotFoundError:
             continue
         except OSError as e:
-            raise OSError(f"read legacy vscode persona {old_path!r}: {e}") from e
+            raise OSError(f"al leer la persona heredada de vscode {old_path!r}: {e}") from e
 
         if not _is_legacy_unwrapped_persona(data):
             continue

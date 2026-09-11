@@ -113,7 +113,7 @@ class ChatBackend:
         if not self.binary:
             return ChatMessage(
                 role="system",
-                text="opencode CLI not found. Install it or set DXRK_OPENCODE_BIN.",
+                text="CLI de opencode no encontrada. Instálala o configura DXRK_OPENCODE_BIN.",
             )
         cmd = [self.binary, "run", "--format", "json"]
         if self.model:
@@ -132,16 +132,16 @@ class ChatBackend:
                 check=False,
             )
         except (OSError, subprocess.SubprocessError) as exc:
-            return ChatMessage(role="system", text=f"chat backend error: {exc}")
+            return ChatMessage(role="system", text=f"error del backend de chat: {exc}")
         if proc.returncode != 0:
-            detail = proc.stderr.strip() or proc.stdout.strip() or "unknown error"
-            return ChatMessage(role="system", text=f"opencode failed: {detail}")
+            detail = proc.stderr.strip() or proc.stdout.strip() or "error desconocido"
+            return ChatMessage(role="system", text=f"opencode falló: {detail}")
         text = parse_json_events(proc.stdout)
         if self.session == "" and proc.stderr:
             maybe_session = _guess_session_id(proc.stderr)
             if maybe_session:
                 self.session = maybe_session
-        return ChatMessage(role="assistant", text=text or "(empty reply)")
+        return ChatMessage(role="assistant", text=text or "(respuesta vacía)")
 
     def handle_slash(self, text: str) -> SlashResult:
         """Run a local /command. Never touches the opencode backend."""
@@ -156,25 +156,25 @@ class ChatBackend:
             if not arg:
                 return SlashResult(
                     handled=True,
-                    reply=f"model: {self.model or '(default)'}",
+                    reply=f"modelo: {self.model or '(predeterminado)'}",
                 )
             self.model = arg
-            return SlashResult(handled=True, reply=f"model set to {arg}")
+            return SlashResult(handled=True, reply=f"modelo cambiado a {arg}")
         if name == "session":
             if not arg:
                 return SlashResult(
                     handled=True,
-                    reply=f"session: {self.session or '(new on next message)'}",
+                    reply=f"sesión: {self.session or '(nueva en el próximo mensaje)'}",
                 )
             self.session = arg
-            return SlashResult(handled=True, reply=f"session set to {arg}")
+            return SlashResult(handled=True, reply=f"sesión cambiada a {arg}")
         if name == "memory":
             if not arg:
-                return SlashResult(handled=True, reply="usage: /memory <query>")
+                return SlashResult(handled=True, reply="uso: /memory <query>")
             return SlashResult(handled=True, reply=self._search_memory(arg))
         return SlashResult(
             handled=True,
-            reply=f"unknown command /{name}. Type /help for the list.",
+            reply=f"comando desconocido /{name}. Escribe /help para ver la lista.",
         )
 
     def _search_memory(self, query: str) -> str:
@@ -188,21 +188,21 @@ class ChatBackend:
                 check=False,
             )
         except (OSError, subprocess.SubprocessError) as exc:
-            return f"memory search error: {exc}"
+            return f"error al buscar en memoria: {exc}"
         out = proc.stdout.strip()
         if proc.returncode != 0:
-            detail = proc.stderr.strip() or out or "unknown error"
-            return f"memory search failed: {detail}"
-        return out or "(no memory matches)"
+            detail = proc.stderr.strip() or out or "error desconocido"
+            return f"la búsqueda en memoria falló: {detail}"
+        return out or "(sin resultados en memoria)"
 
 
-_HELP_TEXT = """Commands:
-/help ............ show this list
-/memory <query> .. search Dxrk memory (current tenant)
-/model [name] .... show or set provider/model (e.g. /model anthropic/claude)
-/session [id] .... show or resume an opencode session id
-/clear ........... clear the transcript
-Everything else is sent to the agent."""
+_HELP_TEXT = """Comandos:
+/help ............ muestra esta lista
+/memory <query> .. busca en la memoria de Dxrk (tenant actual)
+/model [name] .... muestra o cambia el proveedor/modelo (p. ej. /model anthropic/claude)
+/session [id] .... muestra o retoma una sesión de opencode por id
+/clear ........... borra la conversación
+Todo lo demás se envía al agente."""
 
 
 def _guess_session_id(stderr: str) -> str:

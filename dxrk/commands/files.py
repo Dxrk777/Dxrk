@@ -29,9 +29,7 @@ def _human_size(size: int) -> str:
     return str(size)
 
 
-def _recent_files(
-    wd: str, limit: int, tracked_only: bool
-) -> list[tuple[str, float, str, str]]:
+def _recent_files(wd: str, limit: int, tracked_only: bool) -> list[tuple[str, float, str, str]]:
     files: list[tuple[str, float, str, str]] = []
     if tracked_only:
         result = run_git(wd, "ls-files")
@@ -77,34 +75,28 @@ def register_files_command(reg: Registry) -> None:
             try:
                 limit = max(1, int(raw_limit))
             except ValueError:
-                ctx.err.write(f"Error: invalid limit: {raw_limit}\n")
+                ctx.err.write(f"Error: límite inválido: {raw_limit}\n")
                 return 1
 
         tracked_only = ctx.flag_bool("tracked")
         files = _recent_files(wd, limit, tracked_only)
 
-        out.write(f"Recent files in {os.path.abspath(wd)}\n")
+        out.write(f"Archivos recientes en {os.path.abspath(wd)}\n")
         out.write("──────────────────\n")
         if not files:
-            out.write("  No files found.\n")
+            out.write("  No se encontraron archivos.\n")
             return 0
         for kind, mtime, rel, size in files:
-            when = datetime.fromtimestamp(mtime, tz=UTC).strftime(
-                "%Y-%m-%d %H:%M"
-            )
+            when = datetime.fromtimestamp(mtime, tz=UTC).strftime("%Y-%m-%d %H:%M")
             out.write(f"  {kind}{rel:<40}  {size:<8}  {when}\n")
         return 0
 
     cmd = Command(
         name="files",
-        short="List recent files",
+        short="Listar archivos recientes",
         flags={
-            "limit": Flag(
-                "limit", default="", shorthand="n", help="Maximum number of files"
-            ),
-            "tracked": Flag(
-                "tracked", is_bool=True, default=False, help="Only git-tracked files"
-            ),
+            "limit": Flag("limit", default="", shorthand="n", help="Número máximo de archivos"),
+            "tracked": Flag("tracked", is_bool=True, default=False, help="Solo archivos con seguimiento en git"),
         },
         run=run,
     )

@@ -32,7 +32,7 @@ def _share_body(s: Session, fmt: str) -> str:
 def share_session(s: Session, output_path: str, fmt: str) -> str:
     """Writes a session to a share file; returns the format used."""
     if fmt not in _SHARE_FORMATS:
-        raise SessionError(f"unsupported format: {fmt}")
+        raise SessionError(f"formato no compatible: {fmt}")
     body = _share_body(s, fmt)
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(body)
@@ -50,11 +50,11 @@ def register_share_command(reg: Registry) -> None:
         if not output_path:
             output_path = ctx.args[1] if len(ctx.args) > 1 else ""
         if not output_path:
-            ctx.err.write("Error: output file required (use --output or pass a path)\n")
+            ctx.err.write("Error: se requiere el archivo de salida (usa --output o pasa una ruta)\n")
             return 1
 
         if not session_id:
-            ctx.err.write("Error: session id required\n")
+            ctx.err.write("Error: se requiere el id de la sesión\n")
             return 1
 
         try:
@@ -71,24 +71,24 @@ def register_share_command(reg: Registry) -> None:
         try:
             used = share_session(s, output_path, fmt)
         except OSError as exc:
-            ctx.err.write(f"Error: write share file: {exc}\n")
+            ctx.err.write(f"Error: al escribir el archivo compartido: {exc}\n")
             return 1
         except SessionError as exc:
             ctx.err.write(f"Error: {exc}\n")
             return 1
 
-        out.write(f"Shared session {s.id[:8]} to {output_path} ({used})\n")
+        out.write(f"Sesión {s.id[:8]} compartida en {output_path} ({used})\n")
         return 0
 
     cmd = Command(
         name="share",
-        short="Share a session as a file",
-        long="Export a session to a shareable file (markdown, html, json, or xml).",
+        short="Compartir una sesión como archivo",
+        long="Exportar una sesión a un archivo compartible (markdown, html, json o xml).",
         min_args=0,
         max_args=2,
         flags={
-            "output": Flag("output", default="", shorthand="o", help="Output file path"),
-            "format": Flag("format", default="", help="Output format (md, html, json, xml)"),
+            "output": Flag("output", default="", shorthand="o", help="Ruta del archivo de salida"),
+            "format": Flag("format", default="", help="Formato de salida (md, html, json, xml)"),
         },
         run=run,
     )

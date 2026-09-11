@@ -37,12 +37,12 @@ def session_dir() -> str:
     """Returns the sessions directory, creating it if needed."""
     home = os.path.expanduser("~")
     if not home:
-        raise SessionError("resolve home directory")
+        raise SessionError("no se pudo resolver el directorio inicio")
     dir_path = os.path.join(home, ".dxrk", SESSION_DIR_NAME)
     try:
         os.makedirs(dir_path, mode=0o750, exist_ok=True)
     except OSError as exc:
-        raise SessionError(f"create sessions directory: {exc}") from exc
+        raise SessionError(f"al crear el directorio de sesiones: {exc}") from exc
     return dir_path
 
 
@@ -56,7 +56,7 @@ def list_session_files() -> list[Session]:
     try:
         entries = os.listdir(dir_path)
     except OSError as exc:
-        raise SessionError(f"read sessions directory: {exc}") from exc
+        raise SessionError(f"al leer el directorio de sesiones: {exc}") from exc
     sessions: list[Session] = []
     for name in entries:
         full = os.path.join(dir_path, name)
@@ -84,13 +84,13 @@ def load_session(session_id: str) -> Session:
         try:
             return import_json(data)
         except Exception as exc:
-            raise SessionError(f"decode session: {exc}") from exc
+            raise SessionError(f"al decodificar la sesión: {exc}") from exc
     except OSError:
         pass
     found = _find_session(list_session_files(), session_id)
     if found is not None:
         return found
-    raise SessionError(f"session {go_quote(session_id)} not found")
+    raise SessionError(f"sesión {go_quote(session_id)} no encontrada")
 
 
 def save_session(s: Session) -> bool:
@@ -151,7 +151,7 @@ def session_list_cmd() -> Command:
             try:
                 limit = max(0, int(raw_limit))
             except ValueError:
-                ctx.err.write(f"Error: invalid limit: {raw_limit}\n")
+                ctx.err.write(f"Error: límite inválido: {raw_limit}\n")
                 return 1
         status_filter = ctx.flag_str("status")
         tag_filter = ctx.flag_str("tag")
@@ -163,10 +163,10 @@ def session_list_cmd() -> Command:
             return 1
 
         if not sessions:
-            out.write("No sessions found.\n")
+            out.write("No se encontraron sesiones.\n")
             return 0
 
-        header = "ID\tTITLE\tMODEL\tMSGS\tSTATUS\tUPDATED"
+        header = "ID\tTÍTULO\tMODELO\tMENSAJES\tESTADO\tACTUALIZADA"
         out.write(header + "\n")
         shown = 0
         for s in sessions:
@@ -185,11 +185,11 @@ def session_list_cmd() -> Command:
 
     cmd = Command(
         name="session list",
-        short="List sessions",
+        short="Listar sesiones",
         flags={
-            "limit": Flag("limit", default="", help="Maximum number of sessions to show"),
-            "status": Flag("status", default="", help="Filter by status"),
-            "tag": Flag("tag", default="", help="Filter by tag"),
+            "limit": Flag("limit", default="", help="Número máximo de sesiones a mostrar"),
+            "status": Flag("status", default="", help="Filtrar por estado"),
+            "tag": Flag("tag", default="", help="Filtrar por etiqueta"),
         },
         run=run,
     )
@@ -202,19 +202,19 @@ def session_create_cmd() -> Command:
         title = ctx.args[0] if ctx.args else ""
         s = new_session(
             SessionOpts(
-                title=title if title else "Untitled",
+                title=title if title else "Sin título",
                 working_dir=ctx.cwd,
             )
         )
         if not save_session(s):
-            ctx.err.write("Error: save session\n")
+            ctx.err.write("Error: al guardar la sesión\n")
             return 1
-        out.write(f"Created session {s.id[:8]} — {s.title}\n")
+        out.write(f"Sesión {s.id[:8]} creada — {s.title}\n")
         return 0
 
     cmd = Command(
         name="session create",
-        short="Create a new session",
+        short="Crear una nueva sesión",
         max_args=1,
         run=run,
     )
@@ -232,18 +232,18 @@ def session_switch_cmd() -> Command:
             return 1
         found = _find_session(sessions, session_id)
         if found is None:
-            ctx.err.write(f"Error: session {go_quote(session_id)} not found\n")
+            ctx.err.write(f"Error: sesión {go_quote(session_id)} no encontrada\n")
             return 1
         found.updated_at = now()
         if not save_session(found):
-            ctx.err.write("Error: save session\n")
+            ctx.err.write("Error: al guardar la sesión\n")
             return 1
-        out.write(f"Switched to session {found.id[:8]} — {found.title}\n")
+        out.write(f"Sesión {found.id[:8]} activada — {found.title}\n")
         return 0
 
     cmd = Command(
         name="session switch",
-        short="Switch to a session",
+        short="Cambiar a una sesión",
         min_args=1,
         max_args=1,
         run=run,
@@ -262,17 +262,17 @@ def session_delete_cmd() -> Command:
             return 1
         found = _find_session(sessions, session_id)
         if found is None:
-            ctx.err.write(f"Error: session {go_quote(session_id)} not found\n")
+            ctx.err.write(f"Error: sesión {go_quote(session_id)} no encontrada\n")
             return 1
         if not delete_session_file(found):
-            ctx.err.write("Error: delete session\n")
+            ctx.err.write("Error: al eliminar la sesión\n")
             return 1
-        out.write(f"Deleted session {found.id[:8]} — {found.title}\n")
+        out.write(f"Sesión {found.id[:8]} eliminada — {found.title}\n")
         return 0
 
     cmd = Command(
         name="session delete",
-        short="Delete a session",
+        short="Eliminar una sesión",
         min_args=1,
         max_args=1,
         run=run,
@@ -294,25 +294,25 @@ def session_info_cmd() -> Command:
         if s.created_at is not None and s.updated_at is not None:
             duration_secs = (s.updated_at - s.created_at).total_seconds()
 
-        out.write(f"ID:          {s.id}\n")
-        out.write(f"Title:       {s.title}\n")
-        out.write(f"Model:       {s.model}\n")
-        out.write(f"Status:      {_status_name(s)}\n")
-        out.write(f"Working Dir: {s.working_dir}\n")
-        out.write(f"Created:     {_fmt_ts(s.created_at)}\n")
-        out.write(f"Updated:     {_fmt_ts(s.updated_at)}\n")
-        out.write(f"Messages:    {s.message_count}\n")
-        out.write(f"Tokens:      {s.token_count}\n")
-        out.write(f"Duration:    {go_duration(duration_secs)}\n")
+        out.write(f"ID:                 {s.id}\n")
+        out.write(f"Título:             {s.title}\n")
+        out.write(f"Modelo:             {s.model}\n")
+        out.write(f"Estado:             {_status_name(s)}\n")
+        out.write(f"Dir. de trabajo:   {s.working_dir}\n")
+        out.write(f"Creada:             {_fmt_ts(s.created_at)}\n")
+        out.write(f"Actualizada:        {_fmt_ts(s.updated_at)}\n")
+        out.write(f"Mensajes:           {s.message_count}\n")
+        out.write(f"Tokens:             {s.token_count}\n")
+        out.write(f"Duración:           {go_duration(duration_secs)}\n")
         if s.tags:
-            out.write(f"Tags:        {', '.join(s.tags)}\n")
+            out.write(f"Etiquetas:          {', '.join(s.tags)}\n")
         if s.summary:
-            out.write(f"Summary:     {s.summary}\n")
+            out.write(f"Resumen:            {s.summary}\n")
         return 0
 
     cmd = Command(
         name="session info",
-        short="Show session details",
+        short="Mostrar los detalles de la sesión",
         min_args=1,
         max_args=1,
         run=run,
@@ -322,10 +322,10 @@ def session_info_cmd() -> Command:
 
 def session_parent_cmd() -> Command:
     def run(ctx: CommandContext) -> int:
-        ctx.err.write("Error: use 'dxrk session list', 'create', 'switch', 'delete', or 'info'\n")
+        ctx.err.write("Error: usa 'dxrk session list', 'create', 'switch', 'delete' o 'info'\n")
         return 1
 
-    return Command(name="session", short="Manage sessions", run=run)
+    return Command(name="session", short="Gestionar sesiones", run=run)
 
 
 def register_session_command(reg: Registry) -> None:

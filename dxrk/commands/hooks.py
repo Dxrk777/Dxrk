@@ -55,9 +55,9 @@ def register_hooks_command(reg: Registry) -> None:
         out = ctx.out
         hooks = load_hooks()
         if not hooks:
-            out.write("No hooks configured.\n")
+            out.write("No hay hooks configurados.\n")
             return 0
-        out.write("NAME\tEVENT\tCOMMAND\tENABLED\n")
+        out.write("NOMBRE\tEVENTO\tCOMANDO\tACTIVO\n")
         for h in hooks:
             out.write(
                 f"{h.get('name', '')}\t{h.get('event', '')}\t{h.get('command', '')}\t"
@@ -72,13 +72,13 @@ def register_hooks_command(reg: Registry) -> None:
         command = ctx.args[2]
 
         if event not in HOOK_EVENTS:
-            ctx.err.write(f"Error: invalid event {go_quote(event)}\n")
+            ctx.err.write(f"Error: evento inválido {go_quote(event)}\n")
             return 1
 
         hooks = load_hooks()
         for h in hooks:
             if h.get("name") == name:
-                ctx.err.write(f"Error: hook {go_quote(name)} already exists\n")
+                ctx.err.write(f"Error: el hook {go_quote(name)} ya existe\n")
                 return 1
 
         hooks.append(
@@ -90,9 +90,9 @@ def register_hooks_command(reg: Registry) -> None:
             }
         )
         if not save_hooks(hooks):
-            ctx.err.write("Error: write hooks config\n")
+            ctx.err.write("Error: al escribir la configuración de hooks\n")
             return 1
-        out.write(f"Added hook {go_quote(name)} ({event})\n")
+        out.write(f"Hook {go_quote(name)} agregado ({event})\n")
         return 0
 
     def remove_run(ctx: CommandContext) -> int:
@@ -101,25 +101,25 @@ def register_hooks_command(reg: Registry) -> None:
         hooks = load_hooks()
         remaining = [h for h in hooks if h.get("name") != name]
         if len(remaining) == len(hooks):
-            ctx.err.write(f"Error: hook {go_quote(name)} not found\n")
+            ctx.err.write(f"Error: hook {go_quote(name)} no encontrado\n")
             return 1
         if not save_hooks(remaining):
-            ctx.err.write("Error: write hooks config\n")
+            ctx.err.write("Error: al escribir la configuración de hooks\n")
             return 1
-        out.write(f"Removed hook {go_quote(name)}\n")
+        out.write(f"Hook {go_quote(name)} eliminado\n")
         return 0
 
-    list_cmd = Command(name="hooks list", short="List configured hooks", run=list_run)
+    list_cmd = Command(name="hooks list", short="Listar los hooks configurados", run=list_run)
     add_cmd = Command(
         name="hooks add",
-        short="Add a hook",
+        short="Agregar un hook",
         min_args=3,
         max_args=3,
         run=add_run,
     )
     remove_cmd = Command(
         name="hooks remove",
-        short="Remove a hook",
+        short="Eliminar un hook",
         min_args=1,
         max_args=1,
         run=remove_run,

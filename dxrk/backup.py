@@ -57,9 +57,9 @@ def extract_archive(archive_path: str, dest_dir: str) -> list[ArchiveEntry]:
             dest_path = os.path.join(dest_dir, rel)
             clean_dest = os.path.normpath(os.path.join(clean_base, rel))
             if clean_dest == clean_base:
-                raise ValueError(f"archive entry {member.name!r} resolves to destination directory itself")
+                raise ValueError(f"la entrada del archivo {member.name!r} apunta al propio directorio de destino")
             if not clean_dest.startswith(clean_base + os.sep):
-                raise ValueError(f"archive entry {member.name!r} escapes destination directory")
+                raise ValueError(f"la entrada del archivo {member.name!r} sale del directorio de destino")
             os.makedirs(os.path.dirname(dest_path), exist_ok=True)
             tar.extract(member, os.path.dirname(dest_path), filter="data")
             extracted.append(
@@ -88,7 +88,7 @@ class BackupSource(StrEnum):
             BackupSource.UPGRADE: "upgrade",
             BackupSource.UNINSTALL: "uninstall",
         }
-        return labels.get(self, "unknown source")
+        return labels.get(self, "origen desconocido")
 
 
 @dataclass
@@ -114,13 +114,13 @@ class Manifest:
     checksum: str = ""
 
     def display_label(self) -> str:
-        src = self.source.label() if self.source else "unknown source"
+        src = self.source.label() if self.source else "origen desconocido"
         created = self.created_at if self.created_at else datetime.now(UTC)
         base = f"{src} \u2014 {created.astimezone().strftime('%Y-%m-%d %H:%M')}"
         if self.file_count > 0:
-            base = f"{base} ({self.file_count} files)"
+            base = f"{base} ({self.file_count} archivos)"
         if self.pinned:
-            return "[pinned] " + base
+            return "[fijado] " + base
         return base
 
 
@@ -215,7 +215,7 @@ def read_manifest(path: str) -> Manifest:
 def backup_root() -> str:
     home = os.path.expanduser("~")
     if not home or home == "~":
-        raise OSError("resolve home directory: HOME not set")
+        raise OSError("no se pudo resolver el directorio home: HOME no está definido")
     return os.path.join(home, ".dxrk", "backups")
 
 
@@ -240,17 +240,17 @@ def is_root_dir_under_backup_root(dir_path: str) -> bool:
 
 def delete_backup(manifest: Manifest) -> None:
     if not manifest.root_dir:
-        raise ValueError("backup has no root directory")
+        raise ValueError("la copia de seguridad no tiene directorio raíz")
     if not is_root_dir_under_backup_root(manifest.root_dir):
         raise ValueError(
-            f"backup RootDir {manifest.root_dir!r} is outside the expected backup directory \u2014 refusing to delete"
+            f"el RootDir de la copia {manifest.root_dir!r} está fuera del directorio de copias esperado \u2014 no se eliminará"
         )
     shutil.rmtree(manifest.root_dir)
 
 
 def rename_backup(manifest: Manifest, new_description: str) -> None:
     if not manifest.root_dir:
-        raise ValueError("backup has no root directory")
+        raise ValueError("la copia de seguridad no tiene directorio raíz")
     manifest.description = new_description
     manifest_path = os.path.join(manifest.root_dir, ManifestFilename)
     write_manifest(manifest_path, manifest)
@@ -258,7 +258,7 @@ def rename_backup(manifest: Manifest, new_description: str) -> None:
 
 def toggle_pin(manifest: Manifest) -> None:
     if not manifest.root_dir:
-        raise ValueError("backup has no root directory")
+        raise ValueError("la copia de seguridad no tiene directorio raíz")
     manifest.pinned = not manifest.pinned
     manifest_path = os.path.join(manifest.root_dir, ManifestFilename)
     write_manifest(manifest_path, manifest)
@@ -303,7 +303,7 @@ class Snapshotter:
             try:
                 checksum = compute_checksum(existing_paths)
             except (OSError, ValueError) as exc:
-                logger.warning("backup: compute checksum: %s", exc)
+                logger.warning("backup: error al calcular el checksum: %s", exc)
                 checksum = ""
         manifest.checksum = checksum
 
@@ -353,14 +353,14 @@ def compute_checksum(paths: list[str]) -> str:
         except FileNotFoundError:
             continue
         except OSError as e:
-            raise ValueError(f"stat {p!r}: {e}") from e
+            raise ValueError(f"error de stat {p!r}: {e}") from e
         if not stat_is_regular(info.st_mode):
             continue
         try:
             with open(p, "rb") as f:
                 data = f.read()
         except OSError as e:
-            raise ValueError(f"read {p!r}: {e}") from e
+            raise ValueError(f"error al leer {p!r}: {e}") from e
         entries.append((p, hashlib.sha256(data).hexdigest()))
 
     if not entries:
@@ -408,7 +408,7 @@ def prune(backup_dir: str, retention_count: int) -> list[str]:
             delete_backup(m)
             deleted.append(m.id)
         except (OSError, ValueError) as e:
-            logger.warning("backup: prune: failed to delete %r: %s", m.root_dir, e)
+            logger.warning("backup: prune: no se pudo eliminar %r: %s", m.root_dir, e)
     return deleted
 
 
@@ -489,8 +489,8 @@ class RestoreService:
                 if entry.existed:
                     if os.path.isabs(entry.snapshot_path):
                         raise ValueError(
-                            f"manifest entry {entry.original_path!r} has absolute "
-                            f"SnapshotPath {entry.snapshot_path!r}, expected relative"
+                            f"la entrada del manifiesto {entry.original_path!r} tiene un "
+                            f"SnapshotPath absoluto {entry.snapshot_path!r}, se esperaba uno relativo"
                         )
                     resolved = ManifestEntry(
                         original_path=entry.original_path,
@@ -502,8 +502,8 @@ class RestoreService:
                 else:
                     if not (os.path.isabs(entry.original_path) and _is_path_under_home(entry.original_path)):
                         raise ValueError(
-                            f"manifest entry has invalid OriginalPath {entry.original_path!r}: "
-                            "must be an absolute path under the user home directory"
+                            f"la entrada del manifiesto tiene un OriginalPath no válido {entry.original_path!r}: "
+                            "debe ser una ruta absoluta dentro del directorio home del usuario"
                         )
                     try:
                         os.remove(entry.original_path)
@@ -519,8 +519,8 @@ class RestoreService:
             else:
                 if not (os.path.isabs(entry.original_path) and _is_path_under_home(entry.original_path)):
                     raise ValueError(
-                        f"manifest entry has invalid OriginalPath {entry.original_path!r}: "
-                        "must be an absolute path under the user home directory"
+                        f"la entrada del manifiesto tiene un OriginalPath no válido {entry.original_path!r}: "
+                        "debe ser una ruta absoluta dentro del directorio home del usuario"
                     )
                 try:
                     os.remove(entry.original_path)
@@ -530,19 +530,19 @@ class RestoreService:
     def _restore_entry(self, entry: ManifestEntry, trusted_snapshot: bool) -> None:
         if not (os.path.isabs(entry.original_path) and _is_path_under_home(entry.original_path)):
             raise ValueError(
-                f"manifest entry has invalid OriginalPath {entry.original_path!r}: "
-                "must be an absolute path under the user home directory"
+                f"la entrada del manifiesto tiene un OriginalPath no válido {entry.original_path!r}: "
+                "debe ser una ruta absoluta dentro del directorio home del usuario"
             )
         if not trusted_snapshot:
             if not is_root_dir_under_backup_root(entry.snapshot_path):
                 raise ValueError(
-                    f"manifest entry has invalid SnapshotPath {entry.snapshot_path!r}: "
-                    "must be under the backup root directory"
+                    f"la entrada del manifiesto tiene un SnapshotPath no válido {entry.snapshot_path!r}: "
+                    "debe estar dentro del directorio raíz de copias"
                 )
         try:
             with open(entry.snapshot_path, "rb") as f:
                 content = f.read()
         except OSError as e:
-            raise ValueError(f"read snapshot file {entry.snapshot_path!r}: {e}") from e
+            raise ValueError(f"error al leer el archivo de instantánea {entry.snapshot_path!r}: {e}") from e
         os.makedirs(os.path.dirname(entry.original_path), exist_ok=True)
         _write_file_atomic(entry.original_path, content, entry.mode)

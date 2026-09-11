@@ -34,7 +34,7 @@ def register_security_review_command(reg: Registry) -> None:
         wd = ctx.cwd
 
         if not git_dir(wd).ok:
-            ctx.err.write("Error: not a git repository\n")
+            ctx.err.write("Error: no es un repositorio git\n")
             return 1
 
         branch = git_current_branch(wd) or "(detached)"
@@ -42,44 +42,40 @@ def register_security_review_command(reg: Registry) -> None:
 
         result = git_diff(wd, since)
         if not result.ok:
-            ctx.err.write(
-                f"Error: get diff: {result.err.strip() or result.out.strip()}\n"
-            )
+            ctx.err.write(f"Error: al obtener el diff: {result.err.strip() or result.out.strip()}\n")
             return 1
         diff = result.out
 
         files, additions, deletions = git_diff_stats(diff)
 
-        out.write("🔒 Security Review\n")
-        out.write("==================\n")
-        out.write(f"Branch: {branch}\n")
-        out.write(f"Files changed: {files}\n")
-        out.write(f"Additions: {additions}, Deletions: {deletions}\n\n")
+        out.write("🔒 Revisión de seguridad\n")
+        out.write("========================\n")
+        out.write(f"Rama: {branch}\n")
+        out.write(f"Archivos cambiados: {files}\n")
+        out.write(f"Adiciones: {additions}, Eliminaciones: {deletions}\n\n")
 
         findings: list[str] = []
         for i, line in enumerate(diff.splitlines(), start=1):
             if line.startswith("+") and not line.startswith("+++"):
                 for pattern in _SUSPICIOUS_PATTERNS:
                     if pattern.search(line):
-                        findings.append(f"  - line {i}: possible {pattern.pattern[:40]}")
+                        findings.append(f"  - línea {i}: posible {pattern.pattern[:40]}")
                         break
 
         if not findings:
-            out.write("✅ No security issues detected in the changes.\n")
+            out.write("✅ No se detectaron problemas de seguridad en los cambios.\n")
         else:
-            out.write("Potential security concerns:\n")
+            out.write("Posibles problemas de seguridad:\n")
             for finding in findings:
                 out.write(finding + "\n")
 
-        out.write(
-            "\nNote: Review the diff against the default branch before merging.\n"
-        )
+        out.write("\nNota: revisa el diff contra la rama predeterminada antes de fusionar.\n")
         return 0
 
     cmd = Command(
         name="security review",
-        short="Scan changes for security issues",
-        long="Review the diff against the default branch for common vulnerability patterns.",
+        short="Analizar los cambios en busca de problemas de seguridad",
+        long="Revisar el diff contra la rama predeterminada para patrones comunes de vulnerabilidad.",
         run=run,
     )
     reg.add_command(cmd)

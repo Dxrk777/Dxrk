@@ -16,21 +16,21 @@ from dxrk.tui.context import get_ctx
 
 class ReviewScreen(Screen):
     BINDINGS = [
-        Binding("up,k", "cursor_up", "Up", show=False),
-        Binding("down,j", "cursor_down", "Down", show=False),
-        Binding("enter", "select", "Select"),
-        Binding("escape", "back", "Back"),
+        Binding("up,k", "cursor_up", "Arriba", show=False),
+        Binding("down,j", "cursor_down", "Abajo", show=False),
+        Binding("enter", "select", "Seleccionar"),
+        Binding("escape", "back", "Atrás"),
     ]
 
     cursor = reactive(0)
 
     def compose(self) -> ComposeResult:
         with Container(id="review-container"):
-            yield Static("[bold]Review and Confirm[/]", id="review-title")
+            yield Static("[bold]Revisar y confirmar[/]", id="review-title")
             with VerticalScroll(id="review-content"):
                 yield Static("")
             yield Static("")
-            yield Static("[dim]enter: install • esc: back[/]")
+            yield Static("[dim]enter: instalar • esc: atrás[/]")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -57,28 +57,28 @@ class ReviewScreen(Screen):
 
         parts = []
 
-        agent_str = ", ".join(a.value for a in agents) if agents else "none"
-        parts.append(f"  [bold]Agents[/]  {agent_str}")
+        agent_str = ", ".join(a.value for a in agents) if agents else "ninguno"
+        parts.append(f"  [bold]Agentes[/]  {agent_str}")
         parts.append(f"  [bold]Persona[/]  {ctx.persona.value}")
         parts.append(f"  [bold]Preset[/]  {ctx.preset.value}")
         parts.append("")
 
         if components:
-            parts.append("[bold]Components[/]")
+            parts.append("[bold]Componentes[/]")
             for c in components:
                 is_auto = payload and c in payload.added_dependencies
-                badge = "[dim]selected[/]" if not is_auto else "[yellow]auto-dependency[/]"
+                badge = "[dim]seleccionado[/]" if not is_auto else "[yellow]dependencia automática[/]"
                 parts.append(f"  {c.value} {badge}")
 
             if skills:
-                parts.append("[bold]  Skills[/]")
+                parts.append("[bold]  Habilidades[/]")
                 for s in skills:
                     parts.append(f"    [dim]{s.value}[/]")
 
             has_sdd = any(c.value == "sdd" for c in components)
             if has_sdd:
-                tdd_label = "Enabled" if ctx.strict_tdd else "Disabled"
-                parts.append(f"  [bold]Strict TDD[/]  {tdd_label}")
+                tdd_label = "Activado" if ctx.strict_tdd else "Desactivado"
+                parts.append(f"  [bold]TDD estricto[/]  {tdd_label}")
 
             parts.append("")
 
@@ -90,14 +90,14 @@ class ReviewScreen(Screen):
                 if not is_supported_agent(a):
                     unsupported.append(a.value)
         if unsupported:
-            parts.append(f"[yellow]Unsupported agents: {', '.join(unsupported)}[/]")
+            parts.append(f"[yellow]Agentes no compatibles: {', '.join(unsupported)}[/]")
             parts.append("")
 
         for line in parts:
             scroll.mount(Static(line))
 
-        scroll.mount(Static("  ▸ Install"))
-        scroll.mount(Static("   Back"))
+        scroll.mount(Static("  ▸ Instalar"))
+        scroll.mount(Static("   Atrás"))
         items = scroll.children
         self._action_statics = [
             cast(Static, items[-2]),
@@ -119,7 +119,7 @@ class ReviewScreen(Screen):
     def _update_actions(self) -> None:
         if not hasattr(self, "_action_statics"):
             return
-        actions = ["Install", "Back"]
+        actions = ["Instalar", "Atrás"]
         for i, s in enumerate(self._action_statics):
             prefix = "▸" if i == self.cursor else " "
             s.update(f"{prefix} {actions[i]}")

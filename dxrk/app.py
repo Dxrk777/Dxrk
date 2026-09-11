@@ -28,24 +28,24 @@ VERSION = "dev"
 
 HELP_TEXT = """dxrk — AI Gentle Stack ({version})
 
-USAGE
-  dxrk                     Launch interactive TUI
+USO
+  dxrk                     Iniciar la TUI interactiva
   dxrk <command> [flags]
 
-COMMANDS
-  install      Configure AI coding agents on this machine
-  uninstall    Remove Gentle AI managed files from this machine
-  sync         Sync agent configs and skills to current version
-  update       Check for available updates
-  upgrade      Apply updates to managed tools
-  restore      Restore a config backup
-  version      Print version
+COMANDOS
+  install      Configurar los agentes de codificación IA en este equipo
+  uninstall    Eliminar los archivos gestionados de Gentle AI de este equipo
+  sync         Sincronizar las configs de agentes y skills con la versión actual
+  update       Comprobar las actualizaciones disponibles
+  upgrade      Aplicar actualizaciones a las herramientas gestionadas
+  restore      Restaurar una copia de configuración
+  version      Mostrar la versión
 
-FLAGS
-  --help, -h    Show this help
+OPCIONES
+  --help, -h    Mostrar esta ayuda
 
-Run 'dxrk help' for this message.
-Documentation: https://github.com/Dxrk777/Dxrk
+Ejecuta 'dxrk help' para ver este mensaje.
+Documentación: https://github.com/Dxrk777/Dxrk
 """
 
 
@@ -67,11 +67,11 @@ class SelfUpdateChecker:
 
     def skip_reason(self) -> str | None:
         if os.environ.get("DXRK_SELF_UPDATE_DONE") == "1":
-            return "already updated this invocation"
+            return "ya actualizado en esta invocación"
         if os.environ.get("DXRK_NO_SELF_UPDATE") == "1":
-            return "opt-out via DXRK_NO_SELF_UPDATE"
+            return "exclusión vía DXRK_NO_SELF_UPDATE"
         if self.version == "dev":
-            return "dev build"
+            return "versión dev"
         return None
 
     def check(self, stdout=sys.stdout) -> str | None:
@@ -89,7 +89,7 @@ class SelfUpdateChecker:
         if target is None or target.status != UpdateStatus.UPDATE_AVAILABLE:
             return None
 
-        print(f"Updated to v{target.latest_version}, restarting...", file=stdout)
+        print(f"Actualizado a v{target.latest_version}, reiniciando...", file=stdout)
         return target.latest_version
 
 
@@ -124,7 +124,7 @@ def run_cli(args: list[str]) -> int:
     try:
         detection: DetectionResult = detect()
     except Exception as e:
-        print(f"detect system: {e}", file=sys.stderr)
+        print(f"error al detectar el sistema: {e}", file=sys.stderr)
         return 1
 
     if not detection.system.supported:
@@ -141,10 +141,10 @@ def run_cli(args: list[str]) -> int:
     try:
         checker.check()
     except Exception as e:
-        print(f"Warning: self-update failed: {e}", file=sys.stderr)
+        print(f"Advertencia: falló la autoactualización: {e}", file=sys.stderr)
 
     if not args:
-        print("TUI mode not available in Python port")
+        print("Modo TUI no disponible en la versión Python")
         return 0
 
     cmd = args[0]
@@ -161,7 +161,7 @@ def run_cli(args: list[str]) -> int:
             print(update_render_cli(results))
             failed = check_failures(results)
             if failed:
-                print(f"update check failed for: {', '.join(failed)}", file=sys.stderr)
+                print(f"la verificación de actualizaciones falló para: {', '.join(failed)}", file=sys.stderr)
                 return 1
             return 0
 
@@ -191,7 +191,7 @@ def run_cli(args: list[str]) -> int:
 
             failed = check_failures(check_results)
             if failed and tool_filter:
-                print(f"update check failed for: {', '.join(failed)}", file=sys.stderr)
+                print(f"la verificación de actualizaciones falló para: {', '.join(failed)}", file=sys.stderr)
                 return 1
 
             home_dir = os.path.expanduser("~")
@@ -200,16 +200,16 @@ def run_cli(args: list[str]) -> int:
 
             for r in report.results:
                 if r.err:
-                    print(f"upgrade failed for {r.tool_name!r}: {r.err}", file=sys.stderr)
+                    print(f"la actualización falló para {r.tool_name!r}: {r.err}", file=sys.stderr)
                     return 1
             return 0
 
         elif cmd == "install":
             install_result = run_install(args[1:], detection)
             if install_result.dry_run:
-                print("Dry-run: install plan built successfully")
+                print("Simulación: plan de instalación generado correctamente")
             elif install_result.verify and not getattr(install_result.verify, "ready", True):
-                print("Post-apply verification failed")
+                print("Falló la verificación posterior")
                 return 1
             return 0
 
@@ -221,16 +221,16 @@ def run_cli(args: list[str]) -> int:
             except ValueError as e:
                 print(f"Error: {e}", file=sys.stderr)
                 return 1
-            print("Sync completed")
+            print("Sincronización completa")
             return 0
 
         elif cmd == "restore":
-            print("Restore requires TUI mode")
+            print("Restaurar requiere el modo TUI")
             return 0
 
         else:
             print(
-                f"unknown command {cmd!r} — run 'dxrk-py help' for available commands",
+                f"comando desconocido {cmd!r} — ejecuta 'dxrk-py help' para ver los comandos disponibles",
                 file=sys.stderr,
             )
             return 1

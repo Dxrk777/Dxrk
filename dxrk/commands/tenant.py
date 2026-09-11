@@ -94,17 +94,17 @@ def register_tenant_command(reg: Registry) -> None:
     """Registers the `dxrk tenant` command and its subcommands."""
 
     def parent_run(ctx: CommandContext) -> int:
-        ctx.err.write("Error: use 'dxrk tenant list', 'create', 'switch', 'current', 'delete', 'whoami' or 'migrate'\n")
+        ctx.err.write("Error: usa 'dxrk tenant list', 'create', 'switch', 'current', 'delete', 'whoami' o 'migrate'\n")
         return 1
 
     def list_run(ctx: CommandContext) -> int:
         tenants = _list_tenants()
         if not tenants:
-            ctx.out.write("No tenants found.\n")
+            ctx.out.write("No se encontraron tenants.\n")
             return 0
         active = _effective_tenant(ctx)
         for t in tenants:
-            marker = " * active" if t == active else ""
+            marker = " * activo" if t == active else ""
             ctx.out.write(f"{t}{marker}\n")
         return 0
 
@@ -116,7 +116,7 @@ def register_tenant_command(reg: Registry) -> None:
             return 1
         tid = ctx.args[0].strip() if ctx.args else ""
         if not validate_id(tid):
-            ctx.err.write(f"Error: invalid tenant id {tid!r}\n")
+            ctx.err.write(f"Error: id de tenant inválido {tid!r}\n")
             return 1
         try:
             ensure_tenant(tid)
@@ -124,15 +124,15 @@ def register_tenant_command(reg: Registry) -> None:
             ctx.err.write(f"Error: {exc}\n")
             return 1
         except OSError as exc:
-            ctx.err.write(f"Error: create tenant: {exc}\n")
+            ctx.err.write(f"Error: al crear el tenant: {exc}\n")
             return 1
-        ctx.out.write(f"Created tenant {tid}\n")
+        ctx.out.write(f"Tenant {tid} creado\n")
         return 0
 
     def switch_run(ctx: CommandContext) -> int:
         tid = ctx.args[0].strip() if ctx.args else ""
         if not validate_id(tid):
-            ctx.err.write(f"Error: invalid tenant id {tid!r}\n")
+            ctx.err.write(f"Error: id de tenant inválido {tid!r}\n")
             return 1
         # check exists
         try:
@@ -141,20 +141,20 @@ def register_tenant_command(reg: Registry) -> None:
             ctx.err.write(f"Error: {exc}\n")
             return 1
         if not p.exists() or not p.is_dir():
-            ctx.err.write(f"Error: tenant {tid!r} not found\n")
+            ctx.err.write(f"Error: tenant {tid!r} no encontrado\n")
             return 1
         if not _write_active(tid):
-            ctx.err.write("Error: write active tenant\n")
+            ctx.err.write("Error: al escribir el tenant activo\n")
             return 1
         # propagate to env for current process
         os.environ["DXRK_TENANT"] = tid
-        ctx.out.write(f"Switched to tenant {tid}\n")
+        ctx.out.write(f"Tenant activo: {tid}\n")
         return 0
 
     def current_run(ctx: CommandContext) -> int:
         tid = _effective_tenant(ctx)
         if not tid:
-            ctx.out.write("No current tenant\n")
+            ctx.out.write("No hay tenant actual\n")
             return 0
         ctx.out.write(f"{tid}\n")
         return 0
@@ -167,11 +167,11 @@ def register_tenant_command(reg: Registry) -> None:
             return 1
         tid = ctx.args[0].strip() if ctx.args else ""
         if not validate_id(tid):
-            ctx.err.write(f"Error: invalid tenant id {tid!r}\n")
+            ctx.err.write(f"Error: id de tenant inválido {tid!r}\n")
             return 1
         force = ctx.flag_bool("force", False)
         if not force:
-            ctx.err.write(f"Error: use --force to delete tenant {tid!r}\n")
+            ctx.err.write(f"Error: usa --force para eliminar el tenant {tid!r}\n")
             return 1
         try:
             p = tenant_root(tid)
@@ -179,12 +179,12 @@ def register_tenant_command(reg: Registry) -> None:
             ctx.err.write(f"Error: {exc}\n")
             return 1
         if not p.exists():
-            ctx.err.write(f"Error: tenant {tid!r} not found\n")
+            ctx.err.write(f"Error: tenant {tid!r} no encontrado\n")
             return 1
         try:
             shutil.rmtree(p)
         except OSError as exc:
-            ctx.err.write(f"Error: delete tenant: {exc}\n")
+            ctx.err.write(f"Error: al eliminar el tenant: {exc}\n")
             return 1
         # clean _active if points to deleted
         if _read_active() == tid:
@@ -194,13 +194,13 @@ def register_tenant_command(reg: Registry) -> None:
                 pass
             if os.environ.get("DXRK_TENANT") == tid:
                 os.environ.pop("DXRK_TENANT", None)
-        ctx.out.write(f"Deleted tenant {tid}\n")
+        ctx.out.write(f"Tenant {tid} eliminado\n")
         return 0
 
     def whoami_run(ctx: CommandContext) -> int:
         tid = _effective_tenant(ctx)
         if not tid:
-            ctx.out.write("No tenant\n")
+            ctx.out.write("Sin tenant\n")
             return 0
         ctx.out.write(f"{tid}\n")
         return 0
@@ -209,42 +209,42 @@ def register_tenant_command(reg: Registry) -> None:
         try:
             result = migrate_legacy_to_default()
         except Exception as exc:
-            ctx.err.write(f"Error: migrate: {exc}\n")
+            ctx.err.write(f"Error: al migrar: {exc}\n")
             return 1
         copied = result.get("copied", [])
         skipped = result.get("skipped", [])
-        ctx.out.write(f"Migrated {len(copied)} files, skipped {len(skipped)}\n")
+        ctx.out.write(f"{len(copied)} archivo(s) migrados, {len(skipped)} omitidos\n")
         for c in copied:
-            ctx.out.write(f"  copied: {c}\n")
+            ctx.out.write(f"  copiado: {c}\n")
         return 0
 
-    parent_cmd = Command(name="tenant", short="Manage tenants", run=parent_run)
-    list_cmd = Command(name="tenant list", short="List tenants", run=list_run)
+    parent_cmd = Command(name="tenant", short="Gestionar tenants", run=parent_run)
+    list_cmd = Command(name="tenant list", short="Listar tenants", run=list_run)
     create_cmd = Command(
         name="tenant create",
-        short="Create a tenant",
+        short="Crear un tenant",
         min_args=1,
         max_args=1,
         run=create_run,
     )
     switch_cmd = Command(
         name="tenant switch",
-        short="Switch active tenant",
+        short="Cambiar el tenant activo",
         min_args=1,
         max_args=1,
         run=switch_run,
     )
-    current_cmd = Command(name="tenant current", short="Show current tenant", run=current_run)
+    current_cmd = Command(name="tenant current", short="Mostrar el tenant actual", run=current_run)
     delete_cmd = Command(
         name="tenant delete",
-        short="Delete a tenant",
+        short="Eliminar un tenant",
         min_args=1,
         max_args=1,
-        flags={"force": Flag("force", is_bool=True, help="Force deletion")},
+        flags={"force": Flag("force", is_bool=True, help="Forzar la eliminación")},
         run=delete_run,
     )
-    whoami_cmd = Command(name="tenant whoami", short="Show tenant id", run=whoami_run)
-    migrate_cmd = Command(name="tenant migrate", short="Migrate legacy data", run=migrate_run)
+    whoami_cmd = Command(name="tenant whoami", short="Mostrar el id de tenant", run=whoami_run)
+    migrate_cmd = Command(name="tenant migrate", short="Migrar datos heredados", run=migrate_run)
 
     reg.add_command(parent_cmd)
     reg.add_command(list_cmd)

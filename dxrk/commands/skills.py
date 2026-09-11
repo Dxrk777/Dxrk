@@ -38,16 +38,16 @@ def register_skills_command(reg: Registry) -> None:
         out = ctx.out
         skills = discover_skills(ctx.cwd, os.path.expanduser("~"))
         if not skills:
-            out.write("No skills found.\n")
+            out.write("No se encontraron skills.\n")
             return 0
-        out.write("NAME\tDESCRIPTION\tPATH\n")
+        out.write("NOMBRE\tDESCRIPCIÓN\tRUTA\n")
         for name, description, path in skills:
             out.write(f"{name}\t{description}\t{path}\n")
         return 0
 
     cmd = Command(
         name="skills",
-        short="List available skills",
+        short="Listar los skills disponibles",
         run=run,
     )
     reg.add_command(cmd)

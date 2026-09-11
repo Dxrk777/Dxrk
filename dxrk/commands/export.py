@@ -67,7 +67,7 @@ def register_export_command(reg: Registry) -> None:
             ext = os.path.splitext(output_path)[1].lstrip(".").lower()
             fmt = ext if ext else "md"
         if fmt not in _EXPORT_FORMATS:
-            ctx.err.write(f"Error: unsupported format {go_quote(fmt)}\n")
+            ctx.err.write(f"Error: formato no compatible {go_quote(fmt)}\n")
             return 1
 
         body = export_session_body(s, fmt)
@@ -76,20 +76,20 @@ def register_export_command(reg: Registry) -> None:
                 f.write(body)
             os.chmod(output_path, 0o600)
         except OSError as exc:
-            ctx.err.write(f"Error: write export file: {exc}\n")
+            ctx.err.write(f"Error: al escribir el archivo de exportación: {exc}\n")
             return 1
 
-        out.write(f"Exported session {s.id[:8]} to {output_path} ({fmt})\n")
+        out.write(f"Sesión {s.id[:8]} exportada a {output_path} ({fmt})\n")
         return 0
 
     cmd = Command(
         name="export",
-        short="Export a session to a file",
+        short="Exportar una sesión a un archivo",
         min_args=1,
         max_args=1,
         flags={
-            "output": Flag("output", default="", shorthand="o", help="Output file path"),
-            "format": Flag("format", default="", help="Output format (md, html, json, xml)"),
+            "output": Flag("output", default="", shorthand="o", help="Ruta del archivo de salida"),
+            "format": Flag("format", default="", help="Formato de salida (md, html, json, xml)"),
         },
         run=run,
     )

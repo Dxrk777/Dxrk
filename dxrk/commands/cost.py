@@ -33,7 +33,7 @@ def register_cost_command(reg: Registry) -> None:
         out = ctx.out
         session_id = ctx.args[0] if ctx.args else ""
         if not session_id:
-            ctx.err.write("Error: session id required\n")
+            ctx.err.write("Error: se requiere el id de la sesión\n")
             return 1
 
         try:
@@ -45,16 +45,16 @@ def register_cost_command(reg: Registry) -> None:
         input_tokens = s.token_count
         input_cost, output_cost, total = estimate_cost(s.model, input_tokens, 0)
 
-        out.write(f"Model: {s.model}\n")
-        out.write(f"Input tokens: {input_tokens}\n")
-        out.write(f"Input cost: ${input_cost:.4f}\n")
-        out.write(f"Output cost: ${output_cost:.4f}\n")
-        out.write(f"Estimated total: ${total:.4f}\n")
+        out.write(f"Modelo: {s.model}\n")
+        out.write(f"Tokens de entrada: {input_tokens}\n")
+        out.write(f"Costo de entrada: ${input_cost:.4f}\n")
+        out.write(f"Costo de salida: ${output_cost:.4f}\n")
+        out.write(f"Total estimado: ${total:.4f}\n")
         return 0
 
     cmd = Command(
         name="cost",
-        short="Estimate token costs for a session",
+        short="Estimar el costo en tokens de una sesión",
         min_args=1,
         max_args=1,
         run=run,

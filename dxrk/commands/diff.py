@@ -15,7 +15,7 @@ def register_diff_command(reg: Registry) -> None:
         wd = ctx.cwd
 
         if not git_dir(wd).ok:
-            ctx.err.write("Error: not a git repository\n")
+            ctx.err.write("Error: no es un repositorio git\n")
             return 1
 
         since = ctx.flag_str("since")
@@ -27,18 +27,18 @@ def register_diff_command(reg: Registry) -> None:
             result = git_diff(wd)
 
         if not result.ok:
-            ctx.err.write(f"Error: get diff: {result.err.strip() or result.out.strip()}\n")
+            ctx.err.write(f"Error: al obtener el diff: {result.err.strip() or result.out.strip()}\n")
             return 1
         out.write(result.out)
         return 0
 
     cmd = Command(
         name="diff",
-        short="Show git diff",
-        long="Show working tree changes, optionally staged or since a ref.",
+        short="Mostrar el diff de git",
+        long="Mostrar los cambios en el directorio de trabajo, opcionalmente los preparados o desde una ref.",
         flags={
-            "staged": Flag("staged", is_bool=True, default=False, shorthand="s", help="Show staged changes"),
-            "since": Flag("since", default="", help="Show changes since a ref"),
+            "staged": Flag("staged", is_bool=True, default=False, shorthand="s", help="Mostrar los cambios preparados"),
+            "since": Flag("since", default="", help="Mostrar los cambios desde una ref"),
         },
         run=run,
     )

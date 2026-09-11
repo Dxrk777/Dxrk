@@ -16,20 +16,20 @@ from .gitutil import (
 from .registry import Command, CommandContext, Flag, Registry
 
 _REVIEW_POINTS = (
-    "  - Code correctness and logic",
-    "  - Performance considerations",
-    "  - Security vulnerabilities",
-    "  - Error handling",
-    "  - Test coverage",
-    "  - Naming and readability",
+    "  - Corrección del código y lógica",
+    "  - Consideraciones de rendimiento",
+    "  - Vulnerabilidades de seguridad",
+    "  - Manejo de errores",
+    "  - Cobertura de pruebas",
+    "  - Nombres y legibilidad",
 )
 
 
 def _print_review(ctx: CommandContext) -> None:
-    ctx.out.write("=== REVIEW ===\n")
+    ctx.out.write("=== REVISIÓN ===\n")
     for point in _REVIEW_POINTS:
         ctx.out.write(point + "\n")
-    ctx.out.write("=== SUMMARY ===\n")
+    ctx.out.write("=== RESUMEN ===\n")
 
 
 def _print_files(ctx: CommandContext, diff: str) -> None:
@@ -46,32 +46,26 @@ def register_review_command(reg: Registry) -> None:
         wd = ctx.cwd
 
         if not git_dir(wd).ok:
-            ctx.err.write("Error: not a git repository\n")
+            ctx.err.write("Error: no es un repositorio git\n")
             return 1
 
         if ctx.flag_bool("pr"):
             result = run_gh(wd, "pr", "view", "--json", "number,title,url,baseRefName")
             if not result.ok:
-                ctx.err.write(
-                    f"Error: get PR info: {result.err.strip() or result.out.strip()}\n"
-                )
+                ctx.err.write(f"Error: al obtener info del PR: {result.err.strip() or result.out.strip()}\n")
                 return 1
             try:
                 info = json.loads(result.out)
             except json.JSONDecodeError as exc:
-                ctx.err.write(f"Error: get PR info: {exc}\n")
+                ctx.err.write(f"Error: al obtener info del PR: {exc}\n")
                 return 1
 
             diff = run_gh(wd, "pr", "diff")
             if not diff.ok:
-                ctx.err.write(
-                    f"Error: get PR diff: {diff.err.strip() or diff.out.strip()}\n"
-                )
+                ctx.err.write(f"Error: al obtener el diff del PR: {diff.err.strip() or diff.out.strip()}\n")
                 return 1
 
-            out.write(
-                f"PR #{info.get('number', '')} details:\n{info.get('title', '')}\n\n"
-            )
+            out.write(f"Detalles del PR #{info.get('number', '')}:\n{info.get('title', '')}\n\n")
             _print_files(ctx, diff.out)
             _print_review(ctx)
             return 0
@@ -80,46 +74,38 @@ def register_review_command(reg: Registry) -> None:
         if since:
             result = git_diff(wd, since)
             if not result.ok:
-                ctx.err.write(
-                    f"Error: get diff: {result.err.strip() or result.out.strip()}\n"
-                )
+                ctx.err.write(f"Error: al obtener el diff: {result.err.strip() or result.out.strip()}\n")
                 return 1
             files, additions, deletions = git_diff_stats(result.out)
-            out.write(f"Reviewing changes since {since}:\n")
-            out.write(
-                f"{files} files changed, {additions} insertions(+), {deletions} deletions(-)\n\n"
-            )
+            out.write(f"Revisando cambios desde {since}:\n")
+            out.write(f"{files} archivos cambiados, {additions} inserciones(+), {deletions} eliminaciones(-)\n\n")
             _print_files(ctx, result.out)
             _print_review(ctx)
             return 0
 
         staged = git_diff_cached(wd)
         if not staged.ok:
-            ctx.err.write(
-                f"Error: get staged diff: {staged.err.strip() or staged.out.strip()}\n"
-            )
+            ctx.err.write(f"Error: al obtener el diff preparado: {staged.err.strip() or staged.out.strip()}\n")
             return 1
         unstaged = git_diff(wd)
         if not unstaged.ok:
-            ctx.err.write(
-                f"Error: get unstaged diff: {unstaged.err.strip() or unstaged.out.strip()}\n"
-            )
+            ctx.err.write(f"Error: al obtener el diff sin preparar: {unstaged.err.strip() or unstaged.out.strip()}\n")
             return 1
 
         status = git_status_porcelain(wd)
         has_changes = bool(status.ok and status.out.strip())
 
-        out.write("Reviewing uncommitted changes:\n")
+        out.write("Revisando cambios sin confirmar:\n")
         if not has_changes:
-            out.write("No changes to review.\n")
+            out.write("No hay cambios para revisar.\n")
             _print_review(ctx)
             return 0
 
         if staged.out.strip():
-            out.write("=== STAGED ===\n")
+            out.write("=== PREPARADOS ===\n")
             _print_files(ctx, staged.out)
         if unstaged.out.strip():
-            out.write("=== UNSTAGED ===\n")
+            out.write("=== SIN PREPARAR ===\n")
             _print_files(ctx, unstaged.out)
 
         _print_review(ctx)
@@ -127,11 +113,11 @@ def register_review_command(reg: Registry) -> None:
 
     cmd = Command(
         name="review",
-        short="Review changes",
-        long="Review staged, unstaged, or PR changes against review criteria.",
+        short="Revisar cambios",
+        long="Revisar cambios preparados, sin preparar o de un PR según criterios de revisión.",
         flags={
-            "pr": Flag("pr", is_bool=True, default=False, help="Review the current PR"),
-            "since": Flag("since", default="", help="Review changes since a ref"),
+            "pr": Flag("pr", is_bool=True, default=False, help="Revisar el PR actual"),
+            "since": Flag("since", default="", help="Revisar cambios desde una ref"),
         },
         run=run,
     )

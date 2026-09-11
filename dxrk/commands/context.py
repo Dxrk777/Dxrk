@@ -15,22 +15,22 @@ def register_context_command(reg: Registry) -> None:
 
     def run(ctx: CommandContext) -> int:
         out = ctx.out
-        out.write("Context\n")
-        out.write("───────\n")
-        out.write(f"  Working dir:  {os.path.abspath(ctx.cwd)}\n")
-        out.write(f"  Platform:     {sys.platform} ({platform.machine()})\n")
-        out.write(f"  Python:       {platform.python_version()}\n")
-        out.write(f"  User:         {os.environ.get('USER', os.environ.get('USERNAME', 'unknown'))}\n")
-        shell = os.environ.get("SHELL") or os.environ.get("COMSPEC", "unknown")
-        out.write(f"  Shell:        {shell}\n")
-        out.write(f"  Home:         {os.path.expanduser('~')}\n")
-        term = os.environ.get("TERM") or "unknown"
-        out.write(f"  Terminal:     {term}\n")
+        out.write("Contexto\n")
+        out.write("────────\n")
+        out.write(f"  Directorio de trabajo:  {os.path.abspath(ctx.cwd)}\n")
+        out.write(f"  Plataforma:             {sys.platform} ({platform.machine()})\n")
+        out.write(f"  Python:                 {platform.python_version()}\n")
+        out.write(f"  Usuario:                {os.environ.get('USER', os.environ.get('USERNAME', 'desconocido'))}\n")
+        shell = os.environ.get("SHELL") or os.environ.get("COMSPEC", "desconocida")
+        out.write(f"  Shell:                  {shell}\n")
+        out.write(f"  Inicio:                 {os.path.expanduser('~')}\n")
+        term = os.environ.get("TERM") or "desconocida"
+        out.write(f"  Terminal:               {term}\n")
         return 0
 
     cmd = Command(
         name="context",
-        short="Show the current execution context",
+        short="Mostrar el contexto de ejecución actual",
         run=run,
     )
     reg.add_command(cmd)

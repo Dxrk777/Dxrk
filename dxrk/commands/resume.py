@@ -24,7 +24,7 @@ def register_resume_command(reg: Registry) -> None:
             try:
                 limit = max(1, int(raw_limit))
             except ValueError:
-                ctx.err.write(f"Error: invalid limit: {raw_limit}\n")
+                ctx.err.write(f"Error: límite inválido: {raw_limit}\n")
                 return 1
 
         try:
@@ -35,13 +35,13 @@ def register_resume_command(reg: Registry) -> None:
 
         if not ctx.args:
             shown = sessions[:limit]
-            out.write(f"Recent sessions (showing {len(shown)} of {len(sessions)}):\n\n")
+            out.write(f"Sesiones recientes (mostrando {len(shown)} de {len(sessions)}):\n\n")
             for s in shown:
                 out.write(
                     f"  {s.id[:8]}  {_truncate(s.title, 50):<50}  "
-                    f"{_fmt_ts_short(s.updated_at)}  {s.message_count} msgs\n"
+                    f"{_fmt_ts_short(s.updated_at)}  {s.message_count} mensajes\n"
                 )
-            out.write("\nResume with: dxrk resume <id-or-title>\n")
+            out.write("\nReanuda con: dxrk resume <id-o-título>\n")
             return 0
 
         query = ctx.args[0]
@@ -53,27 +53,27 @@ def register_resume_command(reg: Registry) -> None:
 
         if found is None:
             ctx.err.write(
-                f"Error: no session matching {go_quote(query)} — "
-                "use `dxrk resume` to list recent sessions\n"
+                f"Error: ninguna sesión coincide con {go_quote(query)} — "
+                "usa `dxrk resume` para listar las sesiones recientes\n"
             )
             return 1
 
-        out.write(f"Resumed session {found.id[:8]} — {found.title}\n")
-        out.write(f"Model: {found.model} | Messages: {found.message_count} | Tokens: {found.token_count}\n")
+        out.write(f"Sesión {found.id[:8]} reanudada — {found.title}\n")
+        out.write(f"Modelo: {found.model} | Mensajes: {found.message_count} | Tokens: {found.token_count}\n")
         if found.messages:
             last = found.messages[-1]
             content = _truncate(last.content, 80)
-            out.write(f"Last message ({last.role}): {content}\n")
+            out.write(f"Último mensaje ({last.role}): {content}\n")
         return 0
 
     cmd = Command(
         name="resume",
-        short="Resume a previous session",
-        long="List recent sessions or resume a specific one by ID or title.",
+        short="Reanudar una sesión anterior",
+        long="Listar las sesiones recientes o reanudar una específica por ID o título.",
         min_args=0,
         max_args=1,
         flags={
-            "limit": Flag("limit", default="", help="Maximum number of sessions to list"),
+            "limit": Flag("limit", default="", help="Número máximo de sesiones a listar"),
         },
         run=run,
     )

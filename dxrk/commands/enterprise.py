@@ -12,7 +12,7 @@ def register_enterprise_command(reg: Registry) -> None:
     """Registers the `dxrk enterprise` command and its subcommands."""
 
     def parent_run(ctx: CommandContext) -> int:
-        ctx.err.write("Error: use 'dxrk enterprise start', 'stop', 'status', 'execute', 'skills' or 'report'\n")
+        ctx.err.write("Error: usa 'dxrk enterprise start', 'stop', 'status', 'execute', 'skills' o 'report'\n")
         return 1
 
     def start_run(ctx: CommandContext) -> int:
@@ -24,7 +24,7 @@ def register_enterprise_command(reg: Registry) -> None:
     def stop_run(ctx: CommandContext) -> int:
         company = DxrkEnterprise()
         company.stop_company()
-        ctx.out.write("Dxrk Enterprise stopped.\n")
+        ctx.out.write("Dxrk Enterprise detenida.\n")
         return 0
 
     def status_run(ctx: CommandContext) -> int:
@@ -34,7 +34,7 @@ def register_enterprise_command(reg: Registry) -> None:
 
     def execute_run(ctx: CommandContext) -> int:
         if not ctx.args:
-            ctx.err.write("Error: use 'dxrk enterprise execute <task> [department]'\n")
+            ctx.err.write("Error: usa 'dxrk enterprise execute <tarea> [departamento]'\n")
             return 1
         company = DxrkEnterprise()
         company.start_company()
@@ -52,7 +52,7 @@ def register_enterprise_command(reg: Registry) -> None:
         for dept_id, skills in company.list_all_skills().items():
             ctx.out.write(f"{dept_id}:\n")
             for skill in skills:
-                marker = "installed" if skill["installed"] else "available"
+                marker = "instalado" if skill["installed"] else "disponible"
                 ctx.out.write(f"  [{marker}] {skill['name']}\n")
         return 0
 

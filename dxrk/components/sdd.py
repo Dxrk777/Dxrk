@@ -63,13 +63,13 @@ _SDD_ORCHESTRATOR_MARKERS = [
 
 def validate_profile_name(name: str) -> str | None:
     if not name:
-        return "profile name must not be empty"
+        return "el nombre del perfil no debe estar vacío"
     if name in _RESERVED_PROFILE_NAMES:
-        return f"profile name {name!r} is reserved"
+        return f"el nombre de perfil {name!r} está reservado"
     if not _PROFILE_NAME_RE.match(name):
         return (
-            f"profile name {name!r} must match ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ "
-            "(lowercase, hyphens only, no trailing hyphens, no underscores or spaces)"
+            f"el nombre de perfil {name!r} debe coincidir con ^[a-z0-9]([a-z0-9-]*[a-z0-9])?$ "
+            "(minúsculas, solo guiones, sin guiones finales, sin guiones bajos ni espacios)"
         )
     return None
 
@@ -188,7 +188,7 @@ def _extract_model_from_agent(agent_map: dict[str, Any]) -> ModelAssignment:
 
 def generate_profile_overlay(profile: Profile, home_dir: str) -> bytes:
     if not profile.name or profile.name == "default":
-        raise ValueError("GenerateProfileOverlay: profile name must be non-empty and not 'default'")
+        raise ValueError("GenerateProfileOverlay: el nombre de perfil no debe estar vacío y no debe ser 'default'")
 
     suffix = f"-{profile.name}"
     orchestrator_key = f"sdd-orchestrator{suffix}"
@@ -197,16 +197,16 @@ def generate_profile_overlay(profile: Profile, home_dir: str) -> bytes:
     prompt_dir = shared_prompt_dir(home_dir)
 
     phase_descriptions = {
-        "sdd-init": "Bootstrap SDD context and project configuration",
-        "sdd-explore": "Investigate codebase and think through ideas",
-        "sdd-propose": "Create change proposals from explorations",
-        "sdd-spec": "Write detailed specifications from proposals",
-        "sdd-design": "Create technical design from proposals",
-        "sdd-tasks": "Break down specs and designs into implementation tasks",
-        "sdd-apply": "Implement code changes from task definitions",
-        "sdd-verify": "Validate implementation against specs",
-        "sdd-archive": "Archive completed change artifacts",
-        "sdd-onboard": "Guide user through a complete SDD cycle using their real codebase",
+        "sdd-init": "Inicializar el contexto SDD y la configuración del proyecto",
+        "sdd-explore": "Investigar el código y analizar ideas",
+        "sdd-propose": "Crear propuestas de cambio desde exploraciones",
+        "sdd-spec": "Escribir especificaciones detalladas desde propuestas",
+        "sdd-design": "Crear el diseño técnico desde propuestas",
+        "sdd-tasks": "Dividir specs y diseños en tareas de implementación",
+        "sdd-apply": "Implementar cambios de código desde definiciones de tareas",
+        "sdd-verify": "Validar la implementación contra las specs",
+        "sdd-archive": "Archivar los artefactos del cambio terminado",
+        "sdd-onboard": "Guiar al usuario en un ciclo SDD completo con su código real",
     }
 
     task_perms: dict[str, str] = {"*": "deny"}
@@ -215,7 +215,7 @@ def generate_profile_overlay(profile: Profile, home_dir: str) -> bytes:
 
     orch_entry: dict[str, Any] = {
         "mode": "primary",
-        "description": f"SDD Orchestrator ({profile.name} profile) - coordinates sub-agents, never does work inline",
+        "description": f"Orquestador SDD (perfil {profile.name}) - coordina sub-agentes, nunca trabaja en línea",
         "prompt": orchestrator_prompt,
         "permission": {
             "task": {"__replace__": task_perms},
@@ -332,7 +332,7 @@ def _render_profile_model_assignments_section(profile: Profile) -> str:
 
 def remove_profile_agents(settings_path: str, profile_name: str) -> None:
     if not profile_name or profile_name == "default":
-        raise ValueError(f"RemoveProfileAgents: cannot remove default profile (name={profile_name!r})")
+        raise ValueError(f"RemoveProfileAgents: no se puede eliminar el perfil predeterminado (name={profile_name!r})")
 
     try:
         with open(settings_path) as f:
@@ -467,19 +467,19 @@ class OpenCodeCommand:
 
 def opencode_commands() -> list[OpenCodeCommand]:
     return [
-        OpenCodeCommand("sdd-init", "Initialize SDD context", "/sdd-init"),
-        OpenCodeCommand("sdd-new", "Start a new SDD change", "/sdd-new ${change-name}"),
+        OpenCodeCommand("sdd-init", "Inicializar el contexto SDD", "/sdd-init"),
+        OpenCodeCommand("sdd-new", "Iniciar un nuevo cambio SDD", "/sdd-new ${change-name}"),
         OpenCodeCommand(
             "sdd-continue",
-            "Continue next pending artifact",
+            "Continuar con el siguiente artefacto pendiente",
             "/sdd-continue ${change-name}",
         ),
-        OpenCodeCommand("sdd-explore", "Explore an idea before committing", "/sdd-explore ${topic}"),
-        OpenCodeCommand("sdd-ff", "Generate all planning artifacts", "/sdd-ff ${change-name}"),
-        OpenCodeCommand("sdd-apply", "Implement tasks", "/sdd-apply ${change-name}"),
-        OpenCodeCommand("sdd-verify", "Verify implementation", "/sdd-verify ${change-name}"),
-        OpenCodeCommand("sdd-archive", "Archive completed change", "/sdd-archive ${change-name}"),
-        OpenCodeCommand("sdd-onboard", "Guided SDD walkthrough", "/sdd-onboard"),
+        OpenCodeCommand("sdd-explore", "Explorar una idea antes de confirmar", "/sdd-explore ${topic}"),
+        OpenCodeCommand("sdd-ff", "Generar todos los artefactos de planificación", "/sdd-ff ${change-name}"),
+        OpenCodeCommand("sdd-apply", "Implementar tareas", "/sdd-apply ${change-name}"),
+        OpenCodeCommand("sdd-verify", "Verificar la implementación", "/sdd-verify ${change-name}"),
+        OpenCodeCommand("sdd-archive", "Archivar el cambio terminado", "/sdd-archive ${change-name}"),
+        OpenCodeCommand("sdd-onboard", "Recorrido guiado SDD", "/sdd-onboard"),
     ]
 
 
@@ -947,7 +947,7 @@ def _inject_claude_model_assignments(content: str, assignments: dict[str, str]) 
     start = content.find(open_marker)
     end = content.find(close_marker)
     if start == -1 or end == -1 or end < start:
-        raise ValueError("sdd orchestrator asset missing model assignment markers")
+        raise ValueError("al activo del orquestador sdd le faltan los marcadores de asignación de modelos")
 
     from dxrk.models import claude_model_preset_balanced
 

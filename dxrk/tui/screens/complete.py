@@ -12,8 +12,8 @@ from dxrk.tui.context import get_ctx
 
 class CompleteScreen(Screen):
     BINDINGS = [
-        Binding("enter", "finish", "Finish"),
-        Binding("escape", "finish", "Finish"),
+        Binding("enter", "finish", "Finalizar"),
+        Binding("escape", "finish", "Finalizar"),
     ]
 
     def compose(self) -> ComposeResult:
@@ -35,41 +35,41 @@ class CompleteScreen(Screen):
                     failed.append(step)
 
         if failed:
-            lines = ["[bold red]Installation completed with errors.[/]", ""]
-            lines.append("[bold]Failed steps[/]")
+            lines = ["[bold red]La instalación terminó con errores.[/]", ""]
+            lines.append("[bold]Pasos fallidos[/]")
             for step in failed:
                 lines.append(f"  [red]✗ {step.id}[/]")
                 for line in step.error.split("\n"):
                     lines.append(f"    [dim]{line}[/]")
             lines.append("")
-            lines.append("[yellow]Rollback may have been performed — check the state above.[/]")
+            lines.append("[yellow]Es posible que se haya revertido — revisa el estado anterior.[/]")
             lines.append("")
-            lines.append("[bold]What to do[/]")
-            lines.append("  1. Check the error messages above")
-            lines.append("  2. Fix the underlying issue (missing deps, permissions, etc.)")
-            lines.append("  3. Run Dxrk again to retry")
+            lines.append("[bold]Qué hacer[/]")
+            lines.append("  1. Revisa los mensajes de error anteriores")
+            lines.append("  2. Corrige el problema de fondo (dependencias faltantes, permisos, etc.)")
+            lines.append("  3. Ejecuta Dxrk de nuevo para reintentar")
             lines.append("")
-            lines.append("[dim]Press Enter to return to welcome.[/]")
+            lines.append("[dim]Pulsa Enter para volver al inicio.[/]")
             content.update("\n".join(lines))
         else:
-            lines = ["[bold green]Done! Your AI agents are ready.[/]", ""]
+            lines = ["[bold green]¡Listo! Tus agentes de IA están preparados.[/]", ""]
             n_agents = len(ctx.selected_agents) or 0
             n_components = len(ctx.selected_components) or 0
-            lines.append(f"  [bold]Configured agents[/]  [green]{n_agents}[/]")
-            lines.append(f"  [bold]Installed components[/]  [green]{n_components}[/]")
+            lines.append(f"  [bold]Agentes configurados[/]  [green]{n_agents}[/]")
+            lines.append(f"  [bold]Componentes instalados[/]  [green]{n_components}[/]")
             lines.append("")
-            lines.append("[bold]Next steps[/]")
-            lines.append("  1. Set your API keys")
-            lines.append("  2. Run your selected agent")
-            lines.append("  3. Try /sdd-new my-feature")
+            lines.append("[bold]Próximos pasos[/]")
+            lines.append("  1. Configura tus claves de API")
+            lines.append("  2. Ejecuta tu agente seleccionado")
+            lines.append("  3. Prueba /sdd-new my-feature")
             lines.append("")
             if any(c.value == "DXRK_GUARDIAN" for c in ctx.selected_components):
-                lines.append("[bold]GGA (per project)[/]")
-                lines.append("  GGA was installed globally.")
-                lines.append("  In each repo run: gga init")
-                lines.append("  Then run: gga install")
+                lines.append("[bold]GGA (por proyecto)[/]")
+                lines.append("  GGA se instaló de forma global.")
+                lines.append("  En cada repo ejecuta: gga init")
+                lines.append("  Luego ejecuta: gga install")
                 lines.append("")
-            lines.append("[dim]Press Enter to return to welcome.[/]")
+            lines.append("[dim]Pulsa Enter para volver al inicio.[/]")
             content.update("\n".join(lines))
 
         return Widget._render(self)

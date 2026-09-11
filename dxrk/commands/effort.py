@@ -10,11 +10,11 @@ from .registry import Command, CommandContext, Registry
 valid_effort_levels = ["low", StrMedium2, "high", "max", "auto"]
 
 _EFFORT_DESCRIPTIONS = {
-    "low": "Quick, straightforward implementation",
-    StrMedium2: "Balanced approach with standard testing",
-    "high": "Comprehensive implementation with extensive testing",
-    "max": "Maximum capability with deepest reasoning",
-    "auto": "Default effort level for the current model",
+    "low": "Implementación rápida y directa",
+    StrMedium2: "Enfoque equilibrado con pruebas estándar",
+    "high": "Implementación completa con pruebas extensas",
+    "max": "Capacidad máxima con el razonamiento más profundo",
+    "auto": "Nivel de esfuerzo predeterminado del modelo actual",
 }
 
 
@@ -30,9 +30,9 @@ def register_effort_command(reg: Registry) -> None:
         out = ctx.out
 
         if len(ctx.args) == 0:
-            out.write("Current effort level: auto\n")
+            out.write("Nivel de esfuerzo actual: auto\n")
             out.write("\n")
-            out.write("Available levels:\n")
+            out.write("Niveles disponibles:\n")
             for level in valid_effort_levels:
                 out.write(f"  {level}\n")
             return 0
@@ -43,27 +43,26 @@ def register_effort_command(reg: Registry) -> None:
 
         if level not in valid_effort_levels:
             ctx.err.write(
-                f"Error: invalid effort level: {level}. "
-                f"Valid options: {', '.join(valid_effort_levels)}\n"
+                f"Error: nivel de esfuerzo inválido: {level}. Opciones válidas: {', '.join(valid_effort_levels)}\n"
             )
             return 1
 
         description = effort_description(level)
-        out.write(f"Effort level set to {level}: {description}\n")
+        out.write(f"Nivel de esfuerzo fijado en {level}: {description}\n")
         return 0
 
     cmd = Command(
         name="effort",
-        short="Set the reasoning effort level",
+        short="Fijar el nivel de esfuerzo de razonamiento",
         long=(
-            "Set the effort level for model reasoning.\n\n"
-            "Effort levels:\n"
-            "  low    - Quick, straightforward implementation\n"
-            "  medium - Balanced approach with standard testing\n"
-            "  high   - Comprehensive implementation with extensive testing\n"
-            "  max    - Maximum capability with deepest reasoning\n"
-            "  auto   - Use the default effort level for the current model\n\n"
-            "If no level is provided, shows the current effort level."
+            "Fijar el nivel de esfuerzo para el razonamiento del modelo.\n\n"
+            "Niveles de esfuerzo:\n"
+            "  low    - Implementación rápida y directa\n"
+            "  medium - Enfoque equilibrado con pruebas estándar\n"
+            "  high   - Implementación completa con pruebas extensas\n"
+            "  max    - Capacidad máxima con el razonamiento más profundo\n"
+            "  auto   - Usar el nivel de esfuerzo predeterminado del modelo actual\n\n"
+            "Si no se indica un nivel, muestra el nivel de esfuerzo actual."
         ),
         max_args=1,
         run=run,

@@ -9,16 +9,16 @@ import os
 from .registry import Command, CommandContext, Registry
 
 _THEMES = {
-    "default": ("dark", "dark blue/green palette"),
-    "dark": ("true", "black background, light text"),
-    "light": ("false", "white background, dark text"),
-    "dracula": ("true", "dracula color palette"),
-    "monokai": ("true", "monokai color palette"),
-    "nord": ("true", "nord color palette"),
-    "solarized": ("true", "solarized color palette"),
-    "github": ("false", "github light palette"),
-    "gruvbox": ("true", "gruvbox color palette"),
-    "catppuccin": ("true", "catppuccin color palette"),
+    "default": ("dark", "paleta azul oscuro/verde"),
+    "dark": ("true", "fondo negro, texto claro"),
+    "light": ("false", "fondo blanco, texto oscuro"),
+    "dracula": ("true", "paleta de colores dracula"),
+    "monokai": ("true", "paleta de colores monokai"),
+    "nord": ("true", "paleta de colores nord"),
+    "solarized": ("true", "paleta de colores solarized"),
+    "github": ("false", "paleta clara github"),
+    "gruvbox": ("true", "paleta de colores gruvbox"),
+    "catppuccin": ("true", "paleta de colores catppuccin"),
 }
 
 
@@ -48,8 +48,8 @@ def register_theme_command(reg: Registry) -> None:
         out = ctx.out
         if not ctx.args:
             active = current_theme()
-            out.write(f"Current theme: {active}\n\n")
-            out.write("NAME\tDARK\tDESCRIPTION\n")
+            out.write(f"Tema actual: {active}\n\n")
+            out.write("NOMBRE\tOSCURO\tDESCRIPCIÓN\n")
             for name, (dark, desc) in _THEMES.items():
                 marker = " *" if name == active else ""
                 out.write(f"{name}{marker}\t{dark}\t{desc}\n")
@@ -57,15 +57,15 @@ def register_theme_command(reg: Registry) -> None:
 
         name = ctx.args[0]
         if name not in _THEMES:
-            ctx.err.write(f"Error: unknown theme {name}\n")
+            ctx.err.write(f"Error: tema desconocido {name}\n")
             return 1
         set_current_theme(name)
-        out.write(f"Theme set to {name}\n")
+        out.write(f"Tema fijado en {name}\n")
         return 0
 
     cmd = Command(
         name="theme",
-        short="List or set the active theme",
+        short="Listar o fijar el tema activo",
         max_args=1,
         run=run,
     )

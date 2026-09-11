@@ -48,7 +48,7 @@ def register_plan_command(reg: Registry) -> None:
         out = ctx.out
         content = _load_plan(ctx.cwd)
         if not content:
-            out.write("No plan file found at .dxrk/plan.md\n")
+            out.write("No se encontró el archivo de plan en .dxrk/plan.md\n")
             return 0
         out.write(content)
         if not content.endswith("\n"):
@@ -63,9 +63,9 @@ def register_plan_command(reg: Registry) -> None:
             content = "# Plan\n\n"
         content += f"- [ ] {task}\n"
         if not _write_plan(ctx.cwd, content):
-            ctx.err.write("Error: write plan file\n")
+            ctx.err.write("Error: al escribir el archivo de plan\n")
             return 1
-        out.write(f"Added task: {task}\n")
+        out.write(f"Tarea agregada: {task}\n")
         return 0
 
     def done_run(ctx: CommandContext) -> int:
@@ -73,12 +73,12 @@ def register_plan_command(reg: Registry) -> None:
         try:
             index = int(ctx.args[0])
         except ValueError:
-            ctx.err.write(f"Error: invalid task number {ctx.args[0]}\n")
+            ctx.err.write(f"Error: número de tarea inválido {ctx.args[0]}\n")
             return 1
         content = _load_plan(ctx.cwd)
         items = _task_items(content)
         if index < 1 or index > len(items):
-            ctx.err.write("Error: task number out of range\n")
+            ctx.err.write("Error: número de tarea fuera de rango\n")
             return 1
         new_content = []
         count = 0
@@ -90,21 +90,21 @@ def register_plan_command(reg: Registry) -> None:
                     line = line.replace("- [ ]", "- [x]", 1)
             new_content.append(line)
         if not _write_plan(ctx.cwd, "\n".join(new_content) + "\n"):
-            ctx.err.write("Error: write plan file\n")
+            ctx.err.write("Error: al escribir el archivo de plan\n")
             return 1
-        out.write(f"Marked task {index} as done\n")
+        out.write(f"Tarea {index} marcada como terminada\n")
         return 0
 
-    show_cmd = Command(name="plan show", short="Show the current plan", run=show_run)
+    show_cmd = Command(name="plan show", short="Mostrar el plan actual", run=show_run)
     add_cmd = Command(
         name="plan add",
-        short="Add a task to the plan",
+        short="Agregar una tarea al plan",
         min_args=1,
         run=add_run,
     )
     done_cmd = Command(
         name="plan done",
-        short="Mark a plan task as done",
+        short="Marcar una tarea del plan como terminada",
         min_args=1,
         max_args=1,
         run=done_run,

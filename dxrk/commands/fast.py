@@ -13,31 +13,31 @@ def register_fast_command(reg: Registry) -> None:
         out = ctx.out
 
         if len(ctx.args) == 0:
-            out.write("Fast mode: toggled (currently available)\n")
-            out.write("Use 'dxrk fast on' or 'dxrk fast off' to set explicitly.\n")
+            out.write("Modo rápido: alternado (disponible actualmente)\n")
+            out.write("Usa 'dxrk fast on' o 'dxrk fast off' para fijarlo explícitamente.\n")
             return 0
 
         arg = ctx.args[0].strip().lower()
         if arg == "on":
-            out.write("Fast mode enabled\n")
+            out.write("Modo rápido activado\n")
             return 0
         if arg == "off":
-            out.write("Fast mode disabled\n")
+            out.write("Modo rápido desactivado\n")
             return 0
-        ctx.err.write(f"Error: invalid argument: {arg}. Use 'on' or 'off'\n")
+        ctx.err.write(f"Error: argumento inválido: {arg}. Usa 'on' o 'off'\n")
         return 1
 
     cmd = Command(
         name="fast",
-        short="Toggle fast mode",
+        short="Alternar el modo rápido",
         long=(
-            "Toggle fast mode for reduced latency at higher cost.\n\n"
-            "Fast mode uses a faster model variant for quick iterations. Billed as\n"
-            "extra usage at a premium rate with separate rate limits.\n\n"
-            "Examples:\n"
-            "  dxrk fast        - Toggle fast mode\n"
-            "  dxrk fast on     - Enable fast mode\n"
-            "  dxrk fast off    - Disable fast mode"
+            "Alternar el modo rápido para menor latencia a mayor costo.\n\n"
+            "El modo rápido usa una variante más veloz del modelo para iteraciones rápidas. Se factura\n"
+            "como uso adicional con una tarifa mayor y límites separados.\n\n"
+            "Ejemplos:\n"
+            "  dxrk fast        - Alternar el modo rápido\n"
+            "  dxrk fast on     - Activar el modo rápido\n"
+            "  dxrk fast off    - Desactivar el modo rápido"
         ),
         max_args=1,
         run=run,

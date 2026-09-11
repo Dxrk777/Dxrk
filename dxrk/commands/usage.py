@@ -12,17 +12,17 @@ def register_usage_command(reg: Registry) -> None:
     def run(ctx: CommandContext) -> int:
         out = ctx.out
         if ctx.reg is None:
-            ctx.err.write("Error: no registry available\n")
+            ctx.err.write("Error: no hay registro disponible\n")
             return 1
 
-        out.write("Usage: dxrk <command> [flags]\n\n")
-        out.write("Commands:\n")
+        out.write("Uso: dxrk <comando> [flags]\n\n")
+        out.write("Comandos:\n")
         for cmd in ctx.reg.commands():
             if " " in cmd.name:
                 continue
             short = cmd.short or ""
             out.write(f"  {cmd.name:<22} {short}\n")
-        out.write("\nSubcommands:\n")
+        out.write("\nSubcomandos:\n")
         for cmd in ctx.reg.commands():
             if " " in cmd.name:
                 short = cmd.short or ""
@@ -31,7 +31,7 @@ def register_usage_command(reg: Registry) -> None:
 
     cmd = Command(
         name="usage",
-        short="Show usage overview",
+        short="Mostrar el resumen de uso",
         run=run,
     )
     reg.add_command(cmd)

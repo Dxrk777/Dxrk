@@ -60,19 +60,19 @@ def register_memory_command(reg: Registry) -> None:
         total_kb, available_kb = _meminfo()
         rss_kb = _process_rss_kb()
 
-        out.write("Memory Usage\n")
-        out.write("────────────\n")
+        out.write("Uso de memoria\n")
+        out.write("──────────────\n")
         if total_kb:
             used_kb = total_kb - available_kb
-            out.write(f"  System:  {used_kb / 1024:.0f} MB used of {total_kb / 1024:.0f} MB\n")
+            out.write(f"  Sistema:  {used_kb / 1024:.0f} MB en uso de {total_kb / 1024:.0f} MB\n")
         else:
-            out.write("  System:  unknown\n")
-        out.write(f"  Process: {rss_kb / 1024:.1f} MB (RSS)\n")
+            out.write("  Sistema:  desconocido\n")
+        out.write(f"  Proceso: {rss_kb / 1024:.1f} MB (RSS)\n")
         return 0
 
     cmd = Command(
         name="memory",
-        short="Show memory usage",
+        short="Mostrar el uso de memoria",
         run=run,
     )
     reg.add_command(cmd)

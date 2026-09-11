@@ -20,7 +20,7 @@ def tag_add_cmd() -> Command:
         session_id = ctx.args[0]
         tag_name = ctx.args[1].strip()
         if tag_name == "":
-            ctx.err.write("Error: tag name cannot be empty\n")
+            ctx.err.write("Error: el nombre de la etiqueta no puede estar vacío\n")
             return 1
 
         try:
@@ -31,22 +31,22 @@ def tag_add_cmd() -> Command:
 
         s = _find_session(sessions, session_id)
         if s is None:
-            ctx.err.write(f"Error: session {go_quote(session_id)} not found\n")
+            ctx.err.write(f"Error: sesión {go_quote(session_id)} no encontrada\n")
             return 1
 
         for t in s.tags:
             if t == tag_name:
-                out.write(f"Tag {go_quote(tag_name)} already exists on session {s.id[:8]}\n")
+                out.write(f"La etiqueta {go_quote(tag_name)} ya existe en la sesión {s.id[:8]}\n")
                 return 0
 
         s.tags.append(tag_name)
         if not save_session(s):
-            ctx.err.write("Error: save tagged session\n")
+            ctx.err.write("Error: al guardar la sesión etiquetada\n")
             return 1
-        out.write(f"Added tag {go_quote(tag_name)} to session {s.id[:8]} — {s.title}\n")
+        out.write(f"Etiqueta {go_quote(tag_name)} agregada a la sesión {s.id[:8]} — {s.title}\n")
         return 0
 
-    return Command(name="tag add", short="Add a tag to a session", min_args=2, max_args=2, run=run)
+    return Command(name="tag add", short="Agregar una etiqueta a una sesión", min_args=2, max_args=2, run=run)
 
 
 def tag_remove_cmd() -> Command:
@@ -63,7 +63,7 @@ def tag_remove_cmd() -> Command:
 
         s = _find_session(sessions, session_id)
         if s is None:
-            ctx.err.write(f"Error: session {go_quote(session_id)} not found\n")
+            ctx.err.write(f"Error: sesión {go_quote(session_id)} no encontrada\n")
             return 1
 
         filtered: list[str] = []
@@ -75,19 +75,17 @@ def tag_remove_cmd() -> Command:
             filtered.append(t)
 
         if not found:
-            ctx.err.write(
-                f"Error: tag {go_quote(tag_name)} not found on session {s.id[:8]}\n"
-            )
+            ctx.err.write(f"Error: etiqueta {go_quote(tag_name)} no encontrada en la sesión {s.id[:8]}\n")
             return 1
 
         s.tags = filtered
         if not save_session(s):
-            ctx.err.write("Error: save session\n")
+            ctx.err.write("Error: al guardar la sesión\n")
             return 1
-        out.write(f"Removed tag {go_quote(tag_name)} from session {s.id[:8]}\n")
+        out.write(f"Etiqueta {go_quote(tag_name)} eliminada de la sesión {s.id[:8]}\n")
         return 0
 
-    return Command(name="tag remove", short="Remove a tag from a session", min_args=2, max_args=2, run=run)
+    return Command(name="tag remove", short="Eliminar una etiqueta de una sesión", min_args=2, max_args=2, run=run)
 
 
 def tag_list_cmd() -> Command:
@@ -100,15 +98,15 @@ def tag_list_cmd() -> Command:
             return 1
 
         if not s.tags:
-            out.write(f"Session {s.id[:8]} has no tags.\n")
+            out.write(f"La sesión {s.id[:8]} no tiene etiquetas.\n")
             return 0
 
-        out.write(f"Tags for session {s.id[:8]} ({s.title}):\n")
+        out.write(f"Etiquetas de la sesión {s.id[:8]} ({s.title}):\n")
         for t in s.tags:
             out.write(f"  - {t}\n")
         return 0
 
-    return Command(name="tag list", short="List tags on a session", min_args=1, max_args=1, run=run)
+    return Command(name="tag list", short="Listar las etiquetas de una sesión", min_args=1, max_args=1, run=run)
 
 
 def tag_search_cmd() -> Command:
@@ -125,10 +123,10 @@ def tag_search_cmd() -> Command:
         matches = [s for s in sessions if tag_name in s.tags]
 
         if not matches:
-            out.write(f"No sessions found with tag {go_quote(tag_name)}\n")
+            out.write(f"No se encontraron sesiones con la etiqueta {go_quote(tag_name)}\n")
             return 0
 
-        out.write(f"Sessions with tag {go_quote(tag_name)} ({len(matches)}):\n\n")
+        out.write(f"Sesiones con la etiqueta {go_quote(tag_name)} ({len(matches)}):\n\n")
         for s in matches:
             title = s.title
             if len(title) > 40:
@@ -136,18 +134,20 @@ def tag_search_cmd() -> Command:
             out.write(f"  {s.id[:8]}  {title:<40}  {_fmt_ts_short(s.updated_at)}\n")
         return 0
 
-    return Command(name="tag search", short="Find sessions with a specific tag", min_args=1, max_args=1, run=run)
+    return Command(
+        name="tag search", short="Buscar sesiones con una etiqueta específica", min_args=1, max_args=1, run=run
+    )
 
 
 def tag_parent_cmd() -> Command:
     def run(ctx: CommandContext) -> int:
-        ctx.err.write("Error: use 'dxrk tag add', 'remove', 'list', or 'search'\n")
+        ctx.err.write("Error: usa 'dxrk tag add', 'remove', 'list' o 'search'\n")
         return 1
 
     return Command(
         name="tag",
-        short="Manage session tags",
-        long="Add, remove, or list tags on conversation sessions for organization.",
+        short="Gestionar las etiquetas de sesión",
+        long="Agregar, eliminar o listar etiquetas en sesiones de conversación para organizarlas.",
         run=run,
     )
 

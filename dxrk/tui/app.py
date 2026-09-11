@@ -68,35 +68,35 @@ class OptionCard(Container):
 # ── Welcome Screen ────────────────────────────────────────────────────
 
 WELCOME_OPTIONS = [
-    ("Express Install", "Install everything at once (Full Dxrk)"),
-    ("Install / Configure", "Set up agents, components, and tools"),
-    ("Upgrade", "Upgrade installed components"),
-    ("Sync", "Sync configuration to disk"),
-    ("Upgrade + Sync", "Upgrade and sync in one step"),
-    ("Configure Models", "Assign models to SDD phases"),
-    ("Create your own Agent", "Build a custom agent with AI"),
-    ("OpenCode Plugins", "Manage OpenCode community plugins"),
+    ("Instalación exprés", "Instala todo de una vez (Dxrk completo)"),
+    ("Instalar / Configurar", "Configura agentes, componentes y herramientas"),
+    ("Actualizar", "Actualiza los componentes instalados"),
+    ("Sincronizar", "Sincroniza la configuración al disco"),
+    ("Actualizar + Sincronizar", "Actualiza y sincroniza en un paso"),
+    ("Configurar modelos", "Asigna modelos a las fases de SDD"),
+    ("Crea tu propio agente", "Crea un agente personalizado con IA"),
+    ("Plugins de OpenCode", "Gestiona los plugins comunitarios de OpenCode"),
 ]
 
 if False:  # conditionally shown
-    WELCOME_OPTIONS.append(("Profiles", "Manage SDD orchestrator profiles"))
+    WELCOME_OPTIONS.append(("Perfiles", "Gestiona los perfiles del orquestador SDD"))
 
 WELCOME_OPTIONS.extend(
     [
-        ("Backups", "Manage installation backups"),
-        ("Uninstall", "Remove agents and components"),
-        ("Quit", "Exit Dxrk"),
+        ("Copias de seguridad", "Gestiona las copias de seguridad de la instalación"),
+        ("Desinstalar", "Elimina agentes y componentes"),
+        ("Salir", "Salir de Dxrk"),
     ]
 )
 
 
 class WelcomeScreen(Screen):
     BINDINGS = [
-        Binding("up,k", "cursor_up", "Up", show=False),
-        Binding("down,j", "cursor_down", "Down", show=False),
-        Binding("enter", "select", "Select"),
-        Binding("escape", "back", "Back", show=False),
-        Binding("q", "quit", "Quit"),
+        Binding("up,k", "cursor_up", "Arriba", show=False),
+        Binding("down,j", "cursor_down", "Abajo", show=False),
+        Binding("enter", "select", "Seleccionar"),
+        Binding("escape", "back", "Atrás", show=False),
+        Binding("q", "quit", "Salir"),
         Binding("t", "tenant_switcher", "Tenants"),
         Binding("c", "chat", "Chat"),
     ]
@@ -111,11 +111,11 @@ class WelcomeScreen(Screen):
 
     def compose(self) -> ComposeResult:
         with Container(id="welcome-container"):
-            yield Static("[bold cyan]Dxrk[/] Installer", id="title")
+            yield Static("[bold cyan]Dxrk[/] Instalador", id="title")
             # Migrated to ContextVar DI: prefer get_ctx() over STATE
             yield Static(f"v{get_ctx().version}", id="version")
             yield Static(self._tenant_badge(), id="tenant-badge")
-            yield Static("[dim]press t for Tenants[/]", id="tenant-hint")
+            yield Static("[dim]pulsa t para Tenants[/]", id="tenant-hint")
             with VerticalScroll(id="menu"):
                 for i, (title, desc) in enumerate(WELCOME_OPTIONS):
                     with Container(classes=f"menu-item {'focused' if i == 0 else ''}"):
@@ -144,18 +144,18 @@ class WelcomeScreen(Screen):
     def action_select(self) -> None:
         label = WELCOME_OPTIONS[self.cursor][0]
         mapping = {
-            "Express Install": "__express__",
-            "Install / Configure": "detection",
-            "Upgrade": "upgrade",
-            "Sync": "sync",
-            "Upgrade + Sync": "upgrade_sync",
-            "Configure Models": "model_config",
-            "Create your own Agent": "agent_builder_engine",
-            "OpenCode Plugins": "opencode_plugins",
-            "Profiles": "profiles",
-            "Backups": "backups",
-            "Uninstall": "uninstall_mode",
-            "Quit": "__quit__",
+            "Instalación exprés": "__express__",
+            "Instalar / Configurar": "detection",
+            "Actualizar": "upgrade",
+            "Sincronizar": "sync",
+            "Actualizar + Sincronizar": "upgrade_sync",
+            "Configurar modelos": "model_config",
+            "Crea tu propio agente": "agent_builder_engine",
+            "Plugins de OpenCode": "opencode_plugins",
+            "Perfiles": "profiles",
+            "Copias de seguridad": "backups",
+            "Desinstalar": "uninstall_mode",
+            "Salir": "__quit__",
         }
         target = mapping.get(label, "__quit__")
         if target == "__quit__":
@@ -207,15 +207,15 @@ class WelcomeScreen(Screen):
 
 class PlaceholderScreen(Screen):
     BINDINGS = [
-        Binding("escape", "back", "Back"),
-        Binding("q", "quit", "Quit"),
+        Binding("escape", "back", "Atrás"),
+        Binding("q", "quit", "Salir"),
     ]
 
     def compose(self) -> ComposeResult:
         with Container():
             yield Static(f"[bold]{(self.name or 'screen').replace('_', ' ').title()}[/]")
             yield Static("")
-            yield Static("Coming soon")
+            yield Static("Próximamente")
         yield Footer()
 
     def action_back(self) -> None:
@@ -230,15 +230,15 @@ class PlaceholderScreen(Screen):
 
 class DetectionScreen(Screen):
     BINDINGS = [
-        Binding("enter", "continue", "Continue"),
-        Binding("escape", "back", "Back"),
+        Binding("enter", "continue", "Continuar"),
+        Binding("escape", "back", "Atrás"),
     ]
 
     def compose(self) -> ComposeResult:
         with Container(id="detection-container"):
-            yield Static("[bold]System Detection[/]", id="detection-title")
+            yield Static("[bold]Detección del sistema[/]", id="detection-title")
             yield LoadingIndicator(id="detection-spinner")
-            yield Static("Detecting system...", id="detection-status")
+            yield Static("Detectando el sistema...", id="detection-status")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -246,7 +246,7 @@ class DetectionScreen(Screen):
 
     @work(exclusive=True, thread=True)
     async def _run_detection(self) -> None:
-        self.query_one("#detection-status", Static).update("Detecting OS, tools, and dependencies...")
+        self.query_one("#detection-status", Static).update("Detectando SO, herramientas y dependencias...")
         # DI migration: use get_ctx() (ContextVar) — STATE is deprecated proxy
         get_ctx().detection = detect()
         # Keep STATE sync for backward compat (proxy already forwards, explicit for clarity)
@@ -260,27 +260,27 @@ class DetectionScreen(Screen):
 
         d = get_ctx().detection
         if not d:
-            container.mount(Static("[red]Detection failed[/]"))
+            container.mount(Static("[red]La detección falló[/]"))
             return
 
         items = VerticalScroll(id="detection-results")
         container.mount(items)
-        items.mount(Static(f"OS: [green]{d.system.os}[/] / [green]{d.system.arch}[/]"))
+        items.mount(Static(f"SO: [green]{d.system.os}[/] / [green]{d.system.arch}[/]"))
         items.mount(Static(f"Shell: [green]{d.system.shell}[/]"))
-        items.mount(Static(f"Package Manager: [green]{d.system.profile.package_manager}[/]"))
+        items.mount(Static(f"Gestor de paquetes: [green]{d.system.profile.package_manager}[/]"))
         items.mount(Static(""))
-        items.mount(Static("[bold]Tools:[/]"))
+        items.mount(Static("[bold]Herramientas:[/]"))
         for name, status in d.tools.items():
             c = "green" if status.installed else "red"
             v = f"  ({status.path})" if status.installed else ""
             items.mount(Static(f"  [{c}]{'✅' if status.installed else '❌'} {name}{v}[/]"))
         items.mount(Static(""))
-        items.mount(Static("[bold]Configs Found:[/]"))
+        items.mount(Static("[bold]Configuraciones encontradas:[/]"))
         for cfg in d.configs:
             items.mount(Static(f"  📄 {cfg.path}"))
         items.mount(Static(""))
-        items.mount(Button("Continue", variant="primary", id="detection-continue"))
-        self.query_one("#detection-status", Static).update("Detection complete. Press Enter or click Continue.")
+        items.mount(Button("Continuar", variant="primary", id="detection-continue"))
+        self.query_one("#detection-status", Static).update("Detección completa. Pulsa Enter o haz clic en Continuar.")
 
     @on(Button.Pressed, "#detection-continue")
     def on_continue_click(self) -> None:
@@ -296,41 +296,41 @@ class DetectionScreen(Screen):
 # ── Agent Selection Screen ────────────────────────────────────────────
 
 AGENT_OPTIONS: list[tuple[AgentID, str, str]] = [
-    (AgentID.CLAUDE_CODE, "Claude Code", "Anthropic's CLI agent"),
-    (AgentID.OPENCODE, "OpenCode", "Open-source coding agent"),
-    (AgentID.KILOCODE, "Kilocode", "Lightweight agent"),
-    (AgentID.GEMINI_CLI, "Gemini CLI", "Google's coding agent"),
-    (AgentID.CURSOR, "Cursor", "AI-first IDE"),
-    (AgentID.VSCODE_COPILOT, "VS Code Copilot", "GitHub's AI pair programmer"),
-    (AgentID.CODEX, "Codex", "CLI coding agent"),
-    (AgentID.ANTIGRAVITY, "Antigravity", "Agentic coding tool"),
-    (AgentID.WINDSURF, "Windsurf", "AI IDE"),
-    (AgentID.KIMI, "Kimi", "AI assistant with long context"),
-    (AgentID.QWEN_CODE, "Qwen Code", "Alibaba's coding agent"),
-    (AgentID.KIRO_IDE, "Kiro IDE", "AI-native IDE"),
+    (AgentID.CLAUDE_CODE, "Claude Code", "Agente CLI de Anthropic"),
+    (AgentID.OPENCODE, "OpenCode", "Agente de código abierto"),
+    (AgentID.KILOCODE, "Kilocode", "Agente ligero"),
+    (AgentID.GEMINI_CLI, "Gemini CLI", "Agente de código de Google"),
+    (AgentID.CURSOR, "Cursor", "IDE con IA integrada"),
+    (AgentID.VSCODE_COPILOT, "VS Code Copilot", "Pareja de programación con IA de GitHub"),
+    (AgentID.CODEX, "Codex", "Agente de programación para CLI"),
+    (AgentID.ANTIGRAVITY, "Antigravity", "Herramienta de programación agéntica"),
+    (AgentID.WINDSURF, "Windsurf", "IDE con IA"),
+    (AgentID.KIMI, "Kimi", "Asistente de IA con contexto amplio"),
+    (AgentID.QWEN_CODE, "Qwen Code", "Agente de código de Alibaba"),
+    (AgentID.KIRO_IDE, "Kiro IDE", "IDE nativo de IA"),
 ]
 
 
 class AgentsScreen(Screen):
     BINDINGS = [
-        Binding("up,k", "cursor_up", "Up", show=False),
-        Binding("down,j", "cursor_down", "Down", show=False),
-        Binding("space", "toggle", "Toggle"),
-        Binding("enter", "continue", "Continue"),
-        Binding("escape", "back", "Back"),
+        Binding("up,k", "cursor_up", "Arriba", show=False),
+        Binding("down,j", "cursor_down", "Abajo", show=False),
+        Binding("space", "toggle", "Alternar"),
+        Binding("enter", "continue", "Continuar"),
+        Binding("escape", "back", "Atrás"),
     ]
 
     cursor = reactive(0)
 
     def compose(self) -> ComposeResult:
         with Container(id="agents-container"):
-            yield Static("[bold]Select Agents to Install[/]", id="agents-title")
+            yield Static("[bold]Seleccionar agentes a instalar[/]", id="agents-title")
             with VerticalScroll(id="agent-list"):
                 for i, (aid, name, desc) in enumerate(AGENT_OPTIONS):
                     checked = " " if aid not in get_ctx().selected_agents else "✓"
                     yield Static(f"{'[' if i == 0 else ' '}{checked}{']' if i == 0 else ' '} {name}")
             yield Static("")
-            yield Static("[dim]Space: toggle • Enter: continue • Esc: back[/]")
+            yield Static("[dim]Espacio: alternar • Enter: continuar • Esc: atrás[/]")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -375,32 +375,32 @@ class AgentsScreen(Screen):
 # ── Persona Screen ────────────────────────────────────────────────────
 
 PERSONA_OPTIONS = [
-    (PersonaID.DXRK, "Dxrk", "Full SDD ecosystem with orchestrator, skills, MCP"),
-    (PersonaID.NEUTRAL, "Neutral", "Basic configuration without orchestration"),
-    (PersonaID.CUSTOM, "Custom", "Manual selection of all options"),
+    (PersonaID.DXRK, "Dxrk", "Ecosistema SDD completo con orquestador, habilidades y MCP"),
+    (PersonaID.NEUTRAL, "Neutra", "Configuración básica sin orquestación"),
+    (PersonaID.CUSTOM, "Personalizada", "Selección manual de todas las opciones"),
 ]
 
 
 class PersonaScreen(Screen):
     BINDINGS = [
-        Binding("up,k", "cursor_up", "Up", show=False),
-        Binding("down,j", "cursor_down", "Down", show=False),
-        Binding("enter", "select", "Select"),
-        Binding("escape", "back", "Back"),
+        Binding("up,k", "cursor_up", "Arriba", show=False),
+        Binding("down,j", "cursor_down", "Abajo", show=False),
+        Binding("enter", "select", "Seleccionar"),
+        Binding("escape", "back", "Atrás"),
     ]
 
     cursor = reactive(0)
 
     def compose(self) -> ComposeResult:
         with Container(id="persona-container"):
-            yield Static("[bold]Select Persona[/]", id="persona-title")
+            yield Static("[bold]Seleccionar persona[/]", id="persona-title")
             with Vertical(id="persona-list"):
                 for i, (pid, name, desc) in enumerate(PERSONA_OPTIONS):
                     with Container(classes="persona-card"):
                         yield Static(f"[bold]{name}[/]", classes="persona-name")
                         yield Static(desc, classes="persona-desc")
             yield Static("")
-            yield Static("[dim]Enter: select • Esc: back[/]")
+            yield Static("[dim]Enter: seleccionar • Esc: atrás[/]")
         yield Footer()
 
     def action_cursor_up(self) -> None:
@@ -431,35 +431,35 @@ class PersonaScreen(Screen):
 PRESET_OPTIONS = [
     (
         PresetID.FULL_DXRK,
-        "Full Dxrk",
-        "Complete ecosystem: all components + agents",
+        "Dxrk completo",
+        "Ecosistema completo: todos los componentes + agentes",
     ),
-    (PresetID.ECOSYSTEM_ONLY, "Ecosystem Only", "Components only, no agents"),
-    (PresetID.MINIMAL, "Minimal", "Only essential tools"),
-    (PresetID.CUSTOM, "Custom", "Manually select every option"),
+    (PresetID.ECOSYSTEM_ONLY, "Solo ecosistema", "Solo componentes, sin agentes"),
+    (PresetID.MINIMAL, "Mínimo", "Solo herramientas esenciales"),
+    (PresetID.CUSTOM, "Personalizado", "Selecciona cada opción manualmente"),
 ]
 
 
 class PresetScreen(Screen):
     BINDINGS = [
-        Binding("up,k", "cursor_up", "Up", show=False),
-        Binding("down,j", "cursor_down", "Down", show=False),
-        Binding("enter", "select", "Select"),
-        Binding("escape", "back", "Back"),
+        Binding("up,k", "cursor_up", "Arriba", show=False),
+        Binding("down,j", "cursor_down", "Abajo", show=False),
+        Binding("enter", "select", "Seleccionar"),
+        Binding("escape", "back", "Atrás"),
     ]
 
     cursor = reactive(0)
 
     def compose(self) -> ComposeResult:
         with Container(id="preset-container"):
-            yield Static("[bold]Select Preset[/]", id="preset-title")
+            yield Static("[bold]Seleccionar preset[/]", id="preset-title")
             with Vertical(id="preset-list"):
                 for i, (pid, name, desc) in enumerate(PRESET_OPTIONS):
                     with Container(classes="preset-card"):
                         yield Static(f"[bold]{name}[/]", classes="preset-name")
                         yield Static(desc, classes="preset-desc")
             yield Static("")
-            yield Static("[dim]Enter: select • Esc: back[/]")
+            yield Static("[dim]Enter: seleccionar • Esc: atrás[/]")
         yield Footer()
 
     def action_cursor_up(self) -> None:
@@ -487,33 +487,33 @@ class PresetScreen(Screen):
 # ── SDD Mode Screen ───────────────────────────────────────────────────
 
 SDD_OPTIONS = [
-    (SDDModeID.SINGLE, "Single Agent", "One agent handles all SDD phases"),
+    (SDDModeID.SINGLE, "Agente único", "Un agente gestiona todas las fases de SDD"),
     (
         SDDModeID.MULTI,
-        "Multi Agent",
-        "Dedicated agent per SDD phase (requires model config)",
+        "Multiagente",
+        "Un agente dedicado por fase de SDD (requiere configuración de modelos)",
     ),
 ]
 
 
 class SDDModeScreen(Screen):
     BINDINGS = [
-        Binding("up,k", "cursor_up", "Up", show=False),
-        Binding("down,j", "cursor_down", "Down", show=False),
-        Binding("enter", "select", "Select"),
-        Binding("escape", "back", "Back"),
+        Binding("up,k", "cursor_up", "Arriba", show=False),
+        Binding("down,j", "cursor_down", "Abajo", show=False),
+        Binding("enter", "select", "Seleccionar"),
+        Binding("escape", "back", "Atrás"),
     ]
 
     cursor = reactive(0)
 
     def compose(self) -> ComposeResult:
         with Container():
-            yield Static("[bold]SDD Orchestration Mode[/]", id="sdd-title")
+            yield Static("[bold]Modo de orquestación SDD[/]", id="sdd-title")
             for i, (mid, name, desc) in enumerate(SDD_OPTIONS):
                 with Container(classes=f"option-row {'focused' if i == 0 else ''}"):
                     yield Static(f"[bold]{name}[/]")
                     yield Static(desc)
-            yield Static("[dim]Enter: select • Esc: back[/]")
+            yield Static("[dim]Enter: seleccionar • Esc: atrás[/]")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -547,23 +547,23 @@ class SDDModeScreen(Screen):
 
 class StrictTDDScreen(Screen):
     BINDINGS = [
-        Binding("up,k", "cursor_up", "Up", show=False),
-        Binding("down,j", "cursor_down", "Down", show=False),
-        Binding("enter", "toggle_and_continue", "Toggle & Continue"),
-        Binding("escape", "skip", "Skip"),
+        Binding("up,k", "cursor_up", "Arriba", show=False),
+        Binding("down,j", "cursor_down", "Abajo", show=False),
+        Binding("enter", "toggle_and_continue", "Alternar y continuar"),
+        Binding("escape", "skip", "Omitir"),
     ]
 
     cursor = reactive(0)
 
     def compose(self) -> ComposeResult:
         with Container():
-            yield Static("[bold]Strict TDD Mode[/]")
+            yield Static("[bold]Modo TDD estricto[/]")
             yield Static("")
-            yield Static("When enabled, all SDD phases enforce test-first development.")
-            yield Static("The agent MUST write tests before implementing code.")
+            yield Static("Cuando está activado, todas las fases de SDD exigen programar las pruebas primero.")
+            yield Static("El agente DEBE escribir las pruebas antes de implementar el código.")
             yield Static("")
-            yield Static("  [1] Enable Strict TDD (recommended)")
-            yield Static("  [2] Skip — Standard Mode")
+            yield Static("  [1] Activar TDD estricto (recomendado)")
+            yield Static("  [2] Omitir — Modo estándar")
         yield Footer()
 
     def action_cursor_up(self) -> None:
@@ -588,18 +588,18 @@ class StrictTDDScreen(Screen):
 
 class CompleteScreen(Screen):
     BINDINGS = [
-        Binding("enter", "finish", "Finish"),
-        Binding("escape", "finish", "Finish"),
+        Binding("enter", "finish", "Finalizar"),
+        Binding("escape", "finish", "Finalizar"),
     ]
 
     def compose(self) -> ComposeResult:
         with Container(id="complete-container"):
-            yield Static("[bold green]✓ Installation Complete[/]", id="complete-title")
+            yield Static("[bold green]✓ Instalación completa[/]", id="complete-title")
             yield Static("")
-            yield Static(f"Agents configured: {len(get_ctx().selected_agents) or 'N/A'}")
-            yield Static(f"Components installed: {len(get_ctx().selected_components) or 'N/A'}")
+            yield Static(f"Agentes configurados: {len(get_ctx().selected_agents) or 'N/A'}")
+            yield Static(f"Componentes instalados: {len(get_ctx().selected_components) or 'N/A'}")
             yield Static("")
-            yield Static("[dim]Press Enter to return to the main menu[/]")
+            yield Static("[dim]Pulsa Enter para volver al menú principal[/]")
         yield Footer()
 
     def action_finish(self) -> None:
@@ -611,23 +611,23 @@ class CompleteScreen(Screen):
 
 class UninstallModeScreen(Screen):
     BINDINGS = [
-        Binding("up,k", "cursor_up", "Up", show=False),
-        Binding("down,j", "cursor_down", "Down", show=False),
-        Binding("enter", "select", "Select"),
-        Binding("escape", "back", "Back"),
+        Binding("up,k", "cursor_up", "Arriba", show=False),
+        Binding("down,j", "cursor_down", "Abajo", show=False),
+        Binding("enter", "select", "Seleccionar"),
+        Binding("escape", "back", "Atrás"),
     ]
 
     cursor = reactive(0)
 
     def compose(self) -> ComposeResult:
         with Container():
-            yield Static("[bold]Uninstall Mode[/]")
+            yield Static("[bold]Modo de desinstalación[/]")
             yield Static("")
             modes = [
-                "Partial — select what to remove",
-                "Full — remove all agents and components",
-                "Full Remove — full uninstall including config files",
-                "Clean Install — full uninstall then reinstall",
+                "Parcial — selecciona qué eliminar",
+                "Completa — elimina todos los agentes y componentes",
+                "Eliminación total — desinstalación completa incluyendo archivos de configuración",
+                "Instalación limpia — desinstalación completa y reinstalación",
             ]
             for i, m in enumerate(modes):
                 yield Static(f"  {'▸' if i == 0 else ' '} [{i + 1}] {m}")
@@ -660,21 +660,21 @@ class UninstallModeScreen(Screen):
 
 class BackupsScreen(Screen):
     BINDINGS = [
-        Binding("up,k", "cursor_up", "Up", show=False),
-        Binding("down,j", "cursor_down", "Down", show=False),
-        Binding("enter", "select", "Select"),
-        Binding("escape", "back", "Back"),
+        Binding("up,k", "cursor_up", "Arriba", show=False),
+        Binding("down,j", "cursor_down", "Abajo", show=False),
+        Binding("enter", "select", "Seleccionar"),
+        Binding("escape", "back", "Atrás"),
     ]
 
     cursor = reactive(0)
 
     def compose(self) -> ComposeResult:
         with Container():
-            yield Static("[bold]Backups[/]")
+            yield Static("[bold]Copias de seguridad[/]")
             yield Static("")
-            yield Static("[dim]No backups found.[/]")
+            yield Static("[dim]No se encontraron copias de seguridad.[/]")
             yield Static("")
-            yield Static("[dim]Back[/]")
+            yield Static("[dim]Atrás[/]")
         yield Footer()
 
     def action_cursor_up(self) -> None:
@@ -721,10 +721,10 @@ MODEL_OPTIONS = [
 
 class ModelPickerScreen(Screen):
     BINDINGS = [
-        Binding("up,k", "cursor_up", "Up", show=False),
-        Binding("down,j", "cursor_down", "Down", show=False),
-        Binding("enter", "edit", "Edit"),
-        Binding("escape", "done", "Done"),
+        Binding("up,k", "cursor_up", "Arriba", show=False),
+        Binding("down,j", "cursor_down", "Abajo", show=False),
+        Binding("enter", "edit", "Editar"),
+        Binding("escape", "done", "Listo"),
     ]
 
     cursor = reactive(0)
@@ -732,15 +732,15 @@ class ModelPickerScreen(Screen):
 
     def compose(self) -> ComposeResult:
         with Container():
-            yield Static("[bold]Model Assignments[/]")
-            yield Static("[dim]Configure which model each SDD phase uses[/]")
+            yield Static("[bold]Asignación de modelos[/]")
+            yield Static("[dim]Configura qué modelo usa cada fase de SDD[/]")
             yield Static("")
             for i, phase in enumerate(SDD_PHASES):
                 assignment = get_ctx().model_assignments.get(phase)
-                model_str = f"{assignment.provider_id}/{assignment.model_id}" if assignment else "[dim]not set[/]"
+                model_str = f"{assignment.provider_id}/{assignment.model_id}" if assignment else "[dim]sin asignar[/]"
                 yield Static(f"  {'▸' if i == 0 else ' '} {phase}: {model_str}")
             yield Static("")
-            yield Static("[dim]Enter: edit • Esc: done[/]")
+            yield Static("[dim]Enter: editar • Esc: listo[/]")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -771,10 +771,10 @@ class ModelPickerScreen(Screen):
 
 class ModelSelectScreen(ModalScreen[str]):
     BINDINGS = [
-        Binding("up,k", "cursor_up", "Up", show=False),
-        Binding("down,j", "cursor_down", "Down", show=False),
-        Binding("enter", "select", "Select"),
-        Binding("escape", "cancel", "Cancel"),
+        Binding("up,k", "cursor_up", "Arriba", show=False),
+        Binding("down,j", "cursor_down", "Abajo", show=False),
+        Binding("enter", "select", "Seleccionar"),
+        Binding("escape", "cancel", "Cancelar"),
     ]
 
     cursor = reactive(0)
@@ -786,13 +786,13 @@ class ModelSelectScreen(ModalScreen[str]):
 
     def compose(self) -> ComposeResult:
         with Container():
-            yield Static(f"[bold]Select model for {self.phase}[/]")
+            yield Static(f"[bold]Seleccionar modelo para {self.phase}[/]")
             yield Static("")
             with VerticalScroll():
                 for i, m in enumerate(MODEL_OPTIONS):
                     yield Static(f"  {'▸' if i == 0 else ' '} {m}")
             yield Static("")
-            yield Static("[dim]Enter: select • Esc: cancel[/]")
+            yield Static("[dim]Enter: seleccionar • Esc: cancelar[/]")
         yield Footer()
 
     def action_cursor_up(self) -> None:

@@ -12,36 +12,36 @@ from dxrk.models import AgentID
 from dxrk.tui.context import get_ctx
 
 AGENT_OPTIONS: list[tuple[AgentID, str, str]] = [
-    (AgentID.CLAUDE_CODE, "Claude Code", "Anthropic's CLI agent"),
-    (AgentID.OPENCODE, "OpenCode", "Open-source coding agent"),
-    (AgentID.KILOCODE, "Kilocode", "Lightweight agent"),
-    (AgentID.GEMINI_CLI, "Gemini CLI", "Google's coding agent"),
-    (AgentID.CURSOR, "Cursor", "AI-first IDE"),
-    (AgentID.VSCODE_COPILOT, "VS Code Copilot", "GitHub's AI pair programmer"),
-    (AgentID.CODEX, "Codex", "CLI coding agent"),
-    (AgentID.ANTIGRAVITY, "Antigravity", "Agentic coding tool"),
-    (AgentID.WINDSURF, "Windsurf", "AI IDE"),
-    (AgentID.KIMI, "Kimi", "AI assistant with long context"),
-    (AgentID.QWEN_CODE, "Qwen Code", "Alibaba's coding agent"),
-    (AgentID.KIRO_IDE, "Kiro IDE", "AI-native IDE"),
+    (AgentID.CLAUDE_CODE, "Claude Code", "Agente CLI de Anthropic"),
+    (AgentID.OPENCODE, "OpenCode", "Agente de código abierto"),
+    (AgentID.KILOCODE, "Kilocode", "Agente ligero"),
+    (AgentID.GEMINI_CLI, "Gemini CLI", "Agente de código de Google"),
+    (AgentID.CURSOR, "Cursor", "IDE con IA integrada"),
+    (AgentID.VSCODE_COPILOT, "VS Code Copilot", "Pareja de programación con IA de GitHub"),
+    (AgentID.CODEX, "Codex", "Agente de programación para CLI"),
+    (AgentID.ANTIGRAVITY, "Antigravity", "Herramienta de programación agéntica"),
+    (AgentID.WINDSURF, "Windsurf", "IDE con IA"),
+    (AgentID.KIMI, "Kimi", "Asistente de IA con contexto amplio"),
+    (AgentID.QWEN_CODE, "Qwen Code", "Agente de código de Alibaba"),
+    (AgentID.KIRO_IDE, "Kiro IDE", "IDE nativo de IA"),
 ]
 
 
 class AgentsScreen(Screen):
     BINDINGS = [
-        Binding("up,k", "cursor_up", "Up", show=False),
-        Binding("down,j", "cursor_down", "Down", show=False),
-        Binding("space", "toggle", "Toggle"),
-        Binding("enter", "continue", "Continue"),
-        Binding("escape", "back", "Back"),
+        Binding("up,k", "cursor_up", "Arriba", show=False),
+        Binding("down,j", "cursor_down", "Abajo", show=False),
+        Binding("space", "toggle", "Alternar"),
+        Binding("enter", "continue", "Continuar"),
+        Binding("escape", "back", "Atrás"),
     ]
 
     cursor = reactive(0)
 
     def compose(self) -> ComposeResult:
         with Container(id="agents-container"):
-            yield Static("[bold]Select AI Agents[/]", id="agents-title")
-            yield Static("[dim]Use j/k to move, space to toggle, enter to continue.[/]")
+            yield Static("[bold]Seleccionar agentes de IA[/]", id="agents-title")
+            yield Static("[dim]Usa j/k para moverte, espacio para alternar, enter para continuar.[/]")
             yield Static("")
             with VerticalScroll(id="agent-list"):
                 for i, (aid, name, desc) in enumerate(AGENT_OPTIONS):
@@ -49,10 +49,10 @@ class AgentsScreen(Screen):
                     prefix = "▸" if i == 0 else " "
                     yield Static(f"{prefix}[{checked}] {name}")
             yield Static("")
-            yield Static("  Continue")
-            yield Static("  Back")
+            yield Static("  Continuar")
+            yield Static("  Atrás")
             yield Static("")
-            yield Static("[dim]space: toggle • enter: confirm • esc: back[/]")
+            yield Static("[dim]espacio: alternar • enter: confirmar • esc: atrás[/]")
         yield Footer()
 
     def on_mount(self) -> None:

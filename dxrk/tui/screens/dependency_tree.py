@@ -17,11 +17,11 @@ ALL_COMPONENTS = mvp_components()
 
 class DependencyTreeScreen(Screen):
     BINDINGS = [
-        Binding("up,k", "cursor_up", "Up", show=False),
-        Binding("down,j", "cursor_down", "Down", show=False),
-        Binding("enter", "select", "Select"),
-        Binding("space", "toggle", "Toggle"),
-        Binding("escape", "back", "Back"),
+        Binding("up,k", "cursor_up", "Arriba", show=False),
+        Binding("down,j", "cursor_down", "Abajo", show=False),
+        Binding("enter", "select", "Seleccionar"),
+        Binding("space", "toggle", "Alternar"),
+        Binding("escape", "back", "Atrás"),
     ]
 
     cursor = reactive(0)
@@ -47,7 +47,7 @@ class DependencyTreeScreen(Screen):
         return Widget._render(self)
 
     def _render_preset_plan(self, scroll: VerticalScroll) -> None:
-        scroll.mount(Static("[bold]Install Plan[/]"))
+        scroll.mount(Static("[bold]Plan de instalación[/]"))
         scroll.mount(Static(""))
 
         plan = get_ctx().plan
@@ -55,16 +55,16 @@ class DependencyTreeScreen(Screen):
         added: set[str] = set()
 
         if not ordered:
-            scroll.mount(Static("[yellow]No components selected yet.[/]"))
+            scroll.mount(Static("[yellow]Aún no hay componentes seleccionados.[/]"))
             scroll.mount(Static(""))
         else:
-            scroll.mount(Static("[bold]Components to install[/]"))
+            scroll.mount(Static("[bold]Componentes a instalar[/]"))
             for idx, step in enumerate(ordered):
                 num = f"[dim]{idx + 1}.[/]"
                 name = step.name
-                note = "[green]included[/]"
+                note = "[green]incluido[/]"
                 if hasattr(step, "id") and step.id in added:
-                    note = "[yellow]auto-dependency[/]"
+                    note = "[yellow]dependencia automática[/]"
                 scroll.mount(Static(f"  {num} {name} {note}"))
 
                 found = [c for c in ALL_COMPONENTS if c.id.value == step.id]
@@ -72,7 +72,7 @@ class DependencyTreeScreen(Screen):
                     scroll.mount(Static(f"[dim]     {found[0].description}[/]"))
             scroll.mount(Static(""))
 
-        actions = ["Continue", "Back"]
+        actions = ["Continuar", "Atrás"]
         self._action_statics = []
         for i, label in enumerate(actions):
             prefix = "▸" if i == self.cursor else " "
@@ -80,12 +80,12 @@ class DependencyTreeScreen(Screen):
             self._action_statics.append(s)
             scroll.mount(s)
 
-        scroll.mount(Static("[dim]j/k: navigate • enter: select • esc: back[/]"))
+        scroll.mount(Static("[dim]j/k: navegar • enter: seleccionar • esc: atrás[/]"))
 
     def _render_custom_picker(self, scroll: VerticalScroll) -> None:
-        scroll.mount(Static("[bold]Select Components[/]"))
+        scroll.mount(Static("[bold]Seleccionar componentes[/]"))
         scroll.mount(Static(""))
-        scroll.mount(Static("[dim]Toggle components with enter or space.[/]"))
+        scroll.mount(Static("[dim]Alterna los componentes con enter o espacio.[/]"))
         scroll.mount(Static(""))
 
         selected_set = set(get_ctx().selected_components)
@@ -99,7 +99,7 @@ class DependencyTreeScreen(Screen):
             scroll.mount(Static(f"[dim]    {comp.description}[/]"))
 
         scroll.mount(Static(""))
-        actions = ["Continue", "Back"]
+        actions = ["Continuar", "Atrás"]
         self._action_statics = []
         for i, label in enumerate(actions):
             prefix = "▸" if i == self.cursor - len(ALL_COMPONENTS) else " "
@@ -107,12 +107,12 @@ class DependencyTreeScreen(Screen):
             self._action_statics.append(s)
             scroll.mount(s)
 
-        scroll.mount(Static("[dim]j/k: navigate • space/enter: toggle • esc: back[/]"))
+        scroll.mount(Static("[dim]j/k: navegar • espacio/enter: alternar • esc: atrás[/]"))
 
     def _update_actions(self) -> None:
         if not hasattr(self, "_action_statics"):
             return
-        actions = ["Continue", "Back"]
+        actions = ["Continuar", "Atrás"]
         for i, s in enumerate(self._action_statics):
             prefix = "▸" if i == self.cursor - self._comp_count() else " "
             s.update(f"{prefix} {actions[i]}")

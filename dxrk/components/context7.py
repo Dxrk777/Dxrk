@@ -31,8 +31,7 @@ _VSCODE_CONTEXT7_OVERLAY_JSON = (
 )
 
 _ANTIGRAVITY_CONTEXT7_OVERLAY_JSON = (
-    b'{\n  "mcpServers": {\n    "context7": {\n'
-    b'      "serverUrl": "https://mcp.context7.com/mcp"\n    }\n  }\n}\n'
+    b'{\n  "mcpServers": {\n    "context7": {\n      "serverUrl": "https://mcp.context7.com/mcp"\n    }\n  }\n}\n'
 )
 
 _KIMI_CONTEXT7_OVERLAY_JSON = (
@@ -89,7 +88,7 @@ def inject(home_dir: str, adapter) -> InjectionResult:
         return InjectionResult()
     else:
         raise ValueError(
-            f"context7 injector does not support MCP strategy {strategy} for agent {adapter.agent!r}"
+            f"el inyector de context7 no admite la estrategia MCP {strategy} para el agente {adapter.agent!r}"
         )
 
 
@@ -131,9 +130,7 @@ def _inject_mcp_config_file(home_dir: str, adapter) -> InjectionResult:
     return InjectionResult(Changed=sw.Changed, Files=[path])
 
 
-def _merge_json_file(
-    path: str, overlay: bytes
-) -> tuple[filemerge.WriteResult, bytes | None]:
+def _merge_json_file(path: str, overlay: bytes) -> tuple[filemerge.WriteResult, bytes | None]:
     base_json = _os_read_file(path)
     merged = filemerge.merge_json_objects(base_json, overlay)
     wr = filemerge.write_file_atomic(path, merged, 0o644)

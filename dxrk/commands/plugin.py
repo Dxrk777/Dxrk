@@ -42,10 +42,10 @@ def register_plugin_command(reg: Registry) -> None:
         out = ctx.out
         plugins = list_plugins()
         if not plugins:
-            out.write("No plugins found.\n")
-            out.write(f"Install plugins under {plugins_dir()}\n")
+            out.write("No se encontraron plugins.\n")
+            out.write(f"Instala plugins en {plugins_dir()}\n")
             return 0
-        out.write("NAME\tVERSION\tPATH\n")
+        out.write("NOMBRE\tVERSIÓN\tRUTA\n")
         for name, version, path in plugins:
             out.write(f"{name}\t{version}\t{path}\n")
         return 0
@@ -62,9 +62,9 @@ def register_plugin_command(reg: Registry) -> None:
                 with open(manifest, "w", encoding="utf-8") as f:
                     json.dump({"name": name, "version": "0.1.0"}, f, indent=2)
         except OSError as exc:
-            ctx.err.write(f"Error: install plugin: {exc}\n")
+            ctx.err.write(f"Error: al instalar el plugin: {exc}\n")
             return 1
-        out.write(f"Installed plugin {name}\n")
+        out.write(f"Plugin {name} instalado\n")
         return 0
 
     def remove_run(ctx: CommandContext) -> int:
@@ -72,21 +72,21 @@ def register_plugin_command(reg: Registry) -> None:
         name = ctx.args[0]
         dir_path = os.path.join(plugins_dir(), name)
         if not os.path.isdir(dir_path):
-            ctx.err.write(f"Error: plugin {name} not found\n")
+            ctx.err.write(f"Error: plugin {name} no encontrado\n")
             return 1
         try:
             import shutil
 
             shutil.rmtree(dir_path)
         except OSError as exc:
-            ctx.err.write(f"Error: remove plugin: {exc}\n")
+            ctx.err.write(f"Error: al eliminar el plugin: {exc}\n")
             return 1
-        out.write(f"Removed plugin {name}\n")
+        out.write(f"Plugin {name} eliminado\n")
         return 0
 
-    list_cmd = Command(name="plugin list", short="List installed plugins", run=list_run)
-    add_cmd = Command(name="plugin add", short="Install a plugin", min_args=1, max_args=1, run=add_run)
-    remove_cmd = Command(name="plugin remove", short="Remove a plugin", min_args=1, max_args=1, run=remove_run)
+    list_cmd = Command(name="plugin list", short="Listar los plugins instalados", run=list_run)
+    add_cmd = Command(name="plugin add", short="Instalar un plugin", min_args=1, max_args=1, run=add_run)
+    remove_cmd = Command(name="plugin remove", short="Eliminar un plugin", min_args=1, max_args=1, run=remove_run)
     reg.add_command(list_cmd)
     reg.add_command(add_cmd)
     reg.add_command(remove_cmd)

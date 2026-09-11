@@ -126,7 +126,7 @@ class Service:
         self.DXRK_MEMORY_uninstall_scope = DxrkMemoryUninstallScope.GLOBAL
 
         if not agent_ids:
-            raise ValueError("partial uninstall requires at least one agent")
+            raise ValueError("la desinstalación parcial requiere al menos un agente")
 
         components = component_ids if component_ids else list(_ALL_MANAGED_COMPONENTS)
         plan = self._build_plan(agent_ids, components)
@@ -141,7 +141,7 @@ class Service:
         plan = self._build_plan(all_agents, _ALL_MANAGED_COMPONENTS)
         result = self._execute_plan(plan, all_agents)
         result.ManualActions.append(
-            "To completely remove dxrk from your system, delete the executable (e.g., rm -f $(which dxrk-py))"
+            "Para eliminar dxrk por completo de tu sistema, elimina el ejecutable (p. ej., rm -f $(which dxrk-py))"
         )
         return result
 
@@ -646,9 +646,9 @@ def _remove_dir_if_empty_recursive(path: str) -> bool:
 def _read_managed_file(path: str) -> str:
     st = os.lstat(path)
     if (st.st_mode & 0o170000) == 0o120000:
-        raise PermissionError(f"refusing to read symlink {path!r}")
+        raise PermissionError(f"se rechazó la lectura del enlace simbólico {path!r}")
     if st.st_size > _MAX_MANAGED_FILE_SIZE:
-        raise ValueError(f"file {path!r} exceeds max managed size {_MAX_MANAGED_FILE_SIZE} bytes")
+        raise ValueError(f"el archivo {path!r} supera el tamaño máximo gestionado de {_MAX_MANAGED_FILE_SIZE} bytes")
     with open(path) as f:
         return f.read()
 
@@ -697,7 +697,7 @@ def _manual_action_for_non_empty_directory(path: str) -> str | None:
         return None
     if not entries:
         return None
-    return f"Remove manually if no longer needed: {path} (directory still contains non-managed files)"
+    return f"Elimínalo manualmente si ya no lo necesitas: {path} (el directorio aún contiene archivos no gestionados)"
 
 
 def _dedupe_sorted_strings(items: list[str]) -> list[str]:

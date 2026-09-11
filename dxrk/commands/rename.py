@@ -16,12 +16,12 @@ def register_rename_command(reg: Registry) -> None:
         session_id = ctx.args[0]
         new_name = ctx.args[1].strip()
         if new_name == "":
-            ctx.err.write("Error: new name cannot be empty\n")
+            ctx.err.write("Error: el nuevo nombre no puede estar vacío\n")
             return 1
 
         sessions = list_session_files()
         if sessions is None:
-            ctx.err.write("Error: could not list sessions\n")
+            ctx.err.write("Error: no se pudieron listar las sesiones\n")
             return 1
 
         for s in sessions:
@@ -31,18 +31,18 @@ def register_rename_command(reg: Registry) -> None:
                 s.updated_at = datetime.now(UTC)
 
                 if not save_session(s):
-                    ctx.err.write("Error: save renamed session\n")
+                    ctx.err.write("Error: al guardar la sesión renombrada\n")
                     return 1
 
-                ctx.out.write(f"Renamed session {s.id[:8]}: {go_quote(old_title)} -> {go_quote(new_name)}\n")
+                ctx.out.write(f"Sesión {s.id[:8]} renombrada: {go_quote(old_title)} -> {go_quote(new_name)}\n")
                 return 0
 
-        ctx.err.write(f"Error: session {go_quote(session_id)} not found\n")
+        ctx.err.write(f"Error: sesión {go_quote(session_id)} no encontrada\n")
         return 1
 
     cmd = Command(
         name="rename",
-        short="Rename a session",
+        short="Renombrar una sesión",
         min_args=2,
         max_args=2,
         run=run,

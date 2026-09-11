@@ -93,15 +93,13 @@ class Command:
 
     def validate_args(self, args: list[str]) -> str | None:
         if len(args) < self.min_args:
-            return f"requires at least {self.min_args} arg(s), received {len(args)}"
+            return f"requiere al menos {self.min_args} argumento(s), recibidos {len(args)}"
         if self.max_args is not None and len(args) > self.max_args:
-            return f"accepts at most {self.max_args} arg(s), received {len(args)}"
+            return f"acepta como máximo {self.max_args} argumento(s), recibidos {len(args)}"
         return None
 
 
-def parse_argv(
-    argv: list[str], flags: dict[str, Flag]
-) -> tuple[list[str], dict[str, str | bool], str | None]:
+def parse_argv(argv: list[str], flags: dict[str, Flag]) -> tuple[list[str], dict[str, str | bool], str | None]:
     """Parses flags and positional args; returns (args, flags, error)."""
     positional: list[str] = []
     parsed: dict[str, str | bool] = {}
@@ -119,7 +117,7 @@ def parse_argv(
                 name, value = body, None
             flag = flags.get(name)
             if flag is None:
-                return [], {}, f"unknown flag: --{name}"
+                return [], {}, f"flag desconocido: --{name}"
             if flag.is_bool:
                 if value is None:
                     parsed[name] = True
@@ -130,11 +128,11 @@ def parse_argv(
                     elif lowered in ("0", "false", "no", "off"):
                         parsed[name] = False
                     else:
-                        return [], {}, f'invalid boolean value "{value}" for --{name}'
+                        return [], {}, f'valor booleano inválido "{value}" para --{name}'
             else:
                 if value is None:
                     if i + 1 >= len(argv):
-                        return [], {}, f"flag needs an argument: --{name}"
+                        return [], {}, f"el flag necesita un argumento: --{name}"
                     i += 1
                     value = argv[i]
                 parsed[name] = value
@@ -142,12 +140,12 @@ def parse_argv(
             short = tok[1]
             flag = next((f for f in flags.values() if f.shorthand == short), None)
             if flag is None:
-                return [], {}, f"unknown shorthand flag: -{short}"
+                return [], {}, f"flag abreviado desconocido: -{short}"
             if flag.is_bool:
                 parsed[flag.name] = True
             else:
                 if i + 1 >= len(argv):
-                    return [], {}, f"flag needs an argument: -{short}"
+                    return [], {}, f"el flag necesita un argumento: -{short}"
                 i += 1
                 parsed[flag.name] = argv[i]
         else:
@@ -186,8 +184,8 @@ class Registry:
         if err is None:
             err = sys.stderr
         if not argv:
-            err.write("dxrk: missing command\n")
-            err.write("Run 'dxrk help' for usage.\n")
+            err.write("dxrk: falta el comando\n")
+            err.write("Ejecuta 'dxrk help' para ver el uso.\n")
             return 1
 
         name = argv[0]
@@ -198,8 +196,8 @@ class Registry:
 
         cmd = self._commands.get(name)
         if cmd is None:
-            err.write(f"unknown command: {argv[0]}\n")
-            err.write("Run 'dxrk help' for usage.\n")
+            err.write(f"comando desconocido: {argv[0]}\n")
+            err.write("Ejecuta 'dxrk help' para ver el uso.\n")
             return 1
 
         args, flags, parse_err = parse_argv(rest, cmd.flags)
@@ -211,7 +209,7 @@ class Registry:
             err.write(f"Error: {arg_err}\n")
             return 1
         if cmd.run is None:
-            err.write(f"Error: command {cmd.name} is not implemented\n")
+            err.write(f"Error: comando {cmd.name} no implementado\n")
             return 1
         tenant_id = os.environ.get("DXRK_TENANT", "")
         ctx = CommandContext(args=args, flags=flags, out=out, err=err, cwd=cwd, reg=self, tenant_id=tenant_id)

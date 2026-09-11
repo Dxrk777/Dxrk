@@ -466,7 +466,7 @@ def _fetch_latest_DXRK_MEMORY_version() -> str:
     try:
         version, status = _fetch_latest_DXRK_MEMORY_version_request(token)
         if not status:
-            raise RuntimeError(f"GitHub API returned HTTP {status}")
+            raise RuntimeError(f"la API de GitHub devolvió HTTP {status}")
         return version
     except Exception:
         if token:
@@ -488,7 +488,7 @@ def _fetch_latest_DXRK_MEMORY_version_request(token: str) -> tuple[str, int]:
     tag = data.get("tag_name", "")
     version = tag.lstrip("v")
     if not version:
-        raise RuntimeError("empty tag_name in GitHub release response")
+        raise RuntimeError("tag_name vacío en la respuesta de release de GitHub")
     return version, 200
 
 
@@ -564,7 +564,7 @@ def _download_and_extract_tar_gz(url: str, binary_name: str, out_path: str) -> N
                 if f:
                     _write_executable(f.read(), out_path)
                     return
-    raise FileNotFoundError(f"binary {binary_name!r} not found in archive")
+    raise FileNotFoundError(f"binario {binary_name!r} no encontrado en el archivo")
 
 
 def _download_and_extract_zip(url: str, binary_name: str, out_path: str) -> None:
@@ -577,7 +577,7 @@ def _download_and_extract_zip(url: str, binary_name: str, out_path: str) -> None
                 with zf.open(info) as f:
                     _write_executable(f.read(), out_path)
                     return
-    raise FileNotFoundError(f"binary {binary_name!r} not found in zip archive")
+    raise FileNotFoundError(f"binario {binary_name!r} no encontrado en el archivo zip")
 
 
 def _write_executable(data: bytes, out_path: str) -> None:
@@ -617,7 +617,7 @@ class _Command:
 
 def verify_installed() -> str | None:
     if not shutil.which("DXRK_MEMORY"):
-        return "DXRK_MEMORY binary not found in PATH"
+        return "binario DXRK_MEMORY no encontrado en PATH"
     return None
 
 
@@ -626,7 +626,7 @@ def verify_version() -> str | None:
         import subprocess
 
         out = subprocess.check_output(["DXRK_MEMORY", "version"], text=True).strip()
-        return out or "empty output"
+        return out or "salida vacía"
     except (FileNotFoundError, subprocess.CalledProcessError) as e:
         return str(e)
 
@@ -638,7 +638,7 @@ def verify_health(base_url: str = "http://127.0.0.1:7437") -> str | None:
     try:
         with req.urlopen(f"{base_url.rstrip('/')}/health", timeout=2) as resp:
             if resp.status != 200:
-                return f"memory health check returned status {resp.status}"
+                return f"la comprobación de salud de memory devolvió el estado {resp.status}"
         return None
     except (urllib.error.URLError, OSError) as e:
         return str(e)

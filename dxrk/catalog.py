@@ -157,44 +157,44 @@ _MVP_COMPONENTS = [
     Component(
         id=ComponentID.DXRK_MEMORY,
         name="Memory",
-        description="Persistent cross-session memory",
+        description="Memoria persistente entre sesiones",
     ),
-    Component(id=ComponentID.SDD, name="SDD", description="Spec-driven development workflow"),
-    Component(id=ComponentID.SKILLS, name="Skills", description="Curated coding skill library"),
+    Component(id=ComponentID.SDD, name="SDD", description="Flujo de desarrollo guiado por especificaciones"),
+    Component(id=ComponentID.SKILLS, name="Skills", description="Biblioteca curada de skills de código"),
     Component(
         id=ComponentID.CONTEXT7,
         name="Context7",
-        description="Latest framework and library docs",
+        description="Documentación actualizada de frameworks y bibliotecas",
     ),
     Component(
         id=ComponentID.PERSONA,
         name="Persona",
-        description="Dxrk, neutral or custom behavior",
+        description="Dxrk, comportamiento neutral o personalizado",
     ),
     Component(
         id=ComponentID.PERMISSIONS,
         name="Permissions",
-        description="Security-first defaults and guardrails",
+        description="Valores predeterminados con seguridad primero y barreras de protección",
     ),
     Component(
         id=ComponentID.DXRK_GUARDIAN,
         name="GGA",
-        description="Dxrk Guardian Angel AI provider switcher",
+        description="Selector de proveedor de IA Dxrk Guardian Angel",
     ),
     Component(
         id=ComponentID.THEME,
         name="Theme",
-        description="Dxrk Kanagawa theme overlay",
+        description="Superposición de tema Dxrk Kanagawa",
     ),
     Component(
         id=ComponentID.CLAUDE_THEME,
         name="Claude Theme",
-        description="Claude Code-specific theme",
+        description="Tema específico de Claude Code",
     ),
     Component(
         id=ComponentID.OPENCODE_DXRK_LOGO,
         name="OpenCode Dxrk Logo",
-        description="Braille Dxrk home logo plugin",
+        description="Plugin de logo inicial Dxrk en braille",
     ),
 ]
 

@@ -33,25 +33,25 @@ def register_config_command(reg: Registry) -> None:
         out = ctx.out
         path = user_config_path()
         if not os.path.exists(path):
-            out.write(f"No config file found at {path}\n")
-            out.write("Run 'dxrk init' to create one.\n")
+            out.write(f"No se encontró el archivo de configuración en {path}\n")
+            out.write("Ejecuta 'dxrk init' para crear uno.\n")
             return 0
 
         cfg = load_user_config()
-        out.write(f"Config: {path}\n")
-        out.write(f"Project: {cfg.project.name} ({cfg.project.root})\n")
-        out.write(f"Default provider: {cfg.project.default_provider}\n\n")
-        out.write("Providers:\n")
+        out.write(f"Configuración: {path}\n")
+        out.write(f"Proyecto: {cfg.project.name} ({cfg.project.root})\n")
+        out.write(f"Proveedor predeterminado: {cfg.project.default_provider}\n\n")
+        out.write("Proveedores:\n")
         for p in cfg.providers:
             env = p.api_key_env or "-"
             out.write(f"  {p.name:<10} {p.model:<30} env={env}\n")
         if cfg.sandbox is not None:
-            out.write(f"\nSandbox image: {cfg.sandbox.default_image}\n")
+            out.write(f"\nImagen de sandbox: {cfg.sandbox.default_image}\n")
         return 0
 
     cmd = Command(
         name="config",
-        short="Show the current configuration",
+        short="Mostrar la configuración actual",
         run=run,
     )
     reg.add_command(cmd)

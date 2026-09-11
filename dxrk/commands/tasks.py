@@ -27,9 +27,9 @@ def tasks_list_cmd() -> Command:
         out = ctx.out
         tasks = _queue.list()
         if not tasks:
-            out.write("No tasks.\n")
+            out.write("No hay tareas.\n")
             return 0
-        out.write("ID\tTYPE\tSTATUS\tPRIORITY\tCREATED\n")
+        out.write("ID\tTIPO\tESTADO\tPRIORIDAD\tCREADA\n")
         for t in tasks:
             out.write(
                 f"{t.id}\t{t.type.value}\t{_status_label(t.status)}\t{t.priority}\t"
@@ -37,7 +37,7 @@ def tasks_list_cmd() -> Command:
             )
         return 0
 
-    return Command(name="tasks list", short="List tasks", run=run)
+    return Command(name="tasks list", short="Listar tareas", run=run)
 
 
 def tasks_add_cmd() -> Command:
@@ -48,32 +48,30 @@ def tasks_add_cmd() -> Command:
         try:
             typ = TaskType(typ_name)
         except ValueError:
-            ctx.err.write(f"Error: invalid task type {go_quote(typ_name)}\n")
+            ctx.err.write(f"Error: tipo de tarea inválido {go_quote(typ_name)}\n")
             return 1
         try:
             priority = int(ctx.flag_str("priority", "0"))
         except ValueError:
-            ctx.err.write("Error: invalid priority\n")
+            ctx.err.write("Error: prioridad inválida\n")
             return 1
         t = new_task(typ, Payload({"name": name}), with_priority(priority))
         _queue.push(t)
-        out.write(f"Created task {t.id}: {name}\n")
+        out.write(f"Tarea {t.id} creada: {name}\n")
         return 0
 
     return Command(
         name="tasks add",
-        short="Create a task",
+        short="Crear una tarea",
         min_args=1,
         max_args=1,
         flags={
             "type": Flag(
                 "type",
                 default="generic",
-                help="Task type (generic, dream, local_bash, local_agent)",
+                help="Tipo de tarea (generic, dream, local_bash, local_agent)",
             ),
-            "priority": Flag(
-                "priority", default="0", help="Priority (higher = sooner)"
-            ),
+            "priority": Flag("priority", default="0", help="Prioridad (mayor = antes)"),
         },
         run=run,
     )
@@ -86,26 +84,24 @@ def tasks_delete_cmd() -> Command:
         tasks = _queue.list()
         found = any(t.id == task_id for t in tasks)
         if not found:
-            ctx.err.write(f"Error: task {go_quote(ctx.args[0])} not found\n")
+            ctx.err.write(f"Error: tarea {go_quote(ctx.args[0])} no encontrada\n")
             return 1
         _queue.remove(task_id)
-        out.write(f"Deleted task {task_id}\n")
+        out.write(f"Tarea {task_id} eliminada\n")
         return 0
 
-    return Command(
-        name="tasks delete", short="Delete a task", min_args=1, max_args=1, run=run
-    )
+    return Command(name="tasks delete", short="Eliminar una tarea", min_args=1, max_args=1, run=run)
 
 
 def tasks_parent_cmd() -> Command:
     def run(ctx: CommandContext) -> int:
-        ctx.err.write("Error: use 'dxrk tasks list', 'add', or 'delete'\n")
+        ctx.err.write("Error: usa 'dxrk tasks list', 'add' o 'delete'\n")
         return 1
 
     return Command(
         name="tasks",
-        short="Manage tasks",
-        long="Create, list, and delete tasks in the task queue.",
+        short="Gestionar tareas",
+        long="Crear, listar y eliminar tareas en la cola de tareas.",
         run=run,
     )
 

@@ -50,7 +50,7 @@ def set_model(model: str) -> None:
 
 def model_or_none(model: str) -> str:
     """Returns '(none)' for an empty model name."""
-    return model if model else "(none)"
+    return model if model else "(ninguno)"
 
 
 def format_tokens(tokens: int) -> str:
@@ -67,14 +67,14 @@ def run_stats(ctx: CommandContext, s: SessionStats) -> int:
     err = ctx.err
     started = now()
     elapsed = started.timestamp() - s.started_at
-    err.write("Session Statistics\n")
-    err.write("──────────────────\n")
-    err.write(f"  Started:      {started.strftime('%Y-%m-%d %H:%M:%S')}\n")
-    err.write(f"  Duration:     {go_duration(elapsed)}\n")
-    err.write(f"  Model:        {model_or_none(s.model)}\n")
-    err.write(f"  Messages:     {s.messages}\n")
-    err.write(f"  Tool calls:   {s.tool_calls}\n")
-    err.write(f"  Tokens used:  {format_tokens(s.tokens_used)}\n")
+    err.write("Estadísticas de la sesión\n")
+    err.write("─────────────────────────\n")
+    err.write(f"  Inicio:         {started.strftime('%Y-%m-%d %H:%M:%S')}\n")
+    err.write(f"  Duración:       {go_duration(elapsed)}\n")
+    err.write(f"  Modelo:         {model_or_none(s.model)}\n")
+    err.write(f"  Mensajes:       {s.messages}\n")
+    err.write(f"  Llamadas a herramientas: {s.tool_calls}\n")
+    err.write(f"  Tokens usados:  {format_tokens(s.tokens_used)}\n")
     return 0
 
 
@@ -87,7 +87,7 @@ def register_stats_command(reg: Registry) -> None:
 
     cmd = Command(
         name="stats",
-        short="Show session statistics",
+        short="Mostrar las estadísticas de la sesión",
         run=run,
     )
     reg.add_command(cmd)
