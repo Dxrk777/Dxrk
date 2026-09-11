@@ -330,32 +330,32 @@ def execute_command(name: str, *args: str) -> str | None:
         if _stream_command_output:
             proc = subprocess.run(cmd, check=False)
             if proc.returncode != 0:
-                return f"command {cmd!r} exited with code {proc.returncode}"
+                return f"el comando {cmd!r} salió con el código {proc.returncode}"
             return None
         else:
             captured = subprocess.run(cmd, capture_output=True, text=True, check=False)
             if captured.returncode != 0:
                 out = captured.stdout.strip() + captured.stderr.strip()
                 if out:
-                    return f"command {cmd!r} failed:\n{out}"
-                return f"command {cmd!r} exited with code {captured.returncode}"
+                    return f"el comando {cmd!r} falló:\n{out}"
+                return f"el comando {cmd!r} salió con el código {captured.returncode}"
             return None
     except FileNotFoundError:
-        return f"command {name!r} not found in PATH"
+        return f"comando {name!r} no encontrado en PATH"
     except OSError as e:
         return str(e)
 
 
 def run_command_sequence(commands: list[list[str]]) -> str | None:
     if not commands:
-        return "empty command sequence"
+        return "secuencia de comandos vacía"
 
     for command in commands:
         if not command:
-            return "empty command in sequence"
+            return "comando vacío en la secuencia"
         err = execute_command(command[0], *command[1:])
         if err:
-            return f"run command {' '.join(command)!r}: {err}"
+            return f"error al ejecutar el comando {' '.join(command)!r}: {err}"
     return None
 
 
@@ -407,7 +407,7 @@ async def run_install_pipeline(
     detection = detect()
     if not detection.system.supported:
         if on_progress:
-            await on_progress("Unsupported system", 0)
+            await on_progress("Sistema no compatible", 0)
         return False
 
     profile = resolve_install_profile(detection)
@@ -415,7 +415,7 @@ async def run_install_pipeline(
     resolved.platform_decision = platform_decision_from_profile(profile)
 
     if on_progress:
-        await on_progress("Building stage plan...", 5)
+        await on_progress("Generando el plan de etapas...", 5)
 
     from dxrk.cli.install import build_stage_plan, normalize_install_flags
 
@@ -432,7 +432,7 @@ async def run_install_pipeline(
     stage_plan = build_stage_plan(input_data.selection, resolved)
 
     if on_progress:
-        await on_progress(f"Installing {len(selection.agents)} agent(s)...", 10)
+        await on_progress(f"Instalando {len(selection.agents)} agente(s)...", 10)
 
     try:
         rt = InstallRuntime(
@@ -444,19 +444,24 @@ async def run_install_pipeline(
         )
     except Exception as e:
         if on_progress:
-            await on_progress(f"Runtime error: {e}", 0)
+            await on_progress(f"Error de ejecución: {e}", 0)
         return False
 
     stage_plan = rt.stage_plan()
     total = len(stage_plan.prepare) + len(stage_plan.apply) or 1
     completed = [0]
 
+    import asyncio
+
+    # `cb` runs in the `to_thread` worker (no running loop there), so progress
+    # must be scheduled back onto this coroutine's loop thread-safely.
+    loop = asyncio.get_running_loop()
+
     def cb(event: ProgressEvent) -> None:
         completed[0] += 1
         if on_progress:
-            import asyncio
-
-            asyncio.ensure_future(on_progress(event.step_id, 10 + 70 * completed[0] / total))
+            coro = on_progress(event.step_id, 10 + 70 * completed[0] / total)
+            loop.call_soon_threadsafe(lambda: asyncio.ensure_future(coro))
 
     from dxrk.pipeline import default_rollback_policy, new_orchestrator
 
@@ -464,20 +469,20 @@ async def run_install_pipeline(
     orch.runner.on_progress = cb
 
     if on_progress:
-        await on_progress("Starting installation...", 10)
+        await on_progress("Iniciando la instalación...", 10)
 
     import asyncio
 
     execution = await asyncio.to_thread(orch.execute, stage_plan)
 
     if on_progress:
-        await on_progress("Verifying...", 80)
+        await on_progress("Verificando...", 80)
 
     if execution.error:
         if on_progress:
-            await on_progress(f"Failed: {execution.error}", 0)
+            await on_progress(f"Falló: {execution.error}", 0)
         return False
 
     if on_progress:
-        await on_progress("Installation complete!", 100)
+        await on_progress("¡Instalación completa!", 100)
     return True
