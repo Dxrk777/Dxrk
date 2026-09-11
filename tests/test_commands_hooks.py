@@ -91,7 +91,7 @@ def test_save_hooks_oserror(tmp_path, monkeypatch):
 def test_list_empty(reg):
     code, out, err = _run(reg, ["hooks", "list"])
     assert code == 0
-    assert out == "No hooks configured.\n"
+    assert out == "No hay hooks configurados.\n"
     assert err == ""
 
 
@@ -105,7 +105,7 @@ def test_list_with_hooks(reg, hooks_file):
     code, out, err = _run(reg, ["hooks", "list"])
     assert code == 0
     assert out == (
-        "NAME\tEVENT\tCOMMAND\tENABLED\nfmt\tpre-commit\truff format\ttrue\npush\tpre-push\tuv audit\tfalse\n"
+        "NOMBRE\tEVENTO\tCOMANDO\tACTIVO\nfmt\tpre-commit\truff format\ttrue\npush\tpre-push\tuv audit\tfalse\n"
     )
     assert err == ""
 
@@ -113,7 +113,7 @@ def test_list_with_hooks(reg, hooks_file):
 def test_add_valid(reg, hooks_file):
     code, out, err = _run(reg, ["hooks", "add", "fmt", "pre-commit", "ruff format"])
     assert code == 0
-    assert out == 'Added hook "fmt" (pre-commit)\n'
+    assert out == 'Hook "fmt" agregado (pre-commit)\n'
     assert err == ""
     assert load_hooks() == [{"name": "fmt", "event": "pre-commit", "command": "ruff format", "enabled": True}]
 
@@ -122,7 +122,7 @@ def test_add_invalid_event(reg, hooks_file):
     code, out, err = _run(reg, ["hooks", "add", "fmt", "bogus", "echo hi"])
     assert code == 1
     assert out == ""
-    assert err == 'Error: invalid event "bogus"\n'
+    assert err == 'Error: evento inválido "bogus"\n'
     assert load_hooks() == []
 
 
@@ -131,7 +131,7 @@ def test_add_duplicate(reg, hooks_file):
     code, out, err = _run(reg, ["hooks", "add", "fmt", "pre-push", "uv audit"])
     assert code == 1
     assert out == ""
-    assert err == 'Error: hook "fmt" already exists\n'
+    assert err == 'Error: el hook "fmt" ya existe\n'
     assert len(load_hooks()) == 1
 
 
@@ -140,14 +140,14 @@ def test_add_save_failure(reg, hooks_file, monkeypatch):
     code, out, err = _run(reg, ["hooks", "add", "fmt", "pre-commit", "ruff format"])
     assert code == 1
     assert out == ""
-    assert err == "Error: write hooks config\n"
+    assert err == "Error: al escribir la configuración de hooks\n"
 
 
 def test_remove_valid(reg, hooks_file):
     _run(reg, ["hooks", "add", "fmt", "pre-commit", "ruff format"])
     code, out, err = _run(reg, ["hooks", "remove", "fmt"])
     assert code == 0
-    assert out == 'Removed hook "fmt"\n'
+    assert out == 'Hook "fmt" eliminado\n'
     assert err == ""
     assert load_hooks() == []
 
@@ -156,7 +156,7 @@ def test_remove_not_found(reg, hooks_file):
     code, out, err = _run(reg, ["hooks", "remove", "nope"])
     assert code == 1
     assert out == ""
-    assert err == 'Error: hook "nope" not found\n'
+    assert err == 'Error: hook "nope" no encontrado\n'
 
 
 def test_remove_save_failure(reg, hooks_file, monkeypatch):
@@ -165,7 +165,7 @@ def test_remove_save_failure(reg, hooks_file, monkeypatch):
     code, out, err = _run(reg, ["hooks", "remove", "fmt"])
     assert code == 1
     assert out == ""
-    assert err == "Error: write hooks config\n"
+    assert err == "Error: al escribir la configuración de hooks\n"
 
 
 def test_hook_events_complete():

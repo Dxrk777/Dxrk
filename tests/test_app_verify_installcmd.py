@@ -75,7 +75,7 @@ class TestRunCli:
         rc = run_cli(["help"])
         assert rc == 0
         out = capsys.readouterr().out
-        assert "USAGE" in out
+        assert "USO" in out
 
     def test_help_flag(self, capsys):
         rc = run_cli(["--help"])
@@ -85,7 +85,7 @@ class TestRunCli:
         rc = run_cli(["uninstall", "--bogus"])
         assert rc == 1
         err = capsys.readouterr().err
-        assert "unexpected uninstall argument" in err
+        assert "argumento de uninstall inesperado" in err
 
     def test_uninstall_all_flag(self, capsys):
         rc = run_cli(["uninstall", "--all"])
@@ -95,7 +95,7 @@ class TestRunCli:
         rc = run_cli(["zzz_nonexistent_cmd"])
         assert rc == 1
         err = capsys.readouterr().err
-        assert "unknown command" in err
+        assert "comando desconocido" in err
 
     def test_no_args_tui_not_available(self, capsys, monkeypatch):
         class FakeSystem:
@@ -114,7 +114,7 @@ class TestRunCli:
         rc = run_cli([])
         assert rc == 0
         out = capsys.readouterr().out
-        assert "TUI mode not available" in out
+        assert "Modo TUI no disponible" in out
 
     def test_sync_command(self, capsys, monkeypatch):
         class FakeSystem:
@@ -134,7 +134,7 @@ class TestRunCli:
         rc = run_cli(["sync"])
         assert rc == 0
         out = capsys.readouterr().out
-        assert "Sync completed" in out
+        assert "Sincronización completa" in out
 
     def test_unsupported_os(self, capsys, monkeypatch):
         monkeypatch.setattr(
@@ -155,7 +155,7 @@ class TestRunCli:
         monkeypatch.setattr("dxrk.app.ensure_supported_os", lambda _: None)
         run_cli(["install"])
         out = capsys.readouterr().err
-        assert "detect system" in out
+        assert "detectar el sistema" in out
 
 
 class TestSelfUpdateChecker:
@@ -163,18 +163,18 @@ class TestSelfUpdateChecker:
         monkeypatch.setenv("DXRK_SELF_UPDATE_DONE", "1")
         checker = SelfUpdateChecker(version="1.0.0")
         assert checker.skip_reason() is not None
-        assert "already updated" in checker.skip_reason()
+        assert "ya actualizado" in checker.skip_reason()
 
     def test_skip_reason_env_opt_out(self, monkeypatch):
         monkeypatch.setenv("DXRK_NO_SELF_UPDATE", "1")
         checker = SelfUpdateChecker(version="1.0.0")
         assert checker.skip_reason() is not None
-        assert "opt-out" in checker.skip_reason()
+        assert "exclusión" in checker.skip_reason()
 
     def test_skip_reason_dev_build(self):
         checker = SelfUpdateChecker(version="dev")
         assert checker.skip_reason() is not None
-        assert "dev build" in checker.skip_reason()
+        assert "versión dev" in checker.skip_reason()
 
     def test_skip_reason_none(self):
         checker = SelfUpdateChecker(version="1.0.0")
@@ -376,7 +376,7 @@ class TestProfileResolverAgentInstall:
     def test_opencode_unsupported_raises(self):
         resolver = ProfileResolver()
         profile = PlatformProfile(os="linux", package_manager="apk")
-        with pytest.raises(InstallError, match="unsupported platform for opencode"):
+        with pytest.raises(InstallError, match="plataforma no compatible para opencode"):
             resolver.resolve_agent_install(profile, AgentID.OPENCODE)
 
     def test_kilocode_default(self):
@@ -394,13 +394,13 @@ class TestProfileResolverAgentInstall:
     def test_kimi_unsupported(self):
         resolver = ProfileResolver()
         profile = PlatformProfile(os="linux", supported=False)
-        with pytest.raises(InstallError, match="not supported"):
+        with pytest.raises(InstallError, match="no es compatible con esta plataforma"):
             resolver.resolve_agent_install(profile, AgentID.KIMI)
 
     def test_unknown_agent_raises(self):
         resolver = ProfileResolver()
         profile = PlatformProfile(os="darwin", package_manager="brew")
-        with pytest.raises(InstallError, match="install command is not supported"):
+        with pytest.raises(InstallError, match="comando de instalación no compatible con el agente"):
             resolver.resolve_agent_install(profile, AgentID.CURSOR)
 
 
@@ -408,13 +408,13 @@ class TestProfileResolverComponentInstall:
     def test_memory_brew_raises_no_binary(self):
         resolver = ProfileResolver()
         profile = PlatformProfile(os="darwin", package_manager="brew")
-        with pytest.raises(InstallError, match="no prebuilt binary"):
+        with pytest.raises(InstallError, match="no tiene distribución binaria precompilada"):
             resolver.resolve_component_install(profile, ComponentID.DXRK_MEMORY)
 
     def test_memory_not_brew_raises(self):
         resolver = ProfileResolver()
         profile = PlatformProfile(os="linux", package_manager="apt")
-        with pytest.raises(InstallError, match="no prebuilt binary"):
+        with pytest.raises(InstallError, match="no tiene distribución binaria precompilada"):
             resolver.resolve_component_install(profile, ComponentID.DXRK_MEMORY)
 
     def test_gga_brew(self):
@@ -427,7 +427,7 @@ class TestProfileResolverComponentInstall:
     def test_unknown_component_raises(self):
         resolver = ProfileResolver()
         profile = PlatformProfile(os="darwin", package_manager="brew")
-        with pytest.raises(InstallError, match="install command is not supported"):
+        with pytest.raises(InstallError, match="comando de instalación no compatible con el componente"):
             resolver.resolve_component_install(profile, ComponentID.THEME)
 
 
@@ -465,13 +465,13 @@ class TestProfileResolverDependencyInstall:
     def test_empty_dependency_raises(self):
         resolver = ProfileResolver()
         profile = PlatformProfile(os="darwin", package_manager="brew")
-        with pytest.raises(InstallError, match="dependency name is required"):
+        with pytest.raises(InstallError, match="se requiere el nombre de la dependencia"):
             resolver.resolve_dependency_install(profile, "")
 
     def test_unsupported_pm_raises(self):
         resolver = ProfileResolver()
         profile = PlatformProfile(os="linux", package_manager="apk")
-        with pytest.raises(InstallError, match="unsupported package manager"):
+        with pytest.raises(InstallError, match="gestor de paquetes no compatible"):
             resolver.resolve_dependency_install(profile, "git")
 
 
@@ -490,7 +490,7 @@ class TestValidateAgentInstallPreflight:
     def test_kimi_without_uv(self, monkeypatch):
         monkeypatch.setattr("dxrk.installcmd._cmd_look_path", lambda _: None)
         profile = PlatformProfile(os="darwin", package_manager="brew", supported=True)
-        with pytest.raises(InstallError, match="requires Astral uv"):
+        with pytest.raises(InstallError, match="requiere Astral uv"):
             validate_agent_install_preflight(profile, AgentID.KIMI)
 
     def test_non_kimi_skips(self):
@@ -502,7 +502,7 @@ class TestValidateGoForModuleInstall:
     def test_go_not_found(self, monkeypatch):
         monkeypatch.setattr("dxrk.installcmd._cmd_look_path", lambda _: None)
         profile = PlatformProfile(os="linux", package_manager="apt")
-        with pytest.raises(InstallError, match="required to install DxrkMemory"):
+        with pytest.raises(InstallError, match="para instalar DxrkMemory"):
             validate_go_for_module_install(profile)
 
     def test_go_version_ok(self, monkeypatch):
@@ -524,7 +524,7 @@ class TestValidateGoForModuleInstall:
         )
         monkeypatch.setattr("dxrk.installcmd._os_getenv", lambda k: None)
         profile = PlatformProfile(os="linux", package_manager="apt")
-        with pytest.raises(InstallError, match="found go1.23"):
+        with pytest.raises(InstallError, match="se encontró go1\\.23"):
             validate_go_for_module_install(profile)
 
     def test_go_module_off(self, monkeypatch):
@@ -535,7 +535,7 @@ class TestValidateGoForModuleInstall:
         )
         monkeypatch.setattr("dxrk.installcmd._os_getenv", lambda k: "off")
         profile = PlatformProfile(os="linux", package_manager="apt")
-        with pytest.raises(InstallError, match="go modules are disabled"):
+        with pytest.raises(InstallError, match="están deshabilitados"):
             validate_go_for_module_install(profile)
 
 

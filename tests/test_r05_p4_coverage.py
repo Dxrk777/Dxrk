@@ -1152,7 +1152,7 @@ def test_tui_welcome_screen_actions_and_compose(tmp_path: Path, monkeypatch: pyt
     from dxrk.tui.app import WELCOME_OPTIONS
 
     # find Quit index
-    quit_idx = next(i for i, (t, _) in enumerate(WELCOME_OPTIONS) if t == "Quit")
+    quit_idx = next(i for i, (t, _) in enumerate(WELCOME_OPTIONS) if t == "Salir")
     screen.cursor = quit_idx
     mock_app.reset_mock()
     screen.action_select()

@@ -290,12 +290,12 @@ class TestExecuteCommand:
     def test_not_found(self):
         err = execute_command("nonexistent-command-12345")
         assert err is not None
-        assert "not found" in err
+        assert "no encontrado" in err
 
     def test_failure_exit_code(self):
         err = execute_command("python3", "-c", "exit(1)")
         assert err is not None
-        assert "exited with code" in err
+        assert "salió con el código" in err
 
     def test_captured_output_on_failure(self):
         prev = set_command_streaming(False)
@@ -328,15 +328,15 @@ class TestRunCommandSequence:
             ]
         )
         assert err is not None
-        assert "exited with code" in err
+        assert "salió con el código" in err
 
     def test_empty_sequence(self):
         err = run_command_sequence([])
-        assert err == "empty command sequence"
+        assert err == "secuencia de comandos vacía"
 
     def test_empty_command(self):
         err = run_command_sequence([[]])
-        assert err == "empty command in sequence"
+        assert err == "comando vacío en la secuencia"
 
 
 class TestResolveComponentInstall:

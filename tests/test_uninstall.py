@@ -256,7 +256,7 @@ class TestReadManagedFile:
     def test_too_large_raises(self, tmp_path):
         f = tmp_path / "big.txt"
         f.write_text("x" * (16 << 20 + 1))
-        with pytest.raises(ValueError, match="exceeds max managed size"):
+        with pytest.raises(ValueError, match="supera el tamaño máximo gestionado"):
             _read_managed_file(str(f))
 
     def test_not_found_raises(self, tmp_path):
@@ -452,7 +452,7 @@ class TestGlobalBackupTargets:
 class TestServicePartialUninstall:
     def test_raises_on_empty_agents(self):
         svc = Service(home_dir="/tmp")
-        with pytest.raises(ValueError, match="requires at least one agent"):
+        with pytest.raises(ValueError, match="requiere al menos un agente"):
             svc.partial_uninstall([], [])
 
     def test_executes_plan(self, tmp_path, monkeypatch):
@@ -476,17 +476,13 @@ class TestServicePartialUninstall:
 
 class TestServiceCompleteUninstall:
     def test_adds_manual_action(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(
-            Service, "_build_plan", lambda self_svc, agents, comps: ([], [])
-        )
-        monkeypatch.setattr(
-            Service, "_execute_plan", lambda self_svc, plan, state: Result()
-        )
+        monkeypatch.setattr(Service, "_build_plan", lambda self_svc, agents, comps: ([], []))
+        monkeypatch.setattr(Service, "_execute_plan", lambda self_svc, plan, state: Result())
 
         svc = Service(home_dir=str(tmp_path))
         result = svc.complete_uninstall()
         assert len(result.ManualActions) == 1
-        assert "remove" in result.ManualActions[0].lower()
+        assert "elimina" in result.ManualActions[0].lower()
 
 
 class TestServiceBuildPlan:
@@ -532,11 +528,7 @@ class TestServiceExecutePlan:
         remove_op = _remove_file(str(f))
         svc = Service(home_dir=str(tmp_path), app_version="test")
         result = svc._execute_plan(([str(f)], [remove_op]), [])
-        assert (
-            str(f) in result.ChangedFiles
-            or str(f) in result.RemovedFiles
-            or not f.exists()
-        )
+        assert str(f) in result.ChangedFiles or str(f) in result.RemovedFiles or not f.exists()
 
 
 class TestServiceGetAdapter:
@@ -563,6 +555,7 @@ class TestServiceSetMemoryScope:
         svc = Service(home_dir="/tmp")
         svc.set_DXRK_MEMORY_uninstall_scope(DxrkMemoryUninstallScope.PROJECT)
         assert svc.DXRK_MEMORY_uninstall_scope == DxrkMemoryUninstallScope.PROJECT
+
 
 import sys
 

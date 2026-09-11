@@ -649,18 +649,18 @@ class TestBackupArchive:
             f.write(buf.read())
         dest = str(tmp_path / "dest")
         os.makedirs(dest)
-        with pytest.raises(ValueError, match="itself"):
+        with pytest.raises(ValueError, match="propio directorio de destino"):
             backup.extract_archive(archive, dest)
 
 
 class TestBackupManifest:
     def test_display_label_variants(self) -> None:
-        assert "unknown source" in backup.Manifest(id="x").display_label()
+        assert "origen desconocido" in backup.Manifest(id="x").display_label()
         m = backup.Manifest(id="y", source=backup.BackupSource.SYNC, file_count=0)
         assert "sync" in m.display_label() and "files" not in m.display_label()
         pinned = backup.Manifest(id="z", source=backup.BackupSource.UPGRADE, file_count=2, pinned=True)
         label = pinned.display_label()
-        assert label.startswith("[pinned]") and "2 files" in label
+        assert label.startswith("[fijado]") and "2 archivos" in label
 
     def test_from_dict_bad_date_and_source(self) -> None:
         m = backup._manifest_from_dict(
@@ -689,20 +689,20 @@ class TestBackupRoot:
 
 class TestBackupOpsErrors:
     def test_delete_no_root(self) -> None:
-        with pytest.raises(ValueError, match="no root"):
+        with pytest.raises(ValueError, match="no tiene directorio raíz"):
             backup.delete_backup(backup.Manifest(id="x"))
 
     def test_delete_outside_root(self, tmp_path, monkeypatch) -> None:
         monkeypatch.setattr(backup, "BackupRootFn", lambda: str(tmp_path))
-        with pytest.raises(ValueError, match="outside"):
+        with pytest.raises(ValueError, match="fuera del directorio"):
             backup.delete_backup(backup.Manifest(id="x", root_dir="/tmp/definitely-elsewhere-xyz"))
 
     def test_rename_no_root(self) -> None:
-        with pytest.raises(ValueError, match="no root"):
+        with pytest.raises(ValueError, match="no tiene directorio raíz"):
             backup.rename_backup(backup.Manifest(id="x"), "desc")
 
     def test_toggle_no_root(self) -> None:
-        with pytest.raises(ValueError, match="no root"):
+        with pytest.raises(ValueError, match="no tiene directorio raíz"):
             backup.toggle_pin(backup.Manifest(id="x"))
 
 
@@ -827,13 +827,13 @@ class TestBackupRestore:
         manifest, _ = self._flat_snapshot(tmp_path, monkeypatch)
         # absoluta en ambas plataformas ("/abs/..." no es absoluta en Windows)
         manifest.entries[0].snapshot_path = os.path.abspath("evil.txt")
-        with pytest.raises(ValueError, match="absolute"):
+        with pytest.raises(ValueError, match="SnapshotPath absoluto"):
             backup.RestoreService().restore(manifest)
 
     def test_restore_compressed_bad_original_rejected(self, tmp_path, monkeypatch) -> None:
         manifest, _ = self._flat_snapshot(tmp_path, monkeypatch)
         manifest.entries.append(backup.ManifestEntry(original_path="/etc/evil-cov-e", existed=False))
-        with pytest.raises(ValueError, match="absolute path under"):
+        with pytest.raises(ValueError, match="OriginalPath no válido"):
             backup.RestoreService().restore(manifest)
 
     def test_restore_plain_bad_original_rejected(self, tmp_path, monkeypatch) -> None:
@@ -844,26 +844,26 @@ class TestBackupRestore:
             compressed=False,
             entries=[backup.ManifestEntry(original_path="/etc/evil-cov-e2", existed=False)],
         )
-        with pytest.raises(ValueError, match="absolute path under"):
+        with pytest.raises(ValueError, match="OriginalPath no válido"):
             backup.RestoreService().restore(m)
 
     def test_restore_entry_errors(self, tmp_path, monkeypatch) -> None:
         monkeypatch.setattr(backup, "BackupRootFn", lambda: str(tmp_path / "root"))
         monkeypatch.setattr(backup, "UserHomeDirFn", lambda: str(tmp_path))
         rs = backup.RestoreService()
-        with pytest.raises(ValueError, match="invalid OriginalPath"):
+        with pytest.raises(ValueError, match="OriginalPath no válido"):
             rs._restore_entry(
                 backup.ManifestEntry(original_path="relative", snapshot_path="x", existed=True, mode=0o644), True
             )
         snap = _touch(str(tmp_path / "outside-snap.txt"), "data")
-        with pytest.raises(ValueError, match="invalid SnapshotPath"):
+        with pytest.raises(ValueError, match="SnapshotPath no válido"):
             rs._restore_entry(
                 backup.ManifestEntry(
                     original_path=str(tmp_path / "o.txt"), snapshot_path=snap, existed=True, mode=0o644
                 ),
                 False,
             )
-        with pytest.raises(ValueError, match="read snapshot"):
+        with pytest.raises(ValueError, match="error al leer"):
             rs._restore_entry(
                 backup.ManifestEntry(
                     original_path=str(tmp_path / "o.txt"),

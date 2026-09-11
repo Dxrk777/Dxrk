@@ -58,7 +58,7 @@ def test_tenant_list_empty_home_tmp(tmp_path, monkeypatch):
     out, err = _ctx_out_err()
     rc = reg.execute(["tenant", "list"], out=out, err=err)
     assert rc == 0
-    assert "No tenants found" in out.getvalue()
+    assert "No se encontraron tenants." in out.getvalue()
     # ensure isolation: no real ~/.dxrk touched, only tmp
     assert not (Path.home() / ".dxrk" / "tenants").exists() or str(Path.home()).startswith(str(home))
 
@@ -69,7 +69,7 @@ def test_tenant_create_valid_and_idempotent(tmp_path, monkeypatch):
     out, err = _ctx_out_err()
     rc = reg.execute(["tenant", "create", "acme"], out=out, err=err)
     assert rc == 0
-    assert "Created tenant acme" in out.getvalue()
+    assert "Tenant acme creado" in out.getvalue()
     # idempotent second create same id
     out2, err2 = _ctx_out_err()
     rc2 = reg.execute(["tenant", "create", "acme"], out=out2, err=err2)
@@ -78,7 +78,7 @@ def test_tenant_create_valid_and_idempotent(tmp_path, monkeypatch):
     out3, err3 = _ctx_out_err()
     rc3 = reg.execute(["tenant", "create", "bad/id"], out=out3, err=err3)
     assert rc3 == 1
-    assert "invalid tenant id" in err3.getvalue()
+    assert "id de tenant inválido" in err3.getvalue()
 
 
 def test_tenant_create_bad_id_via_ctx_flag(tmp_path, monkeypatch):
@@ -94,7 +94,7 @@ def test_tenant_create_bad_id_via_ctx_flag(tmp_path, monkeypatch):
     ctx = CommandContext(args=["bad/id"], out=out, err=err)
     rc = cmd.run(ctx)
     assert rc == 1
-    assert "invalid tenant id" in err.getvalue()
+    assert "id de tenant inválido" in err.getvalue()
     # empty id
     out2, err2 = _ctx_out_err()
     ctx2 = CommandContext(args=[""], out=out2, err=err2)
@@ -116,14 +116,14 @@ def test_tenant_list_active_marker_env_priority(tmp_path, monkeypatch):
     # list shows * active via _effective_tenant (env DXRK_TENANT set by switch)
     out2, err2 = _ctx_out_err()
     reg.execute(["tenant", "list"], out=out2, err=err2)
-    assert "acme * active" in out2.getvalue()
+    assert "acme * activo" in out2.getvalue()
     assert "beta" in out2.getvalue()
     # DXRK_TENANT env overrides _active
     monkeypatch.setenv("DXRK_TENANT", "beta")
     # ensure beta tenant exists already
     out3, err3 = _ctx_out_err()
     reg.execute(["tenant", "list"], out=out3, err=err3)
-    assert "beta * active" in out3.getvalue()
+    assert "beta * activo" in out3.getvalue()
     # --tenant bad/id via ctx.tenant_id priority
     from dxrk.commands.registry import CommandContext
     from dxrk.commands.tenant import _effective_tenant
@@ -143,12 +143,12 @@ def test_tenant_switch_invalid_and_not_found(tmp_path, monkeypatch):
     out, err = _ctx_out_err()
     rc = reg.execute(["tenant", "switch", "bad/id"], out=out, err=err)
     assert rc == 1
-    assert "invalid tenant id" in err.getvalue()
+    assert "id de tenant inválido" in err.getvalue()
     # not found valid id
     out2, err2 = _ctx_out_err()
     rc2 = reg.execute(["tenant", "switch", "ghost"], out=out2, err=err2)
     assert rc2 == 1
-    assert "not found" in err2.getvalue()
+    assert "no encontrado" in err2.getvalue()
 
 
 def test_tenant_current_and_whoami(tmp_path, monkeypatch):
@@ -158,11 +158,11 @@ def test_tenant_current_and_whoami(tmp_path, monkeypatch):
     out, err = _ctx_out_err()
     rc = reg.execute(["tenant", "current"], out=out, err=err)
     assert rc == 0
-    assert "No current tenant" in out.getvalue()
+    assert "No hay tenant actual" in out.getvalue()
     out2, err2 = _ctx_out_err()
     rc2 = reg.execute(["tenant", "whoami"], out=out2, err=err2)
     assert rc2 == 0
-    assert "No tenant" in out2.getvalue()
+    assert "Sin tenant" in out2.getvalue()
     # create and switch, then current/whoami reflect env
     reg.execute(["tenant", "create", "zeta"], out=io.StringIO(), err=io.StringIO())
     reg.execute(["tenant", "switch", "zeta"], out=io.StringIO(), err=io.StringIO())
@@ -218,12 +218,12 @@ def test_tenant_delete_requires_force(tmp_path, monkeypatch):
     out, err = _ctx_out_err()
     rc = reg.execute(["tenant", "delete", "todel"], out=out, err=err)
     assert rc == 1
-    assert "use --force" in err.getvalue()
+    assert "usa --force" in err.getvalue()
     # invalid id
     out2, err2 = _ctx_out_err()
     rc2 = reg.execute(["tenant", "delete", "bad/id"], out=out2, err=err2)
     assert rc2 == 1
-    assert "invalid tenant id" in err2.getvalue()
+    assert "id de tenant inválido" in err2.getvalue()
 
 
 def test_tenant_delete_success_cleans_active(tmp_path, monkeypatch):
@@ -236,7 +236,7 @@ def test_tenant_delete_success_cleans_active(tmp_path, monkeypatch):
     out, err = _ctx_out_err()
     rc = reg.execute(["tenant", "delete", "todel2", "--force"], out=out, err=err)
     assert rc == 0
-    assert "Deleted tenant todel2" in out.getvalue()
+    assert "Tenant todel2 eliminado" in out.getvalue()
     assert not (home / ".dxrk" / "tenants" / "todel2").exists()
     assert not (home / ".dxrk" / "tenants" / "_active").exists()
     assert os.environ.get("DXRK_TENANT") is None
@@ -244,7 +244,7 @@ def test_tenant_delete_success_cleans_active(tmp_path, monkeypatch):
     out2, err2 = _ctx_out_err()
     rc2 = reg.execute(["tenant", "delete", "todel2", "--force"], out=out2, err=err2)
     assert rc2 == 1
-    assert "not found" in err2.getvalue()
+    assert "no encontrado" in err2.getvalue()
 
 
 def test_tenant_migrate_copies_and_idempotent(tmp_path, monkeypatch):
@@ -273,14 +273,14 @@ def test_tenant_migrate_copies_and_idempotent(tmp_path, monkeypatch):
     out, err = _ctx_out_err()
     rc = reg.execute(["tenant", "migrate"], out=out, err=err)
     assert rc == 0
-    assert "Migrated" in out.getvalue()
+    assert "migrados" in out.getvalue()
     assert (home / ".dxrk" / "tenants" / "default" / "identity.txt").exists()
     assert (home / ".dxrk" / "tenants" / "_registry.json").exists()
     assert (home / ".dxrk" / "tenants" / "_active").read_text() == "default"
     # second migrate idempotent -> 0 copied
     out2, err2 = _ctx_out_err()
     reg.execute(["tenant", "migrate"], out=out2, err=err2)
-    assert "Migrated 0 files" in out2.getvalue()
+    assert "0 archivo(s) migrados" in out2.getvalue()
     monkeypatch.setattr(mig, "LEGACY_PATHS", orig_paths)
 
 
@@ -293,7 +293,7 @@ def test_tenant_parent_and_read_active_oserror(tmp_path, monkeypatch):
     out, err = _ctx_out_err()
     rc = reg.execute(["tenant"], out=out, err=err)
     assert rc == 1
-    assert "use 'dxrk tenant list'" in err.getvalue()
+    assert "usa 'dxrk tenant list'" in err.getvalue()
     # _read_active OSError path: monkeypatch Path.read_text to raise
     home = Path.home()
     (home / ".dxrk" / "tenants").mkdir(parents=True, exist_ok=True)
@@ -1015,7 +1015,7 @@ def test_tenant_switcher_action_create_flow(tmp_path, monkeypatch):
     monkeypatch.setattr(screen, "query_one", lambda *a, **k: fake2)
     screen.action_create()
     assert fake2.value == ""
-    assert "invalid id" in fake2.placeholder
+    assert "id no válido" in fake2.placeholder
 
     # valid create
     fake3 = FakeInput("newtenant")

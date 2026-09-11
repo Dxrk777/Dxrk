@@ -189,21 +189,21 @@ def test_fmt_ts_none():
 def test_session_list_empty(reg, sdir):
     code, out, err = _run(reg, ["session", "list"])
     assert code == 0
-    assert out == "No sessions found.\n"
+    assert out == "No se encontraron sesiones.\n"
 
 
 def test_session_list_ok(reg, sdir):
     _mk("sess-aaa", title="Hello")
     code, out, err = _run(reg, ["session", "list"])
     assert code == 0
-    assert "ID\tTITLE" in out
+    assert "ID\tTÍTULO" in out
     assert "Hello" in out
 
 
 def test_session_list_invalid_limit(reg, sdir):
     code, out, err = _run(reg, ["session", "list", "--limit=abc"])
     assert code == 1
-    assert "invalid limit" in err
+    assert "límite inválido" in err
 
 
 def test_session_list_status_filter(reg, sdir):
@@ -246,27 +246,27 @@ def test_session_list_error(reg, sdir, monkeypatch):
 def test_session_create_ok(reg, sdir):
     code, out, err = _run(reg, ["session", "create", "My Session"])
     assert code == 0
-    assert "Created session" in out
+    assert "creada" in out
 
 
 def test_session_create_save_error(reg, sdir, monkeypatch):
     monkeypatch.setattr("dxrk.commands.session.save_session", lambda s: False)
     code, out, err = _run(reg, ["session", "create", "T"])
     assert code == 1
-    assert "save session" in err
+    assert "al guardar la sesión" in err
 
 
 def test_session_switch_ok(reg, sdir):
     _mk("sess-aaa")
     code, out, err = _run(reg, ["session", "switch", "sess-aaa"])
     assert code == 0
-    assert "Switched to session" in out
+    assert "activada" in out
 
 
 def test_session_switch_not_found(reg, sdir):
     code, out, err = _run(reg, ["session", "switch", "nope"])
     assert code == 1
-    assert "not found" in err
+    assert "no encontrada" in err
 
 
 def test_session_switch_list_error(reg, sdir, monkeypatch):
@@ -281,20 +281,20 @@ def test_session_switch_save_error(reg, sdir, monkeypatch):
     monkeypatch.setattr("dxrk.commands.session.save_session", lambda s: False)
     code, out, err = _run(reg, ["session", "switch", "sess-aaa"])
     assert code == 1
-    assert "save session" in err
+    assert "al guardar la sesión" in err
 
 
 def test_session_delete_ok(reg, sdir):
     _mk("sess-aaa")
     code, out, err = _run(reg, ["session", "delete", "sess-aaa"])
     assert code == 0
-    assert "Deleted session" in out
+    assert "eliminada" in out
 
 
 def test_session_delete_not_found(reg, sdir):
     code, out, err = _run(reg, ["session", "delete", "nope"])
     assert code == 1
-    assert "not found" in err
+    assert "no encontrada" in err
 
 
 def test_session_delete_list_error(reg, sdir, monkeypatch):
@@ -309,25 +309,25 @@ def test_session_delete_error(reg, sdir, monkeypatch):
     monkeypatch.setattr("dxrk.commands.session.os.remove", lambda p: (_ for _ in ()).throw(OSError()))
     code, out, err = _run(reg, ["session", "delete", "sess-aaa"])
     assert code == 1
-    assert "delete session" in err
+    assert "al eliminar la sesión" in err
 
 
 def test_session_info_full(reg, sdir):
     _mk("sess-aaa", title="Doc", tags=["t1", "t2"])
     code, out, err = _run(reg, ["session", "info", "sess-aaa"])
     assert code == 0
-    assert "ID:" in out and "Title:" in out
-    assert "Tags:" in out and "t1" in out
-    assert "Summary:" in out
+    assert "ID:" in out and "Título:" in out
+    assert "Etiquetas:" in out and "t1" in out
+    assert "Resumen:" in out
 
 
 def test_session_info_not_found(reg, sdir):
     code, out, err = _run(reg, ["session", "info", "nope"])
     assert code == 1
-    assert "not found" in err
+    assert "no encontrada" in err
 
 
 def test_session_parent_error(reg):
     code, out, err = _run(reg, ["session"])
     assert code == 1
-    assert "use 'dxrk session list'" in err
+    assert "usa 'dxrk session list'" in err

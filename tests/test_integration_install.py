@@ -20,9 +20,7 @@ def _make_detection() -> DetectionResult:
             arch="arm64",
             shell="/bin/zsh",
             supported=True,
-            profile=PlatformProfile(
-                os="darwin", package_manager="brew", supported=True
-            ),
+            profile=PlatformProfile(os="darwin", package_manager="brew", supported=True),
         ),
     )
 
@@ -46,49 +44,35 @@ class TestRunInstallDryRun:
         assert result.resolved is not None
 
     def test_minimal_preset(self):
-        result = install_mod.run_install(
-            ["--dry-run", "--preset", "minimal"], _make_detection()
-        )
+        result = install_mod.run_install(["--dry-run", "--preset", "minimal"], _make_detection())
         assert result.dry_run is True
         assert result.selection.preset == PresetID.MINIMAL
 
     def test_ecosystem_preset(self):
-        result = install_mod.run_install(
-            ["--dry-run", "--preset", "ecosystem-only"], _make_detection()
-        )
+        result = install_mod.run_install(["--dry-run", "--preset", "ecosystem-only"], _make_detection())
         assert result.selection.preset == PresetID.ECOSYSTEM_ONLY
 
     def test_with_agent_flag(self):
-        result = install_mod.run_install(
-            ["--dry-run", "--agents", "claude-code"], _make_detection()
-        )
+        result = install_mod.run_install(["--dry-run", "--agents", "claude-code"], _make_detection())
         assert AgentID.CLAUDE_CODE in result.selection.agents
 
     def test_with_component_flag(self):
-        result = install_mod.run_install(
-            ["--dry-run", "--components", "DXRK_MEMORY"], _make_detection()
-        )
+        result = install_mod.run_install(["--dry-run", "--components", "DXRK_MEMORY"], _make_detection())
         assert ComponentID.DXRK_MEMORY in result.selection.components
 
     def test_with_skills_flag(self):
-        result = install_mod.run_install(
-            ["--dry-run", "--skills", "go-testing"], _make_detection()
-        )
+        result = install_mod.run_install(["--dry-run", "--skills", "go-testing"], _make_detection())
         assert SkillID.GO_TESTING in result.selection.skills
 
     def test_multiple_agents(self):
-        result = install_mod.run_install(
-            ["--dry-run", "--agents", "claude-code,opencode"], _make_detection()
-        )
+        result = install_mod.run_install(["--dry-run", "--agents", "claude-code,opencode"], _make_detection())
         assert AgentID.CLAUDE_CODE in result.selection.agents
         assert AgentID.OPENCODE in result.selection.agents
 
 
 class TestBuildStagePlan:
     def test_returns_stage_plan(self):
-        selection = Selection(
-            agents=[AgentID.CLAUDE_CODE], components=[ComponentID.DXRK_MEMORY]
-        )
+        selection = Selection(agents=[AgentID.CLAUDE_CODE], components=[ComponentID.DXRK_MEMORY])
         resolved = ResolvedPlan(
             agents=[AgentID.CLAUDE_CODE],
             ordered_components=[ComponentID.DXRK_MEMORY],
@@ -151,7 +135,7 @@ class TestRenderDryRun:
             dry_run=True,
         )
         output = install_mod.render_dry_run(result)
-        assert "DRY RUN" in output or "dry-run" in output or "DRY" in output
+        assert "simulación" in output
 
     def test_renders_agent_and_component_count(self):
         selection = Selection(

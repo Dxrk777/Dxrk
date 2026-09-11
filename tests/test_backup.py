@@ -66,7 +66,7 @@ class TestArchiveRoundtrip:
         buf.seek(0)
         with open(archive_path, "wb") as f:
             f.write(buf.read())
-        with pytest.raises(ValueError, match="escapes"):
+        with pytest.raises(ValueError, match="sale del directorio"):
             backup.extract_archive(archive_path, str(tmp_path / "dest"))
 
     def test_raises_on_nonexistent(self, tmp_path):
@@ -189,7 +189,7 @@ class TestListBackups:
         result = backup.list_backups()
         assert len(result) == 1
         assert "install" in result[0]
-        assert "3 files" in result[0]
+        assert "3 archivos" in result[0]
 
     def test_no_backups(self, tmp_path, monkeypatch):
         monkeypatch.setattr(backup, "BackupRootFn", lambda: str(tmp_path))

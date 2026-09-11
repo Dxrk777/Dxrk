@@ -101,13 +101,13 @@ class TestMemoryHasNoBinaryDistribution:
     def test_brew_memory_raises(self):
         resolver = new_resolver()
         profile = PlatformProfile(os="darwin", package_manager="brew")
-        with pytest.raises(InstallError, match="no prebuilt binary"):
+        with pytest.raises(InstallError, match="no tiene distribución binaria precompilada"):
             resolver.resolve_component_install(profile, ComponentID.DXRK_MEMORY)
 
     def test_linux_memory_raises(self):
         resolver = new_resolver()
         profile = PlatformProfile(os="linux", package_manager="apt")
-        with pytest.raises(InstallError, match="no prebuilt binary"):
+        with pytest.raises(InstallError, match="no tiene distribución binaria precompilada"):
             resolver.resolve_component_install(profile, ComponentID.DXRK_MEMORY)
 
 
@@ -154,13 +154,13 @@ class TestResolveDependencyInstall:
     def test_unsupported_package_manager_returns_error(self):
         resolver = new_resolver()
         profile = PlatformProfile(os="linux", linux_distro="ubuntu", package_manager="zypper")
-        with pytest.raises(InstallError, match="unsupported package manager"):
+        with pytest.raises(InstallError, match="gestor de paquetes no compatible"):
             resolver.resolve_dependency_install(profile, "somepkg")
 
     def test_empty_dependency_returns_error(self):
         resolver = new_resolver()
         profile = PlatformProfile(os="darwin", package_manager="brew")
-        with pytest.raises(InstallError, match="dependency name is required"):
+        with pytest.raises(InstallError, match="se requiere el nombre de la dependencia"):
             resolver.resolve_dependency_install(profile, "")
 
 
@@ -420,13 +420,13 @@ class TestResolveAgentInstall:
             package_manager="apt",
             supported=False,
         )
-        with pytest.raises(InstallError, match="not supported on this platform"):
+        with pytest.raises(InstallError, match="no es compatible con esta plataforma"):
             resolver.resolve_agent_install(profile, AgentID.KIMI)
 
     def test_unsupported_agent_returns_error(self):
         resolver = new_resolver()
         profile = PlatformProfile(os="darwin", package_manager="brew")
-        with pytest.raises(InstallError, match="install command is not supported"):
+        with pytest.raises(InstallError, match="comando de instalación no compatible con el agente"):
             resolver.resolve_agent_install(profile, "unsupported")
 
 
@@ -440,7 +440,7 @@ class TestValidateAgentInstallPreflight:
         profile = PlatformProfile(os="linux", linux_distro="unknown", package_manager="", supported=False)
         with pytest.raises(InstallError) as excinfo:
             validate_agent_install_preflight(profile, AgentID.KIMI)
-        assert "not supported on this platform" in str(excinfo.value)
+        assert "no es compatible con esta plataforma" in str(excinfo.value)
         assert "install uv" not in str(excinfo.value).lower()
         assert calls == []
 
@@ -467,7 +467,7 @@ class TestValidateAgentInstallPreflight:
             lambda name: None if name == "pi" else f"/usr/bin/{name}",
         )
         profile = PlatformProfile(os="darwin", package_manager="brew", supported=True)
-        with pytest.raises(InstallError, match="Pi requires the `pi` executable"):
+        with pytest.raises(InstallError, match="requiere el ejecutable `pi`"):
             validate_agent_install_preflight(profile, AgentID.PI)
 
     def test_pi_with_binary_present_passes_preflight(self, monkeypatch):
@@ -488,7 +488,7 @@ class TestResolveComponentInstall:
     def test_dxrk_memory_on_darwin_raises_no_binary(self):
         resolver = new_resolver()
         profile = PlatformProfile(os="darwin", package_manager="brew")
-        with pytest.raises(InstallError, match="no prebuilt binary"):
+        with pytest.raises(InstallError, match="no tiene distribución binaria precompilada"):
             resolver.resolve_component_install(profile, ComponentID.DXRK_MEMORY)
 
     @pytest.mark.parametrize(
@@ -502,7 +502,7 @@ class TestResolveComponentInstall:
     )
     def test_dxrk_memory_on_other_platforms_returns_error(self, profile):
         resolver = new_resolver()
-        with pytest.raises(InstallError, match="no prebuilt binary"):
+        with pytest.raises(InstallError, match="no tiene distribución binaria precompilada"):
             resolver.resolve_component_install(profile, ComponentID.DXRK_MEMORY)
 
     def test_dxrk_guardian_on_darwin_uses_brew_tap_and_install(self):
@@ -566,5 +566,5 @@ class TestResolveComponentInstall:
     def test_unsupported_component_returns_error(self):
         resolver = new_resolver()
         profile = PlatformProfile(os="darwin", package_manager="brew")
-        with pytest.raises(InstallError, match="install command is not supported"):
+        with pytest.raises(InstallError, match="comando de instalación no compatible con el componente"):
             resolver.resolve_component_install(profile, "unsupported")

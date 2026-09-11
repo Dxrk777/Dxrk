@@ -177,7 +177,7 @@ class TestCliTenantManage:
         monkeypatch.setenv("DXRK_USER", "alice")
         code, out, _ = _run_cli(["tenant", "create", "newbie"], tmp_path)
         assert code == 0
-        assert "Created tenant newbie" in out
+        assert "Tenant newbie creado" in out
 
     def test_delete_as_dev_denied(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         _iso_home(tmp_path, monkeypatch)
@@ -197,13 +197,13 @@ class TestCliTenantManage:
         monkeypatch.setenv("DXRK_USER", "alice")
         code, out, _ = _run_cli(["tenant", "delete", "victim", "--force"], tmp_path)
         assert code == 0
-        assert "Deleted tenant victim" in out
+        assert "Tenant victim eliminado" in out
 
     def test_create_local_mode_no_user_passes(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         _iso_home(tmp_path, monkeypatch)
         code, out, _ = _run_cli(["tenant", "create", "local1"], tmp_path)
         assert code == 0
-        assert "Created tenant local1" in out
+        assert "Tenant local1 creado" in out
 
 
 class TestCliMemoryRead:
@@ -214,13 +214,13 @@ class TestCliMemoryRead:
         monkeypatch.setenv("DXRK_USER", "carol")
         code, out, _ = _run_cli(["memory"], tmp_path)
         assert code == 0
-        assert "Memory Usage" in out
+        assert "Uso de memoria" in out
 
     def test_memory_local_mode_passes(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         _iso_home(tmp_path, monkeypatch)
         code, out, _ = _run_cli(["memory"], tmp_path)
         assert code == 0
-        assert "Memory Usage" in out
+        assert "Uso de memoria" in out
 
 
 class TestCliMinePattern:

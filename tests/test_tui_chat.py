@@ -90,7 +90,7 @@ class TestSend:
         backend.binary = ""
         reply = backend.send("hola")
         assert reply.role == "system"
-        assert "not found" in reply.text
+        assert "no encontrada" in reply.text
 
     def test_fake_script(self, tmp_path):
         script = tmp_path / "opencode"
@@ -123,24 +123,24 @@ class TestSlash:
 
     def test_model_get_set(self):
         backend = _make_backend()
-        assert "default" in backend.handle_slash("/model").reply
+        assert "predeterminado" in backend.handle_slash("/model").reply
         result = backend.handle_slash("/model anthropic/claude")
         assert backend.model == "anthropic/claude"
         assert "anthropic/claude" in result.reply
 
     def test_session_get_set(self):
         backend = _make_backend()
-        assert "new" in backend.handle_slash("/session").reply
+        assert "nueva" in backend.handle_slash("/session").reply
         backend.handle_slash("/session abc123")
         assert backend.session == "abc123"
 
     def test_memory_usage(self):
         result = _make_backend().handle_slash("/memory")
-        assert "usage" in result.reply
+        assert "uso:" in result.reply
 
     def test_unknown(self):
         result = _make_backend().handle_slash("/nope")
-        assert result.handled and "unknown command" in result.reply
+        assert result.handled and "comando desconocido" in result.reply
 
 
 class TestChatScreen:
@@ -178,7 +178,7 @@ class TestChatScreen:
             assert isinstance(screen, ChatScreen)
             screen.action_clear()
             await pilot.pause()
-            assert screen.history[-1].text == "Transcript cleared."
+            assert screen.history[-1].text == "Conversación borrada."
 
     async def test_escape_pops(self):
         from dxrk.tui.app import DxrkApp

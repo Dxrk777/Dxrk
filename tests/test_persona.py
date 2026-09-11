@@ -285,19 +285,17 @@ class TestCleanLegacyVSCodePersona:
         target.parent.mkdir(parents=True)
         target.write_text("## Personality\nSenior Architect\n## Rules\n")
 
-
         def failing_open(*args, **kwargs):
             raise OSError("permission denied")
 
         monkeypatch.setattr("builtins.open", failing_open)
-        with pytest.raises(OSError, match="read legacy vscode persona"):
+        with pytest.raises(OSError, match="al leer la persona heredada de vscode"):
             persona._clean_legacy_vscode_persona(str(tmp_path))
 
     def test_oserror_on_remove_ignored(self, monkeypatch, tmp_path):
         target = tmp_path / ".github" / "copilot-instructions.md"
         target.parent.mkdir(parents=True)
         target.write_text("## Personality\nSenior Architect\n## Rules\n")
-
 
         def fail_first_remove(path):
             raise FileNotFoundError("already gone")
@@ -464,6 +462,7 @@ class TestInjectFileReplace:
         prompt.parent.mkdir(parents=True)
         prompt.write_text("## Personality\nSenior Architect\n<!-- dxrk:persona -->\nmanaged\n")
         from dxrk.agents.opencode.adapter import OpenCodeAdapter
+
         adapter = OpenCodeAdapter()
         result = persona.inject(str(tmp_path), adapter, PersonaID.DXRK)
         assert result.Changed is True
@@ -481,6 +480,7 @@ class TestInjectFileReplace:
         prompt.parent.mkdir(parents=True)
         prompt.write_text("exact asset content")
         from dxrk.agents.opencode.adapter import OpenCodeAdapter
+
         adapter = OpenCodeAdapter()
         result = persona.inject(str(tmp_path), adapter, PersonaID.DXRK)
         assert result.Changed is True
@@ -493,6 +493,7 @@ class TestInjectFileReplace:
         prompt.parent.mkdir(parents=True)
         prompt.write_text("existing content\n")
         from dxrk.agents.opencode.adapter import OpenCodeAdapter
+
         adapter = OpenCodeAdapter()
         result = persona.inject(str(tmp_path), adapter, PersonaID.DXRK)
         assert result.Changed is True
@@ -925,6 +926,7 @@ class TestReadFileOrEmpty:
 
     def test_not_found(self, tmp_path):
         assert persona._read_file_or_empty(str(tmp_path / "nope")) == ""
+
 
 import sys
 

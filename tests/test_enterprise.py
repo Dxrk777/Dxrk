@@ -535,7 +535,7 @@ class TestEnterpriseCLI:
         _iso_home(tmp_path, monkeypatch)
         code, out, _ = _run(["enterprise", "stop"])
         assert code == 0
-        assert "stopped" in out.lower()
+        assert "detenida" in out.lower()
 
     def test_status_returns_0(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         _iso_home(tmp_path, monkeypatch)

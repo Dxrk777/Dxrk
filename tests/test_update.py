@@ -300,7 +300,7 @@ class TestUpdateHint:
     def test_opencode_plugin(self):
         p = MagicMock()
         t = ToolInfo(name="opencode-subagent-statusline")
-        assert "Restart/reload" in update_hint(t, p)
+        assert "Reinicia/recarga" in update_hint(t, p)
 
     def test_unknown_tool(self):
         p = MagicMock()
@@ -452,7 +452,7 @@ class TestRenderCli:
     def test_all_up_to_date(self):
         r = UpdateResult(tool=ToolInfo(name="DXRK_MEMORY"), status=UpdateStatus.UP_TO_DATE)
         output = render_cli([r])
-        assert "All tools are up to date!" in output
+        assert "¡Todas las herramientas están actualizadas!" in output
         assert "[ok]" in output
 
     def test_with_updates(self):
@@ -464,7 +464,7 @@ class TestRenderCli:
             update_hint="brew upgrade memory",
         )
         output = render_cli([r])
-        assert "update(s) available" in output
+        assert "actualización(es) disponible(s)" in output
         assert "[UP]" in output
         assert "brew upgrade memory" in output
 
@@ -474,7 +474,7 @@ class TestRenderCli:
             status=UpdateStatus.CHECK_FAILED,
         )
         output = render_cli([r])
-        assert "check failed" in output
+        assert "verificación fallida" in output
         assert "[!!]" in output
 
     def test_with_not_installed(self):
@@ -489,7 +489,7 @@ class TestRenderCli:
 
     def test_empty_results(self):
         output = render_cli([])
-        assert "All tools are up to date!" in output
+        assert "¡Todas las herramientas están actualizadas!" in output
 
     def test_mixed_status_summary(self):
         r1 = UpdateResult(
@@ -501,24 +501,24 @@ class TestRenderCli:
         )
         r2 = UpdateResult(tool=ToolInfo(name="b"), status=UpdateStatus.CHECK_FAILED)
         output = render_cli([r1, r2])
-        assert "update(s) available" in output
-        assert "check(s) failed" in output
+        assert "actualización(es) disponible(s)" in output
+        assert "verificación(es) fallida(s)" in output
 
 
 class TestRenderUpgradeReport:
     def test_dry_run_header(self):
         r = UpgradeReport(dry_run=True)
-        assert "dry-run" in render_upgrade_report(r)
+        assert "simulación" in render_upgrade_report(r)
 
     def test_live_header(self):
         r = UpgradeReport(dry_run=False)
-        assert "Upgrade" in render_upgrade_report(r)
-        assert "dry-run" not in render_upgrade_report(r)
+        assert "Actualización" in render_upgrade_report(r)
+        assert "simulación" not in render_upgrade_report(r)
 
     def test_no_results(self):
         r = UpgradeReport()
         output = render_upgrade_report(r)
-        assert "No upgrades available" in output
+        assert "No hay actualizaciones disponibles" in output
 
     def test_succeeded(self):
         r = UpgradeReport(
@@ -532,7 +532,7 @@ class TestRenderUpgradeReport:
             ]
         )
         output = render_upgrade_report(r)
-        assert "succeeded" in output
+        assert "correctas" in output
         assert "1 → 2" in output
 
     def test_failed(self):
@@ -546,7 +546,7 @@ class TestRenderUpgradeReport:
             ]
         )
         output = render_upgrade_report(r)
-        assert "FAILED" in output
+        assert "FALLÓ" in output
         assert "permission denied" in output
 
     def test_skipped_manual_hint(self):
@@ -596,7 +596,7 @@ class TestRenderUpgradeReport:
             ],
         )
         output = render_upgrade_report(r)
-        assert "WARNING" in output
+        assert "ADVERTENCIA" in output
         assert "no space" in output
 
     def test_actionable_count(self):
@@ -612,7 +612,7 @@ class TestRenderUpgradeReport:
             ],
         )
         output = render_upgrade_report(r)
-        assert "pending" in output
+        assert "pendiente" in output
 
     def test_no_actionable(self):
         r = UpgradeReport(
@@ -635,7 +635,7 @@ class TestRenderUpgradeReport:
             ]
         )
         output = render_upgrade_report(r)
-        assert "succeeded" in output
+        assert "correctas" in output
 
 
 class TestOpencodePmFromMetadata:
@@ -940,7 +940,7 @@ class TestFetchLatestRelease:
     def test_http_403_raises_rate_limit(self, mock_token, mock_urlopen):
         from dxrk.update import fetch_latest_release
 
-        with pytest.raises(RuntimeError, match="rate limit"):
+        with pytest.raises(RuntimeError, match="Límite de la API de GitHub excedido"):
             fetch_latest_release("o", "r")
 
     @patch(
@@ -957,7 +957,7 @@ class TestFetchLatestRelease:
     def test_http_404_raises_no_releases(self, mock_token, mock_urlopen):
         from dxrk.update import fetch_latest_release
 
-        with pytest.raises(RuntimeError, match="No releases"):
+        with pytest.raises(RuntimeError, match="No se encontraron releases"):
             fetch_latest_release("o", "r")
 
     @patch(

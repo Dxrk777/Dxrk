@@ -65,7 +65,7 @@ class TestParseInstallFlags:
     def test_unknown_flag_raises(self):
         from dxrk.cli.install import parse_install_flags
 
-        with pytest.raises(ValueError, match="unexpected install argument"):
+        with pytest.raises(ValueError, match="argumento de install inesperado"):
             parse_install_flags(["--bogus"])
 
     def test_persona_flag(self):
@@ -139,7 +139,7 @@ class TestParseSyncFlags:
     def test_sdd_profile_strategy_invalid(self):
         from dxrk.cli.install import parse_sync_flags
 
-        with pytest.raises(ValueError, match="unsupported sdd-profile-strategy"):
+        with pytest.raises(ValueError, match="sdd-profile-strategy no compatible"):
             parse_sync_flags(["--sdd-profile-strategy", "bogus"])
 
     def test_profile_flag(self):
@@ -167,7 +167,7 @@ class TestParseSyncFlags:
     def test_unknown_flag_raises(self):
         from dxrk.cli.install import parse_sync_flags
 
-        with pytest.raises(ValueError, match="unexpected sync argument"):
+        with pytest.raises(ValueError, match="argumento de sync inesperado"):
             parse_sync_flags(["--bogus"])
 
 
@@ -181,13 +181,13 @@ class TestParseUninstallFlags:
     def test_all_with_agents_raises(self):
         from dxrk.cli.install import parse_uninstall_flags
 
-        with pytest.raises(ValueError, match="--all cannot be combined"):
+        with pytest.raises(ValueError, match="--all no se puede combinar"):
             parse_uninstall_flags(["--all", "--agent", "claude-code"])
 
     def test_no_all_no_agents_raises(self):
         from dxrk.cli.install import parse_uninstall_flags
 
-        with pytest.raises(ValueError, match="partial uninstall requires"):
+        with pytest.raises(ValueError, match="la desinstalación parcial requiere"):
             parse_uninstall_flags([])
 
     def test_agent_flag(self):
@@ -212,7 +212,7 @@ class TestParseUninstallFlags:
     def test_unknown_flag_raises(self):
         from dxrk.cli.install import parse_uninstall_flags
 
-        with pytest.raises(ValueError, match="unexpected uninstall argument"):
+        with pytest.raises(ValueError, match="argumento de uninstall inesperado"):
             parse_uninstall_flags(["--bogus"])
 
 
@@ -235,7 +235,7 @@ class TestNormalizePersona:
     def test_unsupported_raises(self):
         from dxrk.cli.install import normalize_persona
 
-        with pytest.raises(ValueError, match="unsupported persona"):
+        with pytest.raises(ValueError, match="persona no compatible"):
             normalize_persona("bogus")
 
 
@@ -263,7 +263,7 @@ class TestNormalizePreset:
     def test_unsupported_raises(self):
         from dxrk.cli.install import normalize_preset
 
-        with pytest.raises(ValueError, match="unsupported preset"):
+        with pytest.raises(ValueError, match="preset no compatible"):
             normalize_preset("bogus")
 
 
@@ -357,7 +357,7 @@ class TestNormalizeComponents:
         )
         from dxrk.cli.install import normalize_components
 
-        with pytest.raises(ValueError, match="unsupported component"):
+        with pytest.raises(ValueError, match="componente no compatible"):
             normalize_components(["bogus"], PresetID.CUSTOM)
 
 
@@ -393,7 +393,7 @@ class TestNormalizeSkills:
         )
         from dxrk.cli.install import normalize_skills
 
-        with pytest.raises(ValueError, match="unsupported skill"):
+        with pytest.raises(ValueError, match="skill no compatible"):
             normalize_skills(["bogus"])
 
 
@@ -416,7 +416,7 @@ class TestNormalizeSDDMode:
     def test_invalid_raises(self):
         from dxrk.cli.install import normalize_sdd_mode
 
-        with pytest.raises(ValueError, match="unsupported sdd-mode"):
+        with pytest.raises(ValueError, match="sdd-mode no compatible"):
             normalize_sdd_mode("bogus")
 
 
@@ -438,19 +438,19 @@ class TestParseModelSpec:
     def test_missing_provider_raises(self):
         from dxrk.cli.install import _parse_model_spec
 
-        with pytest.raises(ValueError, match="invalid model spec"):
+        with pytest.raises(ValueError, match="especificación de modelo no válida"):
             _parse_model_spec("/model")
 
     def test_missing_model_raises(self):
         from dxrk.cli.install import _parse_model_spec
 
-        with pytest.raises(ValueError, match="invalid model spec"):
+        with pytest.raises(ValueError, match="especificación de modelo no válida"):
             _parse_model_spec("provider/")
 
     def test_no_separator_raises(self):
         from dxrk.cli.install import _parse_model_spec
 
-        with pytest.raises(ValueError, match="invalid model spec"):
+        with pytest.raises(ValueError, match="especificación de modelo no válida"):
             _parse_model_spec("justaname")
 
 
@@ -751,13 +751,13 @@ class TestParseProfileFlag:
     def test_no_colon_raises(self):
         from dxrk.cli.install import _parse_profile_flag
 
-        with pytest.raises(ValueError, match="invalid format"):
+        with pytest.raises(ValueError, match="formato no válido"):
             _parse_profile_flag("my-profile")
 
     def test_empty_name_raises(self):
         from dxrk.cli.install import _parse_profile_flag
 
-        with pytest.raises(ValueError, match="invalid format"):
+        with pytest.raises(ValueError, match="formato no válido"):
             _parse_profile_flag(":anthropic/claude-3-opus")
 
 
@@ -776,17 +776,17 @@ class TestParseProfilePhaseFlag:
     def test_empty_name_raises(self):
         from dxrk.cli.install import _parse_profile_phase_flag
 
-        with pytest.raises(ValueError, match="profile name must not be empty"):
+        with pytest.raises(ValueError, match="el nombre del perfil no debe estar vacío"):
             _parse_profile_phase_flag(":propose:anthropic/claude-3-haiku")
 
     def test_empty_phase_raises(self):
         from dxrk.cli.install import _parse_profile_phase_flag
 
-        with pytest.raises(ValueError, match="phase must not be empty"):
+        with pytest.raises(ValueError, match="la fase no debe estar vacía"):
             _parse_profile_phase_flag("my-profile::anthropic/claude-3-haiku")
 
     def test_too_few_parts_raises(self):
         from dxrk.cli.install import _parse_profile_phase_flag
 
-        with pytest.raises(ValueError, match="invalid format"):
+        with pytest.raises(ValueError, match="formato no válido"):
             _parse_profile_phase_flag("my-profile:onlytwo")

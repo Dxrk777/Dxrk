@@ -86,10 +86,10 @@ class TestTenantCliRoundtrip:
         home = _iso_home(tmp_path, monkeypatch)
         code, out, _ = _run_cli(["tenant", "create", "acme"], tmp_path)
         assert code == 0
-        assert "Created tenant acme" in out
+        assert "Tenant acme creado" in out
         code, out, _ = _run_cli(["tenant", "create", "bob"], tmp_path)
         assert code == 0
-        assert "Created tenant bob" in out
+        assert "Tenant bob creado" in out
 
         code, out, _ = _run_cli(["tenant", "list"], tmp_path)
         assert code == 0
@@ -97,7 +97,7 @@ class TestTenantCliRoundtrip:
 
         code, out, _ = _run_cli(["tenant", "switch", "acme"], tmp_path)
         assert code == 0
-        assert "Switched to tenant acme" in out
+        assert "Tenant activo: acme" in out
         assert (home / ".dxrk" / "tenants" / "_active").read_text(encoding="utf-8") == "acme"
 
         code, out, _ = _run_cli(["tenant", "current"], tmp_path)
@@ -106,7 +106,7 @@ class TestTenantCliRoundtrip:
 
         code, out, _ = _run_cli(["tenant", "delete", "acme", "--force"], tmp_path)
         assert code == 0
-        assert "Deleted tenant acme" in out
+        assert "Tenant acme eliminado" in out
         assert not (home / ".dxrk" / "tenants" / "acme").exists()
 
         code, out, _ = _run_cli(["tenant", "list"], tmp_path)
@@ -118,7 +118,7 @@ class TestTenantCliRoundtrip:
         _iso_home(tmp_path, monkeypatch)
         code, _, err = _run_cli(["tenant", "switch", "ghost"], tmp_path)
         assert code == 1
-        assert "not found" in err
+        assert "no encontrado" in err
 
     def test_delete_requires_force(self, tmp_path, monkeypatch) -> None:
         _iso_home(tmp_path, monkeypatch)
@@ -135,14 +135,14 @@ class TestTenantCliRoundtrip:
         assert _run_cli(["tenant", "create", "acme"], tmp_path)[0] == 0
         code, out, _ = _run_cli(["tenant", "create", "acme"], tmp_path)
         assert code == 0
-        assert "Created tenant acme" in out
+        assert "Tenant acme creado" in out
 
     @pytest.mark.parametrize("tid", ["../evil", "a/b", "bad id", "x" * 257, "a:b"])
     def test_cli_create_rejects_invalid(self, tmp_path, monkeypatch, tid: str) -> None:
         _iso_home(tmp_path, monkeypatch)
         code, _, err = _run_cli(["tenant", "create", tid], tmp_path)
         assert code == 1
-        assert "invalid tenant id" in err
+        assert "id de tenant inválido" in err
 
 
 class TestTenantWhoami:
@@ -178,10 +178,10 @@ class TestTenantWhoami:
         _iso_home(tmp_path, monkeypatch)
         code, out, _ = _run_cli(["tenant", "current"], tmp_path)
         assert code == 0
-        assert out.strip() == "No current tenant"
+        assert out.strip() == "No hay tenant actual"
         code, out, _ = _run_cli(["tenant", "whoami"], tmp_path)
         assert code == 0
-        assert out.strip() == "No tenant"
+        assert out.strip() == "Sin tenant"
 
 
 class TestValidateId:
@@ -260,7 +260,7 @@ class TestMigration:
         self._seed_legacy(home)
         code, out, _ = _run_cli(["tenant", "migrate"], tmp_path)
         assert code == 0
-        assert "Migrated" in out
+        assert "migrados" in out
         assert is_migrated() is True
         assert (home / ".dxrk" / "tenants" / "default" / "identity.txt").exists()
 

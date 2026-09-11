@@ -795,7 +795,7 @@ class TestDownloadAndExtractTarGz:
                 pass
 
         monkeypatch.setattr(memory, "urlopen", lambda req, timeout=None: FakeResp())
-        with pytest.raises(FileNotFoundError, match="binary.*not found"):
+        with pytest.raises(FileNotFoundError, match="no encontrado"):
             memory._download_and_extract_tar_gz("https://example.com/DXRK_MEMORY.tar.gz", "DXRK_MEMORY", "/tmp/out")
 
 
@@ -846,7 +846,7 @@ class TestDownloadAndExtractZip:
                 pass
 
         monkeypatch.setattr(memory, "urlopen", lambda req, timeout=None: FakeResp())
-        with pytest.raises(FileNotFoundError, match="binary.*not found"):
+        with pytest.raises(FileNotFoundError, match="no encontrado"):
             memory._download_and_extract_zip("https://example.com/DXRK_MEMORY.zip", "DXRK_MEMORY.exe", "/tmp/out")
 
 
@@ -916,7 +916,7 @@ class TestFetchLatestMemoryVersionRequest:
                 pass
 
         monkeypatch.setattr(memory, "urlopen", lambda req, timeout=None: FakeResp())
-        with pytest.raises(RuntimeError, match="empty tag_name"):
+        with pytest.raises(RuntimeError, match="tag_name vacío"):
             memory._fetch_latest_DXRK_MEMORY_version_request("")
 
 
@@ -1027,7 +1027,7 @@ class TestVerifyInstalled:
         monkeypatch.setattr("shutil.which", lambda x: None)
         err = memory.verify_installed()
         assert err is not None
-        assert "not found" in err
+        assert "no encontrado" in err
 
 
 class TestVerifyVersion:

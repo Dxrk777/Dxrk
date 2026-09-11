@@ -24,7 +24,7 @@ async def _never_finish_run(selection, on_progress=None):
 def test_express_is_first_option():
     from dxrk.tui.app import WELCOME_OPTIONS
 
-    assert WELCOME_OPTIONS[0][0] == "Express Install"
+    assert WELCOME_OPTIONS[0][0] == "Instalación exprés"
 
 
 def test_parity_with_cli_oneshot():

@@ -80,7 +80,7 @@ def test_dry_run_profile_strategy(tmp_path, monkeypatch):
 def test_dry_run_unknown_flag_raises(tmp_path, monkeypatch):
     monkeypatch.setattr("dxrk.cli.install.os.path.expanduser", lambda _: str(tmp_path))
 
-    with pytest.raises(ValueError, match="unexpected sync argument"):
+    with pytest.raises(ValueError, match="argumento de sync inesperado"):
         run_sync(["--dry-run", "--agents", "opencode", "--bogus-flag"])
 
 
