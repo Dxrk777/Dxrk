@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import os
+
 
 async def test_initial_screen_chat_opens_chat():
     from dxrk.tui.app import DxrkApp
@@ -101,3 +103,91 @@ class TestAgentInstallStepSkip:
 
         step = self._step(monkeypatch, tmp_path, [[sys.executable, "-c", "pass"]])
         assert step.run() is None
+
+
+class TestLaunchSingleInstaller:
+    """_launch_single_installer usa el run_install REAL y abre el chat."""
+
+    def test_runs_real_install_then_opens_chat(self, monkeypatch, tmp_path):
+        from types import SimpleNamespace
+
+        import dxrk.__main__ as main_mod
+        from dxrk.system import DetectionResult
+
+        calls: dict = {}
+
+        def fake_detect():
+            calls["detect"] = True
+            return DetectionResult()
+
+        def fake_run_install(args, detection):
+            calls["run_install"] = (args, detection)
+            return SimpleNamespace(error="")
+
+        def fake_launch_tui(version, initial_screen="welcome"):
+            calls["tui"] = (version, initial_screen)
+
+        monkeypatch.setattr("dxrk.system.detect", fake_detect)
+        monkeypatch.setattr("dxrk.cli.install.run_install", fake_run_install)
+        monkeypatch.setattr(main_mod, "_launch_tui", fake_launch_tui)
+        monkeypatch.setenv("HOME", str(tmp_path))
+
+        main_mod._launch_single_installer("9.9.9")
+
+        assert calls.get("detect") is True
+        assert calls["run_install"][0] == []
+        assert isinstance(calls["run_install"][1], DetectionResult)
+        assert calls["tui"] == ("9.9.9", "chat")
+
+    def test_skips_install_when_already_installed(self, monkeypatch, tmp_path):
+        from types import SimpleNamespace
+
+        import dxrk.__main__ as main_mod
+        from dxrk.state import InstallState
+        from dxrk.state import write as state_write
+        from dxrk.system import DetectionResult
+
+        state_write(str(tmp_path), InstallState(installed_agents=["opencode"]))
+        calls: dict = {}
+
+        def fake_run_install(args, detection):
+            calls["run_install"] = True
+            return SimpleNamespace(error="")
+
+        def fake_launch_tui(version, initial_screen="welcome"):
+            calls["tui"] = (version, initial_screen)
+
+        monkeypatch.setattr("dxrk.system.detect", lambda: DetectionResult())
+        monkeypatch.setattr("dxrk.cli.install.run_install", fake_run_install)
+        monkeypatch.setattr(main_mod, "_launch_tui", fake_launch_tui)
+        monkeypatch.setenv("HOME", str(tmp_path))
+
+        main_mod._launch_single_installer("9.9.9")
+
+        assert "run_install" not in calls
+        assert calls["tui"] == ("9.9.9", "chat")
+
+
+class TestBackgroundAgentsPlugin:
+    """sdd inject despliega plugins/background-agents.ts para opencode."""
+
+    def test_writes_background_agents_ts(self, tmp_path):
+        from dxrk.agents.opencode.adapter import OpenCodeAdapter
+        from dxrk.components import sdd
+        from dxrk.models import SDDModeID
+
+        home = str(tmp_path)
+        result = sdd.inject(
+            home,
+            OpenCodeAdapter(),
+            sdd_mode=SDDModeID.SINGLE,
+            options=None,
+        )
+        dest = os.path.join(home, ".config", "opencode", "plugins", "background-agents.ts")
+        assert os.path.isfile(dest)
+        with open(os.path.join("dxrk", "assets", "opencode", "plugins", "background-agents.ts"), encoding="utf-8") as f:
+            asset = f.read()
+        with open(dest, encoding="utf-8") as f:
+            assert f.read() == asset
+        assert result.Changed is True
+        assert dest in result.Files
