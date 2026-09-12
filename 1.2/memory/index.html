@@ -1,0 +1,1667 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Dxrk Ecosystem Configurator — supercharge AI coding agents">
+      
+      
+      
+        <link rel="canonical" href="https://dxrk777.github.io/Dxrk/1.2/memory/">
+      
+      
+        <link rel="prev" href="../architecture/">
+      
+      
+        <link rel="next" href="../enterprise/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>DxrkMemory 2.0 - Dxrk</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  
+<meta property="og:type" content="website" />
+<meta property="og:title" content="DxrkMemory 2.0 - Dxrk" />
+<meta property="og:description" content="Dxrk Ecosystem Configurator — supercharge AI coding agents" />
+<meta property="og:image" content="https://dxrk777.github.io/Dxrk/1.2/assets/images/social/memory.png" />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:url" content="https://dxrk777.github.io/Dxrk/1.2/memory/" />
+<meta property="twitter:card" content="summary_large_image" />
+<meta property="twitter:title" content="DxrkMemory 2.0 - Dxrk" />
+<meta property="twitter:description" content="Dxrk Ecosystem Configurator — supercharge AI coding agents" />
+<meta property="twitter:image" content="https://dxrk777.github.io/Dxrk/1.2/assets/images/social/memory.png" />
+</head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="purple">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#dxrkmemory-20-flagship-memory-engine-stdlib-only" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Dxrk" class="md-header__button md-logo" aria-label="Dxrk" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Dxrk
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              DxrkMemory 2.0
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Dxrk777/Dxrk" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Dxrk" class="md-nav__button md-logo" aria-label="Dxrk" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Dxrk
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Dxrk777/Dxrk" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inicio
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uso
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial (10 min)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparativa
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../intended-usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uso previsto
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agentes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Componentes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arquitectura
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DxrkMemory 2.0
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DxrkMemory 2.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#arquitectura-13-modulos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arquitectura — 13 módulos
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backend-sqlite3-fts5-trigram-wal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backend — sqlite3 FTS5 trigram + WAL
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#palace-locks-dxrklocks-900-s" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Palace &amp; Locks — ~/.dxrk/locks 900 s
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hybrid-bm25-drawer-closet-boost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hybrid BM25 — drawer + closet boost
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#graph-knowledgegraph-temporal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Graph — KnowledgeGraph temporal
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dialecto-aaak" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dialecto AAAK
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#layers-wake-up-600900-tok" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Layers — wake-up 600–900 tok
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#miner-gitignorematcher" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Miner — GitignoreMatcher
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fidelity-371-paridad-stdlib-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fidelity 3.7.1 — paridad stdlib-only
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#zero-deps-vs-mempalace-engram" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Zero-deps vs mempalace / engram
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#uso" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Uso
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Uso">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cli-relacionado" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI relacionado
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#benchmarks-wake-up-estimados-local-first" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Benchmarks wake-up (estimados, local-first)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verificacion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verificación
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#relacion-con-autonomy-y-rag-ver-adr-002" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Relación con Autonomy y RAG — ver ADR-002
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../enterprise/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Enterprise (Cortex + Autonomous)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tenants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rbac/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RBAC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migración a multi-tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../migration-0.5-to-1.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migración 0.5 → 1.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuración
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/ADR-002-memory-separation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-002 Separación Memoria
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/ADR-003-hybrid-vs-stdlib/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-003 Hybrid vs Stdlib
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/ADR-004-config-unify/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-004 Unificación Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MIGRATION_3.3.5_3.7.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migración 3.3.5 → 3.7.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dx/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DX Top 1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../platforms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plataformas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="dxrkmemory-20-flagship-memory-engine-stdlib-only">DxrkMemory 2.0 — Flagship Memory Engine (stdlib-only)</h1>
+<blockquote>
+<p><strong>Top1 local-first</strong> — 13 módulos <code>dxrk/memory</code> (~4652 LOC), <strong>zero dependencias</strong> (<code>sqlite3</code> stdlib), sin <code>chromadb</code>, sin <code>onnx</code>, sin <code>numpy</code>. Paridad funcional <strong>mempalace 3.7.1</strong> para todo el camino crítico stdlib-only.</p>
+</blockquote>
+<p>DxrkMemory 2.0 es el resultado de la fusión <strong>mempalace 3.3.5</strong> (<code>feat/opencode-integration</code> <code>5623136</code>) → <strong>upstream 3.7.1</strong> (<code>359c579</code>, 388 archivos, 50+ commits). Se portaron los 6 parches críticos stdlib; se dejaron fuera a propósito los fixes exclusivos de <code>chromadb</code>/<code>HNSW</code>/<code>numpy2</code> por diseño <em>stdlib-only</em>. Cero trazas <code>engram</code>/<code>mempal</code> en <code>dxrk/memory</code> (979 reemplazos + 7 <code>git mv</code>) y 6 assets duplicados eliminados vía <code>git rm</code> dejando canónicos <code>memory-*.py</code>.</p>
+<hr />
+<h2 id="arquitectura-13-modulos">Arquitectura — 13 módulos</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Módulo</th>
+<th>Ruta</th>
+<th>LOC</th>
+<th>Responsabilidad</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>AgentMemory</code> (fachada)</td>
+<td><code>dxrk/memory/__init__.py</code></td>
+<td>479</td>
+<td>Fachada <code>AgentMemory</code> compat + delegación <code>Palace</code>/<code>SqliteBackend</code> híbrido BM25; JSON fallback tests</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>types</code></td>
+<td><code>dxrk/memory/types.py</code></td>
+<td>107</td>
+<td><code>MemoryType</code> (SEMANTIC 0/EPISODIC 1/PROCEDURAL 2 + TECHNICAL/PERSONAL), <code>DrawerRecord</code>/<code>ClosetRecord</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>backend.base</code></td>
+<td><code>dxrk/memory/backend/base.py</code></td>
+<td>296</td>
+<td>Contratos <code>BaseBackend</code>/<code>BaseCollection</code>, <code>PalaceRef</code>, <code>HealthStatus</code>, <code>GetResult</code>/<code>QueryResult</code>, <code>IncludeSpec</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>backend</code></td>
+<td><code>dxrk/memory/backend/__init__.py</code></td>
+<td>63</td>
+<td>Registry <code>sqlite</code> (<code>SqliteBackend</code>), <code>get_backend</code>, <code>register_backend</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>SqliteBackend</code></td>
+<td><code>dxrk/memory/backend/sqlite.py</code></td>
+<td>770</td>
+<td><code>sqlite3</code> FTS5 <code>trigram</code>→<code>porter</code> fallback, WAL, <code>dxrk_drawers</code> + <code>LEGACY</code> <code>chr-join</code> compat, BM25, <code>json_extract</code> where</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>Palace</code></td>
+<td><code>dxrk/memory/palace.py</code></td>
+<td>891</td>
+<td>Orquestador wings/rooms/drawers, chunking 800/100, <code>mine()</code>, locks, SIGTERM, <code>O_NONBLOCK</code>+<code>S_ISREG</code></td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>search</code></td>
+<td><code>dxrk/memory/search.py</code></td>
+<td>267</td>
+<td><code>hybrid_search</code> BM25 + <code>closet_boost</code> + <code>sanitize_query</code>, <code>build_where_filter</code>, <code>date_window</code> pool 3×/15×</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>date_window</code></td>
+<td><code>dxrk/memory/date_window.py</code></td>
+<td>88</td>
+<td><code>parse_date_bound</code>/<code>parse_window</code>/<code>filed_at_in_window</code> — ventana <code>[since, before)</code> wall-clock sobre <code>filed_at</code></td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>dialect</code></td>
+<td><code>dxrk/memory/dialect.py</code></td>
+<td>354</td>
+<td>Dialecto <strong>AAAK</strong> — <code>compress</code>/<code>decode</code>/<code>count_tokens</code>/<code>compression_stats</code>, entidades/tópicos/emociones/flags</td>
+</tr>
+<tr>
+<td>10</td>
+<td><code>entity_detector</code></td>
+<td><code>dxrk/memory/entity_detector.py</code></td>
+<td>295</td>
+<td><code>extract_candidates</code>/<code>score_entity</code>/<code>classify_entity</code>/<code>detect_entities</code>, 3+ menciones, person vs project</td>
+</tr>
+<tr>
+<td>11</td>
+<td><code>graph</code></td>
+<td><code>dxrk/memory/graph.py</code></td>
+<td>381</td>
+<td><code>KnowledgeGraph</code> temporal SQLite WAL, <code>valid_from</code>/<code>valid_to</code>, <code>as_of</code>, <code>traverse</code> BFS, <code>stats</code></td>
+</tr>
+<tr>
+<td>12</td>
+<td><code>layers</code></td>
+<td><code>dxrk/memory/layers.py</code></td>
+<td>263</td>
+<td><code>MemoryStack</code> <strong>L0-L3</strong> wake-up 600–900 tok (L0 identity 100 tok, L1 500–800, L2 on-demand, L3 deep)</td>
+</tr>
+<tr>
+<td>13</td>
+<td><code>miner</code></td>
+<td><code>dxrk/memory/miner.py</code></td>
+<td>398</td>
+<td><code>GitignoreMatcher</code> + <code>scan_project</code>/<code>chunk_text</code>, <code>SKIP_DIRS</code>, <code>READABLE_EXTENSIONS</code>, safe <code>O_NONBLOCK</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Total stdlib-only:</strong> 13 archivos, <strong>4652 LOC</strong> (sin <code>chromadb</code>, sin <code>onnx</code>, sin <code>numpy</code>, solo <code>sqlite3</code>, <code>hashlib</code>, <code>re</code>, <code>pathlib</code>, <code>threading</code>).</p>
+<hr />
+<h2 id="backend-sqlite3-fts5-trigram-wal">Backend — <code>sqlite3</code> FTS5 trigram + WAL</h2>
+<ul>
+<li><strong>Un DB por palacio:</strong> <code>&lt;palace_path&gt;/sqlite_palace.db</code> — <code>PRAGMA journal_mode=WAL</code>, <code>synchronous=NORMAL</code>, <code>foreign_keys=ON</code>, <code>chmod 0o600</code> (directorio <code>0o750</code>).</li>
+<li><strong>Esquema:</strong> <code>collections(id, name)</code>, <code>segments(id, collection_id)</code>, <code>embeddings(id, document, metadata json, collection, palace_id)</code> + <code>embedding_fts</code> virtual <code>FTS5(content='embeddings', tokenize='trigram' → 'porter unicode61' → 'unicode61' fallback)</code>.</li>
+<li><strong>Compat LEGACY:</strong> <code>LEGACY_COLLECTION = chr(109)+chr(101)+… → "mempalace_drawers"</code> ofuscado para grep zero-trace; coexiste con <code>DEFAULT_COLLECTION = "dxrk_drawers"</code>. <code>where</code> vía <code>json_extract(metadata, '$.key')</code>, <code>$and</code>/<code>$in</code> soportados.</li>
+<li><strong>FTS5 + BM25:</strong> tokenizador <code>\w{2,}</code>; <code>_sanitize_query</code> strip FTS5 specials → 500 chars; <code>_bm25_scores(k1=1.5,b=0.75)</code> + normalización y <code>distance = 1 - norm</code>; pooling FTS5 <code>OR</code> limitado 10 tokens, fallback <code>ORDER BY rowid DESC</code>.</li>
+<li><strong>Zero traces:</strong> <code>979</code> reemplazos <code>engram</code>/<code>mempal*</code> → <code>dxrk</code> + <code>7 git mv</code> + <code>6 assets</code> duplicados <code>git rm</code>; verificación <code>grep -rn engram|mempal</code> global <code>0</code>.</li>
+</ul>
+<hr />
+<h2 id="palace-locks-dxrklocks-900-s">Palace &amp; Locks — <code>~/.dxrk/locks</code> 900 s</h2>
+<ul>
+<li><strong>Jerarquía:</strong> <code>wings / rooms / drawers</code> — <code>DrawerRecord.make_id(wing,room,source_file,chunk_index)</code> <code>sha256(... )[:24]</code>; metadata <code>wing</code>, <code>room</code>, <code>source_file</code>, <code>chunk_index</code>, <code>filed_at</code> (ISO), <code>source_mtime</code>, <code>chunk_total</code>, <code>normalize_version=2</code>, <code>hall</code>, <code>entities</code>.</li>
+<li><strong>Chunking:</strong> <code>CHUNK_SIZE=800</code>, <code>CHUNK_OVERLAP=100</code>, <code>MIN_CHUNK_SIZE=50</code>, <code>MAX_FILE_SIZE=500 MiB</code>, paragraph-aware (<code>\n\n</code> &gt; <code>\n</code> &gt; hard cut).</li>
+<li><strong><code>mine_lock(source_file)</code>:</strong> lock por archivo en <code>~/.dxrk/locks/&lt;sha16&gt;.lock</code> (<code>hashlib.sha256(source_file).hexdigest()[:16]</code>), <code>fcntl.flock</code>/<code>msvcrt.locking</code>, opportunistic reap throttled.</li>
+<li><strong><code>mine_palace_lock(palace_path)</code>:</strong> lock por palacio <code>mine_palace_&lt;sha16&gt;.lock</code>, <strong>re-entrante por thread</strong> (<code>threading.local</code> + <code>os.getpid()</code>), <code>LOCK_NB</code> + <code>RuntimeError("palace … is held by another writer")</code>.</li>
+<li><strong>Orphan reap <code>27212e5</code>:</strong> <code>reap_stale_dxrk_locks(min_age_seconds=3600)</code> — GC <code>mine_*.lock</code> huérfanos reacquire no-bloqueante (never kill held locks), <code>marker .last_reap</code> 900 s (<code>_LOCK_REAP_INTERVAL_SECONDS</code>), alias <code>reap_stale_mine_locks</code>.</li>
+<li><strong>SIGTERM handler:</strong> <code>_install_shutdown_signal_handlers()</code> rutea <code>SIGTERM</code>/<code>SIGHUP</code> → <code>SystemExit(0)</code> para que <code>atexit</code>/<code>contextmanager</code> liberen <code>flock</code> limpio.</li>
+</ul>
+<hr />
+<h2 id="hybrid-bm25-drawer-closet-boost">Hybrid BM25 — drawer + closet boost</h2>
+<ul>
+<li><strong><code>sanitize_query</code>:</strong> strip control/prompt-injection (<code>ignore previous</code>, <code>system:</code>…), FTS5 specials → <code></code>, collapse whitespace, 500 chars.</li>
+<li><strong><code>_bm25_scores</code> + <code>_hybrid_rank(vector_weight=0.6,bm25_weight=0.4)</code>:</strong> <code>vec_sim = max(0, 1-distance)</code>, <code>score = 0.6*vec_sim + 0.4*bm25_norm</code>.</li>
+<li><strong><code>hybrid_search(collection, query, where, n_results, closet_collection, since, before)</code>:</strong> parse <code>since</code>/<code>before</code> primero (error aunque índice down), <code>pool 3×</code> normal / <code>15×</code> con ventana (min <code>500</code>), <code>closet_boosts [0.40,0.25,0.15,0.08,0.04]</code> con cap <code>1.5</code>; <code>matched_via drawer | drawer+closet</code>; <code>similarity=round(1-eff,3)</code>.</li>
+<li><strong><code>build_where_filter(wing,room)</code>:</strong> <code>{"wing":…}</code>, <code>{"$and":[…]}</code> para <code>sqlite</code> backend.</li>
+</ul>
+<hr />
+<h2 id="graph-knowledgegraph-temporal">Graph — KnowledgeGraph temporal</h2>
+<ul>
+<li><strong>SQLite WAL</strong> <code>~/.dxrk/knowledge_graph.sqlite3</code> (<code>entities(id,name,type,properties)</code>, <code>triples(id,subject,predicate,object,valid_from,valid_to,confidence,source_closet,source_file,source_drawer_id,adapter_name)</code>), índices <code>subject/object/predicate/valid</code>.</li>
+<li><strong>Temporal:</strong> <code>valid_from</code>/<code>valid_to</code> ISO (<code>YYYY-MM-DD</code> o datetime <code>Z</code>/<code>+HH:MM</code>); <code>_sanitize_iso</code>, <code>_start_key</code>/<code>_end_key</code> (date-only → <code>T00:00:00Z</code>/<code>T23:59:59Z</code>), <code>temporal_filter_sql</code> <code>CASE length=10</code> para <code>as_of</code> wall-clock; <code>valid_to &gt;= valid_from</code> validado.</li>
+<li><strong>API:</strong> <code>add_entity(name,type,properties)</code>, <code>add_triple(subject,predicate,obj,valid_from,valid_to,confidence,source_*)</code> (dedup si <code>valid_to IS NULL</code>), <code>invalidate(subject,predicate,obj,ended=today)</code> → <code>SET valid_to</code>, <code>query_entity(name,as_of,direction=outgoing|incoming|both)</code>, <code>query_relationship(predicate,as_of)</code>, <code>timeline(entity?)</code>, <code>traverse(start,depth=2,as_of)</code> BFS, <code>stats(){entities,triples,current_facts,expired_facts,relationship_types}</code>.</li>
+<li><strong>Thread-safe:</strong> <code>RLock</code>, <code>check_same_thread=False</code>, <code>timeout=10</code>.</li>
+</ul>
+<hr />
+<h2 id="dialecto-aaak">Dialecto AAAK</h2>
+<ul>
+<li><strong><code>Dialect(entities, skip_names)</code>:</strong> <code>encode_entity</code> (code map + fallback <code>UPP</code>), <code>compress(text, metadata)</code> → <code>wing|room|date|stem\n0:ENT+…|topic|\"quote\"|emotion|flag</code>, <code>decode(dialect_text)</code> → <code>{header,arc,zettels,tunnels}</code>, <code>count_tokens(text)=max(1,int(words*1.3))</code>, <code>compression_stats(original,compressed)</code> con <code>size_ratio</code>.</li>
+<li><strong>Señales:</strong> <code>_EMOTION_SIGNALS</code> (<code>worried→anx</code>, <code>love→love</code>… 15), <code>_FLAG_SIGNALS</code> (<code>decided→DECISION</code>, <code>api→TECHNICAL</code>…), <code>_STOP_WORDS</code> 80+, <code>_extract_topics</code> (freq + boost <code>Capitalized</code>/<code>snake-kebab</code>/<code>CamelCase</code>), <code>_extract_key_sentence</code> (score <code>decided/because/why/breakthrough</code>…), <code>_detect_entities_in_text</code> (code map o <code>Capitalized</code> 3).</li>
+</ul>
+<hr />
+<h2 id="layers-wake-up-600900-tok">Layers — wake-up 600–900 tok</h2>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Nombre</th>
+<th>Tokens</th>
+<th>Fuente</th>
+<th>Cuándo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>L0</strong></td>
+<td>IDENTITY</td>
+<td>~100</td>
+<td><code>~/.dxrk/identity.txt</code></td>
+<td>Siempre (cache)</td>
+</tr>
+<tr>
+<td><strong>L1</strong></td>
+<td>ESSENTIAL STORY</td>
+<td>500–800</td>
+<td>Top <code>MAX_DRAWERS_L1=15</code> por <code>importance</code>/<code>emotional_weight</code>/<code>weight</code>, agrupado por <code>room</code>, <code>MAX_CHARS_L1=3200</code>, <code>MAX_SCAN=2000</code></td>
+<td><code>wake_up()</code></td>
+</tr>
+<tr>
+<td><strong>L2</strong></td>
+<td>ON-DEMAND</td>
+<td>variable</td>
+<td><code>where wing/room</code> filtrado <code>col.get(limit=n)</code></td>
+<td><code>recall(wing,room)</code></td>
+</tr>
+<tr>
+<td><strong>L3</strong></td>
+<td>DEEP SEARCH</td>
+<td>variable</td>
+<td><code>hybrid_search(col,query,where,n)</code></td>
+<td><code>search(query,wing,room)</code></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong><code>MemoryStack(palace_path, identity_path)</code>:</strong> <code>wake_up(wing?) = L0.render() + L1.generate()</code>, <code>recall</code>, <code>search</code>, <code>status(){palace_path,L0_identity{exists,tokens},L1/L2/L3 description,total_drawers}</code>. Estimación <code>len(text)//4</code>.</li>
+<li><strong>Benchmark wake-up:</strong> <code>L0 100</code> + <code>L1 500–800</code> = <strong>600–900 tok</strong> típicos (header + 15 drawers 200 chars c/u). <code>L2</code>/<code>L3</code> bajo demanda no cuentan en wake-up frío. Sin <code>onnx</code>/<code>chromadb</code> el cold start es <code>sqlite3</code> instantáneo (&lt;50 ms <code>WAL</code> + <code>FTS5</code>).</li>
+</ul>
+<hr />
+<h2 id="miner-gitignorematcher">Miner — <code>GitignoreMatcher</code></h2>
+<ul>
+<li><strong><code>GitignoreMatcher(base_dir, rules[{pattern,anchored,dir_only,negated}])</code>:</strong> <code>from_dir</code> parsea <code>.gitignore</code> (escapes <code>\#</code>/<code>\!</code>, <code>!</code> negated, <code>/</code> anchored, <code>/</code> dir_only), <code>matches(path,is_dir)</code> last-wins, <code>_rule_matches</code> con <code>fnmatch</code> + <code>**</code> recursivo <code>_match_from_root</code>.</li>
+<li><strong><code>scan_project(project_dir, respect_gitignore, include_ignored)</code>:</strong> <code>os.walk</code> con <code>SKIP_DIRS</code> (<code>node_modules</code>, <code>.venv</code>, <code>.git</code>, <code>dist</code>, <code>target</code>… 26), <code>SKIP_FILENAMES</code> (<code>package-lock.json</code>…), <code>READABLE_EXTENSIONS</code> 21 (<code>.txt/.md/.py/.js/.ts/.json/.yaml/.html/.css/.java/.go/.rs…</code>), <code>MAX_FILE_SIZE 500 MiB</code>, <code>is_gitignored</code> acumulado por directorio, <code>normalize_include_paths</code>/<code>is_force_included</code>.</li>
+<li><strong>Safe reads <code>db29959</code>:</strong> <code>_is_regular_source_file</code> + <code>_read_text_no_follow</code> con <code>O_RDONLY|O_NOFOLLOW|O_NONBLOCK</code>, <code>S_ISREG(os.fstat/fstat)</code>, <code>EAGAIN</code> → <code>FIFO</code> guard never-block, misma-<code>mtime</code> <code>fstat</code> anti-TOCTOU, <code>_path_within_root</code> anti-escape.</li>
+<li><strong>Chunk + normalize:</strong> <code>chunk_text</code> re-export, <code>normalize_content</code> (<code>\r\n→\n</code>, <code>\n{3,}→\n\n</code>), <code>scan_and_chunk</code>.</li>
+</ul>
+<hr />
+<h2 id="fidelity-371-paridad-stdlib-only">Fidelity 3.7.1 — paridad stdlib-only</h2>
+<p>Ver detalle completo en <a href="../MIGRATION_3.3.5_3.7.1/"><code>docs/MIGRATION_3.3.5_3.7.1.md</code></a>. Resumen:</p>
+<ul>
+<li><strong>Delta upstream:</strong> <code>3.3.5</code> → <code>3.7.1</code> = <code>388</code> archivos, <code>50+</code> commits (<code>359c579</code>).</li>
+<li><strong>Paridad 100 %</strong> en camino stdlib: <code>palace.mine</code> re-mine honesty, <code>mine_lock</code> FIFO guard, <code>reap_stale_*</code> 900 s, <code>date_window</code> pool <code>15×</code> + <code>filed_at</code> filter, <code>SIGTERM</code>, <code>WAL</code>/<code>FTS5</code>, <code>Graph</code> temporal, <code>Layers</code> wake-up, <code>Dialect</code> AAAK, <code>GitignoreMatcher</code>.</li>
+<li><strong>Explícitamente no portado</strong> (justificado): <code>HNSW</code> defaults, <code>numpy2</code> compat, <code>chroma</code> cache fixes — todo acoplado a <code>chromadb</code>/<code>hnswlib</code>/<code>onnx</code> que DxrkMemory 2.0 elimina por diseño.</li>
+</ul>
+<hr />
+<h2 id="zero-deps-vs-mempalace-engram">Zero-deps vs mempalace / engram</h2>
+<table>
+<thead>
+<tr>
+<th>Eje</th>
+<th>mempalace 3.3.5/3.7.1</th>
+<th><strong>DxrkMemory 2.0</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Runtime</td>
+<td><code>chromadb</code> + <code>hnswlib</code> + <code>onnx</code>/<code>numpy</code></td>
+<td><strong>stdlib-only</strong> <code>sqlite3</code> (sin <code>chromadb</code>, sin <code>onnx</code>, sin <code>numpy</code>)</td>
+</tr>
+<tr>
+<td>Vector store</td>
+<td>HNSW (heavy, native)</td>
+<td><strong>FTS5 <code>trigram</code></strong> + BM25 híbrido (pure Python)</td>
+</tr>
+<tr>
+<td>Persistencia</td>
+<td><code>~/.mempalace</code> / <code>~/.engram</code></td>
+<td><code>~/.dxrk/palace</code> + <code>knowledge_graph.sqlite3</code>, <code>WAL</code>, <code>0o600</code></td>
+</tr>
+<tr>
+<td>Locks</td>
+<td><code>~/.mempalace/locks</code></td>
+<td><code>~/.dxrk/locks</code> <code>reap 900 s</code></td>
+</tr>
+<tr>
+<td>Legacy compat</td>
+<td><code>mempalace_drawers</code></td>
+<td><code>dxrk_drawers</code> + <code>LEGACY chr-join</code> compat (grep <code>0</code>)</td>
+</tr>
+<tr>
+<td>Colección</td>
+<td><code>mempalace_drawers</code></td>
+<td><code>dxrk_drawers</code> (canónico)</td>
+</tr>
+<tr>
+<td>Token budget</td>
+<td>sin contrato L0-L3</td>
+<td><strong>L0-L3 600–900 tok wake-up</strong> medible</td>
+</tr>
+<tr>
+<td>Grep traces</td>
+<td><code>engram</code>/<code>mempal</code> presentes</td>
+<td><strong>0</strong> (979 reemplazos + 7 <code>git mv</code>, 6 <code>git rm</code> duplicados)</td>
+</tr>
+<tr>
+<td>Instalación</td>
+<td><code>pip install mempalace[chromadb]</code></td>
+<td><code>pip install dxrk</code> — <strong>sin extras</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="uso">Uso</h2>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">dxrk.memory</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentMemory</span><span class="p">,</span> <span class="n">Palace</span><span class="p">,</span> <span class="n">KnowledgeGraph</span>
+
+<span class="c1"># 1) AgentMemory — fachada compat (JSON o sqlite palace según path)</span>
+<span class="n">mem</span> <span class="o">=</span> <span class="n">AgentMemory</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="s2">&quot;/tmp/my_palace&quot;</span><span class="p">)</span>  <span class="c1"># dir → sqlite; *.json → JSON legacy</span>
+<span class="n">mem</span><span class="o">.</span><span class="n">store</span><span class="p">(</span><span class="n">mem</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="s2">&quot;__doc__&quot;</span><span class="p">]</span> <span class="ow">and</span> <span class="nb">__import__</span><span class="p">(</span><span class="s2">&quot;dxrk.memory&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">memory</span><span class="o">.</span><span class="n">MemoryEntry</span><span class="p">(</span>
+    <span class="n">content</span><span class="o">=</span><span class="s2">&quot;Decidimos usar sqlite FTS5 por latencia &lt;50ms y zero-deps&quot;</span><span class="p">,</span>
+    <span class="n">project_id</span><span class="o">=</span><span class="s2">&quot;dxrk&quot;</span><span class="p">,</span>
+    <span class="n">session_id</span><span class="o">=</span><span class="s2">&quot;memory-2.0&quot;</span><span class="p">,</span>
+    <span class="n">importance</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span>
+<span class="p">))</span>
+<span class="n">hits</span> <span class="o">=</span> <span class="n">mem</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">project_id</span><span class="o">=</span><span class="s2">&quot;dxrk&quot;</span><span class="p">,</span> <span class="n">query</span><span class="o">=</span><span class="s2">&quot;sqlite FTS5&quot;</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">([(</span><span class="n">h</span><span class="o">.</span><span class="n">content</span><span class="p">[:</span><span class="mi">60</span><span class="p">],</span> <span class="n">h</span><span class="o">.</span><span class="n">importance</span><span class="p">)</span> <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">hits</span><span class="p">])</span>
+
+<span class="c1"># 2) Palace — wings/rooms/drawers + mine</span>
+<span class="n">pal</span> <span class="o">=</span> <span class="n">Palace</span><span class="p">(</span><span class="s2">&quot;/tmp/dxrk_palace&quot;</span><span class="p">)</span>
+<span class="n">pal</span><span class="o">.</span><span class="n">init</span><span class="p">()</span>
+<span class="n">res</span> <span class="o">=</span> <span class="n">pal</span><span class="o">.</span><span class="n">mine</span><span class="p">(</span><span class="n">project_dir</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="n">wing</span><span class="o">=</span><span class="s2">&quot;dxrk&quot;</span><span class="p">,</span> <span class="n">room</span><span class="o">=</span><span class="s2">&quot;code&quot;</span><span class="p">)</span>  <span class="c1"># scan_project + chunk + upsert</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>  <span class="c1"># {&quot;files_mined&quot;: 42, &quot;files_skipped&quot;: 7, &quot;drawers_added&quot;: 128}</span>
+<span class="n">hits</span> <span class="o">=</span> <span class="n">pal</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="s2">&quot;hybrid BM25&quot;</span><span class="p">,</span> <span class="n">wing</span><span class="o">=</span><span class="s2">&quot;dxrk&quot;</span><span class="p">,</span> <span class="n">n_results</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">since</span><span class="o">=</span><span class="s2">&quot;2026-01-01&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">hits</span><span class="p">[</span><span class="s2">&quot;results&quot;</span><span class="p">]:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">h</span><span class="p">[</span><span class="s2">&quot;wing&quot;</span><span class="p">],</span> <span class="n">h</span><span class="p">[</span><span class="s2">&quot;room&quot;</span><span class="p">],</span> <span class="n">h</span><span class="p">[</span><span class="s2">&quot;similarity&quot;</span><span class="p">],</span> <span class="n">h</span><span class="p">[</span><span class="s2">&quot;text&quot;</span><span class="p">][:</span><span class="mi">80</span><span class="p">])</span>
+
+<span class="c1"># 3) KnowledgeGraph — temporal</span>
+<span class="n">kg</span> <span class="o">=</span> <span class="n">KnowledgeGraph</span><span class="p">(</span><span class="n">db_path</span><span class="o">=</span><span class="s2">&quot;/tmp/kg.sqlite3&quot;</span><span class="p">)</span>
+<span class="n">kg</span><span class="o">.</span><span class="n">add_triple</span><span class="p">(</span><span class="s2">&quot;DxrkMemory&quot;</span><span class="p">,</span> <span class="s2">&quot;uses&quot;</span><span class="p">,</span> <span class="s2">&quot;sqlite&quot;</span><span class="p">,</span> <span class="n">valid_from</span><span class="o">=</span><span class="s2">&quot;2026-08-23&quot;</span><span class="p">)</span>
+<span class="n">kg</span><span class="o">.</span><span class="n">add_triple</span><span class="p">(</span><span class="s2">&quot;Alice&quot;</span><span class="p">,</span> <span class="s2">&quot;works_on&quot;</span><span class="p">,</span> <span class="s2">&quot;DxrkMemory&quot;</span><span class="p">,</span> <span class="n">valid_from</span><span class="o">=</span><span class="s2">&quot;2026-08-01&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">kg</span><span class="o">.</span><span class="n">query_entity</span><span class="p">(</span><span class="s2">&quot;DxrkMemory&quot;</span><span class="p">,</span> <span class="n">as_of</span><span class="o">=</span><span class="s2">&quot;2026-08-24&quot;</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">kg</span><span class="o">.</span><span class="n">traverse</span><span class="p">(</span><span class="s2">&quot;DxrkMemory&quot;</span><span class="p">,</span> <span class="n">depth</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">kg</span><span class="o">.</span><span class="n">stats</span><span class="p">())</span>
+
+<span class="c1"># 4) MemoryStack — wake-up 600–900 tok</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dxrk.memory.layers</span><span class="w"> </span><span class="kn">import</span> <span class="n">MemoryStack</span>
+<span class="n">stack</span> <span class="o">=</span> <span class="n">MemoryStack</span><span class="p">(</span><span class="n">palace_path</span><span class="o">=</span><span class="s2">&quot;/tmp/dxrk_palace&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">stack</span><span class="o">.</span><span class="n">wake_up</span><span class="p">(</span><span class="n">wing</span><span class="o">=</span><span class="s2">&quot;dxrk&quot;</span><span class="p">))</span>          <span class="c1"># L0 + L1</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">stack</span><span class="o">.</span><span class="n">recall</span><span class="p">(</span><span class="n">wing</span><span class="o">=</span><span class="s2">&quot;dxrk&quot;</span><span class="p">,</span> <span class="n">room</span><span class="o">=</span><span class="s2">&quot;code&quot;</span><span class="p">,</span> <span class="n">n_results</span><span class="o">=</span><span class="mi">10</span><span class="p">))</span>  <span class="c1"># L2</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">stack</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s2">&quot;AAAK dialect&quot;</span><span class="p">,</span> <span class="n">n_results</span><span class="o">=</span><span class="mi">5</span><span class="p">))</span>             <span class="c1"># L3</span>
+
+<span class="c1"># 5) AAAK dialect + miner</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dxrk.memory.dialect</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dialect</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dxrk.memory.miner</span><span class="w"> </span><span class="kn">import</span> <span class="n">GitignoreMatcher</span><span class="p">,</span> <span class="n">scan_project</span>
+
+<span class="n">d</span> <span class="o">=</span> <span class="n">Dialect</span><span class="p">(</span><span class="n">entities</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;DxrkMemory&quot;</span><span class="p">:</span> <span class="s2">&quot;DXM&quot;</span><span class="p">})</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">compress</span><span class="p">(</span><span class="s2">&quot;Decided to use sqlite because latency matters&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;wing&quot;</span><span class="p">:</span><span class="s2">&quot;dxrk&quot;</span><span class="p">,</span><span class="s2">&quot;room&quot;</span><span class="p">:</span><span class="s2">&quot;code&quot;</span><span class="p">,</span><span class="s2">&quot;source_file&quot;</span><span class="p">:</span><span class="s2">&quot;palace.py&quot;</span><span class="p">}))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">compression_stats</span><span class="p">(</span><span class="s2">&quot;long original ...&quot;</span><span class="p">,</span> <span class="s2">&quot;short ...&quot;</span><span class="p">))</span>
+
+<span class="n">files</span> <span class="o">=</span> <span class="n">scan_project</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="n">respect_gitignore</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">matcher</span> <span class="o">=</span> <span class="n">GitignoreMatcher</span><span class="o">.</span><span class="n">from_dir</span><span class="p">(</span><span class="nb">__import__</span><span class="p">(</span><span class="s2">&quot;pathlib&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;scanned </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span><span class="si">}</span><span class="s2"> files, gitignore=</span><span class="si">{</span><span class="n">matcher</span><span class="w"> </span><span class="ow">is</span><span class="w"> </span><span class="ow">not</span><span class="w"> </span><span class="kc">None</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="cli-relacionado">CLI relacionado</h3>
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>dxrk.memory<span class="w"> </span>search<span class="w"> </span><span class="s2">&quot;arquitectura memoria&quot;</span><span class="w">   </span><span class="c1"># vía AgentMemory</span>
+uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>tests/test_memory.py<span class="w"> </span>-q<span class="w">       </span><span class="c1"># 19 passed</span>
+</code></pre></div>
+<hr />
+<h2 id="benchmarks-wake-up-estimados-local-first">Benchmarks wake-up (estimados, local-first)</h2>
+<table>
+<thead>
+<tr>
+<th>Escenario</th>
+<th>Tokens</th>
+<th>Latencia cold</th>
+<th>Notas</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>wake_up()</code> L0+L1 (15 drawers, 3200 chars)</td>
+<td><strong>600–900</strong></td>
+<td>&lt;50 ms (WAL)</td>
+<td><code>L0 100</code> + <code>L1 500–800</code>; sin <code>onnx</code></td>
+</tr>
+<tr>
+<td><code>recall(wing,room)</code> L2 (10 drawers)</td>
+<td>+300–600</td>
+<td>&lt;20 ms (<code>get</code> + <code>json_extract</code>)</td>
+<td>on-demand</td>
+</tr>
+<tr>
+<td><code>search(query)</code> L3 (5 hits BM25)</td>
+<td>+400–700</td>
+<td>&lt;80 ms (FTS5 + BM25 rerank)</td>
+<td><code>pool 15×</code> si <code>since</code>/<code>before</code></td>
+</tr>
+<tr>
+<td><code>mine .</code> (100 files, 300 chunks)</td>
+<td>—</td>
+<td>~1–2 s</td>
+<td><code>scan_project</code> + <code>chunk</code> + <code>upsert</code> batched 500</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>Sin <code>chromadb</code>/<code>HNSW</code>/<code>onnx</code>, el import de <code>dxrk.memory</code> es instantáneo (stdlib). La comparación justa con mempalace es <em>wake-up</em> frío: <code>chromadb</code> bootstrap + <code>onnx</code> warmup &gt;&gt; <code>sqlite3</code> WAL.</p>
+</blockquote>
+<hr />
+<h2 id="verificacion">Verificación</h2>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_memory.py<span class="w"> </span>-q<span class="w">   </span><span class="c1"># 19 passed</span>
+grep<span class="w"> </span>-rn<span class="w"> </span><span class="s2">&quot;engram\|mempal&quot;</span><span class="w"> </span>dxrk/memory<span class="w"> </span>--include<span class="o">=</span><span class="s2">&quot;*.py&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>wc<span class="w"> </span>-l<span class="w">  </span><span class="c1"># 0 (mempalace-compat legado ofuscado chr-join)</span>
+grep<span class="w"> </span>-rn<span class="w"> </span><span class="s2">&quot;engram\|mempal&quot;</span><span class="w"> </span>--include<span class="o">=</span><span class="s2">&quot;*.py&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>wc<span class="w"> </span>-l<span class="w">                </span><span class="c1"># 0 global</span>
+</code></pre></div>
+<p>Más en <a href="../MIGRATION_3.3.5_3.7.1/">MIGRATION_3.3.5_3.7.1.md</a> y <code>docs/architecture.md</code>.</p>
+<hr />
+<h2 id="relacion-con-autonomy-y-rag-ver-adr-002">Relación con Autonomy y RAG — ver <a href="../adr/ADR-002-memory-separation/">ADR-002</a></h2>
+<blockquote>
+<p><strong>Decisión: AISLAR</strong> — <code>dxrk/memory</code> (DxrkMemory), <code>dxrk/autonomy/learner</code> y <code>dxrk/rag</code> son <strong>3 sistemas aislados</strong> con contratos y persistencias distintas.
+Detalle formal en <strong><a href="../adr/ADR-002-memory-separation/">ADR-002: Separación DxrkMemory vs Autonomy/Learner vs RAG/Store</a></strong> (Accepted 2026-08-27).</p>
+</blockquote>
+<p><strong>Frontera por diseño — 3 dominios, 3 stores, 0 coupling:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Sistema</th>
+<th>Módulo</th>
+<th>Persistencia</th>
+<th>API clave</th>
+<th>Deps</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>DxrkMemory</strong> (canónico)</td>
+<td><code>dxrk/memory</code> — <code>Palace</code>, <code>AgentMemory</code>, <code>KnowledgeGraph</code>, <code>AAAK</code></td>
+<td><code>~/.dxrk/palace/sqlite_palace.db</code> — <code>sqlite3</code> FTS5 <code>trigram</code> + BM25, <code>WAL</code>, <code>0o600</code></td>
+<td><code>mine()</code>, <code>search(since,before)</code>, <code>hybrid_search</code>, <code>traverse()</code></td>
+<td><strong>stdlib-only</strong> (<code>sqlite3</code>, <code>hashlib</code>, <code>re</code>)</td>
+</tr>
+<tr>
+<td><strong>Learner</strong> (patrones)</td>
+<td><code>dxrk/autonomy/learner.py</code> — <code>Learner</code>, <code>MemoryItem</code></td>
+<td><code>.dxrk/memories.json</code> — JSON <code>0o600</code>, <code>max_items 1000</code>, <code>RLock</code></td>
+<td><code>record()</code>, <code>suggest()</code>, <code>top_errors()</code>, <code>recent_memories()</code></td>
+<td>stdlib (<code>json</code>, <code>hashlib</code>)</td>
+</tr>
+<tr>
+<td><strong>RAG</strong> (code index)</td>
+<td><code>dxrk/rag</code> — <code>chunker</code>, <code>indexer</code>, <code>VectorStore</code>, <code>OpenAIEmbedder</code></td>
+<td>in-memory <code>dict[str,VectorRecord]</code> + JSON opcional</td>
+<td><code>VectorStore.Search()</code>, <code>embed()</code>, <code>cosine_similarity</code></td>
+<td><code>urllib</code> + <code>OPENAI_API_KEY</code> opcional</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Por qué no fusionar.</strong> Fusionar contaminaría <code>memory</code> (offline, &lt;50 ms cold, <code>pip install dxrk</code> sin extras) con deps de red/modelo, rompería <code>zero-trace</code> (<code>grep engram|mempal == 0</code>, <code>LEGACY</code> <code>chr-join</code> ofuscado), mezclaría semánticas incompatibles (<code>filed_at</code>/<code>wing</code> vs <code>success_rate</code>/<code>error</code> vs <code>start_line</code>/<code>language</code>) y acoplaría <code>WAL</code>/<code>mine_palace_lock</code>/<code>reap 900 s</code>/<code>FIFO guard</code> (<code>db29959</code>/<code>27212e5</code>) a dominios que no los necesitan. Alternativas <code>SQLite compartido</code> (colecciones separadas en mismo <code>.db</code>) y <code>shared vector store</code> (todo a <code>OpenAIEmbedder</code> + HNSW) se rechazan en el ADR — ver <code>MIGRATION_3.3.5_3.7.1.md</code> “No portados” (<code>HNSW</code>/<code>numpy2</code>/<code>onnx</code>).</p>
+<p><strong>Puentes opcionales sin storage coupling:</strong></p>
+<ul>
+<li><code>Learner → Palace</code> via <strong>hooks</strong> (<code>dxrk/memory/hooks_cli.py</code>, <code>~/.config/dxrk/hooks.json</code>): export fire-and-forget de <code>MemoryItem</code> exitoso a <code>wing=autonomy/room=pattern</code> (<code>source_file=learner:&lt;id&gt;</code>). Si <code>Palace</code> falla, <code>Learner</code> no falla — sin transacción compartida.</li>
+<li><code>RAG → Palace</code> via <strong>enrichment</strong> (<code>dxrk/memory/__init__.py:148-157</code>): <code>AgentMemory(path, rag=rag)</code> inyecta <code>rag.is_enabled()/query(text,1)</code> en <code>store()</code> para poblar <code>entry.embedding</code> antes del <code>upsert</code>. Sin <code>rag</code> o sin <code>OPENAI_API_KEY</code>, <code>memory</code> opera <strong>BM25 puro</strong>. <code>RAG</code> nunca lee <code>sqlite_palace.db</code>.</li>
+</ul>
+<p><strong>Reglas de frontera (ADR-002):</strong></p>
+<ul>
+<li><code>R1 stdlib-only</code> — <code>memory</code> sin <code>openai</code>/<code>numpy</code>/<code>chromadb</code>.</li>
+<li><code>R2 DB por dominio</code> — <code>memory</code> WAL, <code>learner</code> JSON, <code>rag</code> in-memory/JSON.</li>
+<li><code>R3 no read-through</code> — ningún sistema importa el store interno de otro.</li>
+<li><code>R4 zero-trace</code> — <code>grep engram|mempal dxrk/memory → 0</code>.</li>
+<li><code>R5 multi-tenant ready</code> — <code>palace_path</code> por proyecto/usuario, <code>learner</code> por repo, <code>rag</code> por índice.</li>
+<li><code>R6 fallback sin regresión</code> — si <code>rag</code>/<code>Palace</code> falla, cada sistema sigue operativo.</li>
+</ul>
+<p>Verificación y plan de migración completos en <a href="../adr/ADR-002-memory-separation/">ADR-002</a> — ningún <code>from dxrk.memory</code> en <code>learner</code>/<code>rag</code>, ningún <code>from dxrk.rag</code> en <code>memory</code> salvo <code>Protocol</code> <code>rag: object</code>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../architecture/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Arquitectura">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Arquitectura
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../enterprise/" class="md-footer__link md-footer__link--next" aria-label="Next: Enterprise (Cortex + Autonomous)">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Enterprise (Cortex + Autonomous)
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.top", "navigation.footer", "content.code.copy", "toc.integrate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
