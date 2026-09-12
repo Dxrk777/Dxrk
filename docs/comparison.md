@@ -16,7 +16,7 @@ Las opciones habituales:
 | Dependencias pesadas | Ninguna (`sqlite3` stdlib, sin chromadb/onnx) | SDK del vendor | Servidor + embeddings (típicamente ONNX o API) | Ninguna |
 | Búsqueda | FTS5 + BM25 híbrido, grafo temporal | La del vendor | La que configures | `grep` |
 | Multi-tenant local | Sí (`tenants/{id}/`, RBAC admin/dev/readonly, vault HKDF) | Depende del plan | La construyes tú | Disciplina manual |
-| Setup multi-agente | 1 comando, 42 agentes, presets | Por agente, a mano | Por agente, a mano | Por agente, a mano |
+| Setup multi-agente | 1 comando, 14 agentes, presets | Por agente, a mano | Por agente, a mano | Por agente, a mano |
 | Servidor MCP | Incluido (stdio, stdlib-only) | El del vendor | Lo construyes tú | No |
 | Coste operativo | 0 (local, MIT) | Suscripción + egress | Tu tiempo de ops | 0 |
 | Límite | Un nodo, tu disco | El del plan | Tu tuning | Tu memoria |
@@ -36,6 +36,6 @@ Las opciones habituales:
 - Trabajas solo o en equipo pequeño, offline o con red limitada.
 - Quieres aislar clientes/proyectos (`tenant acme` vs `tenant personal`) sin servidores.
 - Te importa auditar cada byte: cero telemetría, cero red, `uv audit` limpio.
-- Ya vives en el terminal y quieres 42 agentes configurados con un comando.
+- Ya vives en el terminal y quieres 14 agentes configurados con un comando.
 
 Ver el [tutorial](tutorial.md) para probarlo en 10 minutos antes de creer esta tabla.

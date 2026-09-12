@@ -9,7 +9,7 @@ En lugar de configurar cada agente a mano, Dxrk:
 2. **Instala** la configuración del agente elegido (presets: `full-dxrk`, ...).
 3. **Sincroniza** perfiles de modelos por proveedor y por fase del workflow.
 4. **Habilita** skills curadas, hooks, permisos y servidores MCP.
-5. **Conecta** la memoria persistente (`dxrk-memory`) y el RAG local.
+5. **Conecta** la memoria persistente nativa (`python -m dxrk.memory`) y el RAG local.
 
 ## Flujos típicos
 

@@ -50,10 +50,11 @@ dxrk-py sync --agent claude-code --dry-run
 
 ## Memoria
 
-La memoria persistente usa el binario `dxrk-memory` (repo `Dxrk777/dxrk-memory`):
+La memoria persistente es DxrkMemory 2.0 nativa (100% Python stdlib-only,
+sin binarios externos):
 
 ```bash
-dxrk-memory search "Spec-Driven Development"
+python -m dxrk.memory search "Spec-Driven Development"
 ```
 
 ## TUI

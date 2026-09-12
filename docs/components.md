@@ -12,8 +12,8 @@ declara con nombre, comando y argumentos, y queda disponible para el agente.
 
 ## Memoria
 
-- `dxrk-memory`: binario externo (repo `Dxrk777/dxrk-memory`) que provee
-  memoria persistente con búsqueda semántica.
+- `dxrk/memory/`: memoria persistente nativa 100% Python stdlib-only
+  (SQLite FTS5 + BM25, sin binarios externos).
 - `dxrk/rag/`: implementación local de chunking, indexado y recuperación.
 
 ## Hooks y permisos

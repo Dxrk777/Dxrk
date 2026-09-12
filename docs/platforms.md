@@ -11,7 +11,8 @@
 ## Requisitos
 
 - Python 3.13 o superior.
-- Opcional: Pillow (procesamiento de imágenes), `dxrk-memory` (memoria persistente).
+- Opcional: Pillow (procesamiento de imágenes). La memoria persistente es
+  nativa 100% Python stdlib-only, sin binarios externos.
 
 ## Instalación por plataforma
 
@@ -42,6 +43,5 @@ uv tool install --from git+https://github.com/Dxrk777/Dxrk.git dxrk
 - El instalador de agentes detecta el package manager disponible
   (`brew`, `apt`, `dnf`, `pacman`, `scoop`, `winget`, `npm`) y usa el más
   apropiado para cada componente.
-- `dxrk-memory` (binario externo) se instala desde Homebrew
-  (`brew install dxrk-memory`) o desde GitHub Releases del repo
-  `Dxrk777/dxrk-memory`.
+- La memoria es 100% Python stdlib-only: no requiere binarios externos
+  ni taps de Homebrew.

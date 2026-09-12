@@ -38,13 +38,13 @@ integra con agentes de código mediante hooks, permisos y sesiones.
 
 ## Persistencia
 
-La memoria persistente la provee el binario externo `Dxrk-memory`
-(repo `Dxrk777/dxrk-memory`), instalable vía Homebrew o GitHub Releases.
+La memoria persistente la provee DxrkMemory 2.0, implementación 100% Python
+stdlib-only (`dxrk/memory`: SQLite FTS5 + BM25, sin binarios externos).
 Los settings de usuario viven en el directorio de configuración del sistema
 (`~/.config/dxrk/` en Linux/macOS).
 
 ## Tests
 
 - `tests/` cubre adaptadores por agente, instalador, config, RAG y utils.
-- Correr: `uv run pytest`.
+- Correr: `uv run python -m pytest -q`.
 - Tipos: `uv run --with mypy mypy dxrk/` (201 archivos, sin errores).

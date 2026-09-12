@@ -1,10 +1,10 @@
-# Dxrk — Memory local-first en 30 segundos. 42 agentes, 1 comando.
+# Dxrk — Memory local-first en 30 segundos. 14 agentes, 1 comando.
 
 <strong>Ecosistema, Frameworks y Workflows para agentes de IA — DxrkMemory 2.0 stdlib-only (sin chromadb, sin onnx)</strong>
 
 ![Social](assets/social-preview.png)
 
-[![Release](https://img.shields.io/badge/Release-v0.2.0-blue)](https://github.com/Dxrk777/Dxrk/releases/latest)
+[![Release](https://img.shields.io/badge/Release-v1.1.0-blue)](https://github.com/Dxrk777/Dxrk/releases/latest)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.13%2B-3776AB)](https://www.python.org/downloads/)
 [![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)](docs/platforms.md)
@@ -15,7 +15,7 @@
 
 ## Qué es Dxrk
 
-**Dxrk** es un configurador y orquestador de ecosistemas para agentes de IA. En un solo comando instala, configura y sincroniza **42 agentes de IA**, memoria persistente, skills curadas, servidores MCP y conmutador de modelos para tu stack de desarrollo completo.
+**Dxrk** es un configurador y orquestador de ecosistemas para agentes de IA. En un solo comando instala, configura y sincroniza **14 agentes de IA**, memoria persistente, skills curadas, servidores MCP y conmutador de modelos para tu stack de desarrollo completo.
 
 ![Demo](docs/assets/demo.gif)
 *30s: install → mine → query. Sin API keys, sin Docker, offline.*
@@ -23,7 +23,7 @@
 ## 30s Quickstart
 
 ```bash
-uv tool install dxrk                                            # 1) instala (42 agentes, memoria, MCP)
+uv tool install dxrk                                            # 1) instala (14 agentes, memoria, MCP)
 dxrk-py install --agent claude-code --preset full-dxrk --dry-run  # 2) vista previa del setup
 python -m dxrk.memory mine ./mi-proyecto                        # 3) indexa tu codigo (FTS5 + BM25, offline)
 python -m dxrk.memory search "arquitectura memoria"             # 4) busca (AND de tokens; ver docs/tutorial.md)
@@ -31,7 +31,7 @@ python -m dxrk.memory search "arquitectura memoria"             # 4) busca (AND 
 > **Por qué DxrkMemory 2.0:** `sqlite3` FTS5 `trigram→porter→unicode61` + BM25 híbrido, Graph temporal `valid_from/valid_to`, AAAK 600–900 tok wake-up, Palace locks `~/.dxrk/locks` 900s — ver [`docs/memory.md`](docs/memory.md) · [`docs/MIGRATION_3.3.5_3.7.1.md`](docs/MIGRATION_3.3.5_3.7.1.md) · [`docs/dx.md`](docs/dx.md)
 
 - 🐍 **Python 3.13+** con TUI moderna basada en [Textual](https://textual.textualize.io/)
-- 🤖 Configura **42 agentes** con un solo comando
+- 🤖 Configura **14 agentes** con un solo comando
 - 🧠 **DxrkMemory 2.0 — Flagship local-first stdlib-only** (sin `chromadb`, sin `onnx`) — `sqlite3` FTS5 `trigram`+WAL, 13 módulos 4652 LOC, hybrid BM25, Palace locks, Graph temporal, dialecto AAAK, wake-up **600–900 tok** (paridad mempalace 3.7.1) — ver [`docs/memory.md`](docs/memory.md)
 - ⚡ Conmutador de proveedores y modelos con perfiles `cheap` / `balanced` / `quality`
 
@@ -100,27 +100,20 @@ Ver [docs/tenants.md](docs/tenants.md) y [docs/rbac.md](docs/rbac.md).
 | Característica | Dxrk | Configurar a mano |
 |---|---|---|
 | Instalar un agente de IA | `dxrk-py install --agent claude-code` | Documentación, paths, symlinks, permisos |
-| 42 agentes configurados | 1 comando | Horas de setup manual |
+| 14 agentes configurados | 1 comando | Horas de setup manual |
 | Memoria persistente | `python -m dxrk.memory search "..."` | Buscar soluciones hechas a medida |
 | Skills curadas + MCP | `dxrk-py install --component skills` | Scraping manual de repos |
 | Cambiar de proveedor | `config.yaml` (`model.provider`, ver docs/config.md) | Editar config de cada agente |
 | Workflows Git | `/commit`, `/branch`, `/pr` | Comandos largos manuales |
 
-## Agentes soportados (42)
+## Agentes soportados (14)
 
 | | | | |
 |---|---|---|---|
 | Claude Code | OpenCode | Kilo Code | Gemini CLI |
 | Cursor | VS Code Copilot | Codex | Windsurf |
 | Antigravity | Kimi Code | Kiro IDE | Qwen Code |
-| Pi | OpenClaw | Aider | Cline |
-| Roo Code | Continue | Junie | Amazon Q |
-| OpenHands | Zed AI | GitHub Copilot | Devin |
-| Cody | Tabnine | Replit | Void |
-| Amp | Blackbox AI | Bolt.new | Conductor |
-| Hermes | JetBrains AI | Looperators | Lovable |
-| PearAI | Qodo | RunCell | Trae |
-| v0 | ZCode | | |
+| Pi | OpenClaw | | |
 
 ## Características
 
@@ -136,7 +129,7 @@ Ver [docs/tenants.md](docs/tenants.md) y [docs/rbac.md](docs/rbac.md).
 
 ```text
 dxrk/
-├── agents/          # Adaptadores para 42 agentes de IA
+├── agents/          # Adaptadores para 14 agentes de IA
 ├── cli/             # Interfaz de línea de comandos
 ├── commands/        # Comandos disponibles (/commit, /branch, ...)
 ├── config/          # Configuración, perfiles y feature flags
