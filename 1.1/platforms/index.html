@@ -1071,7 +1071,8 @@
 <h2 id="requisitos">Requisitos</h2>
 <ul>
 <li>Python 3.13 o superior.</li>
-<li>Opcional: Pillow (procesamiento de imágenes), <code>dxrk-memory</code> (memoria persistente).</li>
+<li>Opcional: Pillow (procesamiento de imágenes). La memoria persistente es
+  nativa 100% Python stdlib-only, sin binarios externos.</li>
 </ul>
 <h2 id="instalacion-por-plataforma">Instalación por plataforma</h2>
 <h3 id="macos">macOS</h3>
@@ -1092,9 +1093,8 @@ uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </
 <li>El instalador de agentes detecta el package manager disponible
   (<code>brew</code>, <code>apt</code>, <code>dnf</code>, <code>pacman</code>, <code>scoop</code>, <code>winget</code>, <code>npm</code>) y usa el más
   apropiado para cada componente.</li>
-<li><code>dxrk-memory</code> (binario externo) se instala desde Homebrew
-  (<code>brew install dxrk-memory</code>) o desde GitHub Releases del repo
-  <code>Dxrk777/dxrk-memory</code>.</li>
+<li>La memoria es 100% Python stdlib-only: no requiere binarios externos
+  ni taps de Homebrew.</li>
 </ul>
 
 

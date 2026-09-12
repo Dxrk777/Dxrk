@@ -1054,8 +1054,8 @@ usadas por los agentes para tareas especializadas (SDD, memoria, batch, etc.).</
 declara con nombre, comando y argumentos, y queda disponible para el agente.</p>
 <h2 id="memoria">Memoria</h2>
 <ul>
-<li><code>dxrk-memory</code>: binario externo (repo <code>Dxrk777/dxrk-memory</code>) que provee
-  memoria persistente con búsqueda semántica.</li>
+<li><code>dxrk/memory/</code>: memoria persistente nativa 100% Python stdlib-only
+  (SQLite FTS5 + BM25, sin binarios externos).</li>
 <li><code>dxrk/rag/</code>: implementación local de chunking, indexado y recuperación.</li>
 </ul>
 <h2 id="hooks-y-permisos">Hooks y permisos</h2>
