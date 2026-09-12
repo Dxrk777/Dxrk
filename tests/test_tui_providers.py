@@ -70,6 +70,18 @@ class TestAuthFile:
         with open(target + ".bak", encoding="utf-8") as f:
             assert "google" in f.read()
 
+    def test_save_token_files_are_owner_only(self, tmp_path, monkeypatch):
+        import stat
+
+        monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+        target = backend.auth_file_path()
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        with open(target, "w", encoding="utf-8") as f:
+            json.dump({"google": {"type": "oauth", "key": "G"}}, f)
+        backend.save_api_token("openrouter", "tok-123")
+        assert stat.S_IMODE(os.stat(target).st_mode) == 0o600
+        assert stat.S_IMODE(os.stat(target + ".bak").st_mode) == 0o600
+
     def test_save_token_rejects_empty(self, tmp_path, monkeypatch):
         monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
         with pytest.raises(ValueError):

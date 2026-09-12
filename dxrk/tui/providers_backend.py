@@ -138,15 +138,23 @@ def save_api_token(provider_id: str, token: str, path: str = "") -> str:
     if os.path.exists(target):
         with open(target, encoding="utf-8") as f:
             backup = f.read()
-        with open(target + ".bak", "w", encoding="utf-8") as f:
+        fd_bak = os.open(target + ".bak", os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd_bak, "w", encoding="utf-8") as f:
             f.write(backup)
     data[pid] = {"type": "api", "key": secret}
     parent = os.path.dirname(target)
     if parent:
         os.makedirs(parent, exist_ok=True)
     tmp = target + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
+    # Secretos: el temporal nace 0600 (open() heredaría umask 0644) y el
+    # chmod final aprieta auth.json pre-existentes que estuvieran en 0644.
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
         f.write("\n")
     os.replace(tmp, target)
+    try:
+        os.chmod(target, 0o600)
+    except OSError:
+        pass
     return target
