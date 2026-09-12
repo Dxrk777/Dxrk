@@ -83,13 +83,9 @@ def _ensure_atomic_parent_dir(directory: str, path: str) -> None:
         st = os.lstat(directory)
 
     if stat_mode_is_symlink(st.st_mode):
-        raise PermissionError(
-            f"refusing symlink parent directory {directory!r} for {path!r}"
-        )
+        raise PermissionError(f"refusing symlink parent directory {directory!r} for {path!r}")
     if not stat_mode_is_dir(st.st_mode):
-        raise NotADirectoryError(
-            f"parent path {directory!r} for {path!r} is not a directory"
-        )
+        raise NotADirectoryError(f"parent path {directory!r} for {path!r} is not a directory")
     if st.st_mode & 0o200 == 0:
         os.chmod(directory, 0o755)
 
@@ -259,11 +255,28 @@ def inject_markdown_section(existing: str, section_id: str, content: str) -> str
 # ─── TOML ──────────────────────────────────────────────────────────────────
 
 
+def memory_mcp_args(cmd: str) -> list[str]:
+    """Args pairing for a resolved DXRK_MEMORY command.
+
+    A Python interpreter runs the native in-repo MCP server module; an
+    external DXRK_MEMORY binary takes its `mcp` subcommand. Matching by
+    basename (not sys.executable) also pairs interpreter paths stored by
+    previous installs under a different venv. Lives here (instead of the
+    memory component) so both modules share one rule without an import
+    cycle.
+    """
+    base = cmd.replace("\\", "/").rsplit("/", 1)[-1]
+    if base == "python" or base.startswith("python3"):
+        return ["-m", "dxrk.memory.mcp_server"]
+    return ["mcp", "--tools=agent"]
+
+
 def upsert_codex_DXRK_MEMORY_block(content: str, dxrk_cmd: str) -> str:
     if not dxrk_cmd:
         dxrk_cmd = "DXRK_MEMORY"
     escaped_cmd = dxrk_cmd.replace("\\", "\\\\")
-    block = f'[mcp_servers.DXRK_MEMORY]\ncommand = "{escaped_cmd}"\nargs = ["mcp", "--tools=agent"]'
+    args_toml = "[" + ", ".join(f'"{a}"' for a in memory_mcp_args(dxrk_cmd)) + "]"
+    block = f'[mcp_servers.DXRK_MEMORY]\ncommand = "{escaped_cmd}"\nargs = {args_toml}'
     content = content.replace("\r\n", "\n")
     lines = content.split("\n")
 

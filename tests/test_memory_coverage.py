@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 import tarfile
 import zipfile
 from io import BytesIO
@@ -189,9 +190,15 @@ class TestMemoryServerJson:
         try:
             result = memory._DXRK_MEMORY_server_json()
             data = json.loads(result)
-            assert data["command"] == "DXRK_MEMORY"
+            assert data["command"] == sys.executable
+            assert data["args"] == ["-m", "dxrk.memory.mcp_server"]
         finally:
             memory.set_look_path_for_test(orig)
+
+    def test_DXRK_MEMORY_server_json_native_explicit(self):
+        data = json.loads(memory._DXRK_MEMORY_server_json_with_cmd(sys.executable))
+        assert data["command"] == sys.executable
+        assert data["args"] == ["-m", "dxrk.memory.mcp_server"]
 
 
 class TestVSCodeMemoryOverlayJson:
@@ -447,7 +454,7 @@ class TestStableMemoryCommandForMergedConfig:
         f = tmp_path / "config.json"
         f.write_text(json.dumps({"mcp": {}}))
         result = memory._stable_DXRK_MEMORY_command_for_merged_config(str(f), AgentID.OPENCODE)
-        assert result in ("DXRK_MEMORY",)
+        assert result == sys.executable
 
     def test_file_not_exists_standard_agent(self, monkeypatch, tmp_path):
         monkeypatch.setattr(memory, "_preferred_stable_DXRK_MEMORY_command", lambda: "/custom/memory")
@@ -492,7 +499,7 @@ class TestPreferredStableMemoryCommand:
         orig = memory.set_look_path_for_test(mock)
         try:
             result = memory._preferred_stable_DXRK_MEMORY_command()
-            assert result == "DXRK_MEMORY"
+            assert result == sys.executable
         finally:
             memory.set_look_path_for_test(orig)
 

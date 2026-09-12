@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import sys
 import tarfile
 import tempfile
 import zipfile
@@ -101,7 +102,9 @@ def set_look_path_for_test(
 def _resolve_DXRK_MEMORY_command() -> tuple[str, bool]:
     p = _DXRK_MEMORY_look_path("DXRK_MEMORY")
     if not p:
-        return "DXRK_MEMORY", False
+        # No external binary: fall back to the native Python MCP server,
+        # guaranteed importable from the running interpreter.
+        return sys.executable, False
     if _is_versioned_homebrew_cellar_path(p):
         return "DXRK_MEMORY", False
     return p, True
@@ -113,7 +116,7 @@ def _DXRK_MEMORY_server_json() -> bytes:
 
 
 def _DXRK_MEMORY_server_json_with_cmd(cmd: str) -> bytes:
-    cfg = {"command": cmd, "args": ["mcp", "--tools=agent"]}
+    cfg = {"command": cmd, "args": filemerge.memory_mcp_args(cmd)}
     return (json.dumps(cfg, indent=2) + "\n").encode("utf-8")
 
 
@@ -123,7 +126,7 @@ def _DXRK_MEMORY_overlay_json(agent_id: AgentID, cmd: str) -> bytes:
             "mcp": {
                 "DXRK_MEMORY": {
                     "__replace__": {
-                        "command": [cmd, "mcp", "--tools=agent"],
+                        "command": [cmd] + filemerge.memory_mcp_args(cmd),
                         "type": "local",
                     }
                 }
@@ -134,7 +137,7 @@ def _DXRK_MEMORY_overlay_json(agent_id: AgentID, cmd: str) -> bytes:
             "mcpServers": {
                 "DXRK_MEMORY": {
                     "command": cmd,
-                    "args": ["mcp", "--tools=agent"],
+                    "args": filemerge.memory_mcp_args(cmd),
                 }
             }
         }
@@ -146,7 +149,7 @@ def _vs_code_DXRK_MEMORY_overlay_json(cmd: str) -> bytes:
         "servers": {
             "DXRK_MEMORY": {
                 "command": cmd,
-                "args": ["mcp", "--tools=agent"],
+                "args": filemerge.memory_mcp_args(cmd),
             }
         }
     }
@@ -337,7 +340,7 @@ def _preferred_stable_DXRK_MEMORY_command() -> str:
     p = _DXRK_MEMORY_look_path("DXRK_MEMORY")
     if p and _is_stable_homebrew_DXRK_MEMORY_path(p):
         return p
-    return "DXRK_MEMORY"
+    return sys.executable
 
 
 def _existing_merged_DXRK_MEMORY_command(raw: bytes, agent_id: AgentID) -> tuple[str, bool]:
@@ -404,7 +407,7 @@ def _build_separate_mcp_content(mcp_path: str, default_content: bytes) -> bytes:
     if not ok or not _is_DXRK_MEMORY_command(cmd):
         return default_content
     cmd = _stable_DXRK_MEMORY_command_for_existing(cmd, None)
-    rebuilt = {"command": cmd, "args": ["mcp", "--tools=agent"]}
+    rebuilt = {"command": cmd, "args": filemerge.memory_mcp_args(cmd)}
     return (json.dumps(rebuilt, indent=2) + "\n").encode("utf-8")
 
 

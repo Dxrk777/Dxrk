@@ -71,27 +71,15 @@ class TestCommandResolution:
     def test_is_versioned_homebrew_cellar_path(self):
         from dxrk.components.memory import _is_versioned_homebrew_cellar_path
 
-        assert (
-            _is_versioned_homebrew_cellar_path(
-                "/opt/homebrew/Cellar/DXRK_MEMORY/1.2.3/bin/DXRK_MEMORY"
-            )
-            is True
-        )
-        assert (
-            _is_versioned_homebrew_cellar_path("/opt/homebrew/bin/DXRK_MEMORY") is False
-        )
+        assert _is_versioned_homebrew_cellar_path("/opt/homebrew/Cellar/DXRK_MEMORY/1.2.3/bin/DXRK_MEMORY") is True
+        assert _is_versioned_homebrew_cellar_path("/opt/homebrew/bin/DXRK_MEMORY") is False
 
     def test_is_stable_homebrew_memory_path(self):
         from dxrk.components.memory import _is_stable_homebrew_DXRK_MEMORY_path
 
-        assert (
-            _is_stable_homebrew_DXRK_MEMORY_path("/opt/homebrew/bin/DXRK_MEMORY")
-            is True
-        )
+        assert _is_stable_homebrew_DXRK_MEMORY_path("/opt/homebrew/bin/DXRK_MEMORY") is True
         # Both Apple Silicon and Intel Homebrew prefixes are stable
-        assert (
-            _is_stable_homebrew_DXRK_MEMORY_path("/usr/local/bin/DXRK_MEMORY") is True
-        )
+        assert _is_stable_homebrew_DXRK_MEMORY_path("/usr/local/bin/DXRK_MEMORY") is True
 
     def test_executable_from_command_value(self):
         from dxrk.components.memory import _executable_from_command_value
@@ -122,9 +110,7 @@ class TestMemoryServerJson:
         assert data["args"] == ["mcp", "--tools=agent"]
 
     def test_memory_server_json_with_cmd(self):
-        data = json.loads(
-            memory._DXRK_MEMORY_server_json_with_cmd("/custom/path/DXRK_MEMORY")
-        )
+        data = json.loads(memory._DXRK_MEMORY_server_json_with_cmd("/custom/path/DXRK_MEMORY"))
         assert data["command"] == "/custom/path/DXRK_MEMORY"
 
 
@@ -140,7 +126,8 @@ class TestInject:
         mcp_file = mcp_dir / "DXRK_MEMORY.json"
         assert mcp_file.exists()
         data = json.loads(mcp_file.read_text())
-        assert data["command"] == "DXRK_MEMORY"
+        assert data["command"] == sys.executable
+        assert data["args"] == ["-m", "dxrk.memory.mcp_server"]
 
     def test_inject_opencode(self, tmp_path):
         from dxrk.agents.opencode.adapter import OpenCodeAdapter
@@ -157,12 +144,11 @@ class TestInject:
 
 class TestLookPath:
     def test_set_look_path_for_test(self, tmp_path):
-        mock = lambda x: (
-            str(tmp_path / "bin" / "DXRK_MEMORY") if x == "DXRK_MEMORY" else None
-        )
+        mock = lambda x: str(tmp_path / "bin" / "DXRK_MEMORY") if x == "DXRK_MEMORY" else None
         orig = memory.set_look_path_for_test(mock)
         assert callable(orig)
         memory.set_look_path_for_test(orig)
+
 
 import sys
 
