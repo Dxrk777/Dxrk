@@ -191,3 +191,47 @@ class TestBackgroundAgentsPlugin:
             assert f.read() == asset
         assert result.Changed is True
         assert dest in result.Files
+
+
+class TestVerifyContractMatchesInjects:
+    def test_memory_lists_dxrk_memory_json_for_separate(self, tmp_path):
+        from dxrk.agents.claude.adapter import ClaudeAdapter
+        from dxrk.cli.install import _component_paths
+        from dxrk.models import ComponentID, Selection
+
+        paths = _component_paths(str(tmp_path), Selection(), [ClaudeAdapter()], ComponentID.DXRK_MEMORY)
+        assert any(p.endswith("DXRK_MEMORY.json") for p in paths)
+        assert not any(p.endswith("mcp/memory.json") for p in paths)
+
+    def test_permissions_skips_unmapped_agents(self, tmp_path):
+        from dxrk.agents.cursor.adapter import CursorAdapter
+        from dxrk.cli.install import _component_paths
+        from dxrk.models import ComponentID, Selection
+
+        paths = _component_paths(str(tmp_path), Selection(), [CursorAdapter()], ComponentID.PERMISSIONS)
+        assert paths == []
+
+    def test_permissions_lists_mapped_agents(self, tmp_path):
+        from dxrk.agents.claude.adapter import ClaudeAdapter
+        from dxrk.cli.install import _component_paths
+        from dxrk.models import ComponentID, Selection
+
+        paths = _component_paths(str(tmp_path), Selection(), [ClaudeAdapter()], ComponentID.PERMISSIONS)
+        assert any(p.endswith("settings.json") for p in paths)
+
+    def test_context7_merge_lists_settings_only(self, tmp_path):
+        from dxrk.agents.opencode.adapter import OpenCodeAdapter
+        from dxrk.cli.install import _component_paths
+        from dxrk.models import ComponentID, Selection
+
+        paths = _component_paths(str(tmp_path), Selection(), [OpenCodeAdapter()], ComponentID.CONTEXT7)
+        assert any(p.endswith("settings.json") for p in paths)
+        assert not any(p.endswith("mcp.json") for p in paths)
+
+    def test_verify_file_exists_passes_for_dirs(self, tmp_path):
+        from dxrk.cli.run import _verify_file_exists
+
+        d = tmp_path / "commands"
+        d.mkdir()
+        assert _verify_file_exists(str(d))() is None
+        assert _verify_file_exists(str(tmp_path / "missing"))() is not None
