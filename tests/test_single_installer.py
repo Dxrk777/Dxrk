@@ -203,12 +203,28 @@ class TestVerifyContractMatchesInjects:
         assert any(p.endswith("DXRK_MEMORY.json") for p in paths)
         assert not any(p.endswith("mcp/memory.json") for p in paths)
 
-    def test_permissions_skips_unmapped_agents(self, tmp_path):
+    def test_permissions_lists_cursor_permissions_file(self, tmp_path):
         from dxrk.agents.cursor.adapter import CursorAdapter
         from dxrk.cli.install import _component_paths
         from dxrk.models import ComponentID, Selection
 
         paths = _component_paths(str(tmp_path), Selection(), [CursorAdapter()], ComponentID.PERMISSIONS)
+        assert paths == [os.path.join(str(tmp_path), ".cursor", "permissions.json")]
+
+    def test_permissions_lists_kiro_permissions_file(self, tmp_path):
+        from dxrk.agents.kiro.adapter import KiroAdapter
+        from dxrk.cli.install import _component_paths
+        from dxrk.models import ComponentID, Selection
+
+        paths = _component_paths(str(tmp_path), Selection(), [KiroAdapter()], ComponentID.PERMISSIONS)
+        assert paths == [os.path.join(str(tmp_path), ".kiro", "settings", "permissions.yaml")]
+
+    def test_permissions_still_skips_pi_without_schema(self, tmp_path):
+        from dxrk.agents.pi.adapter import PiAdapter
+        from dxrk.cli.install import _component_paths
+        from dxrk.models import ComponentID, Selection
+
+        paths = _component_paths(str(tmp_path), Selection(), [PiAdapter()], ComponentID.PERMISSIONS)
         assert paths == []
 
     def test_permissions_lists_mapped_agents(self, tmp_path):

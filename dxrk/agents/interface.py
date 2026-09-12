@@ -44,6 +44,10 @@ class Adapter(ABC):
         """Prompt files written by previous releases (for one-time cleanup)."""
         return []
 
+    def permissions_file(self, home_dir: str = "") -> str:
+        """Separate permissions file managed by Dxrk (empty = none)."""
+        return ""
+
     def skills_dir(self, home_dir: str = "") -> str:
         return ""
 

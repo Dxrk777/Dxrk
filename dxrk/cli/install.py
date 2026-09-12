@@ -1269,12 +1269,9 @@ def _component_paths(
                     result.append(p)
 
         elif component == ComponentID.PERMISSIONS:
-            from dxrk.components.permissions import supports_agent
+            from dxrk.components import permissions as _permissions
 
-            if not supports_agent(adapter.agent):
-                continue
-            p = adapter.settings_path(home_dir)
-            if p:
+            for p in _permissions.managed_paths(adapter, home_dir):
                 result.append(p)
 
         elif component == ComponentID.DXRK_GUARDIAN:

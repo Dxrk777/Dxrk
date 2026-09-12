@@ -6,6 +6,7 @@ Injection of bypassPermissions / auto-edit / auto-approve settings.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 
 from dxrk.components import filemerge
@@ -60,17 +61,126 @@ def supports_agent(agent_id: AgentID) -> bool:
     return _agent_overlay(agent_id) is not None
 
 
+_CURSOR_PERMISSIONS_JSON = (
+    b'{\n  "terminalAllowlist": [\n'
+    b'    "git",\n    "npm",\n    "npx",\n    "node",\n'
+    b'    "uv",\n    "python",\n    "python3",\n    "pip",\n'
+    b'    "docker",\n    "gh",\n    "make"\n'
+    b'  ],\n  "mcpAllowlist": [\n'
+    b'    "DXRK_MEMORY",\n    "context7"\n'
+    b"  ]\n}\n"
+)
+
+# Kiro reads permissions from ~/.kiro/settings/permissions.yaml
+# (https://kiro.dev/docs/permissions/). The stdlib cannot merge YAML,
+# so Dxrk writes this template once and never overwrites it afterwards.
+_KIRO_PERMISSIONS_YAML = """\
+# Managed by Dxrk — Kiro permission rules (https://kiro.dev/docs/permissions/).
+# First write only: Dxrk never overwrites this file, edit freely.
+rules:
+  - capability: shell
+    match: "git *"
+    effect: allow
+  - capability: shell
+    match: "npm *"
+    effect: allow
+  - capability: shell
+    match: "npx *"
+    effect: allow
+  - capability: shell
+    match: "uv *"
+    effect: allow
+  - capability: shell
+    match: "python *"
+    effect: allow
+  - capability: shell
+    match: "gh *"
+    effect: allow
+  - capability: fs_write
+    match: "src/**/*"
+    effect: allow
+  - capability: fs_write
+    match: "tests/**/*"
+    effect: allow
+  - capability: mcp
+    match: "DXRK_MEMORY"
+    effect: allow
+  - capability: mcp
+    match: "context7"
+    effect: allow
+"""
+
+
+def _permissions_file(adapter, home_dir: str) -> str:
+    try:
+        path = adapter.permissions_file(home_dir)
+    except (AttributeError, OSError, TypeError):
+        return ""
+    return path or ""
+
+
+def managed_paths(adapter, home_dir: str = "") -> list[str]:
+    """Files the permissions inject manages for this adapter.
+
+    Shared contract with the post-apply verification: only listed files
+    are required to exist after install.
+    """
+    paths: list[str] = []
+    try:
+        agent = adapter.agent
+    except AttributeError:
+        return paths
+    if supports_agent(agent):
+        sp = adapter.settings_path(home_dir)
+        if sp:
+            paths.append(sp)
+    pf = _permissions_file(adapter, home_dir)
+    if pf:
+        paths.append(pf)
+    return paths
+
+
+def _inject_permissions_file(home_dir: str, adapter, files: list[str]) -> bool:
+    try:
+        agent = adapter.agent
+    except AttributeError:
+        return False
+    perms_file = _permissions_file(adapter, home_dir)
+    if not perms_file:
+        return False
+    if agent == AgentID.CURSOR:
+        parent = os.path.dirname(perms_file)
+        if parent:
+            os.makedirs(parent, mode=0o755, exist_ok=True)
+        mw, _ = _merge_json_file(perms_file, _CURSOR_PERMISSIONS_JSON)
+        files.append(perms_file)
+        return mw.Changed
+    if agent == AgentID.KIRO_IDE:
+        if os.path.exists(perms_file):
+            files.append(perms_file)
+            return False
+        parent = os.path.dirname(perms_file)
+        if parent:
+            os.makedirs(parent, mode=0o755, exist_ok=True)
+        wr = filemerge.write_file_atomic(perms_file, _KIRO_PERMISSIONS_YAML.encode("utf-8"), 0o644)
+        files.append(perms_file)
+        return wr.Changed
+    return False
+
+
 def inject(home_dir: str, adapter) -> InjectionResult:
     settings_path = adapter.settings_path(home_dir)
-    if not settings_path:
-        return InjectionResult()
-
-    overlay = _agent_overlay(adapter.agent)
-    if overlay is None:
-        return InjectionResult()
-
-    wr, _ = _merge_json_file(settings_path, overlay)
-    return InjectionResult(Changed=wr.Changed, Files=[settings_path])
+    files: list[str] = []
+    changed = False
+    if settings_path:
+        overlay = _agent_overlay(adapter.agent)
+        if overlay is not None:
+            wr, _ = _merge_json_file(settings_path, overlay)
+            changed = changed or wr.Changed
+            files.append(settings_path)
+    # 2. Separate permissions file (Cursor JSON merges; Kiro YAML first-write).
+    changed = _inject_permissions_file(home_dir, adapter, files) or changed
+    return InjectionResult(Changed=changed, Files=files)
 
 
 def _merge_json_file(path: str, overlay: bytes) -> tuple[filemerge.WriteResult, bytes | None]:

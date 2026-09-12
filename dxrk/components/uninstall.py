@@ -15,6 +15,7 @@ from typing import Any, cast
 
 from dxrk.components import filemerge
 from dxrk.components import gga as _gga
+from dxrk.components import permissions as _permissions
 from dxrk.components import persona as _persona
 from dxrk.components import sdd as _sdd
 from dxrk.models import AgentID, ComponentID, DxrkMemoryUninstallScope
@@ -290,6 +291,21 @@ class Service:
                     ops.append(_rewrite_json_file(sp, ["general", "defaultApprovalMode"]))
                 elif agent == AgentID.VSCODE_COPILOT:
                     ops.append(_rewrite_json_file(sp, ["chat.tools.autoApprove"]))
+                try:
+                    perms_file = adapter.permissions_file(home)
+                except AttributeError:
+                    perms_file = ""
+                if perms_file and agent == AgentID.CURSOR:
+                    targets.append(perms_file)
+                    ops.append(_rewrite_json_file(perms_file, ["terminalAllowlist"], ["mcpAllowlist"]))
+                elif perms_file and agent == AgentID.KIRO_IDE:
+                    targets.append(perms_file)
+                    ops.append(
+                        _remove_file_if_matches(
+                            perms_file,
+                            _permissions._KIRO_PERMISSIONS_YAML.encode("utf-8"),
+                        )
+                    )
 
         elif component_id == ComponentID.THEME:
             sp = adapter.settings_path(home)
@@ -567,6 +583,28 @@ def _rewrite_toml_file(path: str, mutate: Callable[[str], tuple[str, bool]]) -> 
         return True, False, None
 
     return Operation(OpType.REWRITE_FILE, path, apply)
+
+
+def _remove_file_if_matches(path: str, expected: bytes) -> Operation:
+    """Remove a file only when its content exactly matches `expected`."""
+
+    def apply(p: str) -> tuple[bool, bool, str | None]:
+        try:
+            with open(p, "rb") as f:
+                data = f.read()
+        except FileNotFoundError:
+            return False, False, None
+        except OSError as e:
+            return False, False, str(e)
+        if data.strip() != expected.strip():
+            return False, False, None
+        try:
+            os.remove(p)
+            return True, True, None
+        except OSError as e:
+            return False, False, str(e)
+
+    return Operation(OpType.REMOVE_FILE, path, apply)
 
 
 def _remove_file(path: str) -> Operation:

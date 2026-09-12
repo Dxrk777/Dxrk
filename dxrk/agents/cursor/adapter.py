@@ -38,6 +38,9 @@ class CursorAdapter(Adapter):
     def system_prompt_file(self, home_dir: str = "") -> str:
         return str(Path(home_dir) / ".cursor" / "rules" / "dxrk.mdc")
 
+    def permissions_file(self, home_dir: str = "") -> str:
+        return str(Path(home_dir) / ".cursor" / "permissions.json")
+
     def legacy_system_prompt_files(self, home_dir: str = "") -> list[str]:
         return [str(Path(home_dir) / ".cursor" / "rules" / "gentle-ai.mdc")]
 
