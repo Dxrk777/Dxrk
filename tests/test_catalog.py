@@ -152,7 +152,7 @@ def test_skill_repr():
 
 def test_mvp_skills_count():
     skills = mvp_skills()
-    assert len(skills) == 351
+    assert len(skills) == 368
 
 
 def test_mvp_skills_all_sdd_present():

@@ -55,7 +55,7 @@ def test_skill_ids_all_unique():
 
 
 def test_skill_ids_count():
-    assert len(SkillID) == 351
+    assert len(SkillID) == 368
 
 
 def test_shorthand_aliases():
@@ -170,9 +170,7 @@ def test_support_tier():
 
 
 def test_open_code_plugins():
-    assert (
-        OpenCodeCommunityPluginID.SUB_AGENT_STATUSLINE.value == "sub-agent-statusline"
-    )
+    assert OpenCodeCommunityPluginID.SUB_AGENT_STATUSLINE.value == "sub-agent-statusline"
     assert OpenCodeCommunityPluginID.SDD_MEMORY_PLUGIN.value == "sdd-DXRK_MEMORY-plugin"
 
 
