@@ -1189,7 +1189,7 @@ def _component_paths(
 
             mcps = adapter.mcp_strategy
             if mcps in (MCPStrategy.SEPARATE_MCP_FILES, MCPStrategy.MCP_CONFIG_FILE):
-                result.append(adapter.mcp_config_path(home_dir, "memory"))
+                result.append(adapter.mcp_config_path(home_dir, "DXRK_MEMORY"))
             elif mcps == MCPStrategy.MERGE_INTO_SETTINGS:
                 p = adapter.settings_path(home_dir)
                 if p:
@@ -1209,11 +1209,14 @@ def _component_paths(
             mcps = adapter.mcp_strategy
             if mcps in (MCPStrategy.SEPARATE_MCP_FILES,):
                 result.append(adapter.mcp_config_path(home_dir, "context7"))
-            elif mcps in (MCPStrategy.MERGE_INTO_SETTINGS, MCPStrategy.MCP_CONFIG_FILE):
+            elif mcps == MCPStrategy.MERGE_INTO_SETTINGS:
                 p = adapter.settings_path(home_dir)
                 if p:
                     result.append(p)
-                result.append(adapter.mcp_config_path(home_dir, "context7"))
+            elif mcps == MCPStrategy.MCP_CONFIG_FILE:
+                p = adapter.mcp_config_path(home_dir, "context7")
+                if p:
+                    result.append(p)
 
         elif component == ComponentID.SDD:
             if adapter.supports_system_prompt:
@@ -1266,6 +1269,10 @@ def _component_paths(
                     result.append(p)
 
         elif component == ComponentID.PERMISSIONS:
+            from dxrk.components.permissions import supports_agent
+
+            if not supports_agent(adapter.agent):
+                continue
             p = adapter.settings_path(home_dir)
             if p:
                 result.append(p)

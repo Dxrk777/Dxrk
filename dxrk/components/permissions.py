@@ -36,17 +36,11 @@ _OPENCODE_OVERLAY_JSON = (
     b'      "**/credentials.json": "deny"\n    }\n  }\n}\n'
 )
 
-_GEMINI_CLI_OVERLAY_JSON = (
-    b'{\n  "general": {\n    "defaultApprovalMode": "auto_edit"\n  }\n}\n'
-)
+_GEMINI_CLI_OVERLAY_JSON = b'{\n  "general": {\n    "defaultApprovalMode": "auto_edit"\n  }\n}\n'
 
-_QWEN_CODE_OVERLAY_JSON = (
-    b'{\n  "permissions": {\n    "defaultMode": "auto_edit"\n  }\n}\n'
-)
+_QWEN_CODE_OVERLAY_JSON = b'{\n  "permissions": {\n    "defaultMode": "auto_edit"\n  }\n}\n'
 
-_VSCODE_COPILOT_OVERLAY_JSON = (
-    b'{\n  "chat.tools.autoApprove": true\n}\n'
-)
+_VSCODE_COPILOT_OVERLAY_JSON = b'{\n  "chat.tools.autoApprove": true\n}\n'
 
 
 def _agent_overlay(agent_id: AgentID) -> bytes | None:
@@ -59,6 +53,11 @@ def _agent_overlay(agent_id: AgentID) -> bytes | None:
         AgentID.VSCODE_COPILOT: _VSCODE_COPILOT_OVERLAY_JSON,
     }
     return mapping.get(agent_id)
+
+
+def supports_agent(agent_id: AgentID) -> bool:
+    """True when the permissions inject writes settings for this agent."""
+    return _agent_overlay(agent_id) is not None
 
 
 def inject(home_dir: str, adapter) -> InjectionResult:

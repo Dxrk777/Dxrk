@@ -103,9 +103,7 @@ def run_install(args: list[str], detection: DetectionResult) -> InstallResult:
 
     from dxrk.state import write as state_write
 
-    verify_result = _run_post_apply_verification(
-        home_dir, input_data.selection, resolved
-    )
+    verify_result = _run_post_apply_verification(home_dir, input_data.selection, resolved)
     add_post_install_notes(verify_result, resolved)
     result.verify = verify_result
 
@@ -121,11 +119,8 @@ def run_install(args: list[str], detection: DetectionResult) -> InstallResult:
         home_dir,
         InstallState(
             installed_agents=agent_ids,
-            claude_model_assignments=input_data.selection.claude_model_assignments
-            or None,
-            model_assignments=_model_assignments_to_state(
-                input_data.selection.model_assignments
-            ),
+            claude_model_assignments=input_data.selection.claude_model_assignments or None,
+            model_assignments=_model_assignments_to_state(input_data.selection.model_assignments),
         ),
     )
 
@@ -172,7 +167,9 @@ def _run_post_apply_verification(
 
 def _verify_file_exists(path: str):
     def check() -> str | None:
-        if not os.path.isfile(path):
+        # NOTE: managed paths include directories (commands/, skills/_shared/),
+        # so existence — not isfile — is the correct gate here.
+        if not os.path.exists(path):
             return f"required file does not exist: {path}"
         return None
 
@@ -199,9 +196,7 @@ def _DXRK_MEMORY_health_checks() -> list:
         import subprocess
 
         try:
-            r = subprocess.run(
-                ["memory", "version"], capture_output=True, text=True, timeout=10
-            )
+            r = subprocess.run(["memory", "version"], capture_output=True, text=True, timeout=10)
             if r.returncode != 0:
                 return "memory version command failed"
         except (FileNotFoundError, subprocess.TimeoutExpired) as e:
@@ -262,9 +257,7 @@ def _resolve_adapters(agent_ids: list[AgentID]) -> list[Any]:
 def add_post_install_notes(report: Any, resolved: Any) -> None:
     from dxrk.models import ComponentID
 
-    if has_component(
-        resolved.ordered_components, ComponentID.DXRK_GUARDIAN
-    ) and getattr(report, "ready", True):
+    if has_component(resolved.ordered_components, ComponentID.DXRK_GUARDIAN) and getattr(report, "ready", True):
         note = getattr(report, "final_note", "")
         note += "\n\nDXRK_GUARDIAN is now installed globally. To enable project hooks, run in each repo:\n- DXRK_GUARDIAN init\n- DXRK_GUARDIAN install"
         report.final_note = note
