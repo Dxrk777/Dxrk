@@ -167,7 +167,7 @@ class TestGgaShim:
         home = tmp_path / "home"
         bindir = tmp_path / "bin"
         bindir.mkdir()
-        fake_gga = bindir / "gga"
+        fake_gga = bindir / ("gga.exe" if os.name == "nt" else "gga")
         fake_gga.write_text("#!/bin/sh\n", encoding="utf-8")
         os.chmod(str(fake_gga), 0o755)
         monkeypatch.setenv("PATH", str(bindir))
