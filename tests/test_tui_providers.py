@@ -70,6 +70,7 @@ class TestAuthFile:
         with open(target + ".bak", encoding="utf-8") as f:
             assert "google" in f.read()
 
+    @pytest.mark.skipif(os.name == "nt", reason="Windows no tiene bits de permiso POSIX")
     def test_save_token_files_are_owner_only(self, tmp_path, monkeypatch):
         import stat
 

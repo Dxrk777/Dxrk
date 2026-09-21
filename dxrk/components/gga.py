@@ -127,14 +127,22 @@ def ensure_dxrk_guardian_shim(home_dir: str) -> None:
     try:
         if not os.path.lexists(link):
             os.makedirs(bin_dir, exist_ok=True)
-            os.symlink(gga_bin, link)
+            try:
+                os.symlink(gga_bin, link)
+            except OSError:
+                # Windows sin privilegio de symlinks: copia plana del binario.
+                shutil.copy2(gga_bin, link)
     except OSError:
         pass
     gga_cfg = os.path.join(home_dir, ".config", "gga")
     dxrk_cfg = os.path.join(home_dir, ".config", "DXRK_GUARDIAN")
     try:
         if not os.path.lexists(gga_cfg) and os.path.isdir(dxrk_cfg):
-            os.symlink(dxrk_cfg, gga_cfg)
+            try:
+                os.symlink(dxrk_cfg, gga_cfg)
+            except OSError:
+                # Windows sin privilegio de symlinks: copia del árbol de config.
+                shutil.copytree(dxrk_cfg, gga_cfg)
     except OSError:
         pass
 

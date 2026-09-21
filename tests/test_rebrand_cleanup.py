@@ -174,8 +174,13 @@ class TestGgaShim:
         cfg = home / ".config" / "DXRK_GUARDIAN"
         cfg.mkdir(parents=True)
         gga.ensure_dxrk_guardian_shim(str(home))
-        assert os.path.islink(str(home / ".local" / "bin" / "DXRK_GUARDIAN"))
-        assert os.path.islink(str(home / ".config" / "gga"))
+        shim = str(home / ".local" / "bin" / "DXRK_GUARDIAN")
+        cfg_link = str(home / ".config" / "gga")
+        assert os.path.lexists(shim)
+        assert os.path.lexists(cfg_link)
+        if os.name != "nt":
+            assert os.path.islink(shim)
+            assert os.path.islink(cfg_link)
 
 
 class TestUpdateEntries:

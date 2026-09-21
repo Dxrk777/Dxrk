@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import stat
 
 from dxrk.tui.chat_backend import (
@@ -93,9 +94,14 @@ class TestSend:
         assert "no encontrada" in reply.text
 
     def test_fake_script(self, tmp_path):
-        script = tmp_path / "opencode"
-        line = json.dumps({"type": "text", "text": "script reply"})
-        script.write_text(f"#!/bin/sh\necho '{line}'\n")
+        if os.name == "nt":
+            script = tmp_path / "opencode.cmd"
+            line = json.dumps({"type": "text", "text": "script reply"})
+            script.write_text(f"@echo off\necho {line}\n", encoding="utf-8")
+        else:
+            script = tmp_path / "opencode"
+            line = json.dumps({"type": "text", "text": "script reply"})
+            script.write_text(f"#!/bin/sh\necho '{line}'\n")
         script.chmod(script.stat().st_mode | stat.S_IEXEC)
         backend = ChatBackend(binary=str(script))
         reply = backend.send("hola")
@@ -103,8 +109,12 @@ class TestSend:
         assert reply.text == "script reply"
 
     def test_failing_script(self, tmp_path):
-        script = tmp_path / "opencode"
-        script.write_text("#!/bin/sh\necho boom >&2\nexit 3\n")
+        if os.name == "nt":
+            script = tmp_path / "opencode.cmd"
+            script.write_text("@echo off\necho boom 1>&2\nexit /b 3\n", encoding="utf-8")
+        else:
+            script = tmp_path / "opencode"
+            script.write_text("#!/bin/sh\necho boom >&2\nexit 3\n")
         script.chmod(script.stat().st_mode | stat.S_IEXEC)
         backend = ChatBackend(binary=str(script))
         reply = backend.send("hola")

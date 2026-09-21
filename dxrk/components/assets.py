@@ -19,7 +19,7 @@ def read(path: str, root: str | None = None) -> str | None:
     if not full.startswith(os.path.normpath(base)):
         return None
     try:
-        with open(full) as f:
+        with open(full, encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
         return None
@@ -35,6 +35,7 @@ def must_read(path: str, root: str | None = None) -> str:
 
 def sdd_commands_asset_dir(agent_id: str) -> str:
     from dxrk.models import AgentID
+
     if agent_id == AgentID.CLAUDE_CODE:
         return "claude/commands"
     return "opencode/commands"

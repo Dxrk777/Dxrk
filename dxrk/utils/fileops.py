@@ -367,7 +367,7 @@ def AppendFile(path: str, content: str) -> FileopsError | None:
     if err is not None:
         return err
     try:
-        with open(path, "a") as f:
+        with open(path, "a", encoding="utf-8") as f:
             f.write(content)
     except OSError as e:
         return FileopsError(str(e))

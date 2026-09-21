@@ -266,6 +266,8 @@ def memory_mcp_args(cmd: str) -> list[str]:
     cycle.
     """
     base = cmd.replace("\\", "/").rsplit("/", 1)[-1]
+    if base.lower().endswith(".exe"):
+        base = base[:-4]
     if base == "python" or base.startswith("python3"):
         return ["-m", "dxrk.memory.mcp_server"]
     return ["mcp", "--tools=agent"]

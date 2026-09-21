@@ -111,7 +111,7 @@ def profile_agent_keys(name: str) -> list[str]:
 
 def detect_profiles(settings_path: str) -> list[Profile]:
     try:
-        with open(settings_path) as f:
+        with open(settings_path, encoding="utf-8") as f:
             data = f.read()
     except FileNotFoundError:
         return []
@@ -335,7 +335,7 @@ def remove_profile_agents(settings_path: str, profile_name: str) -> None:
         raise ValueError(f"RemoveProfileAgents: no se puede eliminar el perfil predeterminado (name={profile_name!r})")
 
     try:
-        with open(settings_path) as f:
+        with open(settings_path, encoding="utf-8") as f:
             data = f.read()
     except FileNotFoundError:
         return
@@ -833,7 +833,7 @@ def _read_opencode_agent_prompt(settings_path: str, agent_key: str) -> str | Non
     if not settings_path.strip() or not agent_key.strip():
         return None
     try:
-        with open(settings_path) as f:
+        with open(settings_path, encoding="utf-8") as f:
             data = f.read()
     except FileNotFoundError:
         return None
@@ -853,7 +853,7 @@ def _read_opencode_agent_prompt(settings_path: str, agent_key: str) -> str | Non
 
 def _read_opencode_root_model(path: str) -> str | None:
     try:
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             data = f.read()
     except FileNotFoundError:
         return None
@@ -867,7 +867,7 @@ def _read_opencode_root_model(path: str) -> str | None:
 
 def _read_existing_agent_models(path: str) -> dict[str, bool]:
     try:
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             data = f.read()
     except FileNotFoundError:
         return {}
@@ -1172,7 +1172,7 @@ def read_current_profiles(settings_path: str) -> list[Profile]:
 
 def read_current_model_assignments(settings_path: str) -> dict[str, ModelAssignment]:
     try:
-        with open(settings_path) as f:
+        with open(settings_path, encoding="utf-8") as f:
             data = f.read()
     except FileNotFoundError:
         return {}
@@ -1225,7 +1225,7 @@ def _merge_json_file(path: str, overlay: bytes) -> tuple[filemerge.WriteResult, 
 
 def _read_file_or_empty(path: str) -> str:
     try:
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
         return ""
