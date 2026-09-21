@@ -85,17 +85,13 @@ class TestMainCli:
                 system=SystemInfo(
                     os="linux",
                     supported=True,
-                    profile=PlatformProfile(
-                        os="linux", package_manager="apt", supported=True
-                    ),
+                    profile=PlatformProfile(os="linux", package_manager="apt", supported=True),
                 ),
                 dependencies=DependencyReport(all_present=True),
             ),
         )
         lines = []
-        monkeypatch.setattr(
-            "builtins.print", lambda *a, **kw: lines.append(" ".join(str(x) for x in a))
-        )
+        monkeypatch.setattr("builtins.print", lambda *a, **kw: lines.append(" ".join(str(x) for x in a)))
         from dxrk.__main__ import main
 
         main()
@@ -116,27 +112,21 @@ class TestMainCli:
     def test_main_unknown_command(self, monkeypatch):
         monkeypatch.setattr("sys.argv", ["dxrk", "nonexistent"])
         lines = []
-        monkeypatch.setattr(
-            "builtins.print", lambda *a, **kw: lines.append(" ".join(str(x) for x in a))
-        )
+        monkeypatch.setattr("builtins.print", lambda *a, **kw: lines.append(" ".join(str(x) for x in a)))
         from dxrk.__main__ import main
 
         with pytest.raises(SystemExit):
             main()
 
     def test_run_install_cli_dry_run(self, monkeypatch):
-        monkeypatch.setattr(
-            "sys.argv", ["dxrk", "install", "--agent", "opencode", "--dry-run"]
-        )
+        monkeypatch.setattr("sys.argv", ["dxrk", "install", "--agent", "opencode", "--dry-run"])
         monkeypatch.setattr(
             "dxrk.system.detect",
             lambda: DetectionResult(
                 system=SystemInfo(
                     os="linux",
                     supported=True,
-                    profile=PlatformProfile(
-                        os="linux", package_manager="apt", supported=True
-                    ),
+                    profile=PlatformProfile(os="linux", package_manager="apt", supported=True),
                 ),
                 dependencies=DependencyReport(all_present=True),
             ),
@@ -156,9 +146,7 @@ class TestMainCli:
         monkeypatch.setattr(
             "dxrk.system.detect",
             lambda: DetectionResult(
-                system=SystemInfo(
-                    os="freebsd", supported=False, profile=PlatformProfile()
-                ),
+                system=SystemInfo(os="freebsd", supported=False, profile=PlatformProfile()),
                 dependencies=DependencyReport(),
             ),
         )
@@ -168,9 +156,7 @@ class TestMainCli:
             main()
 
     def test_run_sync_cli_dry_run(self, monkeypatch):
-        monkeypatch.setattr(
-            "sys.argv", ["dxrk", "sync", "--dry-run", "--agent", "opencode"]
-        )
+        monkeypatch.setattr("sys.argv", ["dxrk", "sync", "--dry-run", "--agent", "opencode"])
         printed = []
         monkeypatch.setattr(
             "builtins.print",
@@ -184,9 +170,7 @@ class TestMainCli:
                 {
                     "dry_run": True,
                     "agents": [AgentID.OPENCODE],
-                    "selection": type(
-                        "sel", (), {"sdd_mode": "single", "strict_tdd": False}
-                    )(),
+                    "selection": type("sel", (), {"sdd_mode": "single", "strict_tdd": False})(),
                 },
             )(),
         )
@@ -217,7 +201,9 @@ class TestMainCli:
         )
         from dxrk.__main__ import main
 
-        main()
+        with pytest.raises(SystemExit) as exc:
+            main()
+        assert exc.value.code == 2
         assert any("not yet implemented" in l for l in printed)
 
     def test_run_upgrade(self, monkeypatch):
@@ -229,7 +215,9 @@ class TestMainCli:
         )
         from dxrk.__main__ import main
 
-        main()
+        with pytest.raises(SystemExit) as exc:
+            main()
+        assert exc.value.code == 2
         assert any("not yet implemented" in l for l in printed)
 
 
@@ -288,29 +276,21 @@ class TestCliRun:
 
         monkeypatch.setattr("dxrk.planner.new_resolver", lambda: FakeResolver())
         monkeypatch.setattr("dxrk.planner.build_review_payload", lambda s, r: None)
-        monkeypatch.setattr(
-            "dxrk.planner.platform_decision_from_profile", lambda p: None
-        )
+        monkeypatch.setattr("dxrk.planner.platform_decision_from_profile", lambda p: None)
         monkeypatch.setattr(
             "dxrk.cli.install.resolve_install_profile",
-            lambda d: PlatformProfile(
-                os="linux", package_manager="apt", supported=True
-            ),
+            lambda d: PlatformProfile(os="linux", package_manager="apt", supported=True),
         )
         monkeypatch.setattr(
             "dxrk.cli.run.resolve_install_profile",
-            lambda d: PlatformProfile(
-                os="linux", package_manager="apt", supported=True
-            ),
+            lambda d: PlatformProfile(os="linux", package_manager="apt", supported=True),
         )
 
         detection = DetectionResult(
             system=SystemInfo(
                 os="linux",
                 supported=True,
-                profile=PlatformProfile(
-                    os="linux", package_manager="apt", supported=True
-                ),
+                profile=PlatformProfile(os="linux", package_manager="apt", supported=True),
             ),
             dependencies=DependencyReport(all_present=True),
         )
@@ -360,10 +340,7 @@ class TestCliRun:
     def test_has_component_true(self):
         from dxrk.cli.run import has_component
 
-        assert (
-            has_component([ComponentID.SDD, ComponentID.DXRK_MEMORY], ComponentID.SDD)
-            is True
-        )
+        assert has_component([ComponentID.SDD, ComponentID.DXRK_MEMORY], ComponentID.SDD) is True
 
     def test_has_component_false(self):
         from dxrk.cli.run import has_component
@@ -375,17 +352,13 @@ class TestCliRun:
 
         monkeypatch.setattr(
             "dxrk.cli.install.resolve_install_profile",
-            lambda d: PlatformProfile(
-                os="darwin", package_manager="brew", supported=True
-            ),
+            lambda d: PlatformProfile(os="darwin", package_manager="brew", supported=True),
         )
         profile = resolve_install_profile(
             DetectionResult(
                 system=SystemInfo(
                     os="darwin",
-                    profile=PlatformProfile(
-                        os="darwin", package_manager="brew", supported=True
-                    ),
+                    profile=PlatformProfile(os="darwin", package_manager="brew", supported=True),
                 ),
             )
         )
@@ -419,9 +392,7 @@ class TestCliRun:
             "dxrk.cli.run._look_path",
             lambda name: name == "DXRK_MEMORY" and "/usr/local/bin/DXRK_MEMORY" or "",
         )
-        monkeypatch.setattr(
-            "subprocess.run", lambda *a, **kw: type("r", (), {"returncode": 0})()
-        )
+        monkeypatch.setattr("subprocess.run", lambda *a, **kw: type("r", (), {"returncode": 0})())
         checks = _DXRK_MEMORY_health_checks()
         assert len(checks) == 2
 
@@ -438,6 +409,7 @@ class TestCliRun:
 
         checks = _antigravity_collision_check([AgentID.ANTIGRAVITY])
         assert checks == []
+
 
 import sys
 

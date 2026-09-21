@@ -51,7 +51,13 @@ def run_checks(checks: list[Check]) -> list[CheckResult]:
             results.append(result)
             continue
 
-        err = check.run()
+        try:
+            err = check.run()
+        except Exception as e:
+            result.status = CheckStatus.WARNING if check.soft else CheckStatus.FAILED
+            result.error = f"check raised: {e}"
+            results.append(result)
+            continue
         if err is not None:
             result.status = CheckStatus.WARNING if check.soft else CheckStatus.FAILED
             result.error = err

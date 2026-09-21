@@ -130,7 +130,9 @@ def main() -> None:
         from dxrk.system import detect, render_dependency_report
 
         result = detect()
-        assert result.dependencies is not None, "detection did not populate dependencies"
+        if result.dependencies is None:
+            print("health check failed: detection did not populate dependencies", file=sys.stderr)
+            sys.exit(1)
         print(render_dependency_report(result.dependencies))
         return
 
@@ -155,8 +157,8 @@ def main() -> None:
         return
 
     if args.command == "upgrade":
-        print("Upgrade not yet implemented")
-        return
+        print("Upgrade not yet implemented", file=sys.stderr)
+        sys.exit(2)
 
     if args.command == "model":
         _run_model_cli(args)
@@ -171,8 +173,8 @@ def main() -> None:
         return
 
     if args.command:
-        print(f"Command '{args.command}' not yet implemented")
-        return
+        print(f"Command '{args.command}' not yet implemented", file=sys.stderr)
+        sys.exit(2)
 
     _launch_single_installer(version)
 
@@ -227,6 +229,9 @@ def _run_install_cli(args) -> None:
     raw = sys.argv[2:]
 
     out = run_install(raw, detection=result)
+    if out.error:
+        print(f"Install failed: {out.error}", file=sys.stderr)
+        sys.exit(1)
     if out.dry_run:
         rev = out.review
         if rev:
@@ -279,7 +284,14 @@ def _launch_single_installer(version: str) -> None:
         from dxrk.system import detect
 
         print("Instalando Dxrk (una sola vez: agentes + componentes + MCP)…", flush=True)
-        result = run_install([], detect())
+        try:
+            result = run_install([], detect())
+        except Exception as e:
+            print(f"La instalación falló con excepción: {e}", flush=True)
+            print("Se abre Dxrk de todos modos.", flush=True)
+            print("Reintenta con `dxrk-py install` para ver el detalle.", flush=True)
+            _launch_tui(version, initial_screen="chat")
+            return
         if result.error:
             print(f"La instalación reportó errores: {result.error}", flush=True)
         if _is_installed(home):
@@ -294,7 +306,11 @@ def _run_sync_cli(args) -> None:
     from dxrk.cli.sync import RunSync
 
     raw = sys.argv[2:]
-    result = RunSync(raw)
+    try:
+        result = RunSync(raw)
+    except Exception as e:
+        print(f"Sync failed: {e}", file=sys.stderr)
+        sys.exit(1)
     if hasattr(result, "dry_run") and result.dry_run:
         print("=== Dry Run Sync ===")
         print(f"  Agents: {len(result.agents)}")
@@ -309,7 +325,11 @@ def _run_uninstall_cli(args) -> None:
     from dxrk.cli.uninstall import RunUninstall
 
     raw = sys.argv[2:]
-    result = RunUninstall(raw)
+    try:
+        result = RunUninstall(raw)
+    except Exception as e:
+        print(f"Uninstall failed: {e}", file=sys.stderr)
+        sys.exit(1)
     if hasattr(result, "removed_files"):
         manual = getattr(result, "manual_actions", [])
         if manual:
@@ -334,14 +354,25 @@ def _run_restore_cli(args) -> None:
     from dxrk.cli.restore import RunRestore
 
     raw = sys.argv[2:]
-    RunRestore(raw)
+    try:
+        result = RunRestore(raw)
+    except ValueError as e:
+        print(f"Restore failed: {e}", file=sys.stderr)
+        sys.exit(2)
+    except Exception as e:
+        print(f"Restore failed: {e}", file=sys.stderr)
+        sys.exit(1)
+    if isinstance(result, str) and result:
+        print(result, file=sys.stderr)
+        sys.exit(1)
 
 
 def _run_model_cli(args) -> None:
     if args.phase:
-        print(f"Model config for phase '{args.phase}' not yet implemented")
+        print(f"Model config for phase '{args.phase}' not yet implemented", file=sys.stderr)
     else:
-        print("Model configuration not yet implemented")
+        print("Model configuration not yet implemented", file=sys.stderr)
+    sys.exit(2)
 
 
 if __name__ == "__main__":

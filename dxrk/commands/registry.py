@@ -20,7 +20,7 @@ def go_quote(s: str) -> str:
     for ch in s:
         if ch in _GO_QUOTE_CHARS:
             out.append(_GO_QUOTE_CHARS[ch])
-        elif ord(ch) < 0x20:
+        elif ord(ch) < 0x20 or ord(ch) == 0x7F:
             out.append(f"\\u{ord(ch):04x}")
         else:
             out.append(ch)
@@ -30,7 +30,7 @@ def go_quote(s: str) -> str:
 
 def go_duration(seconds: float) -> str:
     """Formats a duration like time.Duration.String()."""
-    secs = round(seconds)
+    secs = int(seconds)
     secs = max(secs, 0)
     hours = secs // 3600
     minutes = (secs % 3600) // 60
@@ -137,21 +137,50 @@ def parse_argv(argv: list[str], flags: dict[str, Flag]) -> tuple[list[str], dict
                     value = argv[i]
                 parsed[name] = value
         elif tok.startswith("-") and len(tok) > 1 and not tok[1].isdigit():
-            short = tok[1]
-            flag = next((f for f in flags.values() if f.shorthand == short), None)
-            if flag is None:
-                return [], {}, f"flag abreviado desconocido: -{short}"
-            if flag.is_bool:
-                parsed[flag.name] = True
+            body = tok[1:]
+            if len(body) >= 2 and body[1] == "=":
+                # -f=value form
+                short = body[0]
+                flag = next((f for f in flags.values() if f.shorthand == short), None)
+                if flag is None:
+                    return [], {}, f"flag abreviado desconocido: -{short}"
+                if flag.is_bool:
+                    return [], {}, f"el flag booleano -{short} no acepta valor"
+                parsed[flag.name] = body[2:]
             else:
-                if i + 1 >= len(argv):
-                    return [], {}, f"el flag necesita un argumento: -{short}"
-                i += 1
-                parsed[flag.name] = argv[i]
+                # Short cluster: bool flags combine (-vvv); a non-bool
+                # shorthand consumes the rest of the token or next argv.
+                j = 0
+                while j < len(body):
+                    short = body[j]
+                    flag = next((f for f in flags.values() if f.shorthand == short), None)
+                    if flag is None:
+                        return [], {}, f"flag abreviado desconocido: -{short}"
+                    if flag.is_bool:
+                        parsed[flag.name] = True
+                        j += 1
+                    else:
+                        rest = body[j + 1 :]
+                        if rest:
+                            parsed[flag.name] = rest
+                        else:
+                            if i + 1 >= len(argv):
+                                return [], {}, f"el flag necesita un argumento: -{short}"
+                            i += 1
+                            parsed[flag.name] = argv[i]
+                        break
         else:
             positional.append(tok)
         i += 1
     return positional, parsed, None
+
+
+def _safe_write(stream: TextIO, msg: str) -> None:
+    """Write to a stream, tolerating closed/broken pipes."""
+    try:
+        stream.write(msg)
+    except (BrokenPipeError, OSError):
+        pass
 
 
 class Registry:
@@ -184,8 +213,8 @@ class Registry:
         if err is None:
             err = sys.stderr
         if not argv:
-            err.write("dxrk: falta el comando\n")
-            err.write("Ejecuta 'dxrk help' para ver el uso.\n")
+            _safe_write(err, "dxrk: falta el comando\n")
+            _safe_write(err, "Ejecuta 'dxrk help' para ver el uso.\n")
             return 1
 
         name = argv[0]
@@ -196,21 +225,27 @@ class Registry:
 
         cmd = self._commands.get(name)
         if cmd is None:
-            err.write(f"comando desconocido: {argv[0]}\n")
-            err.write("Ejecuta 'dxrk help' para ver el uso.\n")
+            _safe_write(err, f"comando desconocido: {argv[0]}\n")
+            _safe_write(err, "Ejecuta 'dxrk help' para ver el uso.\n")
             return 1
 
         args, flags, parse_err = parse_argv(rest, cmd.flags)
         if parse_err is not None:
-            err.write(f"Error: {parse_err}\n")
+            _safe_write(err, f"Error: {parse_err}\n")
             return 1
         arg_err = cmd.validate_args(args)
         if arg_err is not None:
-            err.write(f"Error: {arg_err}\n")
+            _safe_write(err, f"Error: {arg_err}\n")
             return 1
         if cmd.run is None:
-            err.write(f"Error: comando {cmd.name} no implementado\n")
+            _safe_write(err, f"Error: comando {cmd.name} no implementado\n")
             return 1
         tenant_id = os.environ.get("DXRK_TENANT", "")
         ctx = CommandContext(args=args, flags=flags, out=out, err=err, cwd=cwd, reg=self, tenant_id=tenant_id)
-        return cmd.run(ctx)
+        try:
+            return cmd.run(ctx)
+        except BrokenPipeError:
+            return 1
+        except Exception as e:
+            _safe_write(err, f"Error: comando {cmd.name} falló: {e}\n")
+            return 1
