@@ -3,13 +3,11 @@
 
 from __future__ import annotations
 
-import io
 import os
 import ssl
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import cast
 
 from cryptography import x509 as crypto_x509
 from cryptography.hazmat.primitives import serialization
@@ -55,6 +53,28 @@ _DEFAULT_CIPHER_SUITES = [
 
 # Default curve preferences mapped to OpenSSL names.
 _DEFAULT_CURVE_PREFERENCES = ["X25519", "prime256v1", "secp384r1", "secp521r1"]
+
+
+def _load_cert_chain_mem(ctx: ssl.SSLContext, cert_data: bytes, key_data: bytes) -> None:
+    """Load cert/key from memory via temp files (ssl needs paths, not BytesIO)."""
+    import tempfile
+
+    cert_tmp = tempfile.NamedTemporaryFile(delete=False, prefix="dxrk-cert-", suffix=".pem")
+    key_tmp = tempfile.NamedTemporaryFile(delete=False, prefix="dxrk-key-", suffix=".pem")
+    try:
+        os.chmod(cert_tmp.name, 0o600)
+        os.chmod(key_tmp.name, 0o600)
+        cert_tmp.write(cert_data)
+        cert_tmp.close()
+        key_tmp.write(key_data)
+        key_tmp.close()
+        ctx.load_cert_chain(cert_tmp.name, key_tmp.name)
+    finally:
+        for p in (cert_tmp.name, key_tmp.name):
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
 
 
 @dataclass
@@ -141,16 +161,10 @@ class TLSConfig:
             ctx.check_hostname = True
 
         if self.cert_data and self.key_data:
-            ctx.load_cert_chain(
-                certfile=cast(
-                    str | bytes | os.PathLike[str] | os.PathLike[bytes],
-                    io.BytesIO(self.cert_data),
-                ),
-                keyfile=cast(
-                    str | bytes | os.PathLike[str] | os.PathLike[bytes],
-                    io.BytesIO(self.key_data),
-                ),
-            )
+            try:
+                _load_cert_chain_mem(ctx, self.cert_data, self.key_data)
+            except (OSError, ssl.SSLError) as e:
+                raise _wrap(str(ErrCertKeyMismatch), e) from e
         elif self.cert_file and self.key_file:
             try:
                 ctx.load_cert_chain(self.cert_file, self.key_file)
@@ -193,16 +207,10 @@ class TLSConfig:
         if self.max_version is not None:
             ctx.maximum_version = self.max_version
         if self.cert_data and self.key_data:
-            ctx.load_cert_chain(
-                certfile=cast(
-                    str | bytes | os.PathLike[str] | os.PathLike[bytes],
-                    io.BytesIO(self.cert_data),
-                ),
-                keyfile=cast(
-                    str | bytes | os.PathLike[str] | os.PathLike[bytes],
-                    io.BytesIO(self.key_data),
-                ),
-            )
+            try:
+                _load_cert_chain_mem(ctx, self.cert_data, self.key_data)
+            except (OSError, ssl.SSLError) as e:
+                raise _wrap(str(ErrCertKeyMismatch), e) from e
         elif self.cert_file and self.key_file:
             try:
                 ctx.load_cert_chain(self.cert_file, self.key_file)
@@ -217,11 +225,8 @@ class TLSConfig:
 
     def WithMutualTLS(self, ca_data: bytes) -> TLSConfig:
         """Require and verify client certificates against ``ca_data``."""
+        self.SetCAData(ca_data)
         self.client_auth = ClientAuthType.RequireAndVerifyClientCert
-        try:
-            self.SetCAData(ca_data)
-        except HttpError:
-            pass
         return self
 
     def WithInsecureSkipVerify(self, skip: bool) -> TLSConfig:
@@ -271,10 +276,22 @@ def NewTLSConfig() -> TLSConfig:
 
 
 def _pem_decode(data: bytes) -> bytes | None:
-    """Return the DER bytes of the first PEM block, or None."""
+    """Return the DER bytes of the first PEM block (cert or private key), or None."""
     try:
         cert = crypto_x509.load_pem_x509_certificate(data)
         return cert.public_bytes(serialization.Encoding.DER)
+    except Exception:
+        pass
+    try:
+        key = serialization.load_pem_private_key(data, password=None)
+        if isinstance(key, (rsa.RSAPrivateKey, ec.EllipticCurvePrivateKey)):
+            return key.private_bytes(
+                serialization.Encoding.DER,
+                serialization.PrivateFormat.PKCS8,
+                serialization.NoEncryption(),
+            )
+        # Otra clave privada válida pero de tipo no exportable a DER PKCS8.
+        return b"valid-private-key"
     except Exception:
         return None
 
@@ -311,10 +328,10 @@ def PrivateKeyToPEM(key: object) -> bytes:
     )
 
 
-def LoadSystemCertPool() -> list[crypto_x509.Certificate]:
-    """Return the system certificate pool as a list (raises on error)."""
+def LoadSystemCertPool() -> list[dict]:
+    """Return the system CA certs as list of dicts (ssl.get_ca_certs)."""
     ctx = ssl.create_default_context()
-    return cast(list[crypto_x509.Certificate], ctx.get_ca_certs())
+    return ctx.get_ca_certs() or []
 
 
 def NewCertPool(

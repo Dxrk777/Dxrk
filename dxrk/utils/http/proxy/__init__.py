@@ -72,6 +72,8 @@ class ProxyConfig:
             scheme = "socks5"
         else:
             raise _wrap(str(ErrUnsupportedProxy), HttpError(str(self.type)))
+        if not self.host:
+            return None
         host_port = _join_host_port(self.host, self.ProxyPort())
         auth = ""
         if self.auth is not None:
@@ -142,7 +144,11 @@ def NewProxyConfig(proxy_url: str) -> tuple[ProxyConfig | None, Exception | None
     except ValueError as e:
         return None, _wrap(str(ErrInvalidProxyURL), e)
 
-    proxy_type = cast(ProxyType, ProxyType(parsed.scheme.lower()) if parsed.scheme else None)
+    try:
+        scheme = (parsed.scheme or "").lower()
+        proxy_type = cast(ProxyType, ProxyType(scheme) if scheme else None)
+    except ValueError:
+        return None, HttpError(f"{ErrUnsupportedProxy}: {parsed.scheme}")
     if proxy_type not in (
         ProxyType.ProxyTypeHTTP,
         ProxyType.ProxyTypeHTTPS,
@@ -153,8 +159,12 @@ def NewProxyConfig(proxy_url: str) -> tuple[ProxyConfig | None, Exception | None
 
     host = parsed.hostname or ""
     port = 0
-    if parsed.port is not None:
-        port = int(parsed.port)
+    try:
+        raw_port = parsed.port
+    except ValueError as e:
+        return None, _wrap(str(ErrInvalidProxyURL), e)
+    if raw_port is not None:
+        port = int(raw_port)
     else:
         if proxy_type is ProxyType.ProxyTypeHTTP:
             port = 8080

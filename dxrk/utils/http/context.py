@@ -27,7 +27,7 @@ def _is_zero(dt: datetime) -> bool:
 class _Context:
     """Minimal context with cancellation, deadline, and value storage."""
 
-    __slots__ = ("_done", "_err", "_deadline", "_parent", "_values")
+    __slots__ = ("_done", "_err", "_deadline", "_parent", "_values", "_mu", "__weakref__")
 
     def __init__(self, parent: _Context | None = None, deadline: float | None = None) -> None:
         self._done = threading.Event()
@@ -35,13 +35,15 @@ class _Context:
         self._deadline = deadline
         self._parent = parent
         self._values: dict[str, object] | None = None
+        self._mu = threading.RLock()
 
     def _set(self, err: str) -> None:
-        if self._deadline is not None and time.monotonic() >= self._deadline:
-            err = _CTX_DEADLINE
-        if not self._done.is_set():
-            self._done.set()
-            self._err = err
+        with self._mu:
+            if self._deadline is not None and time.monotonic() >= self._deadline:
+                err = _CTX_DEADLINE
+            if not self._done.is_set():
+                self._done.set()
+                self._err = err
 
     def err(self) -> str | None:
         """Return the context error, if any."""
@@ -49,12 +51,14 @@ class _Context:
             perr = self._parent.err()
             if perr is not None:
                 self._set(perr)
-        if self._done.is_set():
-            return self._err
-        if self._deadline is not None and time.monotonic() >= self._deadline:
-            self._set(_CTX_DEADLINE)
-            return self._err
-        return None
+        with self._mu:
+            if self._done.is_set():
+                return self._err
+            if self._deadline is not None and time.monotonic() >= self._deadline:
+                self._done.set()
+                self._err = _CTX_DEADLINE
+                return self._err
+            return None
 
     def remaining(self) -> float | None:
         """Seconds until the deadline, or None."""

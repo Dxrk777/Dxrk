@@ -97,8 +97,10 @@ def test_new_proxy_config_errors():
     cfg, err = H.NewProxyConfig("")
     assert cfg is None
     assert err is H.ErrInvalidProxyURL
-    with pytest.raises(ValueError):
-        H.NewProxyConfig("ftp://x")
+    cfg2, err2 = H.NewProxyConfig("ftp://x")
+    assert cfg2 is None
+    assert err2 is not None
+    assert "unsupported proxy scheme" in str(err2)
     cfg3, err3 = H.NewProxyConfig("socks5://h:1080")
     assert err3 is None and cfg3 is not None
     assert cfg3.type is H.ProxyType.ProxyTypeSOCKS5

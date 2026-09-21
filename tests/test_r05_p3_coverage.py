@@ -195,8 +195,9 @@ def test_connection_pool_clone_copies_settings() -> None:
     assert clone is not pool
     assert clone.max_idle_conns == 11
     assert clone.max_conns_per_host == 12
-    # stats object is shared at clone time (current impl)
-    assert clone.stats is pool.stats
+    # stats are copied at clone time, not shared (independent pools)
+    assert clone.stats is not pool.stats
+    assert clone.stats == pool.stats
     pool.Close()
     clone.Close()
 

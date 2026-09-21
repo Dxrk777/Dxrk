@@ -17,7 +17,7 @@ import httpx
 
 from .context import _Context, _now
 from .errors import _STR_UNKNOWN
-from .transport import _env_proxy_url, _make_transport
+from .transport import _make_transport
 
 defaultMaxBodyLogSize = 1024 * 1024
 sensitiveHeaders = (
@@ -232,6 +232,7 @@ class HTTPLogger:
             body = self._sanitize_params(body)
         for sanitizer in config.custom_sanitizers:
             body = sanitizer(body)
+        body = _truncate_body(body, config.max_body_size)
         buf.append(f"\nRequest Body ({len(body)} bytes): {body.decode('utf-8', 'replace')}")
 
     def _write_response_body(self, buf: list[str], resp: httpx.Response, config: LoggingConfig) -> None:
@@ -243,6 +244,7 @@ class HTTPLogger:
             body = self._sanitize_body(body)
         for sanitizer in config.custom_sanitizers:
             body = sanitizer(body)
+        body = _truncate_body(body, config.max_body_size)
         buf.append(f"\nResponse Body ({len(body)} bytes): {body.decode('utf-8', 'replace')}")
 
     def _sanitize_body(self, data: bytes) -> bytes:
@@ -275,7 +277,11 @@ class HTTPLogger:
             return self.config
 
     def Middleware(self, next: httpx.HTTPTransport) -> httpx.HTTPTransport:
-        """Return a transport that logs every round trip."""
+        """Return a transport that logs every round trip through ``next``.
+
+        The wrapped transport keeps its own proxy/TLS/limits/pool
+        configuration; only logging is added around it.
+        """
         logger = self
 
         class _LoggingTransport(httpx.HTTPTransport):
@@ -292,8 +298,14 @@ class HTTPLogger:
                 logger.LogRoundTrip(request, resp, duration, None)
                 return resp
 
+            def close(self) -> None:
+                try:
+                    next.close()
+                finally:
+                    super().close()
+
         _LoggingTransport.__name__ = "LoggedTransport"
-        return _LoggingTransport(proxy=_env_proxy_url(), trust_env=False)
+        return _LoggingTransport()
 
 
 class LoggedTransport:
@@ -324,7 +336,7 @@ class LoggedTransport:
         self.transport.close()
 
     def clone(self) -> LoggedTransport:
-        """Return a copy wrapping a fresh transport."""
+        """Return a copy sharing the wrapped transport (same pool)."""
         return LoggedTransport(self.transport, self.logger)
 
 
@@ -413,23 +425,30 @@ def SanitizeBody(body: bytes) -> bytes:
     return result
 
 
-_logger_registry: weakref.WeakValueDictionary[int, HTTPLogger] = weakref.WeakValueDictionary()
+def _truncate_body(body: bytes, max_size: int) -> bytes:
+    """Truncate a log body to ``max_size`` bytes (0/negative = no truncation)."""
+    if max_size > 0 and len(body) > max_size:
+        return body[:max_size] + b"...[truncated]"
+    return body
+
+
+_logger_registry: weakref.WeakKeyDictionary[_Context, HTTPLogger] = weakref.WeakKeyDictionary()
 _logger_registry_lock = threading.RLock()
 
 _loggerContextKey = "http_logger"
 
 
 def WithLogger(ctx: _Context, logger: HTTPLogger) -> _Context:
-    """Return a context carrying an HTTP logger (context.WithValue)."""
+    """Attach an HTTP logger to a context (context.WithValue)."""
     with _logger_registry_lock:
-        _logger_registry[id(ctx)] = logger
+        _logger_registry[ctx] = logger
     return ctx
 
 
 def LoggerFromContext(ctx: _Context) -> HTTPLogger | None:
     """Return the logger stored in the context, if any."""
     with _logger_registry_lock:
-        logger = _logger_registry.get(id(ctx))
+        logger = _logger_registry.get(ctx)
     if logger is not None:
         return logger
     return None

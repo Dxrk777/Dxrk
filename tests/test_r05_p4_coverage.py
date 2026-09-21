@@ -263,8 +263,9 @@ def test_tls_pem_decode_and_parse_helpers(tmp_path: Path, monkeypatch: pytest.Mo
     # _pem_decode on cert returns DER bytes
     der = _pem_decode(cert_pem)
     assert der is not None and len(der) > 0
-    # _pem_decode on key returns None (key not x509)
-    assert _pem_decode(key_pem) is None
+    # _pem_decode on a valid private key also returns DER (usable for validation)
+    key_der = _pem_decode(key_pem)
+    assert key_der is not None and len(key_der) > 0
     # Parse helpers
     cert = ParseCertificate(cert_pem)
     assert cert is not None
@@ -481,10 +482,10 @@ def test_tls_build_server_config_and_mutual(tmp_path: Path, monkeypatch: pytest.
     assert cfg6.server_name == "mutual.test"
     cfg6.WithMinVersion(ssl.TLSVersion.TLSv1_3)
     assert cfg6.min_version == ssl.TLSVersion.TLSv1_3
-    # WithMutual invalid ca_data should not raise (caught)
+    # WithMutual invalid ca_data raises (no silent swallow)
     cfg7 = TLSConfig()
-    cfg7.WithMutualTLS(b"invalid ca")  # should swallow error
-    assert cfg7.client_auth == ClientAuthType.RequireAndVerifyClientCert
+    with pytest.raises(HttpError):
+        cfg7.WithMutualTLS(b"invalid ca")
 
 
 def test_tls_load_system_cert_pool_and_new_cert_pool(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -963,12 +964,12 @@ def test_transport_from_config_proxy_and_tls_verify(tmp_path: Path, monkeypatch:
     tr2 = _transport_from_config(None, cfg)
     assert tr2 is not None
     tr2.close()
-    # tls with ca_data (verify will be PEM string; httpx would treat as cafile path and fail -> mock _make_transport)
+    # tls with ca_data (verify is a built SSLContext, not a PEM string)
     pem = _gen_cert_key_pem()
     if pem is None:
         pytest.skip("cryptography not available")
     cert_pem, _ = pem
-    # mock _make_transport to avoid httpx ssl error for PEM string as verify
+    # mock _make_transport to capture verify without real handshake
     import dxrk.utils.http.transport as tr_mod
 
     orig_make = tr_mod._make_transport
@@ -982,17 +983,16 @@ def test_transport_from_config_proxy_and_tls_verify(tmp_path: Path, monkeypatch:
     cfg2 = TLSConfig(ca_data=cert_pem)
     tr3 = _transport_from_config(None, cfg2)
     assert tr3 is not None
-    assert captured.get("verify") == cert_pem.decode("utf-8", "replace")
+    assert isinstance(captured.get("verify"), ssl.SSLContext)
     tr3.close()
-    # restore for ca_file case (which is a real path and should work)
+    # restore for ca_file case (also builds an SSLContext)
     monkeypatch.setattr(tr_mod, "_make_transport", orig_make)
     ca_path = _write_pem(tmp_path, "ca_tr.pem", cert_pem)
     cfg3 = TLSConfig(ca_file=str(ca_path))
-    # ca_file string is also treated as verify path, but httpx will try to open it as file; since file exists, it may succeed or fail; mock again to avoid ssl error
     monkeypatch.setattr(tr_mod, "_make_transport", fake_make)
     tr4 = _transport_from_config(None, cfg3)
     assert tr4 is not None
-    assert captured.get("verify") == str(ca_path)
+    assert isinstance(captured.get("verify"), ssl.SSLContext)
     tr4.close()
     monkeypatch.setattr(tr_mod, "_make_transport", orig_make)
     # both None -> env fallback (None)

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import ssl
 from typing import TYPE_CHECKING, Protocol, cast
 
 import httpx
@@ -38,7 +39,7 @@ def _env_proxy_url() -> str | None:
 
 def _make_transport(
     proxy: str | None = None,
-    verify: bool | str = True,
+    verify: bool | str | ssl.SSLContext = True,
     limits: httpx.Limits | None = None,
     timeout: httpx.Timeout | None = None,
     trust_env: bool = False,
@@ -70,12 +71,15 @@ def _transport_from_config(
     if proxy is None:
         proxy = _env_proxy_url()
 
-    verify: bool | str = True
+    verify: bool | str | ssl.SSLContext = True
     if tls_config is not None:
         if tls_config.insecure_skip_verify:
             verify = False
-        if tls_config.ca_data or tls_config.ca_file:
-            verify = tls_config.ca_data.decode("utf-8", "replace") if tls_config.ca_data else tls_config.ca_file
+        elif tls_config.ca_data or tls_config.ca_file or tls_config.cert_data or tls_config.cert_file:
+            try:
+                verify = tls_config.BuildClientTLSConfig()
+            except HttpError:
+                verify = True
 
     return _make_transport(proxy=proxy, verify=verify, limits=limits, timeout=timeout)
 

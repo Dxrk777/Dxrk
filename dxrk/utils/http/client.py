@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-import copy
+import random
 import threading
 import time
 from collections.abc import Callable
@@ -30,9 +30,23 @@ from .transport import (
     _apply_proxy_config_impl,
     _apply_tls_config_impl,
     _make_transport,
-    _proxy_url_of,
     _transport_from_config,
 )
+
+
+def _sleep_backoff(seconds: float, ctx: _Context | None) -> None:
+    """Sleep with ±25% jitter, waking early if the context is canceled."""
+    if seconds <= 0:
+        return
+    jittered = seconds * random.uniform(0.75, 1.25)
+    deadline = time.monotonic() + jittered
+    while True:
+        if ctx is not None and ctx.err() is not None:
+            return
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return
+        time.sleep(min(remaining, 0.05))
 
 
 @dataclass
@@ -111,12 +125,18 @@ class HTTPClient:
                 last_resp = resp
                 if resp is not None and not policy.IsRetryable(resp.status_code):
                     return resp, None
-                if resp is not None:
+                # Close intermediate retryable responses, but keep the
+                # last one open so a streamed body stays usable.
+                if resp is not None and attempt < policy.max_retries:
                     resp.close()
 
             if attempt < policy.max_retries:
                 backoff = policy.retry_backoff.total_seconds() * (attempt + 1)
-                time.sleep(backoff)
+                _sleep_backoff(backoff, ctx)
+                if ctx is not None and ctx.err() is not None:
+                    if last_resp is not None:
+                        last_resp.close()
+                    return None, HttpError(ctx.err() or _CTX_CANCELED)
 
         if last_resp is not None:
             return last_resp, None
@@ -127,18 +147,26 @@ class HTTPClient:
         return None, ErrMaxRetriesExceeded
 
     def _send(self, req: httpx.Request) -> tuple[httpx.Response | None, Exception | None]:
-        """Send one request, returning a response or an error."""
-        try:
-            with self.mu:
-                self.client.timeout = _client_timeout(req, self.client.timeout)
+        """Send one request, returning a response or an error.
+
+        The lock serializes sends (single-flight) so the per-request
+        timeout mutation on the shared client can't leak into a
+        concurrent request; the previous timeout is always restored.
+        """
+        with self.mu:
+            previous_timeout = self.client.timeout
+            self.client.timeout = _client_timeout(req, previous_timeout)
+            try:
                 resp = self.client.send(req, stream=True)
-            return resp, None
-        except _TIMEOUT_ERRORS as e:
-            return None, HttpError(str(e))
-        except httpx.TransportError as e:
-            return None, HttpError(str(e))
-        except httpx.HTTPError as e:
-            return None, HttpError(str(e))
+                return resp, None
+            except _TIMEOUT_ERRORS as e:
+                return None, HttpError(str(e))
+            except httpx.TransportError as e:
+                return None, HttpError(str(e))
+            except httpx.HTTPError as e:
+                return None, HttpError(str(e))
+            finally:
+                self.client.timeout = previous_timeout
 
     def DoWithContext(self, ctx: _Context, req: httpx.Request) -> tuple[httpx.Response | None, Exception | None]:
         """Send the request with a context deadline/cancellation."""
@@ -173,11 +201,12 @@ class HTTPClient:
 
     def Clone(self) -> HTTPClient:
         """Return a client sharing the retry/proxy/TLS config with a fresh
-        transport and client."""
+        transport (independent connection pool) and client."""
         with self.mu:
-            new_transport = self.transport
-            if hasattr(self.transport, "clone"):
-                new_transport = copy.copy(self.transport)
+            new_transport = _transport_from_config(
+                self.proxy_config,
+                self.tls_config,
+            )
             new_client = httpx.Client(
                 transport=new_transport,
                 timeout=self.client.timeout,
@@ -192,10 +221,17 @@ class HTTPClient:
             )
 
     def WithMiddleware(self, middleware: Callable[[httpx.HTTPTransport], httpx.HTTPTransport]) -> HTTPClient:
-        """Wrap the transport with middleware (e.g. a logging transport)."""
+        """Wrap the transport with middleware (e.g. a logging transport).
+
+        The base transport is rebuilt from the current proxy/TLS config
+        so those settings survive the wrap. Mutates and returns self.
+        """
         with self.mu:
-            new_transport = _make_transport()
-            new_transport = middleware(new_transport)
+            base = _transport_from_config(
+                self.proxy_config,
+                self.tls_config,
+            )
+            new_transport = middleware(base)
             self.transport = new_transport
             self.client._transport = new_transport  # type: ignore[attr-defined]
             return self
@@ -204,8 +240,9 @@ class HTTPClient:
 def _client_timeout(req: httpx.Request, default: float | httpx.Timeout = 30.0) -> httpx.Timeout:
     """Compute the client timeout for a request (ctx deadline wins)."""
     ctx = getattr(req, "_ctx", None)
-    if ctx is not None and ctx.remaining() is not None:
-        return httpx.Timeout(ctx.remaining() or 0.0)
+    remaining = getattr(ctx, "remaining", None)
+    if callable(remaining) and remaining() is not None:
+        return httpx.Timeout(remaining() or 0.0)
     return httpx.Timeout(default)
 
 
@@ -251,13 +288,9 @@ def NewHTTPClient(
         limits=limits,
         timeout=transport_timeout,
     )
-    if opts.disable_compression:
-        transport = _make_transport(
-            proxy=_proxy_url_of(opts.proxy_config),
-            verify=True,
-            limits=limits,
-            timeout=transport_timeout,
-        )
+    # NOTE: disable_compression is kept for API parity; httpx already
+    # handles Accept-Encoding transparently, so no transport rebuild here
+    # (the old rebuild silently dropped TLS config and env proxy fallback).
 
     hc = HTTPClient(
         client=None,  # type: ignore[arg-type]  # set right after construction
