@@ -131,7 +131,7 @@ class WelcomeScreen(Screen):
 
     def compose(self) -> ComposeResult:
         with Container(id="welcome-container"):
-            yield Static("[bold cyan]Dxrk[/] Instalador", id="title")
+            yield Static("[bold cyan]Dxrk[/] Ecosistema de agentes IA", id="title")
             # Migrated to ContextVar DI: prefer get_ctx() over STATE
             yield Static(f"v{get_ctx().version}", id="version")
             yield Static(self._tenant_badge(), id="tenant-badge")
@@ -224,6 +224,12 @@ class WelcomeScreen(Screen):
 
 # ── Placeholder Screen ───────────────────────────────────────────────
 
+# Pantallas aún sin UI dedicada que sí existen en el CLI.
+_PLACEHOLDER_CLI_HINTS = {
+    "sync": "Disponible en CLI: dxrk-py sync",
+    "uninstall": "Disponible en CLI: dxrk-py uninstall",
+}
+
 
 class PlaceholderScreen(Screen):
     BINDINGS = [
@@ -235,7 +241,7 @@ class PlaceholderScreen(Screen):
         with Container():
             yield Static(f"[bold]{(self.name or 'screen').replace('_', ' ').title()}[/]")
             yield Static("")
-            yield Static("Próximamente")
+            yield Static(_PLACEHOLDER_CLI_HINTS.get(self.name or "", "Próximamente"))
         yield Footer()
 
     def action_back(self) -> None:
@@ -328,6 +334,8 @@ AGENT_OPTIONS: list[tuple[AgentID, str, str]] = [
     (AgentID.KIMI, "Kimi", "Asistente de IA con contexto amplio"),
     (AgentID.QWEN_CODE, "Qwen Code", "Agente de código de Alibaba"),
     (AgentID.KIRO_IDE, "Kiro IDE", "IDE nativo de IA"),
+    (AgentID.OPENCLAW, "OpenClaw", "Agente autónomo de código abierto"),
+    (AgentID.PI, "Pi", "Agente de IA"),
 ]
 
 

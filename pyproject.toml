@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "dxrk"
 version = "1.2.0"
-description = "Dxrk Ecosystem Configurator — supercharge AI coding agents"
+description = "Dxrk — local-first configurator for AI coding-agent ecosystems: 14 agents, memory, SDD, MCP"
 readme = "README.md"
 requires-python = ">=3.13"
 authors = [{ name = "Dxrk777" }]

@@ -40,6 +40,7 @@ from pathlib import Path
 import httpx
 import pytest
 
+from dxrk.models import AgentID
 from dxrk.utils import http as hx
 
 # ---------------------------------------------------------------------------
@@ -748,7 +749,8 @@ def test_transport_from_config_and_proxy_url_of() -> None:
 def test_tui_agents_options_and_screen_compose(monkeypatch: pytest.MonkeyPatch) -> None:
     from dxrk.tui.screens import agents as agents_mod
 
-    assert len(agents_mod.AGENT_OPTIONS) == 12
+    assert len(agents_mod.AGENT_OPTIONS) == len(AgentID)
+    assert {aid for aid, _, _ in agents_mod.AGENT_OPTIONS} == set(AgentID)
     # screen can be instantiated without app if we patch watch_cursor
     monkeypatch.setattr(agents_mod.AgentsScreen, "watch_cursor", lambda self, old, new: None)
     screen = agents_mod.AgentsScreen()

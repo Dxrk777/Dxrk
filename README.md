@@ -169,9 +169,8 @@ Editando `model.provider` en tu `config.yaml` (ver [docs/config.md](docs/config.
 
 ## Roadmap
 
-- **v0.2.0** — Pipeline de entrenamiento ML, pre-commit hooks y Dependabot
-- **v0.5.0** — Marketplace de plugins
-- **v1.0.0** — Multi-tenant y estabilización de API
+- **v1.0.0** — Multi-tenant y estabilización de API ✓
+- **v1.2.0** — Endurecimiento de seguridad y CI verde en las 3 plataformas ✓ (versión actual)
 
 ## Documentación
 

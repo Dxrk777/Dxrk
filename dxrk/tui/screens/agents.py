@@ -24,6 +24,8 @@ AGENT_OPTIONS: list[tuple[AgentID, str, str]] = [
     (AgentID.KIMI, "Kimi", "Asistente de IA con contexto amplio"),
     (AgentID.QWEN_CODE, "Qwen Code", "Agente de código de Alibaba"),
     (AgentID.KIRO_IDE, "Kiro IDE", "IDE nativo de IA"),
+    (AgentID.OPENCLAW, "OpenClaw", "Agente autónomo de código abierto"),
+    (AgentID.PI, "Pi", "Agente de IA"),
 ]
 
 

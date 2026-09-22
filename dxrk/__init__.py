@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Dxrk — Ecosystem Configurator for AI coding agents."""
+"""Dxrk — local-first configurator and orchestrator for AI coding-agent ecosystems."""
 
 from __future__ import annotations
 
