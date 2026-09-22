@@ -888,7 +888,7 @@ class TestQueueExtra:
             caps["cancel"] = cancel
             return c, cancel
 
-        monkeypatch.setattr(hooks, "_with_cancel", _spy)
+        monkeypatch.setattr("dxrk.utils.hooks_queue._with_cancel", _spy)
         t = threading.Timer(0.2, lambda: caps["cancel"]())
         t.start()
         try:
