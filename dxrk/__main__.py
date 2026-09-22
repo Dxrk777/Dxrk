@@ -51,7 +51,9 @@ def main() -> None:
     sync_parser.add_argument("--include-theme", action="store_true", default=False, help="Include theme")
 
     # dxrk upgrade
-    sub.add_parser("upgrade", help="Upgrade installed components")
+    upgrade_parser = sub.add_parser("upgrade", help="Upgrade installed components")
+    upgrade_parser.add_argument("--dry-run", "-n", action="store_true", help="Preview without upgrading")
+    upgrade_parser.add_argument("tool", nargs="*", help="Only upgrade these tools (default: all)")
 
     # dxrk uninstall
     uninstall_parser = sub.add_parser("uninstall", help="Uninstall agents and components")
@@ -157,8 +159,8 @@ def main() -> None:
         return
 
     if args.command == "upgrade":
-        print("Upgrade not yet implemented", file=sys.stderr)
-        sys.exit(2)
+        _run_upgrade_cli(args)
+        return
 
     if args.command == "model":
         _run_model_cli(args)
@@ -367,12 +369,91 @@ def _run_restore_cli(args) -> None:
         sys.exit(1)
 
 
-def _run_model_cli(args) -> None:
-    if args.phase:
-        print(f"Model config for phase '{args.phase}' not yet implemented", file=sys.stderr)
-    else:
-        print("Model configuration not yet implemented", file=sys.stderr)
-    sys.exit(2)
+def _run_upgrade_cli(args: argparse.Namespace) -> None:
+    from dxrk.system import detect
+
+    result = detect()
+    if not result.system.supported:
+        print("Unsupported system:", result.system.os)
+        sys.exit(1)
+
+    from dxrk.cli.install import resolve_install_profile
+
+    profile = resolve_install_profile(result)
+
+    from dxrk import __version__
+
+    version = os.environ.get("DXRK_VERSION") or __version__
+
+    from dxrk.update import (
+        ToolUpgradeStatus,
+        check_failures,
+        check_filtered,
+        execute,
+        has_check_failures,
+        has_updates,
+        render_upgrade_report,
+        update_summary_line,
+    )
+
+    tools: list[str] | None = list(getattr(args, "tool", []) or []) or None
+    dry_run: bool = bool(getattr(args, "dry_run", False))
+
+    results = check_filtered(version, profile, tools)
+    if has_check_failures(results):
+        failed = check_failures(results)
+        print(f"la verificación de actualizaciones falló para: {', '.join(failed)}", file=sys.stderr)
+        sys.exit(1)
+
+    if has_updates(results):
+        print(f"Actualizaciones disponibles: {update_summary_line(results)}")
+
+    home_dir = os.path.expanduser("~")
+    report = execute(results, profile, home_dir, dry_run=dry_run)
+    print(render_upgrade_report(report))
+
+    failed_upgrades = [r for r in report.results if r.status == ToolUpgradeStatus.FAILED or r.err]
+    if failed_upgrades:
+        for r in failed_upgrades:
+            print(f"la actualización falló para {r.tool_name!r}: {r.err}", file=sys.stderr)
+        sys.exit(1)
+
+
+def _run_model_cli(args: argparse.Namespace) -> None:
+    from dxrk.model import get_model_assignments, set_model_assignment
+
+    phase = str(getattr(args, "phase", "") or "").strip()
+    provider = str(getattr(args, "provider", "") or "").strip()
+    model = str(getattr(args, "model", "") or "").strip()
+
+    if not phase:
+        assignments = get_model_assignments()
+        if not assignments:
+            print("No model assignments configured")
+            return
+        for name in sorted(assignments):
+            print(f"  {name}: {assignments[name].full_id()}")
+        return
+
+    if not provider and not model:
+        assignments = get_model_assignments()
+        current = assignments.get(phase)
+        if current is None:
+            print(f"No model configured for phase '{phase}'")
+            return
+        print(f"  {phase}: {current.full_id()}")
+        return
+
+    if not provider or not model:
+        print(f"Model config for phase '{phase}' requires both --provider and --model", file=sys.stderr)
+        sys.exit(2)
+
+    try:
+        saved = set_model_assignment(phase, provider, model)
+    except (ValueError, OSError) as e:
+        print(f"Model config failed: {e}", file=sys.stderr)
+        sys.exit(1)
+    print(f"Model for phase '{phase}' set to {saved.full_id()}")
 
 
 if __name__ == "__main__":

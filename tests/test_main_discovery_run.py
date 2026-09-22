@@ -194,6 +194,7 @@ class TestMainCli:
 
     def test_run_model_cli_no_args(self, monkeypatch):
         monkeypatch.setattr("sys.argv", ["dxrk", "model"])
+        monkeypatch.setattr("dxrk.model.get_model_assignments", lambda *a, **k: {})
         printed = []
         monkeypatch.setattr(
             "builtins.print",
@@ -201,13 +202,28 @@ class TestMainCli:
         )
         from dxrk.__main__ import main
 
-        with pytest.raises(SystemExit) as exc:
-            main()
-        assert exc.value.code == 2
-        assert any("not yet implemented" in l for l in printed)
+        main()
+        assert any("No model assignments" in l for l in printed)
 
     def test_run_upgrade(self, monkeypatch):
+        from dxrk.system import DetectionResult, PlatformProfile, SystemInfo
+        from dxrk.update import UpdateResult, UpdateStatus
+
         monkeypatch.setattr("sys.argv", ["dxrk", "upgrade"])
+        monkeypatch.setattr(
+            "dxrk.system.detect",
+            lambda: DetectionResult(
+                system=SystemInfo(
+                    os="linux",
+                    supported=True,
+                    profile=PlatformProfile(os="linux", package_manager="apt", supported=True),
+                ),
+            ),
+        )
+        monkeypatch.setattr(
+            "dxrk.update.check_filtered",
+            lambda version, profile, tools: [UpdateResult(status=UpdateStatus.UP_TO_DATE)],
+        )
         printed = []
         monkeypatch.setattr(
             "builtins.print",
@@ -215,10 +231,8 @@ class TestMainCli:
         )
         from dxrk.__main__ import main
 
-        with pytest.raises(SystemExit) as exc:
-            main()
-        assert exc.value.code == 2
-        assert any("not yet implemented" in l for l in printed)
+        main()
+        assert any("No hay actualizaciones disponibles" in l for l in printed)
 
 
 class TestCliRun:

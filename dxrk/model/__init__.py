@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass, field
 from enum import IntEnum, StrEnum
 from typing import Dict, List, Optional
@@ -827,3 +828,59 @@ class Plan:
     Selection: Selection
     Status: str
     Steps: list[PlanStep] = field(default_factory=list)
+
+
+# ── Persistent model assignments ──────────────────────────────────────
+# Backed by dxrk.state (InstallState.model_assignments in ~/.dxrk/state.json),
+# the same store used by install/sync. Errors surface as ValueError/OSError.
+
+
+def _resolve_home(home_dir: str = "") -> str:
+    home = home_dir.strip() or os.path.expanduser("~")
+    if not home or home == "~":
+        raise OSError("no se pudo resolver el directorio home del usuario")
+    return home
+
+
+def get_model_assignments(home_dir: str = "") -> dict[str, ModelAssignment]:
+    """Return the persisted phase -> ModelAssignment mapping (empty when none)."""
+    from dxrk.state import read as state_read
+
+    home = _resolve_home(home_dir)
+    try:
+        st = state_read(home)
+    except (FileNotFoundError, ValueError, OSError):
+        return {}
+    stored = st.model_assignments or {}
+    return {
+        phase: ModelAssignment(ProviderID=a.provider_id, ModelID=a.model_id, Effort=a.effort)
+        for phase, a in stored.items()
+    }
+
+
+def set_model_assignment(phase: str, provider: str, model: str, home_dir: str = "") -> ModelAssignment:
+    """Persist the ModelAssignment for a phase; raises ValueError on empty fields."""
+    from dxrk.state import InstallState, ModelAssignmentState
+    from dxrk.state import read as state_read
+    from dxrk.state import write as state_write
+
+    clean_phase = phase.strip()
+    clean_provider = provider.strip()
+    clean_model = model.strip()
+    if not clean_phase:
+        raise ValueError("la fase no debe estar vacía")
+    if not clean_provider:
+        raise ValueError("el provider no debe estar vacío")
+    if not clean_model:
+        raise ValueError("el model no debe estar vacío")
+
+    home = _resolve_home(home_dir)
+    try:
+        st = state_read(home)
+    except (FileNotFoundError, ValueError, OSError):
+        st = InstallState()
+    stored = dict(st.model_assignments or {})
+    stored[clean_phase] = ModelAssignmentState(provider_id=clean_provider, model_id=clean_model)
+    st.model_assignments = stored
+    state_write(home, st)
+    return ModelAssignment(ProviderID=clean_provider, ModelID=clean_model)
