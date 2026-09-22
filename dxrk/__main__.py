@@ -34,13 +34,29 @@ def main() -> None:
     )
     install_parser.add_argument("--persona", choices=["dxrk", "neutral", "custom"], default="dxrk")
     install_parser.add_argument("--preset", choices=["full-dxrk", "ecosystem-only", "minimal", "custom"])
+    install_parser.add_argument("--skill", "-s", action="append", dest="skills", help="Skill to install")
+    install_parser.add_argument("--sdd-mode", type=str, default="", help="SDD mode (single/multi)")
     install_parser.add_argument("--dry-run", action="store_true", help="Preview without installing")
 
     # dxrk sync
     sync_parser = sub.add_parser("sync", help="Sync configuration to disk")
     sync_parser.add_argument("--agent", "-a", action="append", dest="agents", help="Agent to sync")
+    sync_parser.add_argument("--skill", "-s", action="append", dest="skills", help="Skill to sync")
     sync_parser.add_argument("--dry-run", action="store_true", help="Preview without syncing")
     sync_parser.add_argument("--sdd-mode", type=str, default="", help="SDD mode (single/multi)")
+    sync_parser.add_argument(
+        "--sdd-profile-strategy",
+        type=str,
+        default="",
+        help="SDD profile strategy (generated-multi/external-single-active)",
+    )
+    sync_parser.add_argument("--profile", action="append", dest="profiles", help="Profile name:provider/model")
+    sync_parser.add_argument(
+        "--profile-phase",
+        action="append",
+        dest="profile_phases",
+        help="Profile phase name:phase:provider/model",
+    )
     sync_parser.add_argument("--strict-tdd", action="store_true", default=False, help="Enable strict TDD")
     sync_parser.add_argument(
         "--include-permissions",
@@ -66,6 +82,8 @@ def main() -> None:
     sub.add_parser("backup", help="Manage backups")
     restore_parser = sub.add_parser("restore", help="Restore from a backup")
     restore_parser.add_argument("backup_id", nargs="?", help="Backup ID to restore")
+    restore_parser.add_argument("--list", action="store_true", help="List available backups")
+    restore_parser.add_argument("--yes", "-y", action="store_true", help="Skip confirmation")
 
     # dxrk model
     model_parser = sub.add_parser("model", help="Configure model assignments")
@@ -218,6 +236,82 @@ def _run_enterprise_cli(args: argparse.Namespace) -> None:
         sys.exit(code)
 
 
+def _rebuild_install_raw(args) -> list[str]:
+    """Rebuild canonical argv from parsed args (single source of truth).
+
+    Downstream parsers only understand long flags, so short forms (-a/-c/-s)
+    are normalized here instead of re-reading sys.argv.
+    """
+    raw: list[str] = []
+    for a in getattr(args, "agents", None) or []:
+        raw += ["--agent", str(a)]
+    for c in getattr(args, "components", None) or []:
+        raw += ["--component", str(c)]
+    for s in getattr(args, "skills", None) or []:
+        raw += ["--skill", str(s)]
+    if getattr(args, "persona", ""):
+        raw += ["--persona", str(args.persona)]
+    if getattr(args, "preset", None):
+        raw += ["--preset", str(args.preset)]
+    if getattr(args, "sdd_mode", ""):
+        raw += ["--sdd-mode", str(args.sdd_mode)]
+    if getattr(args, "dry_run", False):
+        raw.append("--dry-run")
+    return raw
+
+
+def _rebuild_sync_raw(args) -> list[str]:
+    """Rebuild canonical argv from parsed args (single source of truth)."""
+    raw: list[str] = []
+    for a in getattr(args, "agents", None) or []:
+        raw += ["--agent", str(a)]
+    for s in getattr(args, "skills", None) or []:
+        raw += ["--skill", str(s)]
+    if getattr(args, "sdd_mode", ""):
+        raw += ["--sdd-mode", str(args.sdd_mode)]
+    if getattr(args, "sdd_profile_strategy", ""):
+        raw += ["--sdd-profile-strategy", str(args.sdd_profile_strategy)]
+    if getattr(args, "strict_tdd", False):
+        raw.append("--strict-tdd")
+    if getattr(args, "include_permissions", False):
+        raw.append("--include-permissions")
+    if getattr(args, "include_theme", False):
+        raw.append("--include-theme")
+    for p in getattr(args, "profiles", None) or []:
+        raw += ["--profile", str(p)]
+    for p in getattr(args, "profile_phases", None) or []:
+        raw += ["--profile-phase", str(p)]
+    if getattr(args, "dry_run", False):
+        raw.append("--dry-run")
+    return raw
+
+
+def _rebuild_uninstall_raw(args) -> list[str]:
+    """Rebuild canonical argv from parsed args (single source of truth)."""
+    raw: list[str] = []
+    for a in getattr(args, "agents", None) or []:
+        raw += ["--agent", str(a)]
+    for c in getattr(args, "components", None) or []:
+        raw += ["--component", str(c)]
+    if getattr(args, "all", False):
+        raw.append("--all")
+    if getattr(args, "yes", False):
+        raw.append("--yes")
+    return raw
+
+
+def _rebuild_restore_raw(args) -> list[str]:
+    """Rebuild canonical argv from parsed args (single source of truth)."""
+    raw: list[str] = []
+    if getattr(args, "backup_id", None):
+        raw.append(str(args.backup_id))
+    if getattr(args, "list", False):
+        raw.append("--list")
+    if getattr(args, "yes", False):
+        raw.append("--yes")
+    return raw
+
+
 def _run_install_cli(args) -> None:
     from dxrk.system import detect
 
@@ -228,7 +322,7 @@ def _run_install_cli(args) -> None:
 
     from dxrk.cli.install import run_install
 
-    raw = sys.argv[2:]
+    raw = _rebuild_install_raw(args)
 
     out = run_install(raw, detection=result)
     if out.error:
@@ -307,7 +401,7 @@ def _launch_single_installer(version: str) -> None:
 def _run_sync_cli(args) -> None:
     from dxrk.cli.sync import RunSync
 
-    raw = sys.argv[2:]
+    raw = _rebuild_sync_raw(args)
     try:
         result = RunSync(raw)
     except Exception as e:
@@ -326,7 +420,7 @@ def _run_sync_cli(args) -> None:
 def _run_uninstall_cli(args) -> None:
     from dxrk.cli.uninstall import RunUninstall
 
-    raw = sys.argv[2:]
+    raw = _rebuild_uninstall_raw(args)
     try:
         result = RunUninstall(raw)
     except Exception as e:
@@ -355,7 +449,7 @@ def _run_backup_cli() -> None:
 def _run_restore_cli(args) -> None:
     from dxrk.cli.restore import RunRestore
 
-    raw = sys.argv[2:]
+    raw = _rebuild_restore_raw(args)
     try:
         result = RunRestore(raw)
     except ValueError as e:
