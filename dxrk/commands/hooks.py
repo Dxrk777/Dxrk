@@ -40,9 +40,18 @@ def load_hooks() -> list[dict[str, str | bool]]:
 def save_hooks(hooks: list[dict[str, str | bool]]) -> bool:
     path = hooks_path()
     try:
-        os.makedirs(os.path.dirname(path), mode=0o750, exist_ok=True)
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(hooks, f, indent=2)
+        os.makedirs(os.path.dirname(path), mode=0o700, exist_ok=True)
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(hooks, f, indent=2)
+        except BaseException:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+            raise
+        os.chmod(path, 0o600)
         return True
     except OSError:
         return False

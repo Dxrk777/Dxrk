@@ -340,14 +340,14 @@ class TestLoadSaveExtra:
         assert isinstance(err, hooks.HookError)
 
     def test_save_open_error(self, tmp_path, monkeypatch):
-        real_open = open
+        real_os_open = os.open
 
-        def _fake_open(path, *a, **k):
+        def _fake_os_open(path, *a, **k):
             if str(path).endswith("hooks_fail.json"):
                 raise OSError("ro")
-            return real_open(path, *a, **k)
+            return real_os_open(path, *a, **k)
 
-        monkeypatch.setattr("builtins.open", _fake_open)
+        monkeypatch.setattr(os, "open", _fake_os_open)
         cfg = hooks.HookConfigFile(version="1.0", hooks=[])
         err = hooks.SaveConfig(str(tmp_path / "hooks_fail.json"), cfg)
         assert isinstance(err, hooks.HookError)
@@ -1085,12 +1085,17 @@ class TestDetachedPopen:
 
 
 class TestDxrkPython:
-    def test_env_valid(self, tmp_path, monkeypatch):
+    def test_env_outside_prefix_rejected(self, tmp_path, monkeypatch):
         exe = tmp_path / "mypython"
         exe.write_text("#!/bin/sh\n")
         exe.chmod(0o755)
         monkeypatch.setenv("DXRK_PYTHON", str(exe))
-        assert hc._dxrk_python() == str(exe)
+        # Un binario arbitrario fuera del prefix no es confiable: se ignora.
+        assert hc._dxrk_python() != str(exe)
+
+    def test_env_same_interpreter_accepted(self, monkeypatch):
+        monkeypatch.setenv("DXRK_PYTHON", sys.executable)
+        assert hc._dxrk_python() == sys.executable
 
     def test_env_invalid_falls_through(self, tmp_path, monkeypatch):
         monkeypatch.setenv("DXRK_PYTHON", str(tmp_path / "nope"))

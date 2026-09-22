@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import os
+import re
 from datetime import UTC, datetime
 
 from dxrk.utils.session import (
@@ -19,6 +20,11 @@ from dxrk.utils.session import (
 from .registry import Command, CommandContext, Flag, Registry, go_duration, go_quote
 
 SESSION_DIR_NAME = "sessions"
+
+# Session ids are generated internally (hex/uuid); only these characters may
+# appear in a file name. Anything else skips the direct file lookup and goes
+# to prefix search, which only ever matches real session ids.
+_SESSION_ID_RE = re.compile(r"[A-Za-z0-9_-]+")
 
 _STATUS_NAMES: dict[int, str] = {
     SessionStatus.Active: "active",
@@ -75,18 +81,39 @@ def list_session_files() -> list[Session]:
     return sessions
 
 
+def _write_private_file(path: str, data: str) -> None:
+    """Write text to ``path`` with owner-only permissions, atomically.
+
+    ``os.open`` with mode 0o600 applies at creation time (no world-readable
+    window under a permissive umask); the follow-up chmod covers files that
+    already existed with wider permissions.
+    """
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(data)
+    except BaseException:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        raise
+    os.chmod(path, 0o600)
+
+
 def load_session(session_id: str) -> Session:
     """Loads a single session by id or unique prefix."""
-    path = os.path.join(session_dir(), session_id + ".json")
-    try:
-        with open(path, encoding="utf-8") as f:
-            data = f.read()
+    if _SESSION_ID_RE.fullmatch(session_id):
+        path = os.path.join(session_dir(), session_id + ".json")
         try:
-            return import_json(data)
-        except Exception as exc:
-            raise SessionError(f"al decodificar la sesión: {exc}") from exc
-    except OSError:
-        pass
+            with open(path, encoding="utf-8") as f:
+                data = f.read()
+            try:
+                return import_json(data)
+            except Exception as exc:
+                raise SessionError(f"al decodificar la sesión: {exc}") from exc
+        except OSError:
+            pass
     found = _find_session(list_session_files(), session_id)
     if found is not None:
         return found
@@ -101,9 +128,7 @@ def save_session(s: Session) -> bool:
         return False
     path = os.path.join(session_dir(), s.id + ".json")
     try:
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(data)
-        os.chmod(path, 0o600)
+        _write_private_file(path, data)
     except OSError:
         return False
     return True

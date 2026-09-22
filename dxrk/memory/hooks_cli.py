@@ -46,9 +46,34 @@ def _palace_root_exists() -> bool:
     return PALACE_ROOT.is_dir()
 
 
+def _is_trusted_python(path: str) -> bool:
+    """True if ``path`` is an executable inside a trusted interpreter location.
+
+    Only the running interpreter itself or something inside its prefix may be
+    selected via DXRK_PYTHON — hooks execute automatically, so an arbitrary
+    path from the environment would be a code-execution vector.
+    """
+    try:
+        resolved = os.path.realpath(path)
+    except OSError:
+        return False
+    if not (os.path.isfile(resolved) and os.access(resolved, os.X_OK)):
+        return False
+    if resolved == os.path.realpath(sys.executable):
+        return True
+    for base in {sys.prefix, sys.base_prefix, sys.exec_prefix, sys.base_exec_prefix}:
+        try:
+            trusted = os.path.realpath(base)
+        except OSError:
+            continue
+        if resolved == trusted or resolved.startswith(trusted + os.sep):
+            return True
+    return False
+
+
 def _dxrk_python() -> str:
     env_python = os.environ.get("DXRK_PYTHON", "")
-    if env_python and os.path.isfile(env_python) and os.access(env_python, os.X_OK):
+    if env_python and _is_trusted_python(env_python):
         return env_python
     venv_bin = Path(__file__).resolve().parents[3] / "bin" / "python"
     if venv_bin.is_file():

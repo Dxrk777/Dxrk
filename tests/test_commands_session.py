@@ -153,14 +153,10 @@ def test_save_session_export_error(sdir, monkeypatch):
 
 
 def test_save_session_write_error(sdir, monkeypatch):
-    real_open = open
+    def fake_os_open(path, *a, **k):
+        raise OSError("no write")
 
-    def fake_open(path, *a, **k):
-        if a and a[0] in ("w", "a") or k.get("mode") in ("w", "a"):
-            raise OSError("no write")
-        return real_open(path, *a, **k)
-
-    monkeypatch.setattr("builtins.open", fake_open)
+    monkeypatch.setattr(os, "open", fake_os_open)
     assert save_session(new_session()) is False
 
 

@@ -493,12 +493,21 @@ def SaveConfig(path: str, cfg: HookConfigFile) -> Any:
 
     dirname = os.path.dirname(os.path.abspath(path))
     try:
-        os.makedirs(dirname, exist_ok=True, mode=0o755)
+        os.makedirs(dirname, exist_ok=True, mode=0o700)
     except OSError as e:
         return HookError(str(e))
     try:
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(data)
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(data)
+        except BaseException:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+            raise
+        os.chmod(path, 0o600)
     except OSError as e:
         return HookError(str(e))
     return None
@@ -579,9 +588,7 @@ class HookDefaults:
 
 def DefaultHookDefaults() -> HookDefaults:
     """Return the default hook defaults. Mirrors hooks.DefaultHookDefaults."""
-    return HookDefaults(
-        timeout=timedelta(seconds=30), max_retries=3, retry_delay=timedelta(seconds=1)
-    )
+    return HookDefaults(timeout=timedelta(seconds=30), max_retries=3, retry_delay=timedelta(seconds=1))
 
 
 class HookMatcher:
@@ -1014,10 +1021,7 @@ class CircuitBreaker:
             if self._state == CircuitClosed:
                 return True
             if self._state == CircuitOpen:
-                if (
-                    self._last_failure is not None
-                    and datetime.now() - self._last_failure >= self._timeout
-                ):
+                if self._last_failure is not None and datetime.now() - self._last_failure >= self._timeout:
                     self._state = CircuitHalfOpen
                     self._successes = 0
                     return True
@@ -1037,10 +1041,7 @@ class CircuitBreaker:
                     self._state = CircuitOpen
             else:
                 self._successes += 1
-                if (
-                    self._state == CircuitHalfOpen
-                    and self._successes >= self._success_threshold
-                ):
+                if self._state == CircuitHalfOpen and self._successes >= self._success_threshold:
                     self._state = CircuitClosed
                     self._failures = 0
 
@@ -1057,9 +1058,7 @@ class CircuitBreaker:
             self._successes = 0
 
 
-def NewCircuitBreaker(
-    failure_threshold: int, success_threshold: int, timeout: timedelta
-) -> CircuitBreaker:
+def NewCircuitBreaker(failure_threshold: int, success_threshold: int, timeout: timedelta) -> CircuitBreaker:
     """Create a new circuit breaker. Mirrors hooks.NewCircuitBreaker."""
     return CircuitBreaker(failure_threshold, success_threshold, timeout)
 
@@ -1069,9 +1068,7 @@ class _Context:
 
     __slots__ = ("_done", "_err", "_deadline", "_parent")
 
-    def __init__(
-        self, parent: _Context | None = None, deadline: float | None = None
-    ) -> None:
+    def __init__(self, parent: _Context | None = None, deadline: float | None = None) -> None:
         self._done = threading.Event()
         self._err: str | None = None
         self._deadline = deadline
@@ -1156,9 +1153,7 @@ class HookExecutor:
         self._retry_delay = retry_delay
         self._circuit_breaker = circuit_breaker
 
-    def Execute(
-        self, ctx: _Context, config: HookConfig, event: HookEvent
-    ) -> HookResult:
+    def Execute(self, ctx: _Context, config: HookConfig, event: HookEvent) -> HookResult:
         """Run a hook command with the given context and configuration."""
         start = datetime.now()
         result = HookResult(success=False, duration=timedelta(0))
@@ -1371,9 +1366,7 @@ class HookQueue:
                 return ctx.err()
         return None
 
-    def Submit(
-        self, ctx: _Context, event: HookEvent, config: HookConfig
-    ) -> tuple[HookResult, Any]:
+    def Submit(self, ctx: _Context, event: HookEvent, config: HookConfig) -> tuple[HookResult, Any]:
         """Add a task to the queue and wait for its result. Mirrors hooks.Submit."""
         child_ctx, cancel = _with_cancel(ctx)
         result_ch: queue.Queue = queue.Queue(maxsize=1)

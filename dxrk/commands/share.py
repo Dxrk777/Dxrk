@@ -14,7 +14,7 @@ from dxrk.utils.session import (
 )
 
 from .registry import Command, CommandContext, Flag, Registry
-from .session import SessionError, load_session
+from .session import SessionError, _write_private_file, load_session
 
 _SHARE_FORMATS = ("md", "markdown", "html", "json", "xml")
 
@@ -34,9 +34,10 @@ def share_session(s: Session, output_path: str, fmt: str) -> str:
     if fmt not in _SHARE_FORMATS:
         raise SessionError(f"formato no compatible: {fmt}")
     body = _share_body(s, fmt)
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write(body)
-    os.chmod(output_path, 0o600)
+    try:
+        _write_private_file(output_path, body)
+    except OSError as exc:
+        raise SessionError(f"al escribir el archivo compartido: {exc}") from exc
     return fmt
 
 
@@ -68,6 +69,10 @@ def register_share_command(reg: Registry) -> None:
             ext = os.path.splitext(output_path)[1].lstrip(".").lower()
             fmt = ext if ext else "md"
 
+        if os.path.exists(output_path) and not ctx.flag_bool("force"):
+            ctx.err.write(f"Error: {output_path} ya existe (usa --force para sobrescribir)\n")
+            return 1
+
         try:
             used = share_session(s, output_path, fmt)
         except OSError as exc:
@@ -89,6 +94,9 @@ def register_share_command(reg: Registry) -> None:
         flags={
             "output": Flag("output", default="", shorthand="o", help="Ruta del archivo de salida"),
             "format": Flag("format", default="", help="Formato de salida (md, html, json, xml)"),
+            "force": Flag(
+                "force", is_bool=True, default=False, shorthand="f", help="Sobrescribir el archivo si ya existe"
+            ),
         },
         run=run,
     )

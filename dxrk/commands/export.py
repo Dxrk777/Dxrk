@@ -8,7 +8,7 @@ import os
 from dxrk.utils.session import Session
 
 from .registry import Command, CommandContext, Flag, Registry, go_quote
-from .session import SessionError, load_session
+from .session import SessionError, _write_private_file, load_session
 
 _EXPORT_FORMATS = ("md", "markdown", "html", "json", "xml")
 
@@ -71,10 +71,11 @@ def register_export_command(reg: Registry) -> None:
             return 1
 
         body = export_session_body(s, fmt)
+        if os.path.exists(output_path) and not ctx.flag_bool("force"):
+            ctx.err.write(f"Error: {output_path} ya existe (usa --force para sobrescribir)\n")
+            return 1
         try:
-            with open(output_path, "w", encoding="utf-8") as f:
-                f.write(body)
-            os.chmod(output_path, 0o600)
+            _write_private_file(output_path, body)
         except OSError as exc:
             ctx.err.write(f"Error: al escribir el archivo de exportación: {exc}\n")
             return 1
@@ -90,6 +91,9 @@ def register_export_command(reg: Registry) -> None:
         flags={
             "output": Flag("output", default="", shorthand="o", help="Ruta del archivo de salida"),
             "format": Flag("format", default="", help="Formato de salida (md, html, json, xml)"),
+            "force": Flag(
+                "force", is_bool=True, default=False, shorthand="f", help="Sobrescribir el archivo si ya existe"
+            ),
         },
         run=run,
     )
