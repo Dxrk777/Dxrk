@@ -12,6 +12,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from dxrk.utils import diff as df
+from dxrk.utils import diff_format as _df_fmt
 from dxrk.utils import fileops as fop
 from dxrk.utils import messages as msg
 
@@ -143,7 +144,9 @@ class TestDiffFormat:
 
     def test_set_colors_roundtrip(self):
         df.SetColors(df.ColorScheme(added="A", removed="R", modified="M", context="C", meta="E", reset="Z", bold="B"))
-        assert df._default_colors.added == "A"
+        # NOTE: SetColors rebinds the module-global inside dxrk.utils.diff_format,
+        # so the live value must be read from the owning submodule, not the facade.
+        assert _df_fmt._default_colors.added == "A"
         df.SetColors(df.ColorScheme())
 
     def test_format_unified_empty(self, plain_colors):
