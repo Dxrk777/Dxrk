@@ -35,6 +35,9 @@ venv/
 .env.*
 !.env.example
 
+# Local tooling caches
+.chunkhound/
+
 # Node
 node_modules/
 

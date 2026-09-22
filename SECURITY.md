@@ -33,6 +33,6 @@ Tómate en serio la seguridad de Dxrk. Reportar vulnerabilidades de forma respon
 
 ## Buenas prácticas de seguridad del proyecto
 
-- Nunca se commiten secretos (tokens, API keys, contraseñas). El repo tiene .gitignore que cubre `.env` y `dist/`.
+- Nunca se commiten secretos (tokens, API keys, contraseñas). El repo tiene .gitignore que cubre `.env*` (con excepción documentada de `.env.example`, que no lleva valores reales).
 - Los tokens de PyPI/API viven SOLO en archivos locales fuera del repo (`.pypirc`, `.env`, variables de entorno).
 - Los cambios con impacto en seguridad pasan revisión de código y el CI ejecuta mypy + pytest en cada PR.
