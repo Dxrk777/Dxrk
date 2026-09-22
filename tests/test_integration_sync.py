@@ -9,7 +9,7 @@ from dxrk.pipeline import StagePlan
 
 
 def test_dry_run_no_agents(tmp_path, monkeypatch):
-    monkeypatch.setattr("dxrk.cli.install.discover_agents", lambda _: [])
+    monkeypatch.setattr("dxrk.cli.install_runtime.discover_agents", lambda _: [])
     monkeypatch.setattr("dxrk.cli.install.os.path.expanduser", lambda _: str(tmp_path))
 
     result = run_sync(["--dry-run"])
@@ -20,7 +20,7 @@ def test_dry_run_no_agents(tmp_path, monkeypatch):
 
 
 def test_dry_run_with_agents(tmp_path, monkeypatch):
-    monkeypatch.setattr("dxrk.cli.install.discover_agents", lambda _: [])
+    monkeypatch.setattr("dxrk.cli.install_runtime.discover_agents", lambda _: [])
     monkeypatch.setattr("dxrk.cli.install.os.path.expanduser", lambda _: str(tmp_path))
 
     result = run_sync(["--dry-run", "--agents", "opencode"])
@@ -32,7 +32,7 @@ def test_dry_run_with_agents(tmp_path, monkeypatch):
 
 
 def test_dry_run_multiple_agents(tmp_path, monkeypatch):
-    monkeypatch.setattr("dxrk.cli.install.discover_agents", lambda _: [])
+    monkeypatch.setattr("dxrk.cli.install_runtime.discover_agents", lambda _: [])
     monkeypatch.setattr("dxrk.cli.install.os.path.expanduser", lambda _: str(tmp_path))
 
     result = run_sync(["--dry-run", "--agents", "opencode,claude-code"])
@@ -42,7 +42,7 @@ def test_dry_run_multiple_agents(tmp_path, monkeypatch):
 
 
 def test_dry_run_strict_tdd(tmp_path, monkeypatch):
-    monkeypatch.setattr("dxrk.cli.install.discover_agents", lambda _: [])
+    monkeypatch.setattr("dxrk.cli.install_runtime.discover_agents", lambda _: [])
     monkeypatch.setattr("dxrk.cli.install.os.path.expanduser", lambda _: str(tmp_path))
 
     result = run_sync(["--dry-run", "--agents", "opencode", "--strict-tdd"])
@@ -51,7 +51,7 @@ def test_dry_run_strict_tdd(tmp_path, monkeypatch):
 
 
 def test_dry_run_include_permissions(tmp_path, monkeypatch):
-    monkeypatch.setattr("dxrk.cli.install.discover_agents", lambda _: [])
+    monkeypatch.setattr("dxrk.cli.install_runtime.discover_agents", lambda _: [])
     monkeypatch.setattr("dxrk.cli.install.os.path.expanduser", lambda _: str(tmp_path))
 
     result = run_sync(["--dry-run", "--agents", "opencode", "--include-permissions"])
@@ -60,7 +60,7 @@ def test_dry_run_include_permissions(tmp_path, monkeypatch):
 
 
 def test_dry_run_include_theme(tmp_path, monkeypatch):
-    monkeypatch.setattr("dxrk.cli.install.discover_agents", lambda _: [])
+    monkeypatch.setattr("dxrk.cli.install_runtime.discover_agents", lambda _: [])
     monkeypatch.setattr("dxrk.cli.install.os.path.expanduser", lambda _: str(tmp_path))
 
     result = run_sync(["--dry-run", "--agents", "opencode", "--include-theme"])
@@ -69,7 +69,7 @@ def test_dry_run_include_theme(tmp_path, monkeypatch):
 
 
 def test_dry_run_profile_strategy(tmp_path, monkeypatch):
-    monkeypatch.setattr("dxrk.cli.install.discover_agents", lambda _: [])
+    monkeypatch.setattr("dxrk.cli.install_runtime.discover_agents", lambda _: [])
     monkeypatch.setattr("dxrk.cli.install.os.path.expanduser", lambda _: str(tmp_path))
 
     result = run_sync(["--dry-run", "--agents", "opencode", "--sdd-profile-strategy", "external-single-active"])
@@ -166,8 +166,8 @@ class TestSyncRuntimeStagePlan:
             components=[ComponentID.SDD, ComponentID.DXRK_MEMORY],
         )
 
-        monkeypatch.setattr("dxrk.cli.install._resolve_adapters", lambda agents: [])
-        monkeypatch.setattr("dxrk.cli.install._sync_backup_targets", lambda *a: [])
+        monkeypatch.setattr("dxrk.cli.install_runtime._resolve_adapters", lambda agents: [])
+        monkeypatch.setattr("dxrk.cli.install_runtime._sync_backup_targets", lambda *a: [])
 
         rt = SyncRuntime(str(tmp_path), str(tmp_path), selection)
         plan = rt.stage_plan()
@@ -181,8 +181,8 @@ class TestSyncRuntimeStagePlan:
     def test_empty_selection_returns_plan(self, tmp_path, monkeypatch):
         selection = Selection(agents=[], components=[])
 
-        monkeypatch.setattr("dxrk.cli.install._resolve_adapters", lambda agents: [])
-        monkeypatch.setattr("dxrk.cli.install._sync_backup_targets", lambda *a: [])
+        monkeypatch.setattr("dxrk.cli.install_runtime._resolve_adapters", lambda agents: [])
+        monkeypatch.setattr("dxrk.cli.install_runtime._sync_backup_targets", lambda *a: [])
 
         rt = SyncRuntime(str(tmp_path), str(tmp_path), selection)
         plan = rt.stage_plan()
