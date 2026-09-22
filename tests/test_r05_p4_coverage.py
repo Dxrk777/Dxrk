@@ -2095,3 +2095,24 @@ def test_tui_detection_screen_run_detection_work(tmp_path: Path, monkeypatch: py
     except Exception:
         pass
     assert True  # just ensure no crash
+
+
+async def test_welcome_badge_refreshes_after_tenant_switch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression: cached WelcomeScreen must show the new tenant after switch."""
+    _iso_home(tmp_path, monkeypatch)
+    from textual.widgets import Static
+
+    from dxrk.tenant.migration import ensure_tenant
+    from dxrk.tui.app import DxrkApp
+
+    ensure_tenant("acme")
+    app = DxrkApp()
+    async with app.run_test() as pilot:
+        await pilot.press("t")
+        await pilot.pause()
+        await pilot.press("enter")
+        await pilot.pause()
+        badge = app.screen.query_one("#tenant-badge", Static)
+        assert "acme" in str(badge.renderable)

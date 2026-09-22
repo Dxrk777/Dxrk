@@ -129,6 +129,13 @@ class WelcomeScreen(Screen):
         role = getattr(ctx, "role", "") or "readonly"
         return f"tenant: {tid} · role: {role}"
 
+    def on_screen_resume(self) -> None:
+        """Refresh the tenant badge: the screen instance is cached by name."""
+        try:
+            self.query_one("#tenant-badge", Static).update(self._tenant_badge())
+        except Exception:
+            pass
+
     def compose(self) -> ComposeResult:
         with Container(id="welcome-container"):
             yield Static("[bold cyan]Dxrk[/] Ecosistema de agentes IA", id="title")
