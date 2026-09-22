@@ -1,5 +1,7 @@
 # Dxrk
 
+![Dxrk](assets/dxrk-icon.jpg){ width="120" align="right" }
+
 <strong>Orquestador local-first de ecosistemas para agentes de IA: 14 agentes, memoria, SDD, MCP y multi-tenant</strong>
 
 **Dxrk** es un configurador y orquestador de ecosistemas para agentes de IA. En un solo comando instala, configura y sincroniza **14 agentes de IA**, memoria persistente, skills curadas, servidores MCP y conmutador de modelos para tu stack de desarrollo completo.

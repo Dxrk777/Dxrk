@@ -2,7 +2,7 @@
 
 <strong>Ecosistema, Frameworks y Workflows para agentes de IA — DxrkMemory 2.0 stdlib-only (sin chromadb, sin onnx)</strong>
 
-![Social](assets/social-preview.png)
+![Dxrk](assets/dxrk-banner.jpg)
 
 [![Release](https://img.shields.io/badge/Release-v1.2.0-blue)](https://github.com/Dxrk777/Dxrk/releases/latest)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
