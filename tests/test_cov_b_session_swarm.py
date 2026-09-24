@@ -232,7 +232,10 @@ def test_filestorage_save_marshal_error(tmp_path, monkeypatch):
     st = S.FileStorage(str(tmp_path))
     s = _mk_session()
     s.id = "e1"
-    monkeypatch.setattr(S, "_session_to_dict", lambda _s: (_ for _ in ()).throw(TypeError("bad")))
+    monkeypatch.setattr(
+        "dxrk.utils.session_storage._session_to_dict",
+        lambda _s: (_ for _ in ()).throw(TypeError("bad")),
+    )
     with pytest.raises(S.SessionError, match="marshal"):
         st.save(s)
 
