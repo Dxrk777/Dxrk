@@ -995,14 +995,14 @@ class TestFileopsWrite:
         def boom(*a, **k):
             return fop.FileopsError("no dir")
 
-        monkeypatch.setattr(fop, "EnsureDir", boom)
+        monkeypatch.setattr("dxrk.utils.fileops_write.EnsureDir", boom)
         err = fop.WriteFile(str(tmp_path / "sub" / "f.txt"), "x", fop.WriteOpts(create_dirs=True))
         assert isinstance(err, fop.FileopsError)
 
     def test_backup_failed(self, tmp_path, monkeypatch):
         p = str(tmp_path / "f.txt")
         _write(p, "old")
-        monkeypatch.setattr(fop, "BackupFile", lambda path: ("", fop.FileopsError("boom")))
+        monkeypatch.setattr("dxrk.utils.fileops_write.BackupFile", lambda path: ("", fop.FileopsError("boom")))
         err = fop.WriteFile(p, "new", fop.WriteOpts(backup=True))
         assert "backup failed" in str(err)
 
