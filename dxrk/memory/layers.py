@@ -87,9 +87,7 @@ def _get_collection(palace_path: str, *, create: bool = False) -> BaseCollection
 class Layer0:
     """Identity — ~100 tokens, always loaded from ~/.dxrk/identity.txt (tenant-aware)."""
 
-    def __init__(
-        self, identity_path: str | None = None, tenant_id: str | None = None
-    ) -> None:
+    def __init__(self, identity_path: str | None = None, tenant_id: str | None = None) -> None:
         self.tenant_id: str = _effective_tenant_id(tenant_id)
         self.path = _resolve_identity_path(tenant_id, identity_path)
         self._text: str | None = None
@@ -127,7 +125,8 @@ class Layer1:
         self.palace_path = _resolve_palace_path(tenant_id, palace_path)
         self.wing = wing
 
-    def generate(self) -> str:
+    def generate(self, wing: str | None = None) -> str:
+        effective_wing = wing or self.wing
         try:
             col = _get_collection(self.palace_path, create=False)
         except Exception:
@@ -157,6 +156,8 @@ class Layer1:
             meta = meta or {}
             if not isinstance(meta, dict):
                 meta = {}
+            if effective_wing and str(meta.get("wing") or "") != effective_wing:
+                continue
             doc = doc or ""
             imp = 3.0
             for key in ("importance", "emotional_weight", "weight"):
@@ -169,6 +170,8 @@ class Layer1:
                     break
             scored.append((imp, meta, doc))
         scored.sort(key=lambda x: x[0], reverse=True)
+        if effective_wing and not scored:
+            return f"## L1 — No memories yet for wing={effective_wing}."
         top = scored[: self.MAX_DRAWERS]
         by_room: dict[str, list[tuple[float, dict[str, object], str]]] = defaultdict(list)
         for imp, meta, doc in top:
@@ -255,9 +258,7 @@ class Layer2:
 class Layer3:
     """Deep search via sqlite hybrid."""
 
-    def __init__(
-        self, palace_path: str | None = None, tenant_id: str | None = None
-    ) -> None:
+    def __init__(self, palace_path: str | None = None, tenant_id: str | None = None) -> None:
         self.tenant_id: str = _effective_tenant_id(tenant_id)
         self.palace_path = _resolve_palace_path(tenant_id, palace_path)
 
@@ -314,9 +315,7 @@ class MemoryStack:
         parts: list[str] = []
         parts.append(self.l0.render())
         parts.append("")
-        if wing:
-            self.l1.wing = wing
-        parts.append(self.l1.generate())
+        parts.append(self.l1.generate(wing=wing))
         return "\n".join(parts)
 
     def recall(self, wing: str | None = None, room: str | None = None, n_results: int = 10) -> str:

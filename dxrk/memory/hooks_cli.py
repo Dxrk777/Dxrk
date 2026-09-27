@@ -218,9 +218,10 @@ def _mine_slot_timeout_secs() -> float:
     if raw:
         try:
             hours = float(raw)
-            return max(0.0, hours) * 3600
         except ValueError:
-            return 0.0
+            # Fail-closed: garbage env must not disable the stale-slot reap.
+            return _MINE_TIMEOUT_HOURS_DEFAULT * 3600
+        return max(0.0, hours) * 3600
     return _MINE_TIMEOUT_HOURS_DEFAULT * 3600
 
 

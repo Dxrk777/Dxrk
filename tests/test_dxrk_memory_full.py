@@ -1686,3 +1686,166 @@ class TestMcpServer:
         assert '"protocolVersion"' in out_val
         assert '"tools"' in out_val
         assert "Parse error" in out_val
+
+
+# ---------------------------------------------------------------------------
+# PHASE 0 regression tests — verified bug fixes (cleanup + correctness)
+# ---------------------------------------------------------------------------
+
+
+def test_types_top_by_importance_sorts_when_short():
+    from dxrk.memory.types import MemoryEntry as TypesEntry
+    from dxrk.memory.types import top_by_importance as types_tbi
+
+    entries = [TypesEntry(importance=0.1), TypesEntry(importance=0.9), TypesEntry(importance=0.5)]
+    assert [e.importance for e in types_tbi(entries, 10)] == [0.9, 0.5, 0.1]
+
+
+def test_layer1_generate_filters_by_wing(tmp_path: Path):
+    from dxrk.memory.layers import Layer1
+    from dxrk.memory.palace import DxrkMemory
+
+    pal = tmp_path / "pal_wing"
+    dm = DxrkMemory(str(pal))
+    dm.init()
+    try:
+        dm.add_drawer("alpha", "r", "alpha only content " * 20, "/a.txt", 0)
+        dm.add_drawer("beta", "r", "beta only content " * 20, "/b.txt", 0)
+        out = Layer1(str(pal), wing="alpha").generate()
+        assert "alpha only content" in out
+        assert "beta only content" not in out
+        # no filter -> both wings present
+        out_all = Layer1(str(pal)).generate()
+        assert "alpha only content" in out_all
+        assert "beta only content" in out_all
+        # unknown wing -> explicit empty message, not silent all-wings leak
+        assert "No memories yet for wing=zeta" in Layer1(str(pal), wing="zeta").generate()
+    finally:
+        dm.close()
+
+
+def test_memory_stack_wake_up_wing_filters_without_mutation(tmp_path: Path):
+    from dxrk.memory.layers import MemoryStack
+    from dxrk.memory.palace import DxrkMemory
+
+    pal = tmp_path / "pal_stack_wing"
+    ident = tmp_path / "ident.txt"
+    ident.write_text("stack identity")
+    dm = DxrkMemory(str(pal))
+    dm.init()
+    try:
+        dm.add_drawer("alpha", "r", "alpha stack content " * 20, "/a.txt", 0)
+        dm.add_drawer("beta", "r", "beta stack content " * 20, "/b.txt", 0)
+        ms = MemoryStack(palace_path=str(pal), identity_path=str(ident))
+        scoped = ms.wake_up(wing="alpha")
+        assert "alpha stack content" in scoped
+        assert "beta stack content" not in scoped
+        # scoped call must not stick: unscoped wake_up still sees both wings
+        full = ms.wake_up()
+        assert "alpha stack content" in full
+        assert "beta stack content" in full
+    finally:
+        dm.close()
+
+
+def test_mcp_check_duplicate_detects_exact_content(tmp_path: Path, monkeypatch):
+    from dxrk.memory.mcp_server import _dispatch
+
+    monkeypatch.setenv("DXRK_MEMORY_PATH", str(tmp_path / "pal_dup"))
+    _dispatch(
+        {
+            "method": "tools/call",
+            "id": 1,
+            "params": {
+                "name": "dxrk_memory_add_drawer",
+                "arguments": {
+                    "wing": "w",
+                    "room": "r",
+                    "content": "the quick brown fox jumps over",
+                    "source_file": "/f.txt",
+                },
+            },
+        }
+    )
+    dup = _dispatch(
+        {
+            "method": "tools/call",
+            "id": 2,
+            "params": {
+                "name": "dxrk_memory_check_duplicate",
+                "arguments": {"content": "the quick brown fox jumps over"},
+            },
+        }
+    )
+    assert dup["result"]["isError"] is False
+    assert json.loads(dup["result"]["content"][0]["text"])["duplicate"] is True
+    fresh = _dispatch(
+        {
+            "method": "tools/call",
+            "id": 3,
+            "params": {
+                "name": "dxrk_memory_check_duplicate",
+                "arguments": {"content": "completely unrelated zebra quantum vortex"},
+            },
+        }
+    )
+    assert json.loads(fresh["result"]["content"][0]["text"])["duplicate"] is False
+
+
+def test_mcp_update_drawer_no_orphan_on_wing_change(tmp_path: Path, monkeypatch):
+    from dxrk.memory.mcp_server import _dispatch
+
+    monkeypatch.setenv("DXRK_MEMORY_PATH", str(tmp_path / "pal_upd"))
+    add = _dispatch(
+        {
+            "method": "tools/call",
+            "id": 1,
+            "params": {
+                "name": "dxrk_memory_add_drawer",
+                "arguments": {"wing": "w1", "room": "r", "content": "update me content here", "source_file": "/u.txt"},
+            },
+        }
+    )
+    did = json.loads(add["result"]["content"][0]["text"])["drawer_id"]
+
+    def _count():
+        st = _dispatch({"method": "tools/call", "id": 99, "params": {"name": "dxrk_memory_status", "arguments": {}}})
+        return json.loads(st["result"]["content"][0]["text"])["count"]
+
+    before = _count()
+    upd = _dispatch(
+        {
+            "method": "tools/call",
+            "id": 2,
+            "params": {
+                "name": "dxrk_memory_update_drawer",
+                "arguments": {"drawer_id": did, "wing": "w2", "content": "update me content here revised"},
+            },
+        }
+    )
+    assert upd["result"]["isError"] is False
+    assert _count() == before
+    got = _dispatch(
+        {
+            "method": "tools/call",
+            "id": 3,
+            "params": {"name": "dxrk_memory_get_drawer", "arguments": {"drawer_id": did}},
+        }
+    )
+    drawer = json.loads(got["result"]["content"][0]["text"])["drawer"]
+    assert drawer["metadata"]["wing"] == "w2"
+    assert "revised" in drawer["document"]
+
+
+def test_mcp_update_drawer_not_found_is_error(tmp_path: Path, monkeypatch):
+    from dxrk.memory.mcp_server import _dispatch
+
+    monkeypatch.setenv("DXRK_MEMORY_PATH", str(tmp_path / "pal_nf"))
+    resp = _dispatch(
+        {
+            "method": "tools/call",
+            "id": 1,
+            "params": {"name": "dxrk_memory_update_drawer", "arguments": {"drawer_id": "missing-id"}},
+        }
+    )
+    assert resp["result"]["isError"] is True

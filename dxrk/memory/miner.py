@@ -5,14 +5,16 @@ from __future__ import annotations
 
 import errno
 import fnmatch
+import logging
 import os
 import re
 import stat
-import sys
 from pathlib import Path
 
-from .palace import CHUNK_OVERLAP, CHUNK_SIZE, MIN_CHUNK_SIZE
+from .palace import CHUNK_OVERLAP, CHUNK_SIZE, MAX_FILE_SIZE, MIN_CHUNK_SIZE
 from .palace import chunk_text as _chunk_text
+
+logger = logging.getLogger("dxrk.memory.miner")
 
 READABLE_EXTENSIONS: frozenset[str] = frozenset(
     {
@@ -44,6 +46,7 @@ SKIP_FILENAMES: frozenset[str] = frozenset(
     {"package-lock.json", "pnpm-lock.yaml", "yarn.lock", ".gitignore", "dxrk.yaml", "dxrk.yml"}
 )
 
+# Canonical skip-dirs (dxrk/memory/palace.py no longer keeps a duplicate copy).
 SKIP_DIRS: frozenset[str] = frozenset(
     {
         ".git",
@@ -71,8 +74,6 @@ SKIP_DIRS: frozenset[str] = frozenset(
         "target",
     }
 )
-
-MAX_FILE_SIZE = 500 * 1024 * 1024
 
 # ---------------------------------------------------------------------------
 # Non-regular file guards (port of db29959)
@@ -354,7 +355,7 @@ def scan_project(
                 # os.walk lists FIFOs/sockets as plain filenames; opening
                 # them would block forever (db29959).
                 if not stat.S_ISREG(file_stat.st_mode):
-                    print(f"  SKIP: {filepath.name} (not a regular file)", file=sys.stderr)
+                    logger.debug("scan skip non-regular file: %s", filepath.name)
                     continue
                 if file_stat.st_size > MAX_FILE_SIZE:
                     continue
@@ -392,7 +393,5 @@ def scan_and_chunk(
         norm = normalize_content(raw)
         chunks = chunk_text(norm, str(fp))
         if chunks:
-            _ = wing
-            _ = room
             out.append((fp, chunks))
     return out

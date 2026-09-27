@@ -39,34 +39,6 @@ MAX_FILE_SIZE = 500 * 1024 * 1024
 
 logger = logging.getLogger("dxrk.memory")
 
-SKIP_DIRS: frozenset[str] = frozenset(
-    {
-        ".git",
-        "node_modules",
-        "__pycache__",
-        ".venv",
-        "venv",
-        "env",
-        "dist",
-        "build",
-        ".next",
-        "coverage",
-        ".dxrk",
-        ".ruff_cache",
-        ".mypy_cache",
-        ".pytest_cache",
-        ".cache",
-        ".tox",
-        ".nox",
-        ".idea",
-        ".vscode",
-        ".ipynb_checkpoints",
-        ".eggs",
-        "htmlcov",
-        "target",
-    }
-)
-
 _ENTITY_STOPLIST: frozenset[str] = frozenset(
     {
         "The",

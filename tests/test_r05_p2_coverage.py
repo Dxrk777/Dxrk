@@ -424,9 +424,9 @@ def test_hooks_maybe_auto_ingest_with_target_mocked(tmp_path, monkeypatch):
     assert len(calls) == 1
     assert "mine" in calls[0]
     assert str(proj) in calls[0]
-    # also test timeout parsing branches
+    # also test timeout parsing branches (garbage -> fail-closed default)
     monkeypatch.setenv("DXRK_MINE_TIMEOUT_HOURS", "not-a-number")
-    assert hc._mine_slot_timeout_secs() == 0.0
+    assert hc._mine_slot_timeout_secs() == 7200.0
     monkeypatch.setenv("DXRK_MINE_TIMEOUT_HOURS", "1.5")
     assert hc._mine_slot_timeout_secs() == 5400.0
     monkeypatch.setenv("DXRK_MINE_TIMEOUT_HOURS", "0")

@@ -211,3 +211,35 @@ def test_no_path_skips_persistence(path):
     m = AgentMemory(path=path)
     m.store(make_entry())
     assert m.stats().total_entries == 1
+
+
+def test_top_by_importance_sorts_when_fewer_than_limit():
+    entries = [
+        make_entry(importance=0.1),
+        make_entry(importance=0.9),
+        make_entry(importance=0.5),
+    ]
+    top = top_by_importance(entries, 10)
+    assert [e.importance for e in top] == [0.9, 0.5, 0.1]
+
+
+def test_restore_same_id_does_not_duplicate_indexes(temp_dir: Path):
+    m = AgentMemory(path=temp_dir / "mem.json")
+    m.store(make_entry(id="dup", content="v1", project_id="p1", session_id="s1"))
+    m.store(make_entry(id="dup", content="v2", project_id="p1", session_id="s1"))
+
+    assert [e.id for e in m.get_by_project("p1")] == ["dup"]
+    assert [e.id for e in m.get_by_session("s1")] == ["dup"]
+    assert m.retrieve("dup") is not None
+    assert m.retrieve("dup").content == "v2"  # type: ignore[union-attr]
+    assert m.stats().total_entries == 1
+
+
+def test_restore_same_id_moves_changed_project_index(temp_dir: Path):
+    m = AgentMemory(path=temp_dir / "mem.json")
+    m.store(make_entry(id="mv", content="v1", project_id="p1", session_id="s1"))
+    m.store(make_entry(id="mv", content="v2", project_id="p2", session_id="s1"))
+
+    assert m.get_by_project("p1") == []
+    assert [e.id for e in m.get_by_project("p2")] == ["mv"]
+    assert m.stats().total_entries == 1

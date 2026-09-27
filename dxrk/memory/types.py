@@ -60,8 +60,6 @@ class MemoryStats:
 
 def top_by_importance(entries: list[MemoryEntry], limit: int) -> list[MemoryEntry]:
     """Return top-N entries sorted by importance descending."""
-    if len(entries) <= limit:
-        return entries
     return sorted(entries, key=lambda e: e.importance, reverse=True)[:limit]
 
 

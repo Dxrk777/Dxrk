@@ -13,8 +13,10 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import traceback
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -363,13 +365,17 @@ def _handle_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
             if args.get("room"):
                 meta["room"] = str(args["room"])  # type: ignore[index]
             content = str(args.get("content", existing.get("document") or ""))  # type: ignore[arg-type]
-            # upsert via add_drawer path (preserve source_file)
-            source_file = str(meta.get("source_file") or did)  # type: ignore[arg-type]
-            chunk_index = int(meta.get("chunk_index") or 0)  # type: ignore[arg-type]
+            # Stable-id upsert: drawer_id is the PK, so wing/room/content changes
+            # land on the same row. (A prior add_drawer() pre-call created an
+            # orphan drawer under the new wing/room via make_id hash.)
             wing = str(meta.get("wing") or "default")  # type: ignore[arg-type]
             room = str(meta.get("room") or "general")  # type: ignore[arg-type]
-            dm.add_drawer(wing=wing, room=room, content=content, source_file=source_file, chunk_index=chunk_index)
-            # need to ensure id stable — add_drawer uses make_id hash, so override via direct collection upsert
+            meta["wing"] = wing
+            meta["room"] = room
+            meta.setdefault("source_file", did)
+            meta.setdefault("chunk_index", 0)
+            if content != (existing.get("document") or ""):
+                meta["filed_at"] = datetime.now(UTC).isoformat()
             col = dm._collection(create=False)  # type: ignore[attr-defined]
             col.upsert(documents=[content], ids=[did], metadatas=[meta])  # type: ignore[arg-type]
             return {"drawer_id": did, "updated": True}
@@ -383,20 +389,40 @@ def _handle_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
 
         if name == "dxrk_memory_check_duplicate":
             content = str(args.get("content", ""))
+            try:
+                threshold = float(args.get("threshold", 0.15))
+            except (TypeError, ValueError):
+                threshold = 0.15
             dm = _get_memory(palace_path)
-            # use search to approximate duplicate: if top hit distance=0 or BM25 high
+            # use search to approximate duplicate: exact containment either way
+            # or high token overlap (>= threshold) against the top hit.
             sanitized = sanitize_query(content[:800])
             if not sanitized:
                 return {"duplicate": False, "reason": "empty query"}
             res = dm.search(sanitized, n_results=3)
-            docs: Any = res.get("documents") if isinstance(res, dict) else []  # type: ignore[assignment]
-            # threshold 0.15 cosine; we approximate via exact substring or high BM25 overlap
+            hits = res.get("results", []) if isinstance(res, dict) else []
+            if not isinstance(hits, list):
+                hits = []
             duplicate = False
-            if docs:
-                first = docs[0] if isinstance(docs[0], str) else (docs[0][0] if docs[0] else "")  # type: ignore[index,operator]
-                if isinstance(first, str) and content.strip() and content.strip() in first:
+            top_preview: list[str] = []
+            norm_content = content.strip().lower()
+            content_tokens = {t for t in re.findall(r"\w{2,}", norm_content)}
+            for h in hits:
+                txt = h.get("text", "") if isinstance(h, dict) else ""
+                if not isinstance(txt, str) or not txt:
+                    continue
+                top_preview.append(txt[:200])
+                norm_txt = txt.strip().lower()
+                if norm_content and (norm_content in norm_txt or norm_txt in norm_content):
                     duplicate = True
-            return {"duplicate": duplicate, "top_docs": (docs[:1] if docs else [])}  # type: ignore[return-value]
+                    break
+                if content_tokens:
+                    hit_tokens = {t for t in re.findall(r"\w{2,}", norm_txt)}
+                    overlap = len(content_tokens & hit_tokens) / len(content_tokens)
+                    if overlap >= threshold:
+                        duplicate = True
+                        break
+            return {"duplicate": duplicate, "top_docs": top_preview[:1]}
 
         if name == "dxrk_memory_list_wings":
             dm = _get_memory(palace_path)
@@ -542,8 +568,9 @@ def _dispatch(req: dict[str, Any]) -> dict[str, Any] | None:
         content = [{"type": "text", "text": json.dumps(result_obj, ensure_ascii=False, indent=2)}]
         if is_notification():
             return None
-        # if tool returned error, map to isError
-        is_error = isinstance(result_obj, dict) and "error" in result_obj and "traceback" in result_obj
+        # if tool returned error, map to isError (any "error" key, including
+        # domain errors like update_drawer not-found without traceback)
+        is_error = isinstance(result_obj, dict) and "error" in result_obj
         return {"jsonrpc": "2.0", "id": req_id, "result": {"content": content, "isError": bool(is_error)}}
 
     # fallback unknown

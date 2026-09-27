@@ -1280,8 +1280,9 @@ class TestMineTargets:
 
 class TestMineTimeout:
     def test_variants(self, monkeypatch):
+        # Fail-closed: garbage env falls back to default (stale slots still reap).
         monkeypatch.setenv(hc._MINE_TIMEOUT_HOURS_ENV, "not-a-number")
-        assert hc._mine_slot_timeout_secs() == 0.0
+        assert hc._mine_slot_timeout_secs() == 7200.0
         monkeypatch.setenv(hc._MINE_TIMEOUT_HOURS_ENV, "1.5")
         assert hc._mine_slot_timeout_secs() == 5400.0
         monkeypatch.setenv(hc._MINE_TIMEOUT_HOURS_ENV, "-2")
@@ -2052,7 +2053,8 @@ class TestMemoryHelpers:
 
     def test_top_by_importance(self):
         entries = [MemoryEntry(importance=0.1), MemoryEntry(importance=0.9)]
-        assert top_by_importance(entries, 5) is entries
+        ranked = top_by_importance(entries, 5)
+        assert [e.importance for e in ranked] == [0.9, 0.1]
         assert top_by_importance(entries, 1)[0].importance == 0.9
 
     def test_memory_type_values(self):

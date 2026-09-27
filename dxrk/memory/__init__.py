@@ -106,8 +106,6 @@ def _is_sqlite_path(path: str | Path | None) -> bool:
 
 
 def top_by_importance(entries: list[MemoryEntry], limit: int) -> list[MemoryEntry]:
-    if len(entries) <= limit:
-        return entries
     return sorted(entries, key=lambda e: e.importance, reverse=True)[:limit]
 
 
@@ -194,8 +192,16 @@ class AgentMemory:
                         entry.embedding = list(embedding)  # type: ignore[arg-type]
 
         with self._lock:
-            if self._max_entries > 0 and len(self._entries) >= self._max_entries:
-                self._evict_locked()
+            old = self._entries.get(entry.id)
+            if old is None:
+                if self._max_entries > 0 and len(self._entries) >= self._max_entries:
+                    self._evict_locked()
+            else:
+                # Re-store: drop stale index refs so get_by_* never returns dupes,
+                # even when project/session/type changed between stores.
+                self._remove_from_index(self._by_project.get(old.project_id), entry.id)
+                self._remove_from_index(self._by_session.get(old.session_id), entry.id)
+                self._remove_from_index(self._by_type.get(old.type), entry.id)
             self._entries[entry.id] = entry
             self._by_project.setdefault(entry.project_id, []).append(entry.id)
             self._by_session.setdefault(entry.session_id, []).append(entry.id)
