@@ -23,10 +23,14 @@ from collections.abc import Generator
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any, cast
 
 from .backend import PalaceRef, SqliteBackend
 from .backend.base import BaseCollection
+from .scoring import score_meta
 from .types import DrawerRecord
+from .vectors import cosine as _vec_cosine
+from .vectors import embed_counts as _vec_embed_counts
 
 CHUNK_SIZE = 800
 CHUNK_OVERLAP = 100
@@ -36,6 +40,29 @@ ENTITY_METADATA_LIMIT = 25
 ENTITY_EXTRACT_WINDOW = 5000
 DRAWER_UPSERT_BATCH_SIZE = 500
 MAX_FILE_SIZE = 500 * 1024 * 1024
+
+# ---------------------------------------------------------------------------
+# Phase 2 lifecycle tuning (all heuristic, stdlib-only, deterministic)
+# ---------------------------------------------------------------------------
+# Near-duplicate vector bar: measured bands on hashed char-ngram cosine are
+# identical==1.0, extension/superset~=0.83, same-topic distinct<=0.62,
+# unrelated<=0.36 — 0.85 splits exact/near copies from distinct content.
+DEDUPE_SIM_THRESHOLD = 0.85
+# Overlap coefficient (|A∩B|/min(|A|,|B|) on word tokens) deciding whether a
+# near-duplicate vector means the SAME information (dedupe) or CONFLICTING
+# information (contradiction → supersede instead of overwrite).
+DEDUPE_OVERLAP_THRESHOLD = 0.7
+CONTRADICTION_OVERLAP_THRESHOLD = 0.5
+# Bounded default so palaces cannot grow unbounded: per-wing cap enforced on
+# write (lowest rank_score evicted first, superseded rows first).
+DEFAULT_MAX_ENTRIES_PER_WING = 1000
+# Upper bound on the wing snapshot scanned per write for dedupe/cap.
+WING_SNAPSHOT_LIMIT = 2000
+WING_EVICT_SCAN = 1000
+# Max entities linked to the KG per mined file (one episode per version).
+KG_ENTITY_LIMIT = 25
+
+_WORD_TOKEN_RE = re.compile(r"\w{2,}", re.UNICODE)
 
 logger = logging.getLogger("dxrk.memory")
 
@@ -681,6 +708,8 @@ def _build_drawer_metadata(
     source_mtime: float | None,
     *,
     chunk_total: int | None = None,
+    supersedes: str | None = None,
+    importance: float | None = None,
 ) -> dict[str, object]:
     meta: dict[str, object] = {
         "wing": wing,
@@ -696,10 +725,117 @@ def _build_drawer_metadata(
         meta["source_mtime"] = source_mtime
     if chunk_total is not None:
         meta["chunk_total"] = chunk_total
+    if supersedes:
+        meta["supersedes"] = supersedes
+    if importance is not None:
+        try:
+            meta["importance"] = float(importance)
+        except (TypeError, ValueError):
+            pass
     ents = _extract_entities(content)
     if ents:
         meta["entities"] = ents
     return meta
+
+
+# ---------------------------------------------------------------------------
+# Phase 2 write-time lifecycle: distill/dedupe + contradiction detection
+# ---------------------------------------------------------------------------
+
+
+def _word_tokens(text: str) -> set[str]:
+    return set(_WORD_TOKEN_RE.findall((text or "").lower()))
+
+
+def _overlap_coeff(a: set[str], b: set[str]) -> float:
+    """Overlap coefficient |A∩B|/min(|A|,|B|); 1.0 on containment, 0.0 on empty."""
+    if not a or not b:
+        return 0.0
+    return len(a & b) / min(len(a), len(b))
+
+
+def _is_containment(a: str, b: str) -> bool:
+    """True when one text contains the other (both at least chunk-sized).
+
+    The length floor keeps tiny strings ("c1 hello") from containment-matching
+    — those go through the vector+overlap path instead.
+    """
+    na = (a or "").strip().lower()
+    nb = (b or "").strip().lower()
+    if len(na) < MIN_CHUNK_SIZE or len(nb) < MIN_CHUNK_SIZE:
+        return False
+    return na in nb or nb in na
+
+
+def _vec_similarity(a: str, b: str) -> float:
+    return _vec_cosine(_vec_embed_counts(a or ""), _vec_embed_counts(b or ""))
+
+
+def classify_content_pair(new_text: str, old_text: str) -> str:
+    """Classify a near-duplicate candidate: duplicate | contradiction | distinct.
+
+    - ``duplicate``: identical, containment, or high vector similarity with
+      high token overlap — same information, do NOT fork a divergent copy.
+    - ``contradiction``: high vector similarity but low token overlap —
+      same topic, substantively different text → supersede, never overwrite.
+    - ``distinct``: everything else → normal insert.
+    """
+    if not new_text or not old_text:
+        return "distinct"
+    if new_text.strip() == old_text.strip():
+        return "duplicate"
+    if _is_containment(new_text, old_text):
+        return "duplicate"
+    if _vec_similarity(new_text, old_text) < DEDUPE_SIM_THRESHOLD:
+        return "distinct"
+    overlap = _overlap_coeff(_word_tokens(new_text), _word_tokens(old_text))
+    if overlap >= DEDUPE_OVERLAP_THRESHOLD:
+        return "duplicate"
+    if overlap < CONTRADICTION_OVERLAP_THRESHOLD:
+        return "contradiction"
+    return "distinct"
+
+
+def _wing_snapshot(col: BaseCollection, wing: str, limit: int = WING_SNAPSHOT_LIMIT) -> list[dict[str, object]]:
+    """Fetch wing drawers as {id, doc, meta} for lifecycle scans (best-effort)."""
+    try:
+        got = col.get(where={"wing": wing}, include=["documents", "metadatas"], limit=limit)
+    except Exception:
+        return []
+    out: list[dict[str, object]] = []
+    for rid, doc, meta in zip(got.ids, got.documents, got.metadatas):
+        if not isinstance(meta, dict):
+            meta = {}
+        out.append({"id": rid, "doc": doc or "", "meta": meta})
+    return out
+
+
+def _best_lifecycle_candidate(
+    snapshot: list[dict[str, object]],
+    content: str,
+    exclude_ids: set[str] | None = None,
+) -> tuple[dict[str, object] | None, float]:
+    """Highest-similarity snapshot entry at/above DEDUPE_SIM_THRESHOLD."""
+    excluded = exclude_ids or set()
+    new_vec = _vec_embed_counts(content or "")
+    best: dict[str, object] | None = None
+    best_sim = 0.0
+    for cand in snapshot:
+        cid = str(cand.get("id", ""))
+        if cid in excluded:
+            continue
+        cdoc = str(cand.get("doc", ""))
+        if not cdoc:
+            continue
+        if cdoc.strip() == (content or "").strip():
+            return cand, 1.0
+        sim = _vec_cosine(new_vec, _vec_embed_counts(cdoc))
+        if sim > best_sim:
+            best_sim = sim
+            best = cand
+    if best is not None and best_sim >= DEDUPE_SIM_THRESHOLD:
+        return best, best_sim
+    return None, 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -726,6 +862,9 @@ class DxrkMemory:
         palace_path: str | Path | None = None,
         backend: SqliteBackend | None = None,
         tenant_id: str | None = None,
+        max_entries_per_wing: int = DEFAULT_MAX_ENTRIES_PER_WING,
+        kg_path: str | None = None,
+        auto_kg: bool = True,
     ) -> None:
         self.tenant_id: str = _effective_tenant_id(tenant_id)
         resolved = _resolve_tenant_path(tenant_id, palace_path)
@@ -739,6 +878,13 @@ class DxrkMemory:
                 self.palace_path = str(Path(resolved).expanduser())
         self._backend = backend or SqliteBackend()
         self._ref = PalaceRef(id=self.palace_path, local_path=self.palace_path)
+        # Phase 2 bounded default: 0 disables, >0 caps each wing on write.
+        try:
+            self._max_entries_per_wing = int(max_entries_per_wing)
+        except (TypeError, ValueError):
+            self._max_entries_per_wing = DEFAULT_MAX_ENTRIES_PER_WING
+        self._kg_path = kg_path
+        self._auto_kg = bool(auto_kg)
 
     def _collection(self, name: str = "dxrk_drawers", *, create: bool = True) -> BaseCollection:
         return self._backend.get_collection(palace=self._ref, collection_name=name, create=create)
@@ -762,18 +908,244 @@ class DxrkMemory:
         agent: str = "dxrk",
         *,
         chunk_total: int | None = None,
+        supersedes: str | None = None,
+        importance: float | None = None,
     ) -> str:
+        """Add a drawer with Phase 2 write-time lifecycle.
+
+        - Same deterministic id → direct version update (idempotent re-mine).
+        - Explicit ``supersedes`` → old drawer keeps its row with ``valid_to``
+          + ``superseded_by`` set (never overwritten); new row stamps
+          ``supersedes``.
+        - Near-duplicate of a same-wing drawer (vector similarity >=
+          ``DEDUPE_SIM_THRESHOLD`` + token overlap >= 0.7 or containment) →
+          upsert-update the EXISTING drawer (``last_seen``/``seen_count``
+          bookkeeping) and return its id — no divergent copy.
+        - Same bar but overlap < 0.5 → contradiction → supersede path above.
+        - Otherwise a normal insert. Wing cap enforced on every new row.
+        """
         drawer_id = DrawerRecord.make_id(wing, room, source_file, chunk_index)
         try:
             source_mtime = os.path.getmtime(source_file)
         except OSError:
             source_mtime = 0.0
-        meta = _build_drawer_metadata(
-            wing, room, source_file, chunk_index, agent, content, source_mtime, chunk_total=chunk_total
-        )
+        now_iso = datetime.now(UTC).isoformat()
         col = self._collection(create=True)
+        # 1) Same-id → direct version update (re-mine honesty path).
+        try:
+            same = col.get(ids=[drawer_id], include=["documents", "metadatas"])
+        except Exception:
+            same = None
+        if same is not None and same.ids:
+            meta = _build_drawer_metadata(
+                wing,
+                room,
+                source_file,
+                chunk_index,
+                agent,
+                content,
+                source_mtime,
+                chunk_total=chunk_total,
+                supersedes=supersedes,
+                importance=importance,
+            )
+            col.upsert(documents=[content], ids=[drawer_id], metadatas=[meta])  # type: ignore[arg-type]
+            self._enforce_wing_cap(col, wing)
+            return drawer_id
+        # 2) Explicit supersede signal → invalidate old, link new.
+        if supersedes:
+            self._mark_superseded(col, supersedes, drawer_id, now_iso)
+            meta = _build_drawer_metadata(
+                wing,
+                room,
+                source_file,
+                chunk_index,
+                agent,
+                content,
+                source_mtime,
+                chunk_total=chunk_total,
+                supersedes=supersedes,
+                importance=importance,
+            )
+            col.upsert(documents=[content], ids=[drawer_id], metadatas=[meta])  # type: ignore[arg-type]
+            self._enforce_wing_cap(col, wing)
+            return drawer_id
+        # 3) Lifecycle scan: dedupe hit updates the existing drawer.
+        snapshot = _wing_snapshot(col, wing)
+        best, _sim = _best_lifecycle_candidate(snapshot, content, exclude_ids={drawer_id})
+        if best is not None:
+            verdict = classify_content_pair(content, str(best.get("doc", "")))
+            if verdict == "duplicate":
+                old_id = str(best.get("id", ""))
+                old_meta = dict(cast(dict[str, object], best.get("meta") or {}))
+                old_meta["last_seen"] = now_iso
+                try:
+                    old_meta["seen_count"] = int(cast(Any, old_meta.get("seen_count", 0))) + 1
+                except (TypeError, ValueError):
+                    old_meta["seen_count"] = 1
+                try:
+                    col.update(ids=[old_id], metadatas=[old_meta])
+                except Exception:
+                    logger.debug("Dedupe bookkeeping touch failed for %s", old_id, exc_info=True)
+                return old_id
+            if verdict == "contradiction":
+                old_id = str(best.get("id", ""))
+                self._mark_superseded(col, old_id, drawer_id, now_iso)
+                meta = _build_drawer_metadata(
+                    wing,
+                    room,
+                    source_file,
+                    chunk_index,
+                    agent,
+                    content,
+                    source_mtime,
+                    chunk_total=chunk_total,
+                    supersedes=old_id,
+                    importance=importance,
+                )
+                col.upsert(documents=[content], ids=[drawer_id], metadatas=[meta])  # type: ignore[arg-type]
+                self._enforce_wing_cap(col, wing)
+                return drawer_id
+        # 4) Distinct content → normal insert.
+        meta = _build_drawer_metadata(
+            wing,
+            room,
+            source_file,
+            chunk_index,
+            agent,
+            content,
+            source_mtime,
+            chunk_total=chunk_total,
+            importance=importance,
+        )
         col.upsert(documents=[content], ids=[drawer_id], metadatas=[meta])  # type: ignore[arg-type]
+        self._enforce_wing_cap(col, wing)
         return drawer_id
+
+    @staticmethod
+    def _mark_superseded(col: BaseCollection, old_id: str, new_id: str, now_iso: str) -> bool:
+        """Stamp valid_to/superseded_by on a live drawer; False when absent."""
+        try:
+            got = col.get(ids=[old_id], include=["metadatas"])
+        except Exception:
+            return False
+        if not got.ids:
+            return False
+        old_meta = got.metadatas[0] if got.metadatas else {}
+        if not isinstance(old_meta, dict):
+            old_meta = {}
+        if old_meta.get("valid_to"):
+            return False
+        old_meta = dict(old_meta)
+        old_meta["valid_to"] = now_iso
+        old_meta["superseded_by"] = new_id
+        try:
+            col.update(ids=[old_id], metadatas=[old_meta])
+        except Exception:
+            logger.debug("Supersede mark failed for %s", old_id, exc_info=True)
+            return False
+        return True
+
+    def _enforce_wing_cap(self, col: BaseCollection, wing: str) -> int:
+        """Evict lowest-ranked drawers past the per-wing cap (best-effort).
+
+        Superseded rows go first, then lowest ``score_meta``. Returns the
+        number of rows deleted. Cap <= 0 disables (legacy unbounded).
+        """
+        cap = self._max_entries_per_wing
+        if cap <= 0:
+            return 0
+        try:
+            got = col.get(where={"wing": wing}, include=["documents", "metadatas"], limit=cap + WING_EVICT_SCAN)
+        except Exception:
+            return 0
+        if len(got.ids) <= cap:
+            return 0
+        scored: list[tuple[bool, float, str]] = []
+        for rid, meta in zip(got.ids, got.metadatas):
+            m = meta if isinstance(meta, dict) else {}
+            scored.append((bool(m.get("valid_to")), score_meta(m, default_importance=1.0), rid))
+        # Superseded first (False sorts before True on `not superseded`),
+        # then ascending score — victims are the head past the cap.
+        scored.sort(key=lambda t: (not t[0], t[1]))
+        victims = [rid for _, _, rid in scored[: len(scored) - cap]]
+        evicted = 0
+        for i in range(0, len(victims), DRAWER_UPSERT_BATCH_SIZE):
+            try:
+                col.delete(ids=victims[i : i + DRAWER_UPSERT_BATCH_SIZE])
+                evicted += len(victims[i : i + DRAWER_UPSERT_BATCH_SIZE])
+            except Exception:
+                logger.debug("Wing-cap eviction failed for %s", wing, exc_info=True)
+                break
+        return evicted
+
+    def _kg_or_none(self) -> object | None:
+        """Palace-local KnowledgeGraph, or None when disabled/sentinel."""
+        if not self._auto_kg:
+            return None
+        from .graph import KnowledgeGraph
+
+        if self._kg_path is not None:
+            try:
+                return KnowledgeGraph(self._kg_path)
+            except Exception:
+                logger.debug("KG open failed for %s", self._kg_path, exc_info=True)
+                return None
+        if not self.palace_path or self.palace_path in ("memory-only",):
+            return None
+        try:
+            base = Path(self.palace_path)
+            kg_file = str(base if base.is_file() else base / "knowledge_graph.sqlite3")
+            return KnowledgeGraph(kg_file)
+        except Exception:
+            logger.debug("Palace-local KG open failed", exc_info=True)
+            return None
+
+    def _sync_file_episode(
+        self,
+        kg: object,
+        source_file: str,
+        content: str,
+        drawer_ids: list[str],
+    ) -> int:
+        """Link entity_detector output to the KG: one episode per file version.
+
+        Extracts candidates (>=3 mentions), diffs against the current episode
+        for ``source_file``; identical sets are a no-op (idempotent re-mine),
+        changed sets supersede the old episode via ``valid_to`` (never delete)
+        and open a new one with ``source_drawer_id`` provenance. Returns the
+        number of triples added. Never raises — KG must not break mining.
+        """
+        try:
+            from .entity_detector import extract_candidates
+
+            cands = extract_candidates(content)
+            names = sorted(cands)[:KG_ENTITY_LIMIT]
+            obj = Path(source_file).name
+            new_keys = {(name, "mentioned_in", obj) for name in names}
+            current = kg.triples_for_source(source_file, current_only=True)  # type: ignore[attr-defined]
+            cur_keys = {(t.get("subject"), t.get("predicate"), t.get("object")) for t in current}
+            if cur_keys == new_keys:
+                return 0
+            now_iso = datetime.now(UTC).isoformat()
+            kg.supersede_source(source_file, ended=now_iso)  # type: ignore[attr-defined]
+            added = 0
+            first_drawer = drawer_ids[0] if drawer_ids else None
+            for name in names:
+                kg.add_triple(  # type: ignore[attr-defined]
+                    name,
+                    "mentioned_in",
+                    obj,
+                    valid_from=now_iso,
+                    source_file=source_file,
+                    source_drawer_id=first_drawer,
+                    adapter_name="mine",
+                )
+                added += 1
+            return added
+        except Exception:
+            logger.debug("KG episode sync failed for %s", source_file, exc_info=True)
+            return 0
 
     def mine(
         self,
@@ -811,52 +1183,116 @@ class DxrkMemory:
         total_drawers = 0
         files_mined = 0
         files_skipped = 0
-        for fp in files:
-            source_file = str(fp)
-            # Use O_NONBLOCK safe read that returns same-fstat mtime (db29959 + #22)
-            read_result = _read_text_no_follow_palace(fp, project_path)
-            if read_result is None:
-                files_skipped += 1
-                continue
-            content, source_mtime = read_result
-            content = content.strip()
-            if len(content) < MIN_CHUNK_SIZE:
-                files_skipped += 1
-                continue
-            chunks = chunk_text(
-                content, source_file, chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP, min_chunk_size=MIN_CHUNK_SIZE
-            )
-            if not chunks:
-                files_skipped += 1
-                continue
-            if dry_run:
-                total_drawers += len(chunks)
-                files_mined += 1
-                continue
-            # Per-file lock (tenant-aware)
-            with mine_lock(source_file, tenant_id=self.tenant_id or None):
-                # Purge stale drawers before re-inserting fresh chunks.
-                # If purge fails, abort this file and let next mine retry
-                # (leaves old mtime untouched so freshness check stays honest).
-                try:
-                    col.delete(where={"source_file": source_file})
-                except Exception as exc:
-                    print(f"  ! [skip] {fp.name} stale-drawer purge failed ({exc!r})", file=sys.stderr)
-                    logger.debug("Stale-drawer purge failed for %s", source_file, exc_info=True)
+        drawers_deduped = 0
+        drawers_superseded = 0
+        kg_triples = 0
+        kg = None if dry_run else self._kg_or_none()
+        try:
+            for fp in files:
+                source_file = str(fp)
+                # Use O_NONBLOCK safe read that returns same-fstat mtime (db29959 + #22)
+                read_result = _read_text_no_follow_palace(fp, project_path)
+                if read_result is None:
                     files_skipped += 1
                     continue
-                chunk_total = len(chunks)
-                drawers_added = 0
-                try:
-                    for batch_start in range(0, len(chunks), DRAWER_UPSERT_BATCH_SIZE):
-                        batch_docs: list[str] = []
-                        batch_ids: list[str] = []
-                        batch_metas: list[dict[str, object]] = []
-                        for chunk in chunks[batch_start : batch_start + DRAWER_UPSERT_BATCH_SIZE]:
+                content, source_mtime = read_result
+                content = content.strip()
+                if len(content) < MIN_CHUNK_SIZE:
+                    files_skipped += 1
+                    continue
+                chunks = chunk_text(
+                    content,
+                    source_file,
+                    chunk_size=CHUNK_SIZE,
+                    chunk_overlap=CHUNK_OVERLAP,
+                    min_chunk_size=MIN_CHUNK_SIZE,
+                )
+                if not chunks:
+                    files_skipped += 1
+                    continue
+                if dry_run:
+                    total_drawers += len(chunks)
+                    files_mined += 1
+                    continue
+                # Per-file lock (tenant-aware)
+                with mine_lock(source_file, tenant_id=self.tenant_id or None):
+                    # Wing snapshot BEFORE the purge: other files' drawers inform
+                    # the Phase 2 lifecycle scan (same source_file excluded —
+                    # its stale rows are about to be replaced wholesale).
+                    snapshot = [
+                        e
+                        for e in _wing_snapshot(col, wing)
+                        if str(cast(dict[str, object], e.get("meta", {})).get("source_file")) != source_file
+                    ]
+                    # Purge stale drawers before re-inserting fresh chunks.
+                    # If purge fails, abort this file and let next mine retry
+                    # (leaves old mtime untouched so freshness check stays honest).
+                    try:
+                        col.delete(where={"source_file": source_file})
+                    except Exception as exc:
+                        print(f"  ! [skip] {fp.name} stale-drawer purge failed ({exc!r})", file=sys.stderr)
+                        logger.debug("Stale-drawer purge failed for %s", source_file, exc_info=True)
+                        files_skipped += 1
+                        continue
+                    chunk_total = len(chunks)
+                    now_iso = datetime.now(UTC).isoformat()
+                    # Phase 2 partition: dedupe hits update the existing drawer
+                    # (no divergent copy), contradictions supersede it, the rest
+                    # inserts fresh. `running` is frozen to OTHER files' rows:
+                    # chunks of the same file are positional slices and must
+                    # never collapse onto each other.
+                    running = list(snapshot)
+                    batch_docs: list[str] = []
+                    batch_ids: list[str] = []
+                    batch_metas: list[dict[str, object]] = []
+                    supersede_marks: list[tuple[str, str]] = []  # (old_id, new_id) for rollback
+                    file_drawer_ids: list[str] = []
+                    try:
+                        for chunk in chunks:
                             _ci = chunk.get("chunk_index", 0)
                             ci = int(_ci) if isinstance(_ci, int) else int(str(_ci))  # type: ignore[arg-type]
                             drawer_id = DrawerRecord.make_id(wing, room, source_file, ci)
-                            batch_docs.append(str(chunk["content"]))
+                            text = str(chunk["content"])
+                            best, _sim = _best_lifecycle_candidate(running, text, exclude_ids={drawer_id})
+                            if best is not None:
+                                verdict = classify_content_pair(text, str(best.get("doc", "")))
+                                if verdict == "duplicate":
+                                    old_id = str(best.get("id", ""))
+                                    old_meta = dict(cast(dict[str, object], best.get("meta") or {}))
+                                    old_meta["last_seen"] = now_iso
+                                    try:
+                                        old_meta["seen_count"] = int(cast(Any, old_meta.get("seen_count", 0))) + 1
+                                    except (TypeError, ValueError):
+                                        old_meta["seen_count"] = 1
+                                    try:
+                                        col.update(ids=[old_id], metadatas=[old_meta])
+                                    except Exception:
+                                        logger.debug("Mine dedupe touch failed for %s", old_id, exc_info=True)
+                                    drawers_deduped += 1
+                                    continue
+                                if verdict == "contradiction":
+                                    old_id = str(best.get("id", ""))
+                                    if self._mark_superseded(col, old_id, drawer_id, now_iso):
+                                        supersede_marks.append((old_id, drawer_id))
+                                    batch_docs.append(text)
+                                    batch_ids.append(drawer_id)
+                                    batch_metas.append(
+                                        _build_drawer_metadata(
+                                            wing,
+                                            room,
+                                            source_file,
+                                            ci,
+                                            agent,
+                                            text,
+                                            source_mtime,
+                                            chunk_total=chunk_total,
+                                            supersedes=old_id,
+                                        )
+                                    )
+                                    drawers_superseded += 1
+                                    file_drawer_ids.append(drawer_id)
+                                    continue
+                            batch_docs.append(text)
                             batch_ids.append(drawer_id)
                             batch_metas.append(
                                 _build_drawer_metadata(
@@ -865,37 +1301,75 @@ class DxrkMemory:
                                     source_file,
                                     ci,
                                     agent,
-                                    str(chunk["content"]),
+                                    text,
                                     source_mtime,
                                     chunk_total=chunk_total,
                                 )
                             )
-                        col.upsert(documents=batch_docs, ids=batch_ids, metadatas=batch_metas)  # type: ignore[arg-type]
-                        drawers_added += len(batch_docs)
-                except Exception:
-                    # Clean partial drawers so next mine retries honestly.
-                    # Source lock prevents deleting another miner's work.
-                    try:
-                        col.delete(where={"source_file": source_file})
+                            file_drawer_ids.append(drawer_id)
+                        drawers_added = 0
+                        for batch_start in range(0, len(batch_docs), DRAWER_UPSERT_BATCH_SIZE):
+                            col.upsert(
+                                documents=batch_docs[batch_start : batch_start + DRAWER_UPSERT_BATCH_SIZE],
+                                ids=batch_ids[batch_start : batch_start + DRAWER_UPSERT_BATCH_SIZE],
+                                metadatas=batch_metas[batch_start : batch_start + DRAWER_UPSERT_BATCH_SIZE],  # type: ignore[arg-type]
+                            )
+                            drawers_added += len(batch_docs[batch_start : batch_start + DRAWER_UPSERT_BATCH_SIZE])
                     except Exception:
-                        logger.warning(
-                            "Failed to clean partial drawers after upsert error for %s", source_file, exc_info=True
-                        )
+                        # Clean partial drawers so next mine retries honestly.
+                        # Source lock prevents deleting another miner's work.
+                        # Best-effort rollback of supersede marks we set: those
+                        # old rows stay live (their replacement never landed).
+                        for old_id, new_id in supersede_marks:
+                            try:
+                                got = col.get(ids=[old_id], include=["metadatas"])
+                                if got.ids:
+                                    m = dict(got.metadatas[0] or {})
+                                    if m.get("superseded_by") == new_id:
+                                        m.pop("valid_to", None)
+                                        m.pop("superseded_by", None)
+                                        col.update(ids=[old_id], metadatas=[m])
+                            except Exception:
+                                logger.debug("Supersede rollback failed for %s", old_id, exc_info=True)
+                        try:
+                            col.delete(where={"source_file": source_file})
+                        except Exception:
+                            logger.warning(
+                                "Failed to clean partial drawers after upsert error for %s", source_file, exc_info=True
+                            )
+                        if closets_col is not None:
+                            try:
+                                closets_col.delete(where={"source_file": source_file})
+                            except Exception:
+                                logger.warning("Failed to clean partial closets for %s", source_file, exc_info=True)
+                        raise
+                    # Closet purge unconditional — old pointers already deleted
                     if closets_col is not None:
                         try:
                             closets_col.delete(where={"source_file": source_file})
                         except Exception:
-                            logger.warning("Failed to clean partial closets for %s", source_file, exc_info=True)
-                    raise
-                # Closet purge unconditional — old pointers already deleted
-                if closets_col is not None:
-                    try:
-                        closets_col.delete(where={"source_file": source_file})
-                    except Exception:
-                        pass
-                total_drawers += drawers_added
-                files_mined += 1
-        return {"files_mined": files_mined, "files_skipped": files_skipped, "drawers_added": total_drawers}
+                            pass
+                    # Phase 2 C: KG episode sync — one episode per file version.
+                    if kg is not None:
+                        kg_triples += self._sync_file_episode(kg, source_file, content, file_drawer_ids)
+                    total_drawers += drawers_added
+                    files_mined += 1
+            if not dry_run:
+                self._enforce_wing_cap(col, wing)
+            return {
+                "files_mined": files_mined,
+                "files_skipped": files_skipped,
+                "drawers_added": total_drawers,
+                "drawers_deduped": drawers_deduped,
+                "drawers_superseded": drawers_superseded,
+                "kg_triples": kg_triples,
+            }
+        finally:
+            if kg is not None:
+                try:
+                    kg.close()  # type: ignore[attr-defined]
+                except Exception:
+                    pass
 
     def search(
         self,
@@ -918,7 +1392,20 @@ class DxrkMemory:
         res = col.get(ids=[drawer_id], include=["documents", "metadatas"])
         if not res.ids:
             return None
-        return {"id": res.ids[0], "document": res.documents[0], "metadata": res.metadatas[0]}
+        meta = dict(res.metadatas[0] or {}) if isinstance(res.metadatas[0], dict) else {}
+        # Phase 2: access tracking feeds decay-aware ranking (B). Superseded
+        # rows are readable history but do not accrue access counts.
+        if not meta.get("valid_to"):
+            try:
+                meta["access_count"] = int(cast(Any, meta.get("access_count", 0))) + 1
+            except (TypeError, ValueError):
+                meta["access_count"] = 1
+            meta["accessed_at"] = datetime.now(UTC).isoformat()
+            try:
+                col.update(ids=[drawer_id], metadatas=[meta])
+            except Exception:
+                logger.debug("Drawer access bump failed for %s", drawer_id, exc_info=True)
+        return {"id": res.ids[0], "document": res.documents[0], "metadata": meta}
 
     def list_rooms(self, wing: str | None = None) -> list[str]:
         col = self._collection(create=False)

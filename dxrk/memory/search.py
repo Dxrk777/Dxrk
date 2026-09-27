@@ -79,6 +79,8 @@ def _hybrid_rank(
 ) -> list[dict[str, object]]:
     if not results:
         return results
+    from .scoring import decay_factor
+
     docs = [str(r.get("text", "")) for r in results]
     bm25_raw = _bm25_scores(query, docs)
     max_b = max(bm25_raw) if bm25_raw else 0.0
@@ -94,7 +96,11 @@ def _hybrid_rank(
             except (TypeError, ValueError):
                 vec_sim = 0.0
         r["bm25_score"] = round(raw, 3)
-        scored.append((vector_weight * vec_sim + bm25_weight * norm, r))
+        base = vector_weight * vec_sim + bm25_weight * norm
+        # Phase 2 decay nudge: stale hits (old created_at) sink up to 30%.
+        # Missing created_at is neutral (factor 1.0) — legacy order preserved.
+        freshness = 0.7 + 0.3 * decay_factor(r.get("created_at"))
+        scored.append((base * freshness, r))
     scored.sort(key=lambda p: p[0], reverse=True)
     results[:] = [r for _, r in scored]
     return results
@@ -198,6 +204,11 @@ def hybrid_search(
         meta = meta or {}
         if not isinstance(meta, dict):
             meta = {}
+        # Phase 2 contradiction lifecycle: superseded drawers (valid_to set)
+        # stay on disk for history but never rank — the drawer carrying
+        # `supersedes` is the current version.
+        if meta.get("valid_to"):
+            continue
         # Date window is a post-filter: Chroma string metadata can't be range-filtered
         # server-side, and excluding here keeps the design requirement of recall
         # (widened pool) + precise Python wall-clock check.

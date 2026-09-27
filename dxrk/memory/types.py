@@ -59,8 +59,19 @@ class MemoryStats:
 
 
 def top_by_importance(entries: list[MemoryEntry], limit: int) -> list[MemoryEntry]:
-    """Return top-N entries sorted by importance descending."""
-    return sorted(entries, key=lambda e: e.importance, reverse=True)[:limit]
+    """Return top-N entries sorted by decay-aware rank descending.
+
+    Phase 2: ranks by ``scoring.rank_score`` (importance + access frequency +
+    filed_at/accessed_at half-life) instead of raw importance, so frequently
+    retrieved entries outrank stale ones on importance ties. Entries carrying
+    only ``importance`` score exactly ``importance`` — legacy order preserved.
+    """
+    from .scoring import rank_score
+
+    def _key(e: MemoryEntry) -> float:
+        return rank_score(e.importance, e.access_count, e.created_at or None, e.accessed_at or None)
+
+    return sorted(entries, key=_key, reverse=True)[:limit]
 
 
 @dataclass(frozen=True, slots=True)

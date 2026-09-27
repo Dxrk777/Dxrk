@@ -286,6 +286,56 @@ class KnowledgeGraph:
                     (ended, sub_id, pred, obj_id),
                 )
 
+    def triples_for_source(self, source_file: str, current_only: bool = True) -> list[dict[str, object]]:
+        """All triples mined from ``source_file`` (Phase 2 episode provenance).
+
+        Powers re-mine episode comparison: the caller diffs the current
+        episode against freshly extracted entities and only opens a new
+        episode when the set actually changed.
+        """
+        q = (
+            "SELECT t.*, s.name as sub_name, o.name as obj_name FROM triples t "
+            "JOIN entities s ON t.subject=s.id JOIN entities o ON t.object=o.id "
+            "WHERE t.source_file=?"
+        )
+        if current_only:
+            q += " AND t.valid_to IS NULL"
+        q += " ORDER BY t.extracted_at ASC"
+        with self._lock:
+            conn = self._conn_or_create()
+            rows = conn.execute(q, [source_file]).fetchall()
+        return [
+            {
+                "id": r["id"],
+                "subject": r["sub_name"],
+                "predicate": r["predicate"],
+                "object": r["obj_name"],
+                "valid_from": r["valid_from"],
+                "valid_to": r["valid_to"],
+                "confidence": r["confidence"],
+                "source_file": r["source_file"],
+                "source_drawer_id": r["source_drawer_id"],
+                "current": r["valid_to"] is None,
+            }
+            for r in rows
+        ]
+
+    def supersede_source(self, source_file: str, ended: str | None = None) -> int:
+        """End the current episode for ``source_file`` (set valid_to, keep rows).
+
+        Returns the number of triples superseded. Never deletes — history
+        stays queryable via ``as_of``. Raises ValueError on bad ``ended``.
+        """
+        ended = _sanitize_iso(ended or datetime.now(UTC).isoformat(), "ended")
+        with self._lock:
+            conn = self._conn_or_create()
+            with conn:
+                cur = conn.execute(
+                    "UPDATE triples SET valid_to=? WHERE source_file=? AND valid_to IS NULL",
+                    (ended, source_file),
+                )
+                return cur.rowcount if cur.rowcount is not None and cur.rowcount >= 0 else 0
+
     def query_entity(self, name: str, as_of: str | None = None, direction: str = "outgoing") -> list[dict[str, object]]:
         as_of = _sanitize_iso(as_of, "as_of") if as_of else None  # type: ignore[assignment]
         eid = self._eid(name)

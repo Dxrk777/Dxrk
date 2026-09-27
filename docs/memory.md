@@ -210,6 +210,22 @@ Más en [MIGRATION_3.3.5_3.7.1.md](MIGRATION_3.3.5_3.7.1.md) y `docs/architectur
 
 ---
 
+## Ciclo de vida Phase 2 — distill/dedupe, decay, episodios KG, contradicción
+
+Heurístico, stdlib-only, determinista (sin LLM). Una fórmula de scoring
+(`dxrk/memory/scoring.py:rank_score`) en todos lados: `top_by_importance`,
+`Layer1`, ranker fusionado sqlite (`COS 0.6 + BM25 0.3 + recency 0.05 +
+importance 0.05 + access 0.03`), rerank híbrido (`_hybrid_rank` × frescura).
+
+| Pieza | Regla |
+|-------|-------|
+| Dedupe (A) | `add_drawer`/`mine` colapsan near-duplicates del mismo wing (coseno ≥ 0.85 + overlap ≥ 0.7 o contenencia): update del drawer existente (`last_seen`/`seen_count`), sin copias divergentes |
+| Decay (B) | `(importance + 0.5·log1p(access)) × half-life(filed_at, 180d) × acceso(30d)`; `get_drawer` suma `access_count`/`accessed_at`; cap por wing `DEFAULT_MAX_ENTRIES_PER_WING = 1000` (0 = legacy sin cota) |
+| Episodios KG (C) | `mine` extrae `entity_detector` → `add_triple` con `source_drawer_id`; re-mine idéntico = no-op; cambiado = `supersede_source` (`valid_to`, jamás delete). KG palace-local: `<palace>/knowledge_graph.sqlite3` |
+| Contradicción (D) | vectores similares + texto distinto (overlap < 0.5) o señal explícita `supersedes=`: viejo `valid_to` + `superseded_by`, nuevo `supersedes`; superseded nunca rankea (`hybrid_search`, L1, L2) |
+
+---
+
 ## Relación con Autonomy y RAG — ver [ADR-002](adr/ADR-002-memory-separation.md)
 
 > **Decisión: AISLAR** — `dxrk/memory` (DxrkMemory), `dxrk/autonomy/learner` y `dxrk/rag` son **3 sistemas aislados** con contratos y persistencias distintas.

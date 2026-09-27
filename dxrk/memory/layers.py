@@ -7,9 +7,11 @@ import os
 import pathlib
 from collections import defaultdict
 from pathlib import Path
+from typing import Any, cast
 
 from .backend.base import BaseCollection
 from .palace import Palace
+from .scoring import rank_score
 
 # Limits
 MAX_SCAN = 2000
@@ -158,6 +160,10 @@ class Layer1:
                 meta = {}
             if effective_wing and str(meta.get("wing") or "") != effective_wing:
                 continue
+            # Phase 2: superseded drawers never surface — the `supersedes`
+            # drawer is the current version (mirrors hybrid_search filter).
+            if meta.get("valid_to"):
+                continue
             doc = doc or ""
             imp = 3.0
             for key in ("importance", "emotional_weight", "weight"):
@@ -168,7 +174,13 @@ class Layer1:
                     except (ValueError, TypeError):
                         pass
                     break
-            scored.append((imp, meta, doc))
+            try:
+                acc_raw = meta.get("access_count", 0)
+                accesses = int(cast(Any, acc_raw)) if acc_raw is not None else 0
+            except (TypeError, ValueError):
+                accesses = 0
+            score = rank_score(imp, accesses, meta.get("filed_at"), meta.get("accessed_at"))
+            scored.append((score, meta, doc))
         scored.sort(key=lambda x: x[0], reverse=True)
         if effective_wing and not scored:
             return f"## L1 — No memories yet for wing={effective_wing}."
@@ -236,12 +248,22 @@ class Layer2:
             if room:
                 label += f" room={room}" if label else f"room={room}"
             return f"No drawers found for {label}."
-        lines = [f"## L2 — ON-DEMAND ({len(docs)} drawers)"]
+        # Phase 2: drop superseded drawers (valid_to set) — history only.
+        kept: list[tuple[str, dict[str, object]]] = []
         for doc, meta in zip(docs[:n_results], metas[:n_results]):
             meta = meta or {}
             if not isinstance(meta, dict):
                 meta = {}
-            doc = doc or ""
+            if meta.get("valid_to"):
+                continue
+            kept.append((doc or "", meta))
+        if not kept:
+            label = f"wing={wing}" if wing else ""
+            if room:
+                label += f" room={room}" if label else f"room={room}"
+            return f"No drawers found for {label}."
+        lines = [f"## L2 — ON-DEMAND ({len(kept)} drawers)"]
+        for doc, meta in kept:
             room_name = str(meta.get("room", "?"))
             src = meta.get("source_file", "")
             src_name = Path(str(src)).name if isinstance(src, str) and src else ""

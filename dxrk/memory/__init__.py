@@ -106,7 +106,12 @@ def _is_sqlite_path(path: str | Path | None) -> bool:
 
 
 def top_by_importance(entries: list[MemoryEntry], limit: int) -> list[MemoryEntry]:
-    return sorted(entries, key=lambda e: e.importance, reverse=True)[:limit]
+    from .scoring import rank_score
+
+    def _key(e: MemoryEntry) -> float:
+        return rank_score(e.importance, e.access_count, e.created_at or None, e.accessed_at or None)
+
+    return sorted(entries, key=_key, reverse=True)[:limit]
 
 
 # Light relevance floor on the fused similarity (1 - distance) returned by
@@ -777,6 +782,7 @@ try:
     from .miner import GitignoreMatcher, scan_project  # noqa: F401
     from .miner import chunk_text as palace_chunk_text
     from .palace import DxrkMemory, DxrkPalace, Palace, reap_stale_dxrk_locks, reap_stale_mine_locks  # noqa: F401
+    from .scoring import decay_factor, rank_score, score_meta  # noqa: F401
     from .search import hybrid_search, sanitize_query  # noqa: F401
 except Exception:
     pass

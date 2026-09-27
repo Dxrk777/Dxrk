@@ -1065,11 +1065,28 @@ class TestLayers:
         ident.write_text("Identity " * 25)
         dm = DxrkMemory(str(pal))
         dm.init()
-        # Add enough drawers to reach ~500+ chars L1
+        # Add enough drawers to reach ~500+ chars L1. Contents must be
+        # genuinely distinct: Phase 2 write-time dedupe collapses
+        # near-identical drawers (same information, divergent copies).
+        topics = [
+            "harbour master logged seventeen container ships before the tide",
+            "sourdough starter needs daily rye flour and lukewarm spring water",
+            "quantum error correction spreads logical qubits over lattices",
+            "medieval cartographers drew sea serpents past the known coast",
+            "lighthouse keeper polished the fresnel lens before the storm",
+            "aurora borealis shimmered while reindeer crossed the frozen lake",
+            "orchard grafting season starts when the sap begins to rise",
+            "night train crossed the border while passengers slept soundly",
+            "beekeeper harvested late honey after the heather bloom faded",
+            "cartographer surveyed the estuary with brass triangulation tools",
+            "watchmaker regulated the escapement under magnification lamps",
+            "glacier melt carved new channels through the moraine valley",
+            "bookbinder stitched signatures with linen thread and bone folders",
+            "falconer flew the goshawk over stubbled autumn fields",
+            "lockkeeper opened the lower gates for the narrowboat convoy",
+        ]
         for i in range(15):
-            dm.add_drawer(
-                "w", f"room{i % 3}", ("content about project meeting deadline " * 10) + str(i), f"/file{i}.md", 0
-            )
+            dm.add_drawer("w", f"room{i % 3}", (topics[i] + " ") * 8 + f"note-{i}", f"/file{i}.md", 0)
         ms = MemoryStack(palace_path=str(pal), identity_path=str(ident))
         wake = ms.wake_up()
         assert "Identity" in wake

@@ -127,6 +127,11 @@ TOOLS: dict[str, dict[str, Any]] = {
                 "source_file": {"type": "string"},
                 "chunk_index": {"type": "integer", "default": 0},
                 "palace": {"type": "string"},
+                "supersedes": {
+                    "type": "string",
+                    "description": "Drawer id this version replaces (old row kept with valid_to)",
+                },
+                "importance": {"type": "number", "description": "Explicit importance for decay-aware ranking"},
             },
             "required": ["wing", "room", "content", "source_file"],
         },
@@ -316,12 +321,21 @@ def _handle_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
 
         if name == "dxrk_memory_add_drawer":
             dm = _get_memory(palace_path)
+            add_kwargs: dict[str, Any] = {}
+            if args.get("supersedes") is not None:
+                add_kwargs["supersedes"] = str(args.get("supersedes"))
+            if args.get("importance") is not None:
+                try:
+                    add_kwargs["importance"] = float(args.get("importance"))  # type: ignore[arg-type]
+                except (TypeError, ValueError):
+                    pass
             did = dm.add_drawer(
                 wing=str(args.get("wing", "default")),
                 room=str(args.get("room", "general")),
                 content=str(args.get("content", "")),
                 source_file=str(args.get("source_file", "")),
                 chunk_index=int(args.get("chunk_index", 0)),
+                **add_kwargs,  # type: ignore[arg-type]
             )
             return {"drawer_id": did, "palace_path": palace_path}
 

@@ -19,7 +19,7 @@ import sqlite3
 import threading
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import ClassVar, cast
+from typing import Any, ClassVar, cast
 
 from ..vectors import DIM as _VEC_DIM
 from ..vectors import (
@@ -156,12 +156,18 @@ def _where_to_sql(where: dict[str, object] | None) -> tuple[str, list[object]]:
     return "", []
 
 
-# Fusion weights for hybrid score = COS_W*cos + BM25_W*bm25n + REC_W*recency.
-# Cosine dominates so vocabulary-mismatch queries still recall; BM25 keeps
-# exact matches on top; recency is a small tie-breaker only.
+# Fusion weights for hybrid score = COS_W*cos + BM25_W*bm25n + REC_W*recency
+# + IMP_W*importance + ACC_W*access. Cosine dominates so vocabulary-mismatch
+# queries still recall; BM25 keeps exact matches on top; recency is a small
+# tie-breaker only. Importance/access (Phase 2 decay-aware scoring) are
+# deliberately small nudges — they re-order near-ties, never bury relevance.
 COS_W = 0.6
 BM25_W = 0.3
 REC_W = 0.05
+IMP_W = 0.05
+ACC_W = 0.03
+# Importance saturates at 5.0 (Layer1 default is 3.0); access saturates at
+# ~20 reads via log1p — both normalized to [0, 1] before weighting.
 # Candidate pool bounds: FTS hits union recent rows so vector similarity can
 # surface docs with zero lexical overlap.
 _FTS_CANDIDATE_MULT = 5
@@ -662,11 +668,17 @@ class SqliteCollection(BaseCollection):
         qtext: str,
         qemb: list[float] | None,
     ) -> list[tuple[tuple[str, str, str, int], float]]:
-        """Fused rank: COS_W*cosine + BM25_W*bm25norm + REC_W*recency.
+        """Fused rank: COS_W*cosine + BM25_W*bm25norm + REC_W*recency + IMP/ACC.
+
+        Importance and access_count (Phase 2 scoring) enter normalized to
+        [0, 1] with small weights — near-tie nudges only. Metas without
+        those keys score 0.0 there, i.e. legacy behavior unchanged.
 
         Returns (row, distance) with distance = 1 - fused in [0, 1],
         sorted best-first.
         """
+        import math as _math
+
         docs = [r[1] or "" for r in pool]
         metas = [_parse_meta(r[2]) for r in pool]
         if qtext.strip():
@@ -685,7 +697,29 @@ class SqliteCollection(BaseCollection):
         else:
             cos = [0.0] * len(pool)
         rec = [_recency(m) for m in metas]
-        fused = [COS_W * c + BM25_W * b + REC_W * r for c, b, r in zip(cos, bm25_norm, rec)]
+        impn: list[float] = []
+        accn: list[float] = []
+        for m in metas:
+            imp_raw: object = None
+            for key in ("importance", "emotional_weight", "weight"):
+                if m.get(key) is not None:
+                    imp_raw = m.get(key)
+                    break
+            try:
+                impn.append(min(1.0, max(0.0, float(imp_raw))))  # type: ignore[arg-type]
+            except (TypeError, ValueError):
+                impn.append(0.0)
+            try:
+                acc_raw = m.get("access_count", 0)
+                accn.append(min(1.0, _math.log1p(max(0, int(cast(Any, acc_raw))))) / _math.log1p(20))
+            except (TypeError, ValueError):
+                accn.append(0.0)
+        # importance saturates at 5.0 (Layer1 default 3.0 -> 0.6)
+        impn = [min(1.0, v / 5.0) for v in impn]
+        fused = [
+            COS_W * c + BM25_W * b + REC_W * r + IMP_W * i + ACC_W * a
+            for c, b, r, i, a in zip(cos, bm25_norm, rec, impn, accn)
+        ]
         order = sorted(range(len(pool)), key=lambda i: fused[i], reverse=True)
         out: list[tuple[tuple[str, str, str, int], float]] = []
         for i in order:
