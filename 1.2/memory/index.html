@@ -683,6 +683,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#ciclo-de-vida-phase-3-consolidateforgetpin-budgets-timeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ciclo de vida Phase 3 — consolidate/forget/pin, budgets, timeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ciclo-de-vida-phase-2-distilldedupe-decay-episodios-kg-contradiccion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ciclo de vida Phase 2 — distill/dedupe, decay, episodios KG, contradicción
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#relacion-con-autonomy-y-rag-ver-adr-002" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1503,6 +1525,77 @@ grep<span class="w"> </span>-rn<span class="w"> </span><span class="s2">&quot;en
 grep<span class="w"> </span>-rn<span class="w"> </span><span class="s2">&quot;engram\|mempal&quot;</span><span class="w"> </span>--include<span class="o">=</span><span class="s2">&quot;*.py&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>wc<span class="w"> </span>-l<span class="w">                </span><span class="c1"># 0 global</span>
 </code></pre></div>
 <p>Más en <a href="../MIGRATION_3.3.5_3.7.1/">MIGRATION_3.3.5_3.7.1.md</a> y <code>docs/architecture.md</code>.</p>
+<hr />
+<h2 id="ciclo-de-vida-phase-3-consolidateforgetpin-budgets-timeline">Ciclo de vida Phase 3 — consolidate/forget/pin, budgets, timeline</h2>
+<p>Agentic memory management sobre el mismo modelo supersede (stdlib-only,
+determinista, sin LLM). MCP expone 4 herramientas nuevas (<code>dxrk_memory_*</code>,
+writes con gate RBAC <code>mine</code>): <code>consolidate</code>, <code>forget</code>, <code>pin</code> (writes) y
+<code>timeline</code> (read).</p>
+<table>
+<thead>
+<tr>
+<th>Pieza</th>
+<th>Regla</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Consolidate</td>
+<td><code>consolidate_drawers(ids≥2)</code> — destilación extractiva: pool de fuentes → frases (split <code>[.!?]</code>), score TF + bonus de señal (decisión/obligación/hechos) + preferencia 8–45 palabras, colapso de near-idénticas (overlap ≥ 0.9), tope <code>MAX_CONSOLIDATED_CHARS=2000</code> / 12 frases. Nueva drawer <code>consolidated:&lt;sha12&gt;</code> con <code>supersedes</code> (primera fuente) + <code>consolidated_from</code> (todas); cada fuente <code>valid_to</code> + <code>superseded_by</code>. Bypass de <code>add_drawer</code> a propósito (el destilado suele estar contenido en una fuente y dedupe lo colapsaría); cap enforced tras insert</td>
+</tr>
+<tr>
+<td>Forget</td>
+<td><code>forget(drawer_ids?, wing?, room?, before?, hard=False, include_kg=False)</code> — soft por defecto: <code>valid_to</code> + <code>forgotten</code> (legible vía <code>get</code>, invisible en search/L1/L2 como superseded). <code>hard=True</code> borra filas. KG <strong>jamás</strong> se borra: <code>include_kg=True</code> solo supersede (<code>valid_to</code>) episodios de los <code>source_file</code> matcheados. <code>before</code> = <code>filed_at</code> estrictamente anterior (filas sin fecha nunca matchean). Sin scope → <code>ValueError</code></td>
+</tr>
+<tr>
+<td>Pin</td>
+<td><code>pin_drawer</code> (<code>pinned</code> + <code>pinned_at</code>; upsert-replace porque <code>update()</code> mergea y resucitaría claves) — exento de eviction (<code>_enforce_wing_cap</code> salta pinned; si solo quedan pinned over-cap, no se borra nada) y primero en L1/<code>wake_up</code> (pinned ordenados por score, luego resto hasta <code>MAX_DRAWERS</code>). <code>pin_identity</code> registra el bloque L0 en sidecar <code>&lt;palace&gt;/pins.json</code> (L0 ya renderiza siempre, inmune por construcción)</td>
+</tr>
+<tr>
+<td>Budgets</td>
+<td><code>wing_usage(wing)</code> → <code>{count, budget, remaining, over, unbounded, pinned, superseded, forgotten, truncated}</code>; <code>budgets()</code> agrupa todas en un scan acotado (<code>STATUS_SCAN_LIMIT=10000</code>). <code>dxrk_memory_status</code> incluye <code>budgets</code>. Write paths con cap: <code>add_drawer</code>, <code>mine</code>, <code>consolidate</code> y <code>update_drawer</code> (MCP, sobre wing destino). Orden de eviction: superseded/olvidados primero, luego menor <code>score_meta</code>, pinned nunca</td>
+</tr>
+<tr>
+<td>Timeline</td>
+<td><code>timeline(since?, before?, wing?, limit→50, max 200)</code> → <code>[{time, kind, summary≤160, ref, wing}]</code> cronológico ascendente: <code>session</code> (drawers <code>source_file=session:*</code> del hook_stop), <code>file</code> (episodios KG agrupados por <code>source_file+valid_from</code> vía <code>KnowledgeGraph.all_episodes</code>, con <code>wing</code> resuelto por <code>source_drawer_id</code> y flag <code>current</code>), <code>pin</code> (drawers pinned + pin L0). Ventana <code>[since, before)</code> wall-clock reutilizando <code>date_window</code></td>
+</tr>
+</tbody>
+</table>
+<p>Deliberadamente fuera: borrado físico de historia KG (ningún flag lo permite),
+re-ranking con boost de pinned en search (pin protege de <em>removal</em>, no de orden),
+agrupación de drawers minados en el timeline (los episodios KG son la vista file).</p>
+<hr />
+<h2 id="ciclo-de-vida-phase-2-distilldedupe-decay-episodios-kg-contradiccion">Ciclo de vida Phase 2 — distill/dedupe, decay, episodios KG, contradicción</h2>
+<p>Heurístico, stdlib-only, determinista (sin LLM). Una fórmula de scoring
+(<code>dxrk/memory/scoring.py:rank_score</code>) en todos lados: <code>top_by_importance</code>,
+<code>Layer1</code>, ranker fusionado sqlite (<code>COS 0.6 + BM25 0.3 + recency 0.05 +
+importance 0.05 + access 0.03</code>), rerank híbrido (<code>_hybrid_rank</code> × frescura).</p>
+<table>
+<thead>
+<tr>
+<th>Pieza</th>
+<th>Regla</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dedupe (A)</td>
+<td><code>add_drawer</code>/<code>mine</code> colapsan near-duplicates del mismo wing (coseno ≥ 0.85 + overlap ≥ 0.7 o contenencia): update del drawer existente (<code>last_seen</code>/<code>seen_count</code>), sin copias divergentes</td>
+</tr>
+<tr>
+<td>Decay (B)</td>
+<td><code>(importance + 0.5·log1p(access)) × half-life(filed_at, 180d) × acceso(30d)</code>; <code>get_drawer</code> suma <code>access_count</code>/<code>accessed_at</code>; cap por wing <code>DEFAULT_MAX_ENTRIES_PER_WING = 1000</code> (0 = legacy sin cota)</td>
+</tr>
+<tr>
+<td>Episodios KG (C)</td>
+<td><code>mine</code> extrae <code>entity_detector</code> → <code>add_triple</code> con <code>source_drawer_id</code>; re-mine idéntico = no-op; cambiado = <code>supersede_source</code> (<code>valid_to</code>, jamás delete). KG palace-local: <code>&lt;palace&gt;/knowledge_graph.sqlite3</code></td>
+</tr>
+<tr>
+<td>Contradicción (D)</td>
+<td>vectores similares + texto distinto (overlap &lt; 0.5) o señal explícita <code>supersedes=</code>: viejo <code>valid_to</code> + <code>superseded_by</code>, nuevo <code>supersedes</code>; superseded nunca rankea (<code>hybrid_search</code>, L1, L2)</td>
+</tr>
+</tbody>
+</table>
 <hr />
 <h2 id="relacion-con-autonomy-y-rag-ver-adr-002">Relación con Autonomy y RAG — ver <a href="../adr/ADR-002-memory-separation/">ADR-002</a></h2>
 <blockquote>
