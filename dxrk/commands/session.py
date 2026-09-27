@@ -1,5 +1,12 @@
 # SPDX-License-Identifier: MIT
-"""Session commands and storage helpers"""
+"""Session commands and storage helpers.
+
+Canonical persistence is :class:`dxrk.utils.session_storage.FileStorage`
+(single writer, single reader, single error type). ``~/.dxrk/sessions``
+files written by the legacy flat-file layout remain readable: every read
+goes through the store (which migrates registry versions lazily) and every
+write produces the canonical layout.
+"""
 
 from __future__ import annotations
 
@@ -11,12 +18,12 @@ from dxrk.utils.session import (
     Session,
     SessionOpts,
     SessionStatus,
-    export_json,
     import_json,
     new_session,
     now,
 )
-from dxrk.utils.session_storage import _atomic_write_text
+from dxrk.utils.session_model import SessionError
+from dxrk.utils.session_storage import FileStorage, _atomic_write_text
 
 from .registry import Command, CommandContext, Flag, Registry, go_duration, go_quote
 
@@ -24,8 +31,9 @@ SESSION_DIR_NAME = "sessions"
 QUARANTINE_DIR_NAME = ".quarantine"
 
 # Session ids are generated internally (hex/uuid); only these characters may
-# appear in a file name. Anything else skips the direct file lookup and goes
-# to prefix search, which only ever matches real session ids.
+# appear in a file name. The store layer enforces this
+# (``FileStorage._validate_session_id`` rejects path traversal); the pattern
+# is kept here to document the charset.
 _SESSION_ID_RE = re.compile(r"[A-Za-z0-9_-]+")
 
 _STATUS_NAMES: dict[int, str] = {
@@ -35,10 +43,6 @@ _STATUS_NAMES: dict[int, str] = {
     SessionStatus.Archived: "archived",
     SessionStatus.Expired: "expired",
 }
-
-
-class SessionError(Exception):
-    """Session storage error."""
 
 
 def session_dir() -> str:
@@ -52,6 +56,11 @@ def session_dir() -> str:
     except OSError as exc:
         raise SessionError(f"al crear el directorio de sesiones: {exc}") from exc
     return dir_path
+
+
+def _store() -> FileStorage:
+    """Returns the canonical store bound to the sessions directory."""
+    return FileStorage(session_dir())
 
 
 def _sort_key(s: Session) -> datetime:
@@ -90,32 +99,57 @@ def _quarantine_file(dir_path: str, name: str) -> bool:
 def list_session_files_with_quarantine() -> tuple[list[Session], int]:
     """Lists all sessions newest-first, quarantining unparseable ``.json`` files.
 
-    Returns ``(sessions, quarantined)`` where ``quarantined`` is the number of
-    corrupt files moved to ``.quarantine/``. Non-``.json`` names, directories
-    (including ``.quarantine/`` itself) and transiently unreadable files are
-    still skipped silently.
+    Every session is read through the canonical store (single reader:
+    migration registry and ``.gz`` fallback apply). Returns ``(sessions,
+    quarantined)`` where ``quarantined`` is the number of corrupt files
+    moved to ``.quarantine/``. Non-session names (``.index.json``, tmp
+    files, non-``.json`` names), directories (including ``.quarantine/``
+    itself) and transiently unreadable files are still skipped silently.
     """
     dir_path = session_dir()
+    store = FileStorage(dir_path)
     try:
         entries = os.listdir(dir_path)
     except OSError as exc:
         raise SessionError(f"al leer el directorio de sesiones: {exc}") from exc
     sessions: list[Session] = []
     quarantined = 0
+    seen: set[str] = set()
     for name in entries:
         full = os.path.join(dir_path, name)
-        if os.path.isdir(full) or not name.endswith(".json"):
+        if os.path.isdir(full):
             continue
-        try:
-            with open(full, encoding="utf-8") as f:
-                data = f.read()
-        except OSError:
+        if name in (".index.json",) or name.endswith(".tmp"):
             continue
+        if name.endswith(".json.gz"):
+            sid = name[: -len(".json.gz")]
+            if os.path.exists(os.path.join(dir_path, sid + ".json")):
+                continue  # the plain file wins; the store reads it first
+        elif name.endswith(".json"):
+            sid = name[: -len(".json")]
+        else:
+            continue
+        if not sid or sid in seen:
+            continue
+        seen.add(sid)
         try:
-            sessions.append(import_json(data))
-        except Exception:
-            if _quarantine_file(dir_path, name):
-                quarantined += 1
+            sessions.append(store.load(sid))
+        except SessionError:
+            # The store already tried ``.json`` then ``.gz``: nothing
+            # readable remains. Quarantine only a readable-but-corrupt
+            # plain file (legacy semantics); unreadable files are skipped
+            # silently as before.
+            plain = sid + ".json"
+            try:
+                with open(os.path.join(dir_path, plain), encoding="utf-8") as f:
+                    content = f.read()
+            except OSError:
+                continue
+            try:
+                import_json(content)
+            except Exception:
+                if _quarantine_file(dir_path, plain):
+                    quarantined += 1
             continue
     sessions.sort(key=_sort_key, reverse=True)
     return sessions, quarantined
@@ -132,7 +166,7 @@ def _write_private_file(path: str, data: str) -> None:
 
     Tmp file in the same directory + fsync + ``os.replace`` + best-effort
     dir fsync (see ``dxrk.utils.session_storage._atomic_write_text``), so a
-    crash can never leave a torn session file behind. The tmp file inherits
+    crash can never leave a torn file behind. The tmp file inherits
     mode 0o600 at creation (no world-readable window under a permissive
     umask); the follow-up chmod covers pre-existing files. Raises OSError.
     """
@@ -141,43 +175,53 @@ def _write_private_file(path: str, data: str) -> None:
 
 def load_session(session_id: str) -> Session:
     """Loads a single session by id or unique prefix."""
-    if _SESSION_ID_RE.fullmatch(session_id):
-        path = os.path.join(session_dir(), session_id + ".json")
-        try:
-            with open(path, encoding="utf-8") as f:
-                data = f.read()
-            try:
-                return import_json(data)
-            except Exception as exc:
-                raise SessionError(f"al decodificar la sesión: {exc}") from exc
-        except OSError:
-            pass
+    try:
+        return _store().load(session_id)
+    except SessionError:
+        pass
     found = _find_session(list_session_files(), session_id)
     if found is not None:
         return found
     raise SessionError(f"sesión {go_quote(session_id)} no encontrada")
 
 
+def save_session_strict(s: Session) -> None:
+    """Saves a session through the canonical store. Raises SessionError."""
+    _store().save(s)
+
+
 def save_session(s: Session) -> bool:
-    """Saves a session as JSON with 0600 permissions."""
+    """Saves a session as JSON with 0600 permissions.
+
+    Legacy bool shim at the CLI boundary: True on success, False when the
+    store raises. New code should use :func:`save_session_strict`.
+    """
     try:
-        data = export_json(s)
-    except Exception:
-        return False
-    path = os.path.join(session_dir(), s.id + ".json")
-    try:
-        _write_private_file(path, data)
-    except OSError:
+        save_session_strict(s)
+    except SessionError:
         return False
     return True
 
 
+def delete_session_strict(s: Session) -> None:
+    """Removes a session from the canonical store. Raises SessionError."""
+    store = _store()
+    if not store.exists(s.id):
+        raise SessionError(f"al eliminar la sesión {go_quote(s.id)}: no existe")
+    store.delete(s.id)
+    if store.exists(s.id):
+        raise SessionError(f"al eliminar la sesión {go_quote(s.id)}")
+
+
 def delete_session_file(s: Session) -> bool:
-    """Removes a session file from disk."""
-    path = os.path.join(session_dir(), s.id + ".json")
+    """Removes a session file from disk.
+
+    Legacy bool shim at the CLI boundary. New code should use
+    :func:`delete_session_strict`.
+    """
     try:
-        os.remove(path)
-    except OSError:
+        delete_session_strict(s)
+    except SessionError:
         return False
     return True
 
@@ -271,7 +315,9 @@ def session_create_cmd() -> Command:
                 working_dir=ctx.cwd,
             )
         )
-        if not save_session(s):
+        try:
+            save_session_strict(s)
+        except SessionError:
             ctx.err.write("Error: al guardar la sesión\n")
             return 1
         out.write(f"Sesión {s.id[:8]} creada — {s.title}\n")
@@ -300,7 +346,9 @@ def session_switch_cmd() -> Command:
             ctx.err.write(f"Error: sesión {go_quote(session_id)} no encontrada\n")
             return 1
         found.updated_at = now()
-        if not save_session(found):
+        try:
+            save_session_strict(found)
+        except SessionError:
             ctx.err.write("Error: al guardar la sesión\n")
             return 1
         out.write(f"Sesión {found.id[:8]} activada — {found.title}\n")
@@ -329,7 +377,9 @@ def session_delete_cmd() -> Command:
         if found is None:
             ctx.err.write(f"Error: sesión {go_quote(session_id)} no encontrada\n")
             return 1
-        if not delete_session_file(found):
+        try:
+            delete_session_strict(found)
+        except SessionError:
             ctx.err.write("Error: al eliminar la sesión\n")
             return 1
         out.write(f"Sesión {found.id[:8]} eliminada — {found.title}\n")

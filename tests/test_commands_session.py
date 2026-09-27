@@ -155,11 +155,17 @@ def test_load_session_by_prefix(sdir):
 
 
 def test_save_session_export_error(sdir, monkeypatch):
-    def boom(s):
-        raise Exception("no export")
+    from dxrk.utils.session import SessionError as StoreError
 
-    monkeypatch.setattr("dxrk.commands.session.export_json", boom)
+    def boom(s):
+        raise TypeError("no export")
+
+    monkeypatch.setattr("dxrk.utils.session_storage._session_to_dict", boom)
     assert save_session(new_session()) is False
+    from dxrk.commands.session import save_session_strict
+
+    with pytest.raises(StoreError):
+        save_session_strict(new_session())
 
 
 def test_save_session_write_error(sdir, monkeypatch):
@@ -256,7 +262,10 @@ def test_session_create_ok(reg, sdir):
 
 
 def test_session_create_save_error(reg, sdir, monkeypatch):
-    monkeypatch.setattr("dxrk.commands.session.save_session", lambda s: False)
+    def boom(s):
+        raise SessionError("disk")
+
+    monkeypatch.setattr("dxrk.commands.session.save_session_strict", boom)
     code, out, err = _run(reg, ["session", "create", "T"])
     assert code == 1
     assert "al guardar la sesión" in err
@@ -284,7 +293,11 @@ def test_session_switch_list_error(reg, sdir, monkeypatch):
 
 def test_session_switch_save_error(reg, sdir, monkeypatch):
     _mk("sess-aaa")
-    monkeypatch.setattr("dxrk.commands.session.save_session", lambda s: False)
+
+    def boom(s):
+        raise SessionError("disk")
+
+    monkeypatch.setattr("dxrk.commands.session.save_session_strict", boom)
     code, out, err = _run(reg, ["session", "switch", "sess-aaa"])
     assert code == 1
     assert "al guardar la sesión" in err

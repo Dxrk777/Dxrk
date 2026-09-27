@@ -122,7 +122,11 @@ def test_rewind_empty_session(reg: Registry, sdir: str) -> None:
 
 def test_rewind_save_error(reg: Registry, sdir: str, monkeypatch: pytest.MonkeyPatch) -> None:
     _mk("sess-aaa", texts=["a"])
-    monkeypatch.setattr("dxrk.commands.rewind.save_session", lambda s: False)
+
+    def boom(s):
+        raise SessionError("disk")
+
+    monkeypatch.setattr("dxrk.commands.rewind.save_session_strict", boom)
     code, out, err = _run(reg, ["rewind", "sess-aaa", "1"])
     assert code == 1
     assert "al guardar" in err

@@ -152,4 +152,6 @@ from dxrk.utils.session_storage import _atomic_write_text as _atomic_write_text
 from dxrk.utils.session_storage import _cmp_int as _cmp_int
 from dxrk.utils.session_storage import _cmp_time as _cmp_time
 from dxrk.utils.session_storage import _fsync_parent as _fsync_parent
+from dxrk.utils.session_storage import _migrated_or_raw as _migrated_or_raw
+from dxrk.utils.session_storage import _parse_session_payload as _parse_session_payload
 from dxrk.utils.session_storage import _read_gz_file as _read_gz_file

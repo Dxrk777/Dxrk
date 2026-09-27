@@ -10,7 +10,7 @@ from .session import (
     _fmt_ts_short,
     list_session_files,
     load_session,
-    save_session,
+    save_session_strict,
 )
 
 
@@ -40,7 +40,9 @@ def tag_add_cmd() -> Command:
                 return 0
 
         s.tags.append(tag_name)
-        if not save_session(s):
+        try:
+            save_session_strict(s)
+        except SessionError:
             ctx.err.write("Error: al guardar la sesión etiquetada\n")
             return 1
         out.write(f"Etiqueta {go_quote(tag_name)} agregada a la sesión {s.id[:8]} — {s.title}\n")
@@ -79,7 +81,9 @@ def tag_remove_cmd() -> Command:
             return 1
 
         s.tags = filtered
-        if not save_session(s):
+        try:
+            save_session_strict(s)
+        except SessionError:
             ctx.err.write("Error: al guardar la sesión\n")
             return 1
         out.write(f"Etiqueta {go_quote(tag_name)} eliminada de la sesión {s.id[:8]}\n")

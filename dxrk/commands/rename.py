@@ -6,7 +6,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from .registry import Command, CommandContext, Registry, go_quote
-from .session import list_session_files, save_session
+from .session import SessionError, list_session_files, save_session_strict
 
 
 def register_rename_command(reg: Registry) -> None:
@@ -19,9 +19,10 @@ def register_rename_command(reg: Registry) -> None:
             ctx.err.write("Error: el nuevo nombre no puede estar vacío\n")
             return 1
 
-        sessions = list_session_files()
-        if sessions is None:
-            ctx.err.write("Error: no se pudieron listar las sesiones\n")
+        try:
+            sessions = list_session_files()
+        except SessionError as exc:
+            ctx.err.write(f"Error: {exc}\n")
             return 1
 
         for s in sessions:
@@ -30,7 +31,9 @@ def register_rename_command(reg: Registry) -> None:
                 s.title = new_name
                 s.updated_at = datetime.now(UTC)
 
-                if not save_session(s):
+                try:
+                    save_session_strict(s)
+                except SessionError:
                     ctx.err.write("Error: al guardar la sesión renombrada\n")
                     return 1
 

@@ -3,9 +3,12 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from datetime import timedelta
 
+from dxrk.utils.session_codec import _session_from_dict, _session_to_dict
+from dxrk.utils.session_migrate import migrate_to_current
 from dxrk.utils.session_model import (
     CurrentVersion,
     Message,
@@ -49,6 +52,15 @@ def restore_session(id: str, storage: Storage) -> Session:
         raise SessionError(f"session {id!r} invalid")
     if s.version > CurrentVersion:
         raise SessionError(f"session version {s.version} exceeds current version {CurrentVersion}")
+    if s.version < CurrentVersion:
+        # Lazy migration for backends that hand back unmigrated payloads:
+        # round-trip through the registry so v1 sessions come out canonical.
+        # An unmigratable payload passes through untouched (read-any).
+        try:
+            migrated = migrate_to_current(json.dumps(_session_to_dict(s)))
+            s = _session_from_dict(json.loads(migrated))
+        except (SessionError, ValueError, TypeError):
+            pass
     return s
 
 

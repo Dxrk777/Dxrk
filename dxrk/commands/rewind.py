@@ -8,7 +8,7 @@ from .session import (
     SessionError,
     _find_session,
     list_session_files,
-    save_session,
+    save_session_strict,
 )
 
 
@@ -52,7 +52,9 @@ def register_rewind_command(reg: Registry) -> None:
         s.messages = remaining
         s.message_count = len(remaining)
 
-        if not save_session(s):
+        try:
+            save_session_strict(s)
+        except SessionError:
             ctx.err.write("Error: al guardar la sesión retrocedida\n")
             return 1
 

@@ -13,6 +13,7 @@ from datetime import datetime
 from typing import Any, Protocol
 
 from dxrk.utils.session_codec import _index_entry_from_dict, _index_entry_to_dict, _session_from_dict, _session_to_dict
+from dxrk.utils.session_migrate import migrate_to_current
 from dxrk.utils.session_model import _EPOCH_UTC, Session, SessionError, SessionStatus, now
 
 # ─── durable atomic writes ───────────────────────────────────────────
@@ -101,6 +102,28 @@ def _atomic_write_gz_bytes(path: str, data: bytes) -> None:
 # ─── storage ───────────────────────────────────────────────────────────────
 
 
+def _migrated_or_raw(raw: str) -> str:
+    """Run ``raw`` through the migration registry, passing it through on failure.
+
+    Unknown layouts (e.g. version-less files predating the registry) stay
+    readable; genuine v1 payloads come out canonical (v2).
+    """
+    try:
+        return migrate_to_current(raw)
+    except SessionError:
+        return raw
+
+
+def _parse_session_payload(raw: str) -> Session:
+    try:
+        payload = json.loads(_migrated_or_raw(raw))
+    except (ValueError, TypeError) as e:
+        raise SessionError(f"unmarshal session: {e}") from e
+    if not isinstance(payload, dict):
+        raise SessionError("unmarshal session: expected object")
+    return _session_from_dict(payload)
+
+
 @dataclass
 class SessionSummary:
     id: str = ""
@@ -149,11 +172,29 @@ class FileStorage:
         os.makedirs(base_dir, mode=0o700, exist_ok=True)
         self._load_index()
 
+    def _validate_session_id(self, id: str) -> str:
+        """Resolve ``id`` to a session file path, rejecting path traversal.
+
+        Raises SessionError for empty ids, absolute paths, separators,
+        NUL bytes, ``..`` components, or anything resolving outside
+        ``base_dir``. Session ids are generated internally (hex); anything
+        else never names a real session file.
+        """
+        if not id or id in (".", ".."):
+            raise SessionError(f"invalid session id: {id!r}")
+        if os.path.isabs(id) or "/" in id or "\\" in id or "\x00" in id:
+            raise SessionError(f"invalid session id: {id!r}")
+        full = os.path.realpath(os.path.join(self.base_dir, f"{id}.json"))
+        base = os.path.realpath(self.base_dir)
+        if full != base and not full.startswith(base + os.sep):
+            raise SessionError(f"invalid session id: {id!r}")
+        return full
+
     def _session_path(self, id: str) -> str:
-        return os.path.join(self.base_dir, f"{id}.json")
+        return self._validate_session_id(id)
 
     def _compressed_path(self, id: str) -> str:
-        return os.path.join(self.base_dir, f"{id}.json.gz")
+        return self._validate_session_id(id) + ".gz"
 
     def _index_path(self) -> str:
         return os.path.join(self.base_dir, ".index.json")
@@ -186,7 +227,7 @@ class FileStorage:
         with self.mu:
             _ = self.index.get(id)
         path = self._session_path(id)
-        corrupt: Exception | None = None
+        corrupt: SessionError | None = None
         data: str | None = None
         try:
             with open(path, encoding="utf-8") as f:
@@ -197,20 +238,17 @@ class FileStorage:
             raise SessionError(f"read session: {e}") from e
         if data is not None:
             try:
-                return _session_from_dict(json.loads(data))
-            except (ValueError, TypeError) as e:
+                return _parse_session_payload(data)
+            except SessionError as e:
                 # .json is torn — fall through to the .gz copy below.
                 corrupt = e
         try:
             gz_data = _read_gz_file(self._compressed_path(id))
         except OSError as e:
             if corrupt is not None:
-                raise SessionError(f"unmarshal session: {corrupt}") from corrupt
+                raise corrupt from corrupt
             raise SessionError(f"session {id!r} not found") from e
-        try:
-            return _session_from_dict(json.loads(gz_data))
-        except (ValueError, TypeError) as e:
-            raise SessionError(f"unmarshal session: {e}") from e
+        return _parse_session_payload(gz_data)
 
     def delete(self, id: str) -> None:
         with self.mu:
@@ -349,7 +387,7 @@ class FileStorage:
             else:
                 continue
             try:
-                payload = json.loads(raw)
+                payload = json.loads(_migrated_or_raw(raw))
                 if not isinstance(payload, dict):
                     continue
                 s = _session_from_dict(payload)
