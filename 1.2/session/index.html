@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://dxrk777.github.io/Dxrk/1.2/tenants/">
+        <link rel="canonical" href="https://dxrk777.github.io/Dxrk/1.2/session/">
       
       
-        <link rel="prev" href="../enterprise/">
+        <link rel="prev" href="../migration/">
       
       
-        <link rel="next" href="../rbac/">
+        <link rel="next" href="../migration-0.5-to-1.0/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Multi-tenant - Dxrk</title>
+        <title>Sesiones - Dxrk</title>
       
     
     
@@ -63,17 +63,17 @@
     
   
 <meta property="og:type" content="website" />
-<meta property="og:title" content="Multi-tenant - Dxrk" />
+<meta property="og:title" content="Sesiones - Dxrk" />
 <meta property="og:description" content="Dxrk — local-first configurator for AI coding-agent ecosystems (14 agents, memory, SDD, MCP)" />
-<meta property="og:image" content="https://dxrk777.github.io/Dxrk/1.2/assets/images/social/tenants.png" />
+<meta property="og:image" content="https://dxrk777.github.io/Dxrk/1.2/assets/images/social/session.png" />
 <meta property="og:image:type" content="image/png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
-<meta property="og:url" content="https://dxrk777.github.io/Dxrk/1.2/tenants/" />
+<meta property="og:url" content="https://dxrk777.github.io/Dxrk/1.2/session/" />
 <meta property="twitter:card" content="summary_large_image" />
-<meta property="twitter:title" content="Multi-tenant - Dxrk" />
+<meta property="twitter:title" content="Sesiones - Dxrk" />
 <meta property="twitter:description" content="Dxrk — local-first configurator for AI coding-agent ecosystems (14 agents, memory, SDD, MCP)" />
-<meta property="twitter:image" content="https://dxrk777.github.io/Dxrk/1.2/assets/images/social/tenants.png" />
+<meta property="twitter:image" content="https://dxrk777.github.io/Dxrk/1.2/assets/images/social/session.png" />
 </head>
   
   
@@ -91,7 +91,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#multi-tenant-en-dxrk" class="md-skip">
+        <a href="#sesiones-durabilidad-backend-sqlite-opt-in" class="md-skip">
           Skip to content
         </a>
       
@@ -126,7 +126,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Multi-tenant
+              Sesiones
             
           </span>
         </div>
@@ -514,37 +514,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Multi-tenant
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../tenants/" class="md-nav__link">
         
   
   
@@ -560,92 +533,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#layout" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Layout
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#tenant-activo" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Tenant activo
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#cli" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CLI
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#aislamiento-verificado" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Aislamiento verificado
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#api" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        API
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#vault-por-tenant" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Vault por tenant
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -708,10 +595,37 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../session/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sesiones
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -727,6 +641,114 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#comandos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Comandos
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#durabilidad-escrituras-atomicas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Durabilidad — escrituras atómicas
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#indice-self-heal-fallback-gz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Índice — self-heal + fallback .gz
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cuarentena" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cuarentena
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ids-sanitizados-sin-path-traversal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IDs sanitizados — sin path traversal
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backend-sqlite-wal-opt-in" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backend SQLite-WAL opt-in
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#linkage-sesionswarm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Linkage sesión↔swarm
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verificacion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verificación
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1075,67 +1097,86 @@
   
 
 
-<h1 id="multi-tenant-en-dxrk">Multi-tenant en Dxrk</h1>
-<p><img alt="Demo multi-tenant 30s" src="../assets/demo_tenant.gif" /></p>
-<p>Dxrk aísla todos los datos por tenant bajo un layout de filesystem canónico.
-Sin servidor, sin red: solo directorios con permisos restrictivos (diseño
-detallado en <code>adr/ADR-002-memory-separation.md</code>, roadmap §3.3).</p>
-<h2 id="layout">Layout</h2>
-<div class="highlight"><pre><span></span><code>~/.dxrk/
-├── tenants/
-│   ├── _registry.json        # {&quot;tenants&quot;: [{&quot;id&quot;, &quot;display_name&quot;, ...}]}
-│   ├── _active               # id del tenant activo (texto plano)
-│   └── {id}/
-│       ├── palace/           # DxrkMemory 2.0 (sqlite FTS5, WAL 0o600)
-│       ├── locks/            # locks de minería
-│       ├── learn/            # datos del learner
-│       └── sessions/         # sesiones del tenant
+<h1 id="sesiones-durabilidad-backend-sqlite-opt-in">Sesiones — durabilidad + backend SQLite opt-in</h1>
+<p>Persistencia de sesiones (<code>dxrk/utils/session_storage.py</code>,
+<code>dxrk/commands/session.py</code>): un crash nunca deja un archivo roto, un
+índice corrupto se reconstruye solo y un payload corrupto se cuarentena
+en vez de romper el listado.</p>
+<h2 id="comandos">Comandos</h2>
+<div class="highlight"><pre><span></span><code>dxrk-py<span class="w"> </span>session<span class="w"> </span>list<span class="w">                    </span><span class="c1"># lista (IDs truncados a 8 chars)</span>
+dxrk-py<span class="w"> </span>session<span class="w"> </span>create<span class="w"> </span><span class="o">[</span>título<span class="o">]</span><span class="w">         </span><span class="c1"># crea</span>
+dxrk-py<span class="w"> </span>session<span class="w"> </span>info<span class="w"> </span>&lt;id&gt;<span class="w">               </span><span class="c1"># detalle</span>
+dxrk-py<span class="w"> </span>session<span class="w"> </span>switch<span class="w"> </span>&lt;id&gt;<span class="w">             </span><span class="c1"># cambia la activa</span>
+dxrk-py<span class="w"> </span>session<span class="w"> </span>delete<span class="w"> </span>&lt;id&gt;<span class="w">             </span><span class="c1"># borra</span>
+dxrk-py<span class="w"> </span>rewind<span class="w"> </span>&lt;id&gt;<span class="w"> </span>&lt;count&gt;<span class="w">             </span><span class="c1"># recorta últimos &lt;count&gt; mensajes</span>
+dxrk-py<span class="w"> </span>resume<span class="w"> </span><span class="o">[</span>id<span class="p">|</span>título<span class="o">]</span><span class="w"> </span><span class="o">[</span>--limit<span class="w"> </span>N<span class="o">]</span><span class="w">  </span><span class="c1"># retoma por prefijo de ID o título</span>
+dxrk-py<span class="w"> </span>share<span class="w"> </span>&lt;id&gt;<span class="w"> </span>--output<span class="w"> </span>f.md<span class="w">        </span><span class="c1"># exporta (requiere --output o ruta; --force si existe)</span>
 </code></pre></div>
-<ul>
-<li>Directorios <code>0o750</code>, archivos <code>0o600</code> (ver <code>dxrk/tenant/migration.py</code>).</li>
-<li>El id de tenant se valida con <code>^[a-zA-Z0-9_-]{1,256}$</code>
-  (<code>dxrk.security.jwt.validate_id</code>): sin <code>/</code>, <code>\</code>, espacios ni <code>..</code>.</li>
-<li><code>list_tenants()</code> solo devuelve directorios con nombre válido y ordenados.</li>
-</ul>
-<h2 id="tenant-activo">Tenant activo</h2>
-<p>Prioridad (de mayor a menor):</p>
+<p>Cobertura actual: <code>rewind.py</code> 98%, <code>resume.py</code> 100%, <code>share.py</code> 100%
+(<code>tests/test_commands_rewind_resume_share.py</code>, 33 tests).</p>
+<h2 id="durabilidad-escrituras-atomicas">Durabilidad — escrituras atómicas</h2>
+<p><code>_atomic_write_text()</code> en todos los paths de escritura (<code>FileStorage</code> y
+<code>SQLiteSessionStorage</code> vía su propia transaccionalidad):</p>
 <ol>
-<li>Flag CLI <code>--tenant/-t</code> (validado, falla con <code>SystemExit</code> si es inválido).</li>
-<li>Variable de entorno <code>DXRK_TENANT</code>.</li>
-<li>Archivo <code>tenants/_active</code>.</li>
-<li><code>default</code> (tras migración legacy, ver <code>migration.md</code>).</li>
+<li>tmp en el mismo directorio + <code>fsync</code> del archivo,</li>
+<li><code>os.replace</code> (rename atómico),</li>
+<li><code>fsync</code> best-effort del directorio padre (portable: en Windows el
+   <code>fsync</code> de directorios falla y se ignora).</li>
 </ol>
-<p>El switcher de la TUI (<code>tenant_switcher</code>) sigue la misma prioridad:
-contexto explícito &gt; entorno &gt; <code>_active</code>.</p>
-<h2 id="cli">CLI</h2>
-<div class="highlight"><pre><span></span><code>dxrk-py<span class="w"> </span>tenant<span class="w"> </span>create<span class="w"> </span>acme<span class="w">          </span><span class="c1"># crea tenants/acme/ + subdirs</span>
-dxrk-py<span class="w"> </span>tenant<span class="w"> </span>list<span class="w">                 </span><span class="c1"># lista ordenada</span>
-dxrk-py<span class="w"> </span>tenant<span class="w"> </span>switch<span class="w"> </span>acme<span class="w">          </span><span class="c1"># escribe _active</span>
-dxrk-py<span class="w"> </span>tenant<span class="w"> </span>current<span class="w">              </span><span class="c1"># muestra el activo</span>
-dxrk-py<span class="w"> </span>tenant<span class="w"> </span>whoami<span class="w">               </span><span class="c1"># activo según flag/env/_active</span>
-dxrk-py<span class="w"> </span>tenant<span class="w"> </span>delete<span class="w"> </span>acme<span class="w"> </span>--force<span class="w">  </span><span class="c1"># sin --force se niega</span>
-dxrk-py<span class="w"> </span>tenant<span class="w"> </span>migrate<span class="w">              </span><span class="c1"># legacy → tenants/default (idempotente)</span>
-dxrk-py<span class="w"> </span>--tenant<span class="w"> </span>acme<span class="w"> </span>&lt;comando&gt;<span class="w">     </span><span class="c1"># cualquier comando bajo ese tenant</span>
-</code></pre></div>
-<p><code>create</code> duplicado es idempotente; <code>switch</code> a un tenant inexistente falla.</p>
-<h2 id="aislamiento-verificado">Aislamiento verificado</h2>
+<p>Errores con etapa etiquetada (<code>write temp</code> / <code>atomic rename</code>).</p>
+<h2 id="indice-self-heal-fallback-gz">Índice — self-heal + fallback <code>.gz</code></h2>
 <ul>
-<li><strong>Palace/vault/JWT/RBAC/CLI</strong>: <code>tests/test_tenant_e2e.py</code> (9 tests).</li>
-<li><strong>RBAC por rol</strong>: <code>tests/test_enterprise_rbac_matrix.py</code> (25 tests).</li>
-<li><strong>JWT <code>tid</code> + vault HKDF</strong>: <code>tests/test_enterprise_jwt_vault.py</code> (18 tests).</li>
-<li><strong>CLI + migración + switcher TUI</strong>: <code>tests/test_enterprise_cli_migration.py</code>
-  (42 tests, incluye pilot real de la pantalla <code>tenant_switcher</code>).</li>
+<li><code>FileStorage</code> mantiene <code>.index.json</code>; si falta o está corrupto se
+  reconstruye desde disco (<code>_rebuild_index_from_disk</code>) y el siguiente
+  arranque lo persiste.</li>
+<li>Lectura con fallback: si el <code>.json</code> está roto se intenta su copia
+  <code>.json.gz</code> antes de rendirse (error <code>SessionError</code> si ambas fallan).</li>
+<li>Migración-on-load: cada payload pasa por <code>migrate_to_current()</code>
+  (<code>dxrk/utils/session_migrate.py</code>); si la migración falla, el raw pasa
+  tal cual (sin romper la carga).</li>
 </ul>
-<h2 id="api">API</h2>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">dxrk.tenant</span><span class="w"> </span><span class="kn">import</span> <span class="n">tenant_root</span><span class="p">,</span> <span class="n">ensure_tenant</span><span class="p">,</span> <span class="n">list_tenants</span><span class="p">,</span> <span class="n">is_migrated</span>
-
-<span class="n">root</span> <span class="o">=</span> <span class="n">ensure_tenant</span><span class="p">(</span><span class="s2">&quot;acme&quot;</span><span class="p">)</span>   <span class="c1"># crea skeleton palace/locks/learn/sessions</span>
+<h2 id="cuarentena">Cuarentena</h2>
+<p><code>list_session_files_with_quarantine()</code> (<code>dxrk/commands/session.py</code>):
+archivos legibles-pero-corruptos se mueven a
+<code>&lt;sessions&gt;/.quarantine/</code> (<code>QUARANTINE_DIR_NAME</code>) y el listado avisa:</p>
+<div class="highlight"><pre><span></span><code>Advertencia: N archivo(s) de sesión corrupto(s) movido(s) a cuarentena.
 </code></pre></div>
-<h2 id="vault-por-tenant">Vault por tenant</h2>
-<p><code>dxrk/vault/__init__.py</code> (<code>TenantVaultRegistry</code>): cada tenant deriva su clave
-con HKDF (<code>_derive_tenant_key</code>, 32 bytes) desde la clave maestra
-(<code>DXRK_VAULT_KEY</code>). Las entradas de <code>acme</code> son invisibles para <code>bob</code> y
-viceversa; la derivación es determinista (mismo tenant, misma clave).</p>
+<p>Nombres no-sesión (<code>.index.json</code>, tmps, no-<code>.json</code>) y directorios
+(incluido <code>.quarantine/</code>) se ignoran.</p>
+<h2 id="ids-sanitizados-sin-path-traversal">IDs sanitizados — sin path traversal</h2>
+<p><code>_validate_session_id()</code> (compartida por todos los stores en disco)
+rechaza IDs vacíos, <code>.</code>/<code>..</code>, separadores, bytes NUL y cualquier cosa
+que resuelva fuera del directorio base. El CLI además filtra patrones
+glob en <code>rename</code>/<code>rewind</code>/<code>tag</code>.</p>
+<h2 id="backend-sqlite-wal-opt-in">Backend SQLite-WAL opt-in</h2>
+<div class="highlight"><pre><span></span><code><span class="nv">DXRK_SESSION_BACKEND</span><span class="o">=</span>sqlite<span class="w"> </span>dxrk-py<span class="w"> </span>session<span class="w"> </span>list
+</code></pre></div>
+<ul>
+<li><code>open_session_storage()</code> elige el backend:
+  <code>DXRK_SESSION_BACKEND=sqlite</code> → <code>SQLiteSessionStorage</code> (WAL);
+  cualquier otro valor → <code>FileStorage</code> (default, dir JSON).</li>
+<li>Misma semántica (<code>save</code>/<code>load</code>/<code>delete</code>/<code>exists</code>/<code>list</code>,
+  contrato <code>SessionError</code>, sanitización, migración-on-load).</li>
+<li>Diferencia intencional (fijada en test): una fila con payload corrupto
+  es <strong>visible</strong> en <code>list</code> de SQLite pero <code>load</code> lanza <code>SessionError</code>;
+  <code>FileStorage</code> en cambio descarta el <code>.json</code> roto (usa el <code>.gz</code> o lo
+  cuarentena) — ver
+  <code>tests/test_session_phase03_sqlite.py::test_pinned_difference_corrupt_visibility</code>.</li>
+<li>Migración JSON→SQLite: <code>migrate_json_dir_to_sqlite()</code> (lee <code>*.json</code> +
+  <code>*.json.gz</code> solo-comprimidos vía <code>FileStorage.load</code>, reporta
+  <code>skipped_ids</code>).</li>
+<li>Suite de conformancia: <code>tests/test_session_phase03_sqlite.py</code>
+  (29 tests).</li>
+</ul>
+<h2 id="linkage-sesionswarm">Linkage sesión↔swarm</h2>
+<p>El coordinador swarm registra cada task/resultado contra su sesión
+(<code>dxrk/utils/swarm_session.py</code>: <code>SwarmTaskStore</code>,
+<code>session_summary(session_id)</code> → <code>"session &lt;id&gt;: swarm c/s tasks
+completed"</code>). Ver release notes
+<a href="../releases/v1.3.0/"><code>releases/v1.3.0.md</code></a> § Swarm.</p>
+<h2 id="verificacion">Verificación</h2>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>-q<span class="w"> </span>tests/test_commands_rewind_resume_share.py<span class="w"> </span>tests/test_commands_session.py<span class="w"> </span>tests/test_session_phase01_safety.py<span class="w"> </span>tests/test_session_phase02_unify.py<span class="w"> </span>tests/test_session_phase03_sqlite.py
+</code></pre></div>
 
 
 
@@ -1171,7 +1212,7 @@ viceversa; la derivación es determinista (mismo tenant, misma clave).</p>
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../enterprise/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Enterprise">
+          <a href="../migration/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Migración a multi-tenant">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -1181,20 +1222,20 @@ viceversa; la derivación es determinista (mismo tenant, misma clave).</p>
                 Previous
               </span>
               <div class="md-ellipsis">
-                Enterprise
+                Migración a multi-tenant
               </div>
             </div>
           </a>
         
         
           
-          <a href="../rbac/" class="md-footer__link md-footer__link--next" aria-label="Next: RBAC">
+          <a href="../migration-0.5-to-1.0/" class="md-footer__link md-footer__link--next" aria-label="Next: Migración 0.5 → 1.0">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                RBAC
+                Migración 0.5 → 1.0
               </div>
             </div>
             <div class="md-footer__button md-icon">

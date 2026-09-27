@@ -683,6 +683,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#recall-hibrido-phase-01-vectores-locales-fusion-eval" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recall híbrido Phase 0–1 — vectores locales + fusión + eval
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#ciclo-de-vida-phase-3-consolidateforgetpin-budgets-timeline" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -819,6 +830,33 @@
     
   
     Migración a multi-tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sesiones
   
 
     
@@ -1089,6 +1127,33 @@
     
   
     Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v1.3.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release v1.3.0 (draft)
   
 
     
@@ -1526,11 +1591,84 @@ grep<span class="w"> </span>-rn<span class="w"> </span><span class="s2">&quot;en
 </code></pre></div>
 <p>Más en <a href="../MIGRATION_3.3.5_3.7.1/">MIGRATION_3.3.5_3.7.1.md</a> y <code>docs/architecture.md</code>.</p>
 <hr />
+<h2 id="recall-hibrido-phase-01-vectores-locales-fusion-eval">Recall híbrido Phase 0–1 — vectores locales + fusión + eval</h2>
+<p>Stdlib-only, sin <code>torch</code>/<code>sentence-transformers</code>/<code>numpy</code>
+(<code>dxrk/memory/vectors.py</code>, fusión en <code>dxrk/memory/backend/sqlite.py</code>).</p>
+<table>
+<thead>
+<tr>
+<th>Pieza</th>
+<th>Regla</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Features</td>
+<td>Tokens <code>w:&lt;tok&gt;</code> (<code>\w{2,}</code>) + char 3-grams con padding (<code>g:&lt;tri&gt;</code> sobre <code>^tok$</code>); lado query sin stopwords (<code>query_features</code>), docs con features completas</td>
+</tr>
+<tr>
+<td>Hashing</td>
+<td><code>md5(feat)</code> → <code>DIM = 512</code> buckets; forma almacenada = conteos TF crudos (BLOB <code>float32</code>)</td>
+</tr>
+<tr>
+<td>Coseno IDF</td>
+<td>IDF estilo BM25 estimada sobre el pool de candidatos; <code>weighted_cosine</code> hunde ngrams comunes (<code>the</code>/<code>ing</code>) y deja dominar a distintivos (<code>jwt</code>/<code>auth</code>)</td>
+</tr>
+<tr>
+<td>Fusión</td>
+<td><code>COS_W=0.6 · cos + BM25_W=0.3 · bm25norm + REC_W=0.05 · recency + IMP_W=0.05 · importance + ACC_W=0.03 · access</code>; <code>distance = 1 − fused</code> en <code>[0, 1]</code>; pool = hits FTS ∪ filas recientes (<code>_FTS_CANDIDATE_MULT=5</code>, min 100 / max 500) para rescatar docs sin overlap léxico</td>
+</tr>
+<tr>
+<td>Recency</td>
+<td><code>exp(-age_days / 180)</code> sobre <code>filed_at</code> (<code>0.0</code> si falta); <code>importance</code> satura en <code>5.0</code>, <code>access</code> en <code>~20</code> lecturas vía <code>log1p</code></td>
+</tr>
+<tr>
+<td>Eval</td>
+<td><code>tests/test_memory_recall_eval.py</code> — queries conceptuales que NO solapan literalmente el documento target (BM25 puro + filtro AND las falla); asserts <code>precision@k</code>/<code>recall@k</code>; incluye round-trip <code>hook_session_start</code> y tests de <code>embed</code> determinista/<code>DIM</code></td>
+</tr>
+</tbody>
+</table>
+<p>Phase 0 (limpieza previa): filtros de recall y duplicados corregidos
+(<code>dxrk/memory/palace.py</code>, <code>miner.py</code>, <code>layers.py</code>, <code>hooks_cli.py</code>,
+<code>mcp_server.py</code>; suite <code>tests/test_dxrk_memory_full.py</code>).</p>
 <h2 id="ciclo-de-vida-phase-3-consolidateforgetpin-budgets-timeline">Ciclo de vida Phase 3 — consolidate/forget/pin, budgets, timeline</h2>
 <p>Agentic memory management sobre el mismo modelo supersede (stdlib-only,
 determinista, sin LLM). MCP expone 4 herramientas nuevas (<code>dxrk_memory_*</code>,
-writes con gate RBAC <code>mine</code>): <code>consolidate</code>, <code>forget</code>, <code>pin</code> (writes) y
-<code>timeline</code> (read).</p>
+writes con gate RBAC <code>mine</code> → <code>PermissionError("RBAC_DENIED")</code> si
+<code>DXRK_USER</code> no tiene el op en el tenant): <code>consolidate</code>, <code>forget</code>, <code>pin</code>
+(writes) y <code>timeline</code> (read). Total del servidor: <strong>23 tools</strong>
+(<code>dxrk/memory/mcp_server.py</code>; eran 19 antes de Phase 3).</p>
+<table>
+<thead>
+<tr>
+<th>Tool MCP</th>
+<th>Tipo</th>
+<th>Input clave</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dxrk_memory_consolidate</code></td>
+<td>write</td>
+<td><code>drawer_ids[]</code> (≥2, required), <code>wing</code>, <code>room</code>, <code>palace</code></td>
+</tr>
+<tr>
+<td><code>dxrk_memory_forget</code></td>
+<td>write</td>
+<td><code>drawer_ids[]</code> / <code>wing</code> / <code>room</code> / <code>before</code> (ISO, <code>filed_at</code> estrictamente anterior) / <code>hard</code> (default <code>False</code>) / <code>include_kg</code> (default <code>False</code>, solo supersede)</td>
+</tr>
+<tr>
+<td><code>dxrk_memory_pin</code></td>
+<td>write</td>
+<td><code>drawer_id</code> + <code>scope</code> (<code>drawer</code> | <code>identity</code>, default <code>drawer</code>), <code>pinned</code> (default <code>True</code>)</td>
+</tr>
+<tr>
+<td><code>dxrk_memory_timeline</code></td>
+<td>read</td>
+<td><code>since</code> (incl.) / <code>before</code> (excl.), <code>wing</code>, <code>limit</code> (default 50, max 200)</td>
+</tr>
+</tbody>
+</table>
 <table>
 <thead>
 <tr>
