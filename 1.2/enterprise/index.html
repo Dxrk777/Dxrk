@@ -27,7 +27,7 @@
     
     
       
-        <title>Enterprise (Cortex + Autonomous) - Dxrk</title>
+        <title>Enterprise - Dxrk</title>
       
     
     
@@ -63,7 +63,7 @@
     
   
 <meta property="og:type" content="website" />
-<meta property="og:title" content="Enterprise (Cortex + Autonomous) - Dxrk" />
+<meta property="og:title" content="Enterprise - Dxrk" />
 <meta property="og:description" content="Dxrk — local-first configurator for AI coding-agent ecosystems (14 agents, memory, SDD, MCP)" />
 <meta property="og:image" content="https://dxrk777.github.io/Dxrk/1.2/assets/images/social/enterprise.png" />
 <meta property="og:image:type" content="image/png" />
@@ -71,7 +71,7 @@
 <meta property="og:image:height" content="630" />
 <meta property="og:url" content="https://dxrk777.github.io/Dxrk/1.2/enterprise/" />
 <meta property="twitter:card" content="summary_large_image" />
-<meta property="twitter:title" content="Enterprise (Cortex + Autonomous) - Dxrk" />
+<meta property="twitter:title" content="Enterprise - Dxrk" />
 <meta property="twitter:description" content="Dxrk — local-first configurator for AI coding-agent ecosystems (14 agents, memory, SDD, MCP)" />
 <meta property="twitter:image" content="https://dxrk777.github.io/Dxrk/1.2/assets/images/social/enterprise.png" />
 </head>
@@ -91,7 +91,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#enterprise-cortex-autonomous-empresa-ia" class="md-skip">
+        <a href="#enterprise-empresa-ia" class="md-skip">
           Skip to content
         </a>
       
@@ -126,7 +126,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Enterprise (Cortex + Autonomous)
+              Enterprise
             
           </span>
         </div>
@@ -506,7 +506,7 @@
   <span class="md-ellipsis">
     
   
-    Enterprise (Cortex + Autonomous)
+    Enterprise
   
 
     
@@ -524,7 +524,7 @@
   <span class="md-ellipsis">
     
   
-    Enterprise (Cortex + Autonomous)
+    Enterprise
   
 
     
@@ -548,39 +548,6 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#mapa-rapido" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Mapa rápido
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#cortex-dxrkmemorycortex" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Cortex (dxrk.memory.cortex)
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#autonomous-dxrkmemoryautonomous" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Autonomous (dxrk.memory.autonomous)
-      
-    </span>
-  </a>
-  
-</li>
       
         <li class="md-nav__item">
   <a href="#enterprise-dxrkenterprise" class="md-nav__link">
@@ -1027,112 +994,10 @@
   
 
 
-<h1 id="enterprise-cortex-autonomous-empresa-ia">Enterprise: Cortex + Autonomous + Empresa IA</h1>
-<p>Desde v1.1.0, Dxrk incluye tres capas nuevas sobre DxrkMemory 2.0.
-Todo stdlib, sin red, sin servidor: los tres módulos solo usan SQLite
+<h1 id="enterprise-empresa-ia">Enterprise: Empresa IA</h1>
+<p>Dxrk incluye una capa de empresa IA sobre DxrkMemory 2.0.
+Todo stdlib, sin red, sin servidor: el módulo solo usa SQLite
 local y el filesystem del tenant activo.</p>
-<h2 id="mapa-rapido">Mapa rápido</h2>
-<table>
-<thead>
-<tr>
-<th>Capa</th>
-<th>Paquete</th>
-<th>Qué es</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Cortex</td>
-<td><code>dxrk.memory.cortex</code></td>
-<td>Motor cognitivo: IQ vectorial, evolución de prompts, sueño creativo</td>
-</tr>
-<tr>
-<td>Autonomous</td>
-<td><code>dxrk.memory.autonomous</code></td>
-<td>Aprendizaje autónomo 24/7 en 7 motores</td>
-</tr>
-<tr>
-<td>Enterprise</td>
-<td><code>dxrk.enterprise</code></td>
-<td>Empresa IA: 7 departamentos, 79 skills, orquestador</td>
-</tr>
-</tbody>
-</table>
-<h2 id="cortex-dxrkmemorycortex">Cortex (<code>dxrk.memory.cortex</code>)</h2>
-<p>14 clases exportadas (<code>dxrk/memory/cortex/__init__.py</code>). El punto de
-entrada es <code>DxrkMemoryCognitiveCore</code>:</p>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">dxrk.memory.cortex</span><span class="w"> </span><span class="kn">import</span> <span class="n">DxrkMemoryCognitiveCore</span>
-
-<span class="n">core</span> <span class="o">=</span> <span class="n">DxrkMemoryCognitiveCore</span><span class="p">()</span>  <span class="c1"># db en ~/.dxrk/memory/cortex.db</span>
-<span class="k">await</span> <span class="n">core</span><span class="o">.</span><span class="n">start_cognitive_loop</span><span class="p">()</span>  <span class="c1"># evolución + medición de IQ en fondo</span>
-<span class="n">core</span><span class="o">.</span><span class="n">record_interaction</span><span class="p">({</span><span class="s2">&quot;input&quot;</span><span class="p">:</span> <span class="s2">&quot;...&quot;</span><span class="p">,</span> <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="s2">&quot;...&quot;</span><span class="p">})</span>
-<span class="n">core</span><span class="o">.</span><span class="n">get_cognitive_status</span><span class="p">()</span>  <span class="c1"># dict con estado del loop</span>
-<span class="n">core</span><span class="o">.</span><span class="n">get_iq_report</span><span class="p">()</span>  <span class="c1"># dict con el reporte de IQ actual</span>
-<span class="n">core</span><span class="o">.</span><span class="n">stop_cognitive_loop</span><span class="p">()</span>
-</code></pre></div>
-<p>Componentes (todos importables desde <code>dxrk.memory.cortex</code>):</p>
-<ul>
-<li><code>DxrkIQEngine</code>: IQ vectorial — <code>measure_current_iq()</code>, <code>record_iq()</code>,
-  <code>calculate_evolution_trend(days=30)</code>, <code>project_future_iq()</code>,
-  <code>get_weakest_dimensions()</code>, <code>get_strongest_dimensions()</code>,
-  <code>get_learning_velocity()</code>, <code>add_skill()</code>.</li>
-<li><code>UsageBasedIQ</code>: el IQ crece con el uso (<code>record_interaction</code>,
-  <code>calculate_current_iq</code>).</li>
-<li><code>GeneticPromptEvolution</code>, <code>MetaLearningEngine</code>, <code>DreamingMode</code>,
-  <code>AutonomousThinking</code>, <code>SelfAwarenessLayer</code>, <code>SynapticPlasticity</code>,
-  <code>NetworkEffect</code>, <code>ContributionWeighting</code>, <code>CollectiveIntelligence</code>,
-  <code>SynapseTokenSaver</code>, <code>IQDatabase</code>.</li>
-</ul>
-<h2 id="autonomous-dxrkmemoryautonomous">Autonomous (<code>dxrk.memory.autonomous</code>)</h2>
-<p>7 motores, todos aceptan <code>memory_engine=None</code> (funcionan sin memoria
-conectada) y exponen un <code>get_*_stats()</code>:</p>
-<table>
-<thead>
-<tr>
-<th>Motor</th>
-<th>Loop principal</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>OmniscientReader</code></td>
-<td><code>start_continuous_reading(interval_minutes=30)</code>, <code>get_sources()</code></td>
-</tr>
-<tr>
-<td><code>SelfPracticeEngine</code></td>
-<td><code>daily_practice_session()</code> (genera problemas, intenta, evalúa, aprende)</td>
-</tr>
-<tr>
-<td><code>DeepReflectionEngine</code></td>
-<td>reflexión nocturna sobre experiencias guardadas</td>
-</tr>
-<tr>
-<td><code>ExpertImitationEngine</code></td>
-<td>estudia estrategias de expertos</td>
-</tr>
-<tr>
-<td><code>SelfExperimentationEngine</code></td>
-<td>corre experimentos y mide mejora</td>
-</tr>
-<tr>
-<td><code>CreativeSynthesisEngine</code></td>
-<td>combina ideas en insights nuevos</td>
-</tr>
-<tr>
-<td><code>SelfAssessmentEngine</code></td>
-<td>evaluación semanal con IQ por dimensión</td>
-</tr>
-</tbody>
-</table>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">dxrk.memory.autonomous</span><span class="w"> </span><span class="kn">import</span> <span class="n">OmniscientReader</span><span class="p">,</span> <span class="n">SelfPracticeEngine</span>
-
-<span class="n">reader</span> <span class="o">=</span> <span class="n">OmniscientReader</span><span class="p">()</span>
-<span class="k">await</span> <span class="n">reader</span><span class="o">.</span><span class="n">start_continuous_reading</span><span class="p">(</span><span class="n">interval_minutes</span><span class="o">=</span><span class="mi">30</span><span class="p">)</span>
-<span class="n">reader</span><span class="o">.</span><span class="n">get_reading_stats</span><span class="p">()</span>
-
-<span class="n">practice</span> <span class="o">=</span> <span class="n">SelfPracticeEngine</span><span class="p">(</span><span class="n">iq_engine</span><span class="o">=</span><span class="n">iq</span><span class="p">)</span>
-<span class="k">await</span> <span class="n">practice</span><span class="o">.</span><span class="n">daily_practice_session</span><span class="p">()</span>
-</code></pre></div>
 <h2 id="enterprise-dxrkenterprise">Enterprise (<code>dxrk.enterprise</code>)</h2>
 <p><code>DxrkEnterprise</code> (en <code>dxrk/enterprise/company.py</code>, estado en
 <code>~/.dxrk/enterprise</code>) + <code>TaskOrchestrator</code> (ruteo) + <code>AIWorkforce</code>
@@ -1164,8 +1029,7 @@ dxrk-py<span class="w"> </span>enterprise<span class="w"> </span>report<span cla
 dxrk-py<span class="w"> </span>enterprise<span class="w"> </span>stop
 </code></pre></div>
 <h2 id="tests">Tests</h2>
-<p><code>tests/test_cortex.py</code> (98), <code>tests/test_autonomous.py</code> (41),
-<code>tests/test_enterprise.py</code> (102): todos con SQLite en <code>tmp_path</code>,
+<p><code>tests/test_enterprise.py</code> (102): con SQLite en <code>tmp_path</code>,
 sin red ni sleeps.</p>
 
 
