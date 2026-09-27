@@ -22,6 +22,7 @@ nav:
   - Inicio: index.md
   - Uso: usage.md
   - Tutorial (10 min): tutorial.md
+  - Demo (60 s): demo.md
   - Comparativa: comparison.md
   - Uso previsto: intended-usage.md
   - Agentes: agents.md
