@@ -17,22 +17,21 @@ Concurrency mapping:
 * ``atomic.Pointer``/``atomic.Bool`` -> lock-guarded attributes
 * ``crypto/rand`` -> ``secrets``
 
-Fidelity notes (mirrored intentionally, including upstream quirks):
+Fidelity notes (remaining intentional deviations from the Go original):
 
-* ``TaskScheduler`` workers are keyed by ``worker-*`` IDs while
-  ``dispatchTask`` looks them up by backend ID, so dispatch always falls
-  through to the "backend worker not found" error path.
-* ``worker.backend`` is never assigned by ``startWorker``; the
-  simulated ``runTask`` dereferences it unconditionally (a nil-pointer
-  panic). Python guards it with ``""`` instead of crashing.
-* ``EventBus.SubscribeAll`` registers the handler under the event types
-  that exist at subscribe time only, and ``dispatch`` invokes it once as
-  a type handler and once as an all-handler (duplicated behavior).
 * ``Backend.MarshalJSON`` returns a ``dict`` (not ``[]byte``);
   ``json.dumps`` can produce the wire format. Keys keep the original default
   (capitalized) JSON field names.
-* ``SwarmCoordinator.GetTaskResult`` and ``Unsubscribe`` are no-op
-  stubs.
+* ``Task.payload`` is opaque bytes. Without a registered handler the
+  scheduler echoes the payload as the output; register a
+  ``TaskPayloadHandler`` (per-scheduler or via ``RegisterHandler``) to
+  compute real outputs, with per-task timeout support.
+* Scope is single-host thread-concurrency: no Raft/CRDT, no cross-process
+  transport. Leader election is lease-based among registered backends.
+* Session linkage: ``Task.session_id`` / ``TaskResult.session_id`` carry
+  the owning session; :class:`SwarmTaskStore` (``swarm_session``) persists
+  tasks and results in a local SQLite sidecar so resume/summary can show
+  in-flight vs completed swarm work.
 """
 
 from __future__ import annotations
@@ -80,6 +79,7 @@ from dxrk.utils.swarm_model import SwarmEvent as SwarmEvent
 from dxrk.utils.swarm_model import SwarmEventType as SwarmEventType
 from dxrk.utils.swarm_model import Task as Task
 from dxrk.utils.swarm_model import TaskID as TaskID
+from dxrk.utils.swarm_model import TaskPayloadHandler as TaskPayloadHandler
 from dxrk.utils.swarm_model import TaskPriority as TaskPriority
 from dxrk.utils.swarm_model import TaskResult as TaskResult
 from dxrk.utils.swarm_model import _background as _background
@@ -97,6 +97,9 @@ from dxrk.utils.swarm_schedule import SchedulerConfig as SchedulerConfig
 from dxrk.utils.swarm_schedule import SchedulerStats as SchedulerStats
 from dxrk.utils.swarm_schedule import TaskScheduler as TaskScheduler
 from dxrk.utils.swarm_schedule import _Worker as _Worker
+from dxrk.utils.swarm_session import _SCHEMA as _SCHEMA
+from dxrk.utils.swarm_session import NewSwarmTaskStore as NewSwarmTaskStore
+from dxrk.utils.swarm_session import SwarmTaskStore as SwarmTaskStore
 from dxrk.utils.swarm_supervise import BackendHealth as BackendHealth
 from dxrk.utils.swarm_supervise import HealthMonitor as HealthMonitor
 from dxrk.utils.swarm_supervise import LeaderElection as LeaderElection

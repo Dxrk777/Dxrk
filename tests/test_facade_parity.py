@@ -134,6 +134,7 @@ FACADE_TO_MODULES: dict[str, tuple[str, ...]] = {
         "dxrk.utils.swarm_model",
         "dxrk.utils.swarm_registry",
         "dxrk.utils.swarm_schedule",
+        "dxrk.utils.swarm_session",
         "dxrk.utils.swarm_supervise",
     ),
     "dxrk.cli.install_steps": (

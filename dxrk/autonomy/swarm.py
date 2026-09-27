@@ -29,6 +29,7 @@ class SwarmTask:
     role: AgentRole
     inputs: dict[str, Any] = field(default_factory=dict)
     metadata: dict[str, Any] = field(default_factory=dict)
+    session_id: str = ""
 
 
 @dataclass
@@ -49,8 +50,11 @@ AgentHandler = Callable[[SwarmTask], SwarmResult]
 class SwarmOrchestrator:
     """Orchestrates parallel multi-agent swarm workflows and consensus evaluation."""
 
-    def __init__(self, max_workers: int = 5) -> None:
+    def __init__(self, max_workers: int = 5, consensus_threshold: float = 0.75) -> None:
+        if not 0.0 <= consensus_threshold <= 1.0:
+            raise ValueError("consensus_threshold must be in [0.0, 1.0]")
         self.max_workers = max_workers
+        self.consensus_threshold = consensus_threshold
         self._agent_handlers: dict[AgentRole, AgentHandler] = {}
 
     def register_agent(self, role: AgentRole, handler: AgentHandler) -> None:
@@ -79,34 +83,53 @@ class SwarmOrchestrator:
                 errors=[f"Agent execution error: {exc}"],
             )
 
-    def execute_swarm(self, tasks: list[SwarmTask]) -> list[SwarmResult]:
-        """Execute multiple swarm tasks in parallel across worker threads."""
+    def execute_swarm(self, tasks: list[SwarmTask], timeout: float | None = None) -> list[SwarmResult]:
+        """Execute multiple swarm tasks in parallel across worker threads.
+
+        Results are returned in input order (``results[i]`` corresponds to
+        ``tasks[i]``). ``timeout`` is a per-task limit in seconds; a task
+        that exceeds it completes as a failure with a ``task timed out``
+        error instead of blocking the batch.
+        """
         if not tasks:
             return []
 
         results: list[SwarmResult] = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            future_to_task = {executor.submit(self.execute_task, task): task for task in tasks}
-            for future in concurrent.futures.as_completed(future_to_task):
-                results.append(future.result())
+            futures = [executor.submit(self.execute_task, task) for task in tasks]
+            for task, future in zip(tasks, futures, strict=True):
+                try:
+                    results.append(future.result(timeout=timeout))
+                except concurrent.futures.TimeoutError:
+                    results.append(
+                        SwarmResult(
+                            task_id=task.task_id,
+                            role=task.role,
+                            success=False,
+                            output="",
+                            errors=[f"task timed out after {timeout}s"],
+                        )
+                    )
         return results
 
-    def consensus_check(self, results: list[SwarmResult]) -> tuple[bool, float, str]:
+    def consensus_check(self, results: list[SwarmResult], threshold: float | None = None) -> tuple[bool, float, str]:
         """Check consensus among swarm task results.
 
-        Returns (pass_status, consensus_ratio, summary).
+        Returns (pass_status, consensus_ratio, summary). An empty result
+        set is an explicit empty verdict — it does NOT pass.
         """
         if not results:
-            return True, 1.0, "No results to evaluate"
+            return False, 0.0, "Swarm consensus: empty — no results to evaluate"
 
+        effective = self.consensus_threshold if threshold is None else threshold
         successful = [r for r in results if r.success]
         ratio = len(successful) / len(results)
-        passed = ratio >= 0.75
+        passed = ratio >= effective
 
         summary = f"Swarm consensus: {len(successful)}/{len(results)} passed ({ratio * 100:.1f}%)"
         return passed, ratio, summary
 
 
-def NewSwarmOrchestrator(max_workers: int = 5) -> SwarmOrchestrator:
+def NewSwarmOrchestrator(max_workers: int = 5, consensus_threshold: float = 0.75) -> SwarmOrchestrator:
     """Factory helper to instantiate a new SwarmOrchestrator."""
-    return SwarmOrchestrator(max_workers=max_workers)
+    return SwarmOrchestrator(max_workers=max_workers, consensus_threshold=consensus_threshold)

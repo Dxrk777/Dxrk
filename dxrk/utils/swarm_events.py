@@ -15,56 +15,97 @@ from dxrk.utils.swarm_model import _with_cancel as _with_cancel
 
 
 class EventBus:
-    """Dispatches swarm events to subscribed handlers. Mirrors swarm.EventBus."""
+    """Dispatches swarm events to subscribed handlers. Mirrors swarm.EventBus.
+
+    Drop policy: the event channel is bounded (1024). When full,
+    :meth:`Publish` drops the new event and increments a counter readable
+    via :meth:`DroppedCount` — drops are explicit, never silent.
+    """
 
     def __init__(self, ctx: _Context | None = None) -> None:
         self._handlers: dict[SwarmEventType, list[EventHandler]] = {}
+        self._all_handlers: list[EventHandler] = []
         self._mu = threading.RLock()
         self._ctx, self._cancel = _with_cancel(ctx)
         self._thread: threading.Thread | None = None
         self._event_ch: queue.Queue[SwarmEvent] = queue.Queue(maxsize=1024)
         self._closed = False
+        self._dropped = 0
+
+    def DroppedCount(self) -> int:
+        """Return the number of events dropped due to a full channel."""
+        with self._mu:
+            return self._dropped
 
     def Subscribe(self, event_type: SwarmEventType, handler: EventHandler) -> Callable[[], None]:
-        """Subscribe a handler to one event type. Mirrors EventBus.Subscribe()."""
+        """Subscribe a handler to one event type. Mirrors EventBus.Subscribe().
+
+        The returned callable removes exactly this registration (matched by
+        identity), so it stays correct under concurrent subscribe/unsubscribe.
+        """
         with self._mu:
             self._handlers.setdefault(event_type, []).append(handler)
-            index = len(self._handlers[event_type]) - 1
-            target = self._handlers[event_type]
 
             def unsubscribe() -> None:
                 with self._mu:
-                    if index < len(target):
-                        del target[index]
+                    handlers = self._handlers.get(event_type, [])
+                    for i, h in enumerate(handlers):
+                        if h is handler:
+                            del handlers[i]
+                            break
 
             return unsubscribe
 
-    def SubscribeAll(self, handler: EventHandler) -> Callable[[], None]:
-        """Subscribe a handler to every existing event type. Mirrors EventBus.SubscribeAll()."""
+    def Unsubscribe(self, event_type: SwarmEventType, handler: EventHandler) -> bool:
+        """Remove one registration of ``handler`` for ``event_type``.
+
+        Returns True when a registration was removed.
+        """
         with self._mu:
-            for event_type in list(self._handlers):
-                self._handlers[event_type].append(handler)
+            handlers = self._handlers.get(event_type, [])
+            for i, h in enumerate(handlers):
+                if h is handler:
+                    del handlers[i]
+                    return True
+            for i, h in enumerate(self._all_handlers):
+                if h is handler:
+                    del self._all_handlers[i]
+                    return True
+            return False
+
+    def SubscribeAll(self, handler: EventHandler) -> Callable[[], None]:
+        """Subscribe a handler to every event type, present and future.
+
+        The handler is kept in a dedicated catch-all list consulted on
+        every dispatch, so types registered after subscribing are covered,
+        and each event reaches the handler exactly once.
+        """
+        with self._mu:
+            self._all_handlers.append(handler)
 
             def unsubscribe() -> None:
                 with self._mu:
-                    for event_type in list(self._handlers):
-                        handlers = self._handlers[event_type]
-                        for i, h in enumerate(handlers):
-                            if h is handler:
-                                del handlers[i]
-                                break
+                    for i, h in enumerate(self._all_handlers):
+                        if h is handler:
+                            del self._all_handlers[i]
+                            break
 
             return unsubscribe
 
     def Publish(self, event: SwarmEvent) -> None:
-        """Publish an event to the bus. Mirrors EventBus.Publish()."""
+        """Publish an event to the bus. Mirrors EventBus.Publish().
+
+        When the bounded channel is full the event is dropped and the
+        :meth:`DroppedCount` counter is incremented.
+        """
         with self._mu:
             if self._closed:
                 return
         try:
             self._event_ch.put_nowait(event)
         except queue.Full:
-            pass
+            with self._mu:
+                self._dropped += 1
 
     def Start(self) -> None:
         """Start the event processing goroutine. Mirrors EventBus.Start()."""
@@ -84,12 +125,10 @@ class EventBus:
     def _dispatch(self, event: SwarmEvent) -> None:
         with self._mu:
             handlers = list(self._handlers.get(event.type, []))
-            all_handlers: list[EventHandler] = []
-            for hs in self._handlers.values():
-                all_handlers.extend(hs)
+            catch_all = list(self._all_handlers)
         for h in handlers:
             h(event)
-        for h in all_handlers:
+        for h in catch_all:
             h(event)
 
     def Stop(self) -> None:
@@ -105,7 +144,7 @@ class EventBus:
     def Len(self) -> int:
         """Return the total number of registered handlers. Mirrors EventBus.Len()."""
         with self._mu:
-            return sum(len(hs) for hs in self._handlers.values())
+            return sum(len(hs) for hs in self._handlers.values()) + len(self._all_handlers)
 
 
 def NewEventBus(ctx: _Context | None = None) -> EventBus:

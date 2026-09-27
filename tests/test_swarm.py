@@ -54,9 +54,9 @@ def test_swarm_empty_task_list():
     assert results == []
 
     passed, ratio, summary = orchestrator.consensus_check([])
-    assert passed is True
-    assert ratio == 1.0
-    assert "No results" in summary
+    assert passed is False
+    assert ratio == 0.0
+    assert "empty" in summary.lower()
 
 
 def test_swarm_agent_exception_handled():

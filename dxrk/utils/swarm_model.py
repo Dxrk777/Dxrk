@@ -79,6 +79,10 @@ TaskID = str
 BackendCapabilities = dict[str, int]
 EventHandler = Callable[["SwarmEvent"], None]
 HealthCallback = Callable[[BackendID, "BackendStatus", "BackendStatus"], None]
+# Handler invoked by the scheduler to compute a task's output bytes from
+# the task itself. Returning None means "no output". Raising propagates as
+# a task error (recorded on ``task.error``).
+TaskPayloadHandler = Callable[["Task"], bytes | None]
 
 # Mirrors swarm.Default* constants.
 DEFAULT_HEARTBEAT_INTERVAL = timedelta(seconds=5)
@@ -179,9 +183,7 @@ class Backend:
     last_heartbeat: datetime = _ZERO_TIME
     registered_at: datetime = _ZERO_TIME
     lease_id: str = ""
-    _mu: threading.RLock = field(
-        default_factory=threading.RLock, init=False, repr=False
-    )
+    _mu: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
 
     def AvailableCapacity(self) -> int:
         """Return the remaining capacity. Mirrors Backend.AvailableCapacity()."""
@@ -191,10 +193,7 @@ class Backend:
     def CanHandle(self, task: Task) -> bool:
         """Return True if the backend can accept the task. Mirrors Backend.CanHandle()."""
         with self._mu:
-            if (
-                self.status != BackendStatus.StatusHealthy
-                and self.status != BackendStatus.StatusDegraded
-            ):
+            if self.status != BackendStatus.StatusHealthy and self.status != BackendStatus.StatusDegraded:
                 return False
             if self.load >= self.capacity:
                 return False
@@ -269,9 +268,8 @@ class Task:
     assigned_backend: BackendID = ""
     result: TaskResult | None = None
     error: str = ""
-    _mu: threading.RLock = field(
-        default_factory=threading.RLock, init=False, repr=False
-    )
+    session_id: str = ""
+    _mu: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
 
     def IsCompleted(self) -> bool:
         """Return True if the task has completed. Mirrors Task.IsCompleted()."""
@@ -321,6 +319,7 @@ class TaskResult:
     metrics: dict[str, float] = field(default_factory=dict)
     duration: timedelta = timedelta(0)
     timestamp: datetime = _ZERO_TIME
+    session_id: str = ""
 
 
 @dataclass
@@ -373,9 +372,7 @@ class _Context:
 
     __slots__ = ("_done", "_err", "_deadline", "_parent")
 
-    def __init__(
-        self, parent: _Context | None = None, deadline: float | None = None
-    ) -> None:
+    def __init__(self, parent: _Context | None = None, deadline: float | None = None) -> None:
         self._done = threading.Event()
         self._err: str | None = None
         self._deadline = deadline

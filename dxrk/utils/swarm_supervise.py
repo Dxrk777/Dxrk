@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
@@ -50,7 +51,15 @@ class _HealthCheck:
 
 
 class HealthMonitor:
-    """Periodically checks backend health. Mirrors swarm.HealthMonitor."""
+    """Periodically checks backend health. Mirrors swarm.HealthMonitor.
+
+    The liveness probe is pluggable: :meth:`SetPing` installs a global
+    check, :meth:`SetBackendPing` overrides it per backend. The default
+    probe exercises the backend's own status path — a backend in
+    ``stopping``/``stopped`` status fails the check — so
+    ``StatusUnhealthy`` is reachable without any stubbing once
+    ``consecutive_failures`` hits the threshold.
+    """
 
     def __init__(
         self,
@@ -58,6 +67,7 @@ class HealthMonitor:
         interval: timedelta = timedelta(seconds=10),
         timeout: timedelta = timedelta(seconds=5),
         failure_threshold: int = 3,
+        ping: Callable[[Backend], SwarmError | None] | None = None,
     ) -> None:
         if interval <= timedelta(0):
             interval = timedelta(seconds=10)
@@ -75,6 +85,21 @@ class HealthMonitor:
         self._ctx, self._cancel = _with_cancel()
         self._thread: threading.Thread | None = None
         self._callbacks: list[HealthCallback] = []
+        self._ping = ping
+        self._backend_pings: dict[BackendID, Callable[[Backend], SwarmError | None]] = {}
+
+    def SetPing(self, ping: Callable[[Backend], SwarmError | None] | None) -> None:
+        """Install (or clear) the global liveness probe."""
+        with self._mu:
+            self._ping = ping
+
+    def SetBackendPing(self, backend_id: BackendID, ping: Callable[[Backend], SwarmError | None] | None) -> None:
+        """Install (or clear with None) a per-backend liveness probe."""
+        with self._mu:
+            if ping is None:
+                self._backend_pings.pop(backend_id, None)
+            else:
+                self._backend_pings[backend_id] = ping
 
     def Start(self) -> None:
         """Start the monitoring goroutine. Mirrors HealthMonitor.Start()."""
@@ -111,7 +136,7 @@ class HealthMonitor:
                 check = _HealthCheck(backend_id=b.id, status=b.status)
                 self._checks[b.id] = check
 
-        err = self._ping_backend()
+        err = self._ping_backend(b)
 
         with self._mu:
             check.last_check = _now()
@@ -125,22 +150,39 @@ class HealthMonitor:
                 ):
                     check.status = BackendStatus.StatusUnhealthy
                     b.status = BackendStatus.StatusUnhealthy
-                    self._notify_callbacks(
-                        b.id, old_status, BackendStatus.StatusUnhealthy
-                    )
+                    self._notify_callbacks(b.id, old_status, BackendStatus.StatusUnhealthy)
             else:
                 check.consecutive_failures = 0
                 if check.status != BackendStatus.StatusHealthy:
                     check.status = BackendStatus.StatusHealthy
                     b.status = BackendStatus.StatusHealthy
-                    self._notify_callbacks(
-                        b.id, old_status, BackendStatus.StatusHealthy
-                    )
+                    self._notify_callbacks(b.id, old_status, BackendStatus.StatusHealthy)
 
-    def _ping_backend(self) -> SwarmError | None:
+    def _ping_backend(self, backend: Backend | None = None) -> SwarmError | None:
+        """Probe one backend's liveness.
+
+        Resolution order: per-backend probe, global probe, then the
+        default status-path probe. A cancelled monitor always fails.
+        """
         if self._ctx.err() is not None:
             return SwarmError(self._ctx.err() or _CTX_CANCELED)
-        time.sleep(0.01)
+        if backend is None:
+            return None
+        with self._mu:
+            probe = self._backend_pings.get(backend.id, self._ping)
+        if probe is not None:
+            return probe(backend)
+        return self._default_ping(backend)
+
+    @staticmethod
+    def _default_ping(backend: Backend) -> SwarmError | None:
+        """Default probe: fail backends that are stopping or stopped.
+
+        This exercises the backend's own status path instead of sleeping
+        and returning success unconditionally.
+        """
+        if backend.status in (BackendStatus.StatusStopping, BackendStatus.StatusStopped):
+            return SwarmError(f"backend {backend.id} is {backend.status.string()}")
         return None
 
     def _notify_callbacks(
@@ -150,9 +192,7 @@ class HealthMonitor:
         new_status: BackendStatus,
     ) -> None:
         for cb in list(self._callbacks):
-            threading.Thread(
-                target=cb, args=(backend_id, old_status, new_status), daemon=True
-            ).start()
+            threading.Thread(target=cb, args=(backend_id, old_status, new_status), daemon=True).start()
 
     def GetHealth(self, backend_id: BackendID) -> tuple[BackendStatus, datetime, int]:
         """Return the health state for a backend. Mirrors HealthMonitor.GetHealth()."""
@@ -189,9 +229,10 @@ def NewHealthMonitor(
     interval: timedelta,
     timeout: timedelta,
     failure_threshold: int,
+    ping: Callable[[Backend], SwarmError | None] | None = None,
 ) -> HealthMonitor:
     """Create a new health monitor. Mirrors swarm.NewHealthMonitor()."""
-    return HealthMonitor(registry, interval, timeout, failure_threshold)
+    return HealthMonitor(registry, interval, timeout, failure_threshold, ping=ping)
 
 
 class LeaderElection:

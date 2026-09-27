@@ -1024,7 +1024,7 @@ def test_eventbus_unsub_and_closed_and_full(monkeypatch):
     bus2.Subscribe(W.SwarmEventType.EventTaskCompleted, lambda e: None)
     seen = []
     unsub_all = bus2.SubscribeAll(seen.append)
-    assert bus2.Len() == 4
+    assert bus2.Len() == 3
     unsub_all()
     assert bus2.Len() == 2
     # second unsub_all finds nothing (break miss)
@@ -1152,12 +1152,12 @@ def test_scheduler_dispatch_workstealing_none():
     t = W.Task(id="t-nosuit", type="x")
     sch._dispatch_task(t)
     assert t.error == "no suitable backend found"
-    # least-loaded path with backends returns one (then worker-not-found)
+    # least-loaded path with backends but no started workers reports honestly
     sch2 = W.NewTaskScheduler(reg, W.SchedulerConfig(work_stealing=False))
     b.load = 0
     t2 = W.Task(id="t-ww")
     sch2._dispatch_task(t2)
-    assert t2.error == "backend worker not found"
+    assert t2.error == "no workers available"
 
 
 def test_scheduler_dispatch_assign_and_full():
@@ -1282,7 +1282,7 @@ def test_healthmonitor_check_paths():
     mon._check_backend(b)
     # failure path: force ping error
 
-    def _fail():
+    def _fail(_backend):
         return W.SwarmError("down")
 
     mon._ping_backend = _fail  # type: ignore[method-assign]
@@ -1390,7 +1390,8 @@ def test_coordinator_init_and_methods():
     assert len(coord.GetBackends()) == 1
     assert len(coord.GetHealthyBackends()) == 1
     assert coord.UnregisterBackend(_BG, b.id) is None
-    assert coord.GetTaskResult(None, "x") == (None, None)
+    res, err = coord.GetTaskResult(None, "x")
+    assert res is None and err is not None
     assert coord.SubmitTask(W.Task(id="t1")) is None
     assert coord.IsLeader() is False
     assert coord.LeaderID() == ""
@@ -1543,7 +1544,7 @@ def test_eventbus_dispatch_with_handlers():
     bus.Subscribe(W.SwarmEventType.EventBackendRegistered, seen.append)
     bus.Subscribe(W.SwarmEventType.EventTaskCompleted, lambda e: seen.append(e))
     bus._dispatch(W.SwarmEvent(type=W.SwarmEventType.EventBackendRegistered, backend_id="h1"))
-    assert len(seen) >= 2  # type handler + all-handler duplicate (intended quirk)
+    assert len(seen) == 1  # exactly one type handler fires; no all-handler duplicate
     bus.Stop()
 
 

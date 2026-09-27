@@ -16,12 +16,14 @@ from dxrk.utils.swarm_model import _STR_TASK_ID as _STR_TASK_ID
 from dxrk.utils.swarm_model import Backend as Backend
 from dxrk.utils.swarm_model import BackendID as BackendID
 from dxrk.utils.swarm_model import BackendStatus as BackendStatus
+from dxrk.utils.swarm_model import ErrTaskNotFound as ErrTaskNotFound
 from dxrk.utils.swarm_model import EventHandler as EventHandler
 from dxrk.utils.swarm_model import SwarmConfig as SwarmConfig
 from dxrk.utils.swarm_model import SwarmError as SwarmError
 from dxrk.utils.swarm_model import SwarmEvent as SwarmEvent
 from dxrk.utils.swarm_model import SwarmEventType as SwarmEventType
 from dxrk.utils.swarm_model import Task as Task
+from dxrk.utils.swarm_model import TaskID as TaskID
 from dxrk.utils.swarm_model import TaskResult as TaskResult
 from dxrk.utils.swarm_model import _Context as _Context
 from dxrk.utils.swarm_model import _now as _now
@@ -32,6 +34,7 @@ from dxrk.utils.swarm_schedule import NewTaskScheduler as NewTaskScheduler
 from dxrk.utils.swarm_schedule import SchedulerConfig as SchedulerConfig
 from dxrk.utils.swarm_schedule import SchedulerStats as SchedulerStats
 from dxrk.utils.swarm_schedule import TaskScheduler as TaskScheduler
+from dxrk.utils.swarm_session import SwarmTaskStore as SwarmTaskStore
 from dxrk.utils.swarm_supervise import BackendHealth as BackendHealth
 from dxrk.utils.swarm_supervise import HealthMonitor as HealthMonitor
 from dxrk.utils.swarm_supervise import NewHealthMonitor as NewHealthMonitor
@@ -47,6 +50,10 @@ class CoordinatorConfig:
     task_timeout: timedelta = timedelta(minutes=5)
     max_retries: int = 3
     enable_work_stealing: bool = False
+    local_id: BackendID = ""
+    """Backend ID identifying this coordinator. When set, IsLeader() is True
+    only when the election leader matches it; when empty, IsLeader() is True
+    whenever the election has produced a leader."""
 
 
 @dataclass
@@ -64,7 +71,12 @@ class CoordinatorStats:
 class SwarmCoordinator:
     """Coordinates swarm components. Mirrors swarm.SwarmCoordinator."""
 
-    def __init__(self, registry: BackendRegistry, config: CoordinatorConfig) -> None:
+    def __init__(
+        self,
+        registry: BackendRegistry,
+        config: CoordinatorConfig,
+        result_store: SwarmTaskStore | None = None,
+    ) -> None:
         if config.election_timeout <= timedelta(0):
             config.election_timeout = timedelta(seconds=10)
         if config.heartbeat_interval <= timedelta(0):
@@ -108,7 +120,11 @@ class SwarmCoordinator:
         self._is_leader = False
         self._leader_id: BackendID = ""
         self._unsubscribes: list[Callable[[], None]] = []
+        self._subscriptions: list[tuple[SwarmEventType, EventHandler]] = []
         self._thread: threading.Thread | None = None
+        self._tasks: dict[TaskID, Task] = {}
+        self._results: dict[TaskID, TaskResult] = {}
+        self._store = result_store
 
         self._health.RegisterCallback(self._on_health_change)
 
@@ -125,8 +141,9 @@ class SwarmCoordinator:
     def Stop(self) -> None:
         """Stop all swarm components. Mirrors SwarmCoordinator.Stop()."""
         self._cancel()
-        if self._thread is not None:
-            self._thread.join(timeout=2.0)
+        thread, self._thread = self._thread, None
+        if thread is not None:
+            thread.join(timeout=2.0)
         self._health.Stop()
         self._scheduler.Stop()
         self._election.Stop()
@@ -135,6 +152,8 @@ class SwarmCoordinator:
         for unsub in self._unsubscribes:
             unsub()
         self._unsubscribes.clear()
+        with self._mu:
+            self._subscriptions.clear()
 
     def _coordinator_loop(self) -> None:
         interval = _td_seconds(self._config.heartbeat_interval)
@@ -142,17 +161,33 @@ class SwarmCoordinator:
         while True:
             if self._ctx.err() is not None:
                 return
+            # Short polls so Stop() never waits out a full heartbeat
+            # interval and a result burst cannot starve heartbeats: the
+            # deadline is only reset by the heartbeat itself.
             remaining = max(0.0, next_heartbeat - time.monotonic())
             try:
-                result = self._scheduler.Results().get(timeout=remaining)
+                result = self._scheduler.Results().get(timeout=min(0.05, remaining) or 0.05)
             except queue.Empty:
                 pass
             else:
                 self._handle_task_result(result)
-                next_heartbeat = time.monotonic() + interval
                 continue
-            self._heartbeat()
-            next_heartbeat = time.monotonic() + interval
+            if time.monotonic() >= next_heartbeat:
+                self._heartbeat()
+                self._sync_leader()
+                next_heartbeat = time.monotonic() + interval
+
+    def _sync_leader(self) -> None:
+        """Propagate the election result into the cached leader state."""
+        leader, err = self._election.GetLeader()
+        with self._mu:
+            if err is not None or leader is None:
+                self._is_leader = False
+                self._leader_id = ""
+                return
+            self._leader_id = leader.id
+            local = self._config.local_id
+            self._is_leader = leader.id == local if local else True
 
     def _heartbeat(self) -> None:
         with self._mu:
@@ -168,6 +203,13 @@ class SwarmCoordinator:
             )
 
     def _handle_task_result(self, result: TaskResult) -> None:
+        with self._mu:
+            self._results[result.task_id] = result
+        if self._store is not None:
+            try:
+                self._store.RecordResult(result)
+            except Exception:
+                pass
         self._event_bus.Publish(
             SwarmEvent(
                 type=SwarmEventType.EventTaskCompleted,
@@ -204,15 +246,59 @@ class SwarmCoordinator:
             self._reschedule_tasks(backend_id)
 
     def _reschedule_tasks(self, backend_id: BackendID) -> None:
-        """No-op stub. Mirrors SwarmCoordinator.rescheduleTasks()."""
+        """Requeue incomplete tasks assigned to an unhealthy backend.
+
+        Each task is retried while ``CanRetry()`` holds, so retries stay
+        bounded by ``max_retries``; exhausted tasks keep their error and
+        are left for :meth:`GetTaskResult` callers to observe.
+        """
+        with self._mu:
+            candidates = [t for t in self._tasks.values() if t.assigned_backend == backend_id and not t.IsCompleted()]
+        for task in candidates:
+            if not task.CanRetry():
+                continue
+            task.IncrementRetry()
+            if self._store is not None:
+                try:
+                    self._store.RecordTask(task)
+                except Exception:
+                    pass
+            if self._scheduler.Submit(task) is not None:
+                break
 
     def SubmitTask(self, task: Task) -> SwarmError | None:
         """Submit a task to the coordinator's scheduler. Mirrors SwarmCoordinator.SubmitTask()."""
+        if task.max_retries <= 0:
+            task.max_retries = self._config.max_retries
+        with self._mu:
+            self._tasks[task.id] = task
+        if self._store is not None:
+            try:
+                self._store.RecordTask(task)
+            except Exception:
+                pass
         return self._scheduler.Submit(task)
 
-    def GetTaskResult(self, ctx: _Context | None, task_id: str) -> tuple[None, None]:
-        """No-op stub. Mirrors SwarmCoordinator.GetTaskResult()."""
-        return None, None
+    def GetTaskResult(self, ctx: _Context | None, task_id: str) -> tuple[TaskResult | None, SwarmError | None]:
+        """Return the completed result for a task. Mirrors SwarmCoordinator.GetTaskResult().
+
+        Drains newly arrived scheduler results first; unknown ids return
+        ``ErrTaskNotFound`` instead of a silent ``(None, None)``.
+        """
+        del ctx
+        with self._mu:
+            if task_id in self._results:
+                return self._results[task_id], None
+        while True:
+            try:
+                result = self._scheduler.Results().get_nowait()
+            except queue.Empty:
+                break
+            self._handle_task_result(result)
+        with self._mu:
+            if task_id in self._results:
+                return self._results[task_id], None
+        return None, ErrTaskNotFound
 
     def RegisterBackend(self, ctx: _Context | None, b: Backend) -> SwarmError | None:
         """Register a backend. Mirrors SwarmCoordinator.RegisterBackend()."""
@@ -230,27 +316,63 @@ class SwarmCoordinator:
         """Return healthy backends. Mirrors SwarmCoordinator.GetHealthyBackends()."""
         return self._registry.GetHealthy()
 
-    def Subscribe(self, event_type: SwarmEventType, handler: EventHandler) -> None:
+    def Subscribe(self, event_type: SwarmEventType, handler: EventHandler) -> Callable[[], None]:
         """Subscribe to an event type. Mirrors SwarmCoordinator.Subscribe()."""
         unsub = self._event_bus.Subscribe(event_type, handler)
         with self._mu:
             self._unsubscribes.append(unsub)
+            self._subscriptions.append((event_type, handler))
+        return unsub
 
     def Unsubscribe(self, event_type: SwarmEventType, handler: EventHandler) -> None:
-        """No-op stub. Mirrors SwarmCoordinator.Unsubscribe()."""
+        """Remove a handler subscribed via :meth:`Subscribe`."""
+        with self._mu:
+            self._subscriptions = [(t, h) for t, h in self._subscriptions if not (t == event_type and h is handler)]
+        self._event_bus.Unsubscribe(event_type, handler)
 
     def IsLeader(self) -> bool:
         """Return True if the coordinator is leader. Mirrors SwarmCoordinator.IsLeader()."""
+        self._sync_leader()
         with self._mu:
             return self._is_leader
 
     def LeaderID(self) -> BackendID:
         """Return the coordinator's leader ID. Mirrors SwarmCoordinator.LeaderID()."""
+        self._sync_leader()
         with self._mu:
             return self._leader_id
 
+    def SessionSummary(self, session_id: str) -> dict[str, int]:
+        """Return submitted/completed/in-flight swarm counts for a session.
+
+        Served from the durable :class:`SwarmTaskStore` when configured,
+        else from in-memory tracking — so resume/summary can show swarm
+        work either way.
+        """
+        if self._store is not None:
+            return self._store.SessionSummary(session_id)
+        with self._mu:
+            submitted = sum(1 for t in self._tasks.values() if t.session_id == session_id)
+            completed = sum(1 for r in self._results.values() if r.session_id == session_id)
+        return {
+            "submitted": submitted,
+            "completed": completed,
+            "in_flight": max(0, submitted - completed),
+        }
+
+    def SessionSummaryText(self, session_id: str) -> str:
+        """Render one human line describing a session's swarm work."""
+        if self._store is not None:
+            return self._store.SessionSummaryText(session_id)
+        counts = self.SessionSummary(session_id)
+        return (
+            f"session {session_id}: swarm {counts['completed']}/{counts['submitted']} tasks completed"
+            f" ({counts['in_flight']} in flight)"
+        )
+
     def Stats(self) -> CoordinatorStats:
         """Return coordinator statistics. Mirrors SwarmCoordinator.Stats()."""
+        self._sync_leader()
         with self._mu:
             scheduler_stats = self._scheduler.Stats()
             health_stats = self._health.GetAllHealth()
@@ -264,6 +386,10 @@ class SwarmCoordinator:
             )
 
 
-def NewSwarmCoordinator(registry: BackendRegistry, config: CoordinatorConfig) -> SwarmCoordinator:
+def NewSwarmCoordinator(
+    registry: BackendRegistry,
+    config: CoordinatorConfig,
+    result_store: SwarmTaskStore | None = None,
+) -> SwarmCoordinator:
     """Create a new swarm coordinator. Mirrors swarm.NewSwarmCoordinator()."""
-    return SwarmCoordinator(registry, config)
+    return SwarmCoordinator(registry, config, result_store=result_store)

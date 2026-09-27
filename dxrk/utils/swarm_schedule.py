@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import concurrent.futures
 import queue
 import threading
 import time
@@ -16,6 +17,7 @@ from dxrk.utils.swarm_model import Backend as Backend
 from dxrk.utils.swarm_model import ErrQueueFull as ErrQueueFull
 from dxrk.utils.swarm_model import SwarmError as SwarmError
 from dxrk.utils.swarm_model import Task as Task
+from dxrk.utils.swarm_model import TaskPayloadHandler as TaskPayloadHandler
 from dxrk.utils.swarm_model import TaskResult as TaskResult
 from dxrk.utils.swarm_model import _now as _now
 from dxrk.utils.swarm_model import _rand_string as _rand_string
@@ -60,7 +62,12 @@ class _Worker:
 class TaskScheduler:
     """Distributes tasks to worker goroutines. Mirrors swarm.TaskScheduler."""
 
-    def __init__(self, registry: BackendRegistry, config: SchedulerConfig) -> None:
+    def __init__(
+        self,
+        registry: BackendRegistry,
+        config: SchedulerConfig,
+        handler: TaskPayloadHandler | None = None,
+    ) -> None:
         if config.max_concurrent_tasks <= 0:
             config.max_concurrent_tasks = 10
         if config.queue_size <= 0:
@@ -80,6 +87,17 @@ class TaskScheduler:
         self._ctx, self._cancel = _with_cancel()
         self._threads: list[threading.Thread] = []
         self._config = config
+        self._handler = handler
+
+    def RegisterHandler(self, handler: TaskPayloadHandler) -> None:
+        """Register the callable that executes task payloads.
+
+        The handler receives the assigned :class:`Task` and returns the
+        output bytes (or None). Without a handler the scheduler echoes
+        ``task.payload`` as the output — real data flow, not a simulation.
+        """
+        with self._mu:
+            self._handler = handler
 
     def Start(self) -> None:
         """Start the scheduler workers and dispatch loop. Mirrors TaskScheduler.Start()."""
@@ -102,14 +120,17 @@ class TaskScheduler:
         thread.start()
 
     def _worker_loop(self, w: _Worker) -> None:
-        while True:
-            if self._ctx.err() is not None:
-                return
-            try:
-                task = w.tasks.get(timeout=0.05)
-            except queue.Empty:
-                continue
-            self._execute_task(w, task)
+        try:
+            while True:
+                if self._ctx.err() is not None:
+                    return
+                try:
+                    task = w.tasks.get(timeout=0.05)
+                except queue.Empty:
+                    continue
+                self._execute_task(w, task)
+        finally:
+            w.done.set()
 
     def _dispatch_loop(self) -> None:
         while True:
@@ -149,6 +170,7 @@ class TaskScheduler:
             self._results.put(
                 TaskResult(
                     task_id=task.id,
+                    session_id=task.session_id,
                     metrics={_STR_ERROR: 1.0},
                     timestamp=_now(),
                 )
@@ -165,38 +187,70 @@ class TaskScheduler:
             self._results.put(
                 TaskResult(
                     task_id=task.id,
+                    session_id=task.session_id,
                     metrics={_STR_ERROR: 1.0},
                     timestamp=_now(),
                 )
             )
             return
 
-        w = self._workers.get(selected.id)
+        # Workers form a generic pool: assign the task to the selected
+        # backend, then hand it to the least-queued worker. (Looking workers
+        # up by backend ID never matches — workers are keyed ``worker-*`` —
+        # so every task used to die here with "backend worker not found".)
+        task.Assign(selected.id)
+        task.started_at = _now()
+        selected.IncrementLoad()
+
+        w = self._select_worker()
         if w is None:
-            task.error = "backend worker not found"
+            selected.DecrementLoad()
+            with self._mu:
+                has_workers = bool(self._workers)
+            task.error = "worker queue full" if has_workers else "no workers available"
             self._results.put(
                 TaskResult(
                     task_id=task.id,
+                    backend_id=selected.id,
+                    session_id=task.session_id,
                     metrics={_STR_ERROR: 1.0},
                     timestamp=_now(),
                 )
             )
             return
-
-        task.Assign(selected.id)
-        task.started_at = _now()
 
         try:
             w.tasks.put_nowait(task)
         except queue.Full:
+            selected.DecrementLoad()
             task.error = "worker queue full"
             self._results.put(
                 TaskResult(
                     task_id=task.id,
+                    backend_id=selected.id,
+                    session_id=task.session_id,
                     metrics={_STR_ERROR: 1.0},
                     timestamp=_now(),
                 )
             )
+
+    def _select_worker(self) -> _Worker | None:
+        """Return the non-full worker with the shortest queue, if any."""
+        with self._mu:
+            workers = list(self._workers.values())
+        best: _Worker | None = None
+        best_depth = 0
+        for w in workers:
+            try:
+                depth = w.tasks.qsize()
+            except NotImplementedError:
+                depth = 0
+            if w.tasks.full():
+                continue
+            if best is None or depth < best_depth:
+                best = w
+                best_depth = depth
+        return best
 
     def _select_backend_least_loaded(self, backends: list[Backend]) -> Backend | None:
         selected: Backend | None = None
@@ -207,9 +261,7 @@ class TaskScheduler:
                 selected = b
         return selected
 
-    def _select_backend_work_stealing(
-        self, backends: list[Backend], task: Task
-    ) -> Backend | None:
+    def _select_backend_work_stealing(self, backends: list[Backend], task: Task) -> Backend | None:
         scores: list[tuple[Backend, float]] = []
         for b in backends:
             capacity = float(b.capacity - b.load)
@@ -231,46 +283,101 @@ class TaskScheduler:
     def _execute_task(self, w: _Worker, task: Task) -> None:
         deadline = time.monotonic() + _td_seconds(self._config.task_timeout)
 
-        last_err = ""
-        for attempt in range(self._config.retry_attempts + 1):
-            if self._ctx.err() is not None or time.monotonic() >= deadline:
-                task.error = _CTX_DEADLINE
-                self._results.put(
-                    TaskResult(
-                        task_id=task.id,
-                        metrics={_STR_ERROR: 1.0, _STR_TIMEOUT: 1.0},
-                        duration=_now() - task.started_at,
-                        timestamp=_now(),
+        try:
+            last_err = ""
+            for attempt in range(self._config.retry_attempts + 1):
+                if self._ctx.err() is not None or time.monotonic() >= deadline:
+                    task.error = _CTX_DEADLINE
+                    self._results.put(
+                        TaskResult(
+                            task_id=task.id,
+                            backend_id=task.assigned_backend,
+                            session_id=task.session_id,
+                            metrics={_STR_ERROR: 1.0, _STR_TIMEOUT: 1.0},
+                            duration=_now() - task.started_at,
+                            timestamp=_now(),
+                        )
                     )
+                    return
+
+                result = self._run_task(w, task)
+                if task.error == "":
+                    self._results.put(result)
+                    return
+                last_err = task.error
+                if attempt < self._config.retry_attempts:
+                    time.sleep(_td_seconds(self._config.retry_delay))
+
+            task.error = last_err
+            self._results.put(
+                TaskResult(
+                    task_id=task.id,
+                    backend_id=task.assigned_backend,
+                    session_id=task.session_id,
+                    metrics={_STR_ERROR: 1.0, "retries_exhausted": 1.0},
+                    duration=_now() - task.started_at,
+                    timestamp=_now(),
                 )
-                return
-
-            result = self._run_task(w, task)
-            if task.error == "":
-                self._results.put(result)
-                return
-            last_err = task.error
-            if attempt < self._config.retry_attempts:
-                time.sleep(_td_seconds(self._config.retry_delay))
-
-        task.error = last_err
-        self._results.put(
-            TaskResult(
-                task_id=task.id,
-                metrics={_STR_ERROR: 1.0, "retries_exhausted": 1.0},
-                duration=_now() - task.started_at,
-                timestamp=_now(),
             )
-        )
+        finally:
+            backend, _ = self._registry.Get(task.assigned_backend)
+            if backend is not None:
+                backend.DecrementLoad()
+
+    def _effective_timeout(self, task: Task) -> float:
+        if task.timeout > timedelta(0):
+            return _td_seconds(task.timeout)
+        return _td_seconds(self._config.task_timeout)
 
     def _run_task(self, w: _Worker, task: Task) -> TaskResult:
+        """Execute one task attempt via the registered handler.
+
+        The handler runs with a timeout (the task's own ``timeout`` when
+        set, else the scheduler's ``task_timeout``). On timeout the task
+        records ``context deadline exceeded`` and the result carries the
+        ``timeout`` metric. Without a registered handler the payload is
+        echoed as the output.
+        """
         start = _now()
-        backend_id = w.backend.id if w.backend is not None else ""
+        backend_id = task.assigned_backend or (w.backend.id if w.backend is not None else "")
+        timeout = self._effective_timeout(task)
+
+        with self._mu:
+            handler = self._handler
+
+        try:
+            if handler is None:
+                output = task.payload
+            else:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(handler, task)
+                    output = future.result(timeout=timeout)
+        except concurrent.futures.TimeoutError:
+            task.error = _CTX_DEADLINE
+            return TaskResult(
+                task_id=task.id,
+                backend_id=backend_id,
+                session_id=task.session_id,
+                metrics={_STR_ERROR: 1.0, _STR_TIMEOUT: 1.0},
+                duration=_now() - start,
+                timestamp=_now(),
+            )
+        except Exception as exc:  # noqa: BLE001 - recorded on the task
+            task.error = str(exc) or "handler failed"
+            return TaskResult(
+                task_id=task.id,
+                backend_id=backend_id,
+                session_id=task.session_id,
+                metrics={_STR_ERROR: 1.0},
+                duration=_now() - start,
+                timestamp=_now(),
+            )
 
         result = TaskResult(
             task_id=task.id,
             backend_id=backend_id,
-            metrics={"simulated": 1.0},
+            session_id=task.session_id,
+            output=output,
             duration=_now() - start,
             timestamp=_now(),
         )
@@ -297,7 +404,7 @@ class TaskScheduler:
 
 
 def NewTaskScheduler(
-    registry: BackendRegistry, config: SchedulerConfig
+    registry: BackendRegistry, config: SchedulerConfig, handler: TaskPayloadHandler | None = None
 ) -> TaskScheduler:
     """Create a new task scheduler. Mirrors swarm.NewTaskScheduler()."""
-    return TaskScheduler(registry, config)
+    return TaskScheduler(registry, config, handler=handler)
