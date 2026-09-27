@@ -44,6 +44,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from dxrk import __version__ as _DXRK_VERSION
 from dxrk.memory.palace import DxrkMemory
 from dxrk.memory.search import _bm25_scores as _bm25_scores
 from dxrk.memory.vectors import embed_counts as _embed_counts
@@ -360,7 +361,7 @@ def main(argv: list[str] | None = None) -> int:
     print(_format_markdown(rows, n_docs))
 
     payload: dict[str, Any] = {
-        "version": "1.2.0",
+        "version": _DXRK_VERSION,
         "suite": "bench_recall",
         "quick": bool(args.quick),
         "reps": reps,
