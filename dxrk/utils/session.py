@@ -24,6 +24,12 @@ __all__ = [
     "ListOpts",
     "FileStorage",
     "MemoryStorage",
+    "SQLiteSessionStorage",
+    "NewSQLiteSessionStorage",
+    "JsonToSqliteResult",
+    "open_session_storage",
+    "migrate_json_dir_to_sqlite",
+    "SESSION_BACKEND_ENV_VAR",
     "Serialize",
     "Deserialize",
     "ExportJSON",
@@ -139,12 +145,17 @@ from dxrk.utils.session_serialize import html_escape as html_escape
 from dxrk.utils.session_serialize import import_json as import_json
 from dxrk.utils.session_serialize import serialize as serialize
 from dxrk.utils.session_serialize import xml_escape as xml_escape
+from dxrk.utils.session_storage import _SQLITE_SCHEMA as _SQLITE_SCHEMA
+from dxrk.utils.session_storage import SESSION_BACKEND_ENV_VAR as SESSION_BACKEND_ENV_VAR
 from dxrk.utils.session_storage import FileStorage as FileStorage
+from dxrk.utils.session_storage import JsonToSqliteResult as JsonToSqliteResult
 from dxrk.utils.session_storage import ListOpts as ListOpts
 from dxrk.utils.session_storage import MemoryStorage as MemoryStorage
 from dxrk.utils.session_storage import NewFileStorage as NewFileStorage
 from dxrk.utils.session_storage import NewMemoryStorage as NewMemoryStorage
+from dxrk.utils.session_storage import NewSQLiteSessionStorage as NewSQLiteSessionStorage
 from dxrk.utils.session_storage import SessionSummary as SessionSummary
+from dxrk.utils.session_storage import SQLiteSessionStorage as SQLiteSessionStorage
 from dxrk.utils.session_storage import Storage as Storage
 from dxrk.utils.session_storage import _atomic_write_bytes as _atomic_write_bytes
 from dxrk.utils.session_storage import _atomic_write_gz_bytes as _atomic_write_gz_bytes
@@ -155,3 +166,8 @@ from dxrk.utils.session_storage import _fsync_parent as _fsync_parent
 from dxrk.utils.session_storage import _migrated_or_raw as _migrated_or_raw
 from dxrk.utils.session_storage import _parse_session_payload as _parse_session_payload
 from dxrk.utils.session_storage import _read_gz_file as _read_gz_file
+from dxrk.utils.session_storage import _sqlite_ts as _sqlite_ts
+from dxrk.utils.session_storage import _summaries_from_entries as _summaries_from_entries
+from dxrk.utils.session_storage import _validate_session_id as _validate_session_id
+from dxrk.utils.session_storage import migrate_json_dir_to_sqlite as migrate_json_dir_to_sqlite
+from dxrk.utils.session_storage import open_session_storage as open_session_storage

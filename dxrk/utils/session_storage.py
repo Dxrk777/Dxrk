@@ -1,20 +1,22 @@
 # SPDX-License-Identifier: MIT
-"""Session storage backends: file-based storage with index plus memory storage."""
+"""Session storage backends: file-based storage with index, memory storage,
+and an opt-in SQLite/WAL store implementing the same ``Storage`` protocol."""
 
 from __future__ import annotations
 
 import gzip
 import json
 import os
+import sqlite3
 import tempfile
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Protocol
 
 from dxrk.utils.session_codec import _index_entry_from_dict, _index_entry_to_dict, _session_from_dict, _session_to_dict
 from dxrk.utils.session_migrate import migrate_to_current
-from dxrk.utils.session_model import _EPOCH_UTC, Session, SessionError, SessionStatus, now
+from dxrk.utils.session_model import _EPOCH_UTC, Session, SessionError, SessionStatus, _fmt_ts, _from_ts, now
 
 # ─── durable atomic writes ───────────────────────────────────────────
 
@@ -154,6 +156,87 @@ class Storage(Protocol):
     def exists(self, id: str) -> bool: ...
 
 
+def _validate_session_id(base_dir: str, id: str) -> str:
+    """Resolve ``id`` to a session file path, rejecting path traversal.
+
+    Shared by every disk-backed store so sanitization semantics stay
+    identical. Raises SessionError for empty ids, absolute paths,
+    separators, NUL bytes, ``..`` components, or anything resolving
+    outside ``base_dir``. Session ids are generated internally (hex);
+    anything else never names a real session file.
+    """
+    if not id or id in (".", ".."):
+        raise SessionError(f"invalid session id: {id!r}")
+    if os.path.isabs(id) or "/" in id or "\\" in id or "\x00" in id:
+        raise SessionError(f"invalid session id: {id!r}")
+    full = os.path.realpath(os.path.join(base_dir, f"{id}.json"))
+    base = os.path.realpath(base_dir)
+    if full != base and not full.startswith(base + os.sep):
+        raise SessionError(f"invalid session id: {id!r}")
+    return full
+
+
+def _summaries_from_entries(entries: list[dict[str, Any]], opts: ListOpts | None = None) -> list[SessionSummary]:
+    """Filter/sort/paginate raw index entries into ``SessionSummary`` items.
+
+    Shared by every index-backed store (FileStorage, SQLiteSessionStorage)
+    so ``list`` semantics are identical by construction. Entries carry the
+    ``_index_entry_from_dict`` shape (id/title/created_at/updated_at/
+    message_count/token_count/status); payloads are never consulted.
+    """
+    opts = opts or ListOpts()
+    filtered: list[Any] = []
+    for e in entries:
+        if opts.status >= 0 and int(e["status"]) != opts.status:
+            continue
+        if opts.after is not None and e["created_at"] < opts.after:
+            continue
+        if opts.before is not None and e["created_at"] > opts.before:
+            continue
+        if opts.search_query and opts.search_query.lower() not in e["title"].lower():
+            continue
+        filtered.append(e)
+
+    asc = opts.sort_dir == "asc"
+    key = opts.sort_by
+    if key == "token_count":
+        filtered.sort(key=lambda e: e["token_count"], reverse=not asc)
+    elif key == "message_count":
+        filtered.sort(key=lambda e: e["message_count"], reverse=not asc)
+    else:
+        if key == "updated_at":
+            filtered.sort(
+                key=lambda e: e["updated_at"] if e["updated_at"] is not None else _EPOCH_UTC,
+                reverse=not asc,
+            )
+        else:
+            filtered.sort(
+                key=lambda e: e["created_at"] if e["created_at"] is not None else _EPOCH_UTC,
+                reverse=not asc,
+            )
+
+    if opts.offset > 0:
+        if opts.offset >= len(filtered):
+            return []
+        filtered = filtered[opts.offset :]
+    if opts.limit > 0 and opts.limit < len(filtered):
+        filtered = filtered[: opts.limit]
+
+    result: list[SessionSummary] = []
+    for e in filtered:
+        result.append(
+            SessionSummary(
+                id=e["id"],
+                title=e["title"],
+                created_at=e["created_at"],
+                message_count=e["message_count"],
+                token_count=e["token_count"],
+                status=e["status"],
+            )
+        )
+    return result
+
+
 def _cmp_int(a: int, b: int, asc: bool) -> bool:
     return a < b if asc else a > b
 
@@ -175,20 +258,10 @@ class FileStorage:
     def _validate_session_id(self, id: str) -> str:
         """Resolve ``id`` to a session file path, rejecting path traversal.
 
-        Raises SessionError for empty ids, absolute paths, separators,
-        NUL bytes, ``..`` components, or anything resolving outside
-        ``base_dir``. Session ids are generated internally (hex); anything
-        else never names a real session file.
+        Delegates to the shared :func:`_validate_session_id` helper so all
+        disk-backed stores enforce identical sanitization.
         """
-        if not id or id in (".", ".."):
-            raise SessionError(f"invalid session id: {id!r}")
-        if os.path.isabs(id) or "/" in id or "\\" in id or "\x00" in id:
-            raise SessionError(f"invalid session id: {id!r}")
-        full = os.path.realpath(os.path.join(self.base_dir, f"{id}.json"))
-        base = os.path.realpath(self.base_dir)
-        if full != base and not full.startswith(base + os.sep):
-            raise SessionError(f"invalid session id: {id!r}")
-        return full
+        return _validate_session_id(self.base_dir, id)
 
     def _session_path(self, id: str) -> str:
         return self._validate_session_id(id)
@@ -272,59 +345,9 @@ class FileStorage:
         return os.path.exists(self._compressed_path(id))
 
     def list(self, opts: ListOpts | None = None) -> list[SessionSummary]:
-        opts = opts or ListOpts()
         with self.mu:
             entries = list(self.index.values())
-        filtered: list[Any] = []
-        for e in entries:
-            if opts.status >= 0 and int(e["status"]) != opts.status:
-                continue
-            if opts.after is not None and e["created_at"] < opts.after:
-                continue
-            if opts.before is not None and e["created_at"] > opts.before:
-                continue
-            if opts.search_query and opts.search_query.lower() not in e["title"].lower():
-                continue
-            filtered.append(e)
-
-        asc = opts.sort_dir == "asc"
-        key = opts.sort_by
-        if key == "token_count":
-            filtered.sort(key=lambda e: e["token_count"], reverse=not asc)
-        elif key == "message_count":
-            filtered.sort(key=lambda e: e["message_count"], reverse=not asc)
-        else:
-            if key == "updated_at":
-                filtered.sort(
-                    key=lambda e: e["updated_at"] if e["updated_at"] is not None else _EPOCH_UTC,
-                    reverse=not asc,
-                )
-            else:
-                filtered.sort(
-                    key=lambda e: e["created_at"] if e["created_at"] is not None else _EPOCH_UTC,
-                    reverse=not asc,
-                )
-
-        if opts.offset > 0:
-            if opts.offset >= len(filtered):
-                return []
-            filtered = filtered[opts.offset :]
-        if opts.limit > 0 and opts.limit < len(filtered):
-            filtered = filtered[: opts.limit]
-
-        result: list[SessionSummary] = []
-        for e in filtered:
-            result.append(
-                SessionSummary(
-                    id=e["id"],
-                    title=e["title"],
-                    created_at=e["created_at"],
-                    message_count=e["message_count"],
-                    token_count=e["token_count"],
-                    status=e["status"],
-                )
-            )
-        return result
+        return _summaries_from_entries(entries, opts)
 
     def compress_session(self, id: str) -> None:
         with self.mu:
@@ -467,6 +490,303 @@ class FileStorage:
 
 
 NewFileStorage = FileStorage
+
+
+# ─── sqlite/wal storage (opt-in) ─────────────────────────────────────────
+
+
+SESSION_BACKEND_ENV_VAR = "DXRK_SESSION_BACKEND"
+
+_SQLITE_SCHEMA = """
+CREATE TABLE IF NOT EXISTS sessions (
+    id TEXT PRIMARY KEY,
+    payload TEXT NOT NULL,
+    version INTEGER NOT NULL DEFAULT 2,
+    title TEXT NOT NULL DEFAULT '',
+    model TEXT NOT NULL DEFAULT '',
+    status INTEGER NOT NULL DEFAULT 0,
+    message_count INTEGER NOT NULL DEFAULT 0,
+    token_count INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT '',
+    tags TEXT NOT NULL DEFAULT '[]'
+);
+CREATE INDEX IF NOT EXISTS idx_sessions_updated_at ON sessions(updated_at);
+CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status);
+CREATE INDEX IF NOT EXISTS idx_sessions_model ON sessions(model);
+"""
+
+
+def _sqlite_ts(value: Any) -> datetime | None:
+    try:
+        return _from_ts(value) if value else None
+    except (ValueError, TypeError):
+        return None
+
+
+class SQLiteSessionStorage:
+    """Opt-in SQLite/WAL session store implementing the ``Storage`` protocol.
+
+    Same semantics as :class:`FileStorage` (save/load/delete/exists/list,
+    SessionError contract, id sanitization, migration-on-load): ``list`` is
+    served from indexed columns via the shared ``_summaries_from_entries``
+    helper, so filtering/sorting/pagination behave identically by
+    construction and payloads are never parsed for listing.
+
+    Opt-in only — the JSON dir stays the default backend. Select it either
+    explicitly (``SQLiteSessionStorage(base_dir)``) or via the
+    ``DXRK_SESSION_BACKEND=sqlite`` environment variable with
+    :func:`open_session_storage`.
+
+    Layout: one ``sessions.db`` file in ``base_dir`` (mode 0600), WAL
+    journal, ``busy_timeout=5000``. Each save is a single upsert
+    transaction (atomic). ``load`` parses the stored payload through the
+    migration registry, so registry versions migrate lazily exactly like
+    the file backend.
+
+    PINNED DIFFERENCE vs FileStorage: a row whose payload is corrupt (only
+    possible via external tampering — saves always write valid JSON) still
+    appears in ``list`` (columns are the source of truth for listing)
+    while ``load`` raises SessionError. FileStorage instead drops torn
+    files from a rebuilt index. See
+    ``tests/test_session_phase03_sqlite.py::test_pinned_difference_corrupt_visibility``.
+
+    Deliberately NOT ported: ``compress_session`` (payloads live inline in
+    the db; there is no ``.json``/``.json.gz`` duality) and the CLI-level
+    ``.quarantine/`` directory (a CLI concern in ``commands/session.py``,
+    not a store concern).
+    """
+
+    DB_FILENAME = "sessions.db"
+
+    def __init__(self, base_dir: str = "") -> None:
+        if not base_dir:
+            base_dir = os.path.join(os.path.expanduser("~"), ".dxrk", "sessions")
+        self.base_dir = base_dir
+        self.mu = threading.RLock()
+        os.makedirs(base_dir, mode=0o700, exist_ok=True)
+        self.db_path = os.path.join(base_dir, self.DB_FILENAME)
+        try:
+            self._conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        except sqlite3.Error as e:
+            raise SessionError(f"open sqlite store: {e}") from e
+        try:
+            self._conn.execute("PRAGMA journal_mode=WAL;")
+            self._conn.execute("PRAGMA busy_timeout=5000;")
+            self._conn.execute("PRAGMA synchronous=NORMAL;")
+            self._conn.executescript(_SQLITE_SCHEMA)
+            self._conn.commit()
+        except sqlite3.Error as e:
+            self._conn.close()
+            raise SessionError(f"init sqlite store: {e}") from e
+        try:
+            os.chmod(self.db_path, 0o600)
+        except OSError:
+            pass
+
+    def save(self, s: Session) -> None:
+        _validate_session_id(self.base_dir, s.id)
+        with self.mu:
+            s.updated_at = now()
+            try:
+                data = json.dumps(_session_to_dict(s), indent=2)
+            except (TypeError, ValueError) as e:
+                raise SessionError(f"marshal session: {e}") from e
+            self._upsert_row(s, data)
+
+    def _upsert_row(self, s: Session, payload: str) -> None:
+        """Insert or replace the row for ``s`` without touching timestamps.
+
+        Public ``save`` always refreshes ``updated_at`` first; the
+        JSON-dir importer calls this directly to preserve original
+        timestamps. Raises SessionError on sqlite failures.
+        """
+        try:
+            tags = json.dumps(list(s.tags))
+        except (TypeError, ValueError) as e:
+            raise SessionError(f"marshal session: {e}") from e
+        try:
+            with self._conn:
+                self._conn.execute(
+                    "INSERT INTO sessions "
+                    "(id, payload, version, title, model, status, message_count,"
+                    " token_count, created_at, updated_at, tags) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                    "ON CONFLICT(id) DO UPDATE SET "
+                    "payload=excluded.payload, version=excluded.version, title=excluded.title,"
+                    " model=excluded.model, status=excluded.status,"
+                    " message_count=excluded.message_count, token_count=excluded.token_count,"
+                    " created_at=excluded.created_at, updated_at=excluded.updated_at,"
+                    " tags=excluded.tags",
+                    (
+                        s.id,
+                        payload,
+                        s.version,
+                        s.title,
+                        s.model,
+                        int(s.status),
+                        s.message_count,
+                        s.token_count,
+                        _fmt_ts(s.created_at) if s.created_at else "",
+                        _fmt_ts(s.updated_at) if s.updated_at else "",
+                        tags,
+                    ),
+                )
+        except sqlite3.Error as e:
+            raise SessionError(f"save session: {e}") from e
+
+    def load(self, id: str) -> Session:
+        _validate_session_id(self.base_dir, id)
+        with self.mu:
+            try:
+                row = self._conn.execute("SELECT payload FROM sessions WHERE id = ?", (id,)).fetchone()
+            except sqlite3.Error as e:
+                raise SessionError(f"read session: {e}") from e
+        if row is None:
+            raise SessionError(f"session {id!r} not found")
+        return _parse_session_payload(str(row[0]))
+
+    def delete(self, id: str) -> None:
+        _validate_session_id(self.base_dir, id)
+        with self.mu:
+            try:
+                with self._conn:
+                    self._conn.execute("DELETE FROM sessions WHERE id = ?", (id,))
+            except sqlite3.Error as e:
+                raise SessionError(f"delete session: {e}") from e
+
+    def exists(self, id: str) -> bool:
+        _validate_session_id(self.base_dir, id)
+        with self.mu:
+            try:
+                row = self._conn.execute("SELECT 1 FROM sessions WHERE id = ?", (id,)).fetchone()
+            except sqlite3.Error as e:
+                raise SessionError(f"read session: {e}") from e
+        return row is not None
+
+    def list(self, opts: ListOpts | None = None) -> list[SessionSummary]:
+        # Indexed columns only — the payload is never selected, let alone
+        # parsed, so listing is O(rows) without per-session JSON work.
+        with self.mu:
+            try:
+                rows = self._conn.execute(
+                    "SELECT id, title, created_at, updated_at, message_count, token_count, status FROM sessions"
+                ).fetchall()
+            except sqlite3.Error as e:
+                raise SessionError(f"list sessions: {e}") from e
+        entries: list[dict[str, Any]] = [
+            {
+                "id": str(r[0]),
+                "title": str(r[1]),
+                "created_at": _sqlite_ts(r[2]),
+                "updated_at": _sqlite_ts(r[3]),
+                "message_count": int(r[4] or 0),
+                "token_count": int(r[5] or 0),
+                "status": self._status_from_row(r[6]),
+                "compressed": False,
+            }
+            for r in rows
+        ]
+        return _summaries_from_entries(entries, opts)
+
+    @staticmethod
+    def _status_from_row(value: Any) -> SessionStatus:
+        try:
+            return SessionStatus(int(value))
+        except (ValueError, TypeError):
+            return SessionStatus.Active
+
+    def close(self) -> None:
+        with self.mu:
+            try:
+                self._conn.close()
+            except sqlite3.Error:
+                pass
+
+    Save = save
+    Load = load
+    Delete = delete
+    List = list
+    Exists = exists
+    Close = close
+
+
+NewSQLiteSessionStorage = SQLiteSessionStorage
+
+
+def open_session_storage(base_dir: str = "") -> FileStorage | SQLiteSessionStorage:
+    """Return the session store selected by the environment (default: file).
+
+    The JSON dir (FileStorage) stays the default backend. Set
+    ``DXRK_SESSION_BACKEND=sqlite`` to opt into the SQLite/WAL store.
+    Unknown values fall back to FileStorage.
+    """
+    if os.environ.get(SESSION_BACKEND_ENV_VAR, "").strip().lower() == "sqlite":
+        return SQLiteSessionStorage(base_dir)
+    return FileStorage(base_dir)
+
+
+@dataclass
+class JsonToSqliteResult:
+    imported: int = 0
+    skipped: int = 0
+    skipped_ids: list[str] = field(default_factory=list)
+
+
+def migrate_json_dir_to_sqlite(source: FileStorage | str, target: SQLiteSessionStorage) -> JsonToSqliteResult:
+    """One-shot import of a JSON session dir into a SQLite store.
+
+    Reads ``*.json`` plus compressed-only ``*.json.gz`` sessions through
+    ``FileStorage.load`` (so ``.gz`` fallback and registry migration
+    apply), then upserts each row preserving the original
+    ``created_at``/``updated_at`` timestamps. Unparseable files are
+    skipped and reported in ``skipped_ids`` (mirroring the index-rebuild
+    skip policy). Idempotent: re-running upserts the same rows.
+    Raises SessionError when the source dir is unreadable.
+    """
+    if isinstance(source, str):
+        file_store = FileStorage(source)
+        src_dir = source
+    else:
+        file_store = source
+        src_dir = source.base_dir
+    result = JsonToSqliteResult()
+    try:
+        names = sorted(os.listdir(src_dir))
+    except OSError as e:
+        raise SessionError(f"read session dir: {e}") from e
+    seen: set[str] = set()
+    for name in names:
+        if name == ".index.json" or name.endswith(".tmp"):
+            continue
+        full = os.path.join(src_dir, name)
+        if os.path.isdir(full):
+            continue
+        sid: str | None = None
+        if name.endswith(".json.gz"):
+            sid = name[: -len(".json.gz")]
+            if os.path.exists(os.path.join(src_dir, f"{sid}.json")):
+                continue
+        elif name.endswith(".json"):
+            sid = name[: -len(".json")]
+        else:
+            continue
+        if not sid or sid in seen:
+            continue
+        seen.add(sid)
+        try:
+            s = file_store.load(sid)
+        except SessionError:
+            result.skipped += 1
+            result.skipped_ids.append(sid)
+            continue
+        try:
+            payload = json.dumps(_session_to_dict(s), indent=2)
+        except (TypeError, ValueError) as e:
+            raise SessionError(f"marshal session: {e}") from e
+        target._upsert_row(s, payload)
+        result.imported += 1
+    return result
 
 
 def _read_gz_file(path: str) -> str:
