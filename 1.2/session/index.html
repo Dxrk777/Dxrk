@@ -328,6 +328,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../demo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Demo (60 s)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../comparison/" class="md-nav__link">
         
   
@@ -1141,13 +1168,18 @@ archivos legibles-pero-corruptos se mueven a
 <code>&lt;sessions&gt;/.quarantine/</code> (<code>QUARANTINE_DIR_NAME</code>) y el listado avisa:</p>
 <div class="highlight"><pre><span></span><code>Advertencia: N archivo(s) de sesión corrupto(s) movido(s) a cuarentena.
 </code></pre></div>
-<p>Nombres no-sesión (<code>.index.json</code>, tmps, no-<code>.json</code>) y directorios
-(incluido <code>.quarantine/</code>) se ignoran.</p>
+<p>Cada sesión corrupta pone en cuarentena a sus hermanos
+(<code>&lt;id&gt;.json</code> y/o <code>&lt;id&gt;.json.gz</code> si ambos están corruptos); una copia
+sana nunca se mueve (el store lee <code>.json</code> primero y usa <code>.gz</code> como
+fallback). Con el backend SQLite no hay archivos que mover: las filas
+corruptas se omiten y se cuentan con un aviso ajustado
+(<code>fila(s) ... omitida(s) ... sin cuarentena en disco</code>).</p>
+<p>Nombres no-sesión (<code>.index.json</code>, tmps, sufijos que no son
+<code>.json</code>/<code>.json.gz</code>) y directorios (incluido <code>.quarantine/</code>) se ignoran.</p>
 <h2 id="ids-sanitizados-sin-path-traversal">IDs sanitizados — sin path traversal</h2>
 <p><code>_validate_session_id()</code> (compartida por todos los stores en disco)
 rechaza IDs vacíos, <code>.</code>/<code>..</code>, separadores, bytes NUL y cualquier cosa
-que resuelva fuera del directorio base. El CLI además filtra patrones
-glob en <code>rename</code>/<code>rewind</code>/<code>tag</code>.</p>
+que resuelva fuera del directorio base.</p>
 <h2 id="backend-sqlite-wal-opt-in">Backend SQLite-WAL opt-in</h2>
 <div class="highlight"><pre><span></span><code><span class="nv">DXRK_SESSION_BACKEND</span><span class="o">=</span>sqlite<span class="w"> </span>dxrk-py<span class="w"> </span>session<span class="w"> </span>list
 </code></pre></div>
@@ -1155,6 +1187,10 @@ glob en <code>rename</code>/<code>rewind</code>/<code>tag</code>.</p>
 <li><code>open_session_storage()</code> elige el backend:
   <code>DXRK_SESSION_BACKEND=sqlite</code> → <code>SQLiteSessionStorage</code> (WAL);
   cualquier otro valor → <code>FileStorage</code> (default, dir JSON).</li>
+<li>El CLI honra la variable de punta a punta: <code>session
+  list/create/switch/delete/info</code> (más <code>rename</code>, <code>rewind</code>, <code>tag</code>,
+  <code>resume</code>, <code>share</code>) operan sobre el store seleccionado — con
+  <code>sqlite</code>, <code>list</code>/<code>info</code> leen de <code>sessions.db</code>.</li>
 <li>Misma semántica (<code>save</code>/<code>load</code>/<code>delete</code>/<code>exists</code>/<code>list</code>,
   contrato <code>SessionError</code>, sanitización, migración-on-load).</li>
 <li>Diferencia intencional (fijada en test): una fila con payload corrupto

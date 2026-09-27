@@ -328,6 +328,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../demo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Demo (60 s)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../comparison/" class="md-nav__link">
         
   
@@ -734,6 +761,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#recall-hibrido-2026-09-27-bench_recall" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recall híbrido (2026-09-27, bench_recall)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Recall híbrido (2026-09-27, bench_recall)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#metodo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Método
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#resultados-medidos-deterministas-en-calidad" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resultados (medidos, deterministas en calidad)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#limitaciones-lo-que-este-benchmark-no-prueba" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitaciones (lo que este benchmark NO prueba)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#reglas" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1110,6 +1187,92 @@ pegar aquí. Hay baseline vía pytest opcional
 </table>
 <p>Config: warmup 5 queries, corpus 1k/10k drawers, <code>QUERY_SET</code> de 8 términos,
 BM25 (<code>k1=1.5 b=0.75</code>) + FTS5 trigram→porter, WAL <code>0o600</code>.</p>
+<h2 id="recall-hibrido-2026-09-27-bench_recall">Recall híbrido (2026-09-27, <code>bench_recall</code>)</h2>
+<p>Números públicos del recall híbrido (<code>0.6·cosine + 0.3·BM25 + 0.05·recency
++ 0.05·importance + 0.03·access</code>), medidos con
+<code>uv run python benchmarks/bench_recall.py</code> (reps por defecto: 5).</p>
+<h3 id="metodo">Método</h3>
+<ul>
+<li><strong>Corpus</strong>: 60 documentos sintéticos pero realistas (6 tópicos × 10 docs:
+  <code>auth</code>, <code>deploy</code>, <code>backup</code>, <code>verify</code>, <code>cook</code>, <code>sport</code>), definidos en
+  <code>benchmarks/bench_recall.py</code> (<code>CORPUS</code>). Aislado en <code>tempfile</code>, sin red.</li>
+<li><strong>Queries</strong>: 24 consultas graduadas (<code>QUERIES</code>), mezcla de formulaciones
+  conceptuales (sin solapamiento literal, ej. <em>"how do we handle auth?"</em>),
+  léxicas (ej. <em>"blue-green rollback pipeline?"</em>) y cortas, 4 por tópico.</li>
+<li><strong>Relevancia</strong>: a nivel de tópico — los 10 docs del tópico objetivo son
+  relevantes (denominador de recall@5 = 10).</li>
+<li><strong>Métodos</strong>:</li>
+<li><code>hybrid</code>: path productivo <code>DxrkMemory.search</code> de punta a punta (pool de
+    candidatos FTS5 + rank fusionado + rerank <code>search._hybrid_rank</code>).</li>
+<li><code>bm25-only</code> (ablación): rankea el corpus completo solo con
+    <code>dxrk.memory.search._bm25_scores</code> (k1=1.5, b=0.75); vector, recency,
+    importance y access desactivados.</li>
+<li><code>vector-only</code> (ablación): rankea el corpus completo solo con los
+    primitivos reales de <code>dxrk.memory.vectors</code> (<code>embed_query_counts</code> +
+    <code>idf_weights</code> del pool + <code>weighted_cosine</code>); BM25 y resto desactivados.</li>
+</ul>
+<h3 id="resultados-medidos-deterministas-en-calidad">Resultados (medidos, deterministas en calidad)</h3>
+<table>
+<thead>
+<tr>
+<th>Método</th>
+<th style="text-align: right;">P@1</th>
+<th style="text-align: right;">P@3</th>
+<th style="text-align: right;">P@5</th>
+<th style="text-align: right;">R@5</th>
+<th style="text-align: right;">latencia media/query</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>hybrid</td>
+<td style="text-align: right;">1.000</td>
+<td style="text-align: right;">0.639</td>
+<td style="text-align: right;">0.542</td>
+<td style="text-align: right;">0.271</td>
+<td style="text-align: right;">6.97 ms</td>
+</tr>
+<tr>
+<td>bm25-only</td>
+<td style="text-align: right;">0.958</td>
+<td style="text-align: right;">0.583</td>
+<td style="text-align: right;">0.492</td>
+<td style="text-align: right;">0.246</td>
+<td style="text-align: right;">0.30 ms</td>
+</tr>
+<tr>
+<td>vector-only</td>
+<td style="text-align: right;">0.958</td>
+<td style="text-align: right;">0.639</td>
+<td style="text-align: right;">0.525</td>
+<td style="text-align: right;">0.263</td>
+<td style="text-align: right;">3.27 ms</td>
+</tr>
+</tbody>
+</table>
+<p>Lectura: el híbrido acierta el tópico en el top-1 en las 24 queries y supera
+a ambas ablaciones en P@1/P@5/R@5 (vector-only empata en P@3). Las diferencias
+son chicas — 1 query ≈ 0.04 en P@1 — y consistentes con el diseño: la fusión
+hereda lo mejor de cada señal. BM25 es ~20× más rápido (0.3 ms) porque es
+aritmética sobre tokens; el vector puro (~3.3 ms) paga el coseno ponderado en
+512 dimensiones en Python puro; el híbrido (~7 ms) paga el path completo
+sqlite + rerank.</p>
+<p>Artefacto: <code>benchmarks/results/2026-09-27_bench_recall.json</code>
+(reproducir con <code>uv run python benchmarks/bench_recall.py --json &lt;path&gt;</code>).</p>
+<h3 id="limitaciones-lo-que-este-benchmark-no-prueba">Limitaciones (lo que este benchmark NO prueba)</h3>
+<ul>
+<li>Corpus sintético y tópicos bien separados: no mide recall sobre jerga
+  real de un proyecto ni tópicos ambiguos que se solapan.</li>
+<li>24 queries: sin significancia estadística; 1 query mueve P@1 en 0.04.</li>
+<li>Recency/importance/access entran neutros (docs frescos, sin importance):
+  sus pesos (+0.05/+0.05/+0.03) no se ejercitan aquí.</li>
+<li>Latencias no estrictamente comparables: el híbrido se mide end-to-end
+  (sqlite + rerank) y las ablaciones como scoring en Python sobre el corpus
+  pre-cargado (fetch excluido); el corpus (60 docs) no predice latencia a
+  1k/10k drawers (ver baseline de arriba para escala).</li>
+<li>Una sola máquina / una sola corrida de calidad (determinista) — la
+  latencia varía con el hardware; re-ejecutar localmente.</li>
+</ul>
 <h2 id="reglas">Reglas</h2>
 <ul>
 <li>Todo benchmark nuevo debe ser reproducible: seed fija o corpus sintético

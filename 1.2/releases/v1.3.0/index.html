@@ -328,6 +328,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../../demo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Demo (60 s)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../comparison/" class="md-nav__link">
         
   
@@ -1202,7 +1229,7 @@ Rango cubierto: <code>00ced12..50e9b5e</code> (10 commits). Versión actual en
   tmp + <code>fsync</code> + <code>os.replace</code> + <code>fsync</code> del directorio padre en todos los
   paths; índice con self-heal (<code>_rebuild_index_from_disk</code>), fallback <code>.gz</code>
   y cuarentena (<code>.quarantine/</code> en <code>dxrk/commands/session.py</code>).</li>
-<li><strong>CLI unificada en <code>FileStorage</code></strong> con migración-on-load
+<li><strong>CLI sobre el backend seleccionado por entorno</strong> con migración-on-load
   (<code>migrate_to_current</code>) y sanitización de IDs
   (<code>_validate_session_id</code>: rechaza path traversal).</li>
 <li><strong>Backend SQLite-WAL opt-in:</strong> <code>DXRK_SESSION_BACKEND=sqlite</code>
