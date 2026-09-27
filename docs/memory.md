@@ -210,12 +210,39 @@ Más en [MIGRATION_3.3.5_3.7.1.md](MIGRATION_3.3.5_3.7.1.md) y `docs/architectur
 
 ---
 
+## Recall híbrido Phase 0–1 — vectores locales + fusión + eval
+
+Stdlib-only, sin `torch`/`sentence-transformers`/`numpy`
+(`dxrk/memory/vectors.py`, fusión en `dxrk/memory/backend/sqlite.py`).
+
+| Pieza | Regla |
+|-------|-------|
+| Features | Tokens `w:<tok>` (`\w{2,}`) + char 3-grams con padding (`g:<tri>` sobre `^tok$`); lado query sin stopwords (`query_features`), docs con features completas |
+| Hashing | `md5(feat)` → `DIM = 512` buckets; forma almacenada = conteos TF crudos (BLOB `float32`) |
+| Coseno IDF | IDF estilo BM25 estimada sobre el pool de candidatos; `weighted_cosine` hunde ngrams comunes (`the`/`ing`) y deja dominar a distintivos (`jwt`/`auth`) |
+| Fusión | `COS_W=0.6 · cos + BM25_W=0.3 · bm25norm + REC_W=0.05 · recency + IMP_W=0.05 · importance + ACC_W=0.03 · access`; `distance = 1 − fused` en `[0, 1]`; pool = hits FTS ∪ filas recientes (`_FTS_CANDIDATE_MULT=5`, min 100 / max 500) para rescatar docs sin overlap léxico |
+| Recency | `exp(-age_days / 180)` sobre `filed_at` (`0.0` si falta); `importance` satura en `5.0`, `access` en `~20` lecturas vía `log1p` |
+| Eval | `tests/test_memory_recall_eval.py` — queries conceptuales que NO solapan literalmente el documento target (BM25 puro + filtro AND las falla); asserts `precision@k`/`recall@k`; incluye round-trip `hook_session_start` y tests de `embed` determinista/`DIM` |
+
+Phase 0 (limpieza previa): filtros de recall y duplicados corregidos
+(`dxrk/memory/palace.py`, `miner.py`, `layers.py`, `hooks_cli.py`,
+`mcp_server.py`; suite `tests/test_dxrk_memory_full.py`).
+
 ## Ciclo de vida Phase 3 — consolidate/forget/pin, budgets, timeline
 
 Agentic memory management sobre el mismo modelo supersede (stdlib-only,
 determinista, sin LLM). MCP expone 4 herramientas nuevas (`dxrk_memory_*`,
-writes con gate RBAC `mine`): `consolidate`, `forget`, `pin` (writes) y
-`timeline` (read).
+writes con gate RBAC `mine` → `PermissionError("RBAC_DENIED")` si
+`DXRK_USER` no tiene el op en el tenant): `consolidate`, `forget`, `pin`
+(writes) y `timeline` (read). Total del servidor: **23 tools**
+(`dxrk/memory/mcp_server.py`; eran 19 antes de Phase 3).
+
+| Tool MCP | Tipo | Input clave |
+|----------|------|-------------|
+| `dxrk_memory_consolidate` | write | `drawer_ids[]` (≥2, required), `wing`, `room`, `palace` |
+| `dxrk_memory_forget` | write | `drawer_ids[]` / `wing` / `room` / `before` (ISO, `filed_at` estrictamente anterior) / `hard` (default `False`) / `include_kg` (default `False`, solo supersede) |
+| `dxrk_memory_pin` | write | `drawer_id` + `scope` (`drawer` \| `identity`, default `drawer`), `pinned` (default `True`) |
+| `dxrk_memory_timeline` | read | `since` (incl.) / `before` (excl.), `wing`, `limit` (default 50, max 200) |
 
 | Pieza | Regla |
 |-------|-------|

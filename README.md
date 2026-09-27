@@ -125,6 +125,13 @@ Ver [docs/tenants.md](docs/tenants.md) y [docs/rbac.md](docs/rbac.md).
 - ✅ **TUI Textual** — detección de agentes instalados en tiempo real
 - ✅ **Workflows Git** — conventional commits, PRs con revisión automática y keybindings
 
+## Novedades — próxima v1.3.0 (en `main`, sin publicar)
+
+- 🧠 **Recall híbrido local** — vectores stdlib-only (hashing trick char 3-grams, `DIM 512`, coseno IDF) fusionados `0.6·cos + 0.3·BM25 + 0.05·recency + 0.05·importance + 0.03·access`, con harness de eval (`tests/test_memory_recall_eval.py`) — ver [`docs/memory.md`](docs/memory.md)
+- 🧰 **4 herramientas MCP de ciclo de vida** (`dxrk_memory_consolidate`, `dxrk_memory_forget`, `dxrk_memory_pin`, `dxrk_memory_timeline`; 19 → 23 tools) + budgets por wing (`wing_usage()`/`budgets()`, cap 1000, pinned exento de eviction) — ver [`docs/memory.md`](docs/memory.md)
+- 💾 **Sesiones durables** — escrituras atómicas (tmp + `fsync` + `os.replace`), índice con self-heal, fallback `.gz`, cuarentena `.quarantine/`, IDs sanitizados anti path-traversal; opt-in SQLite-WAL con `DXRK_SESSION_BACKEND=sqlite` — ver [`docs/session.md`](docs/session.md)
+- 🐝 **Swarm honesto** — dispatch real (least-loaded / work-stealing), health con probe pluggable (`StatusUnhealthy` alcanzable), event bus y linkage sesión↔swarm (`SwarmTaskStore`, `session_id` en tasks/results)
+
 ## Estructura del proyecto
 
 ```text

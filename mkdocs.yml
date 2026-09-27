@@ -32,6 +32,7 @@ nav:
   - Multi-tenant: tenants.md
   - RBAC: rbac.md
   - Migración a multi-tenant: migration.md
+  - Sesiones: session.md
   - Migración 0.5 → 1.0: migration-0.5-to-1.0.md
   - Benchmarks: benchmarks.md
   - Configuración: config.md
@@ -42,6 +43,7 @@ nav:
   - DX Top 1: dx.md
   - Plataformas: platforms.md
   - Roadmap: roadmap.md
+  - Release v1.3.0 (draft): releases/v1.3.0.md
   - API Reference: api.md
 
 markdown_extensions:
