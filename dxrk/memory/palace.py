@@ -2005,13 +2005,15 @@ class DxrkMemory:
                         # old rows stay live (their replacement never landed).
                         for old_id, new_id in supersede_marks:
                             try:
-                                got = col.get(ids=[old_id], include=["metadatas"])
+                                got = col.get(ids=[old_id], include=["documents", "metadatas"])
                                 if got.ids:
                                     m = dict(got.metadatas[0] or {})
                                     if m.get("superseded_by") == new_id:
                                         m.pop("valid_to", None)
                                         m.pop("superseded_by", None)
-                                        col.update(ids=[old_id], metadatas=[m])
+                                        # upsert (replace): update() merges, which would
+                                        # resurrect the popped keys from the stored row.
+                                        col.upsert(documents=[got.documents[0]], ids=[old_id], metadatas=[m])  # type: ignore[arg-type]
                             except Exception:
                                 logger.debug("Supersede rollback failed for %s", old_id, exc_info=True)
                         try:

@@ -957,6 +957,68 @@ class TestPalaceHelpers:
         finally:
             dm.close()
 
+    def test_mine_partial_failure_restores_superseded(self, tmp_path: Path, monkeypatch):
+        """Rollback genuinely restores pre-mine state (upsert-replace, not merge-update).
+
+        Forces a contradiction supersede mark, then fails the batch upsert
+        mid-mine. The store must equal its pre-mine snapshot: the old row
+        keeps its document and loses valid_to/superseded_by. A merge-update
+        rollback would resurrect the popped keys and fail this test.
+        """
+        import dxrk.memory.palace as pal
+
+        monkeypatch.setattr(pal, "_dxrk_lock_dir", lambda tenant_id=None: tmp_path / "rlocks")
+        proj = tmp_path / "rproj"
+        proj.mkdir()
+        (proj / "new.md").write_text("brand new file content here " * 40)
+        dm = pal.DxrkMemory(str(tmp_path / "rpal"))
+        dm.init()
+        try:
+            old_content = "victim drawer original text " * 40
+            old_id = dm.add_drawer("w", "r", old_content, "/victim.md", 0)
+            col = dm._collection(create=True)
+
+            def _snapshot() -> dict[str, tuple[str, dict[str, object]]]:
+                got = col.get(include=["documents", "metadatas"])
+                return {
+                    rid: (doc, dict(meta) if isinstance(meta, dict) else {})
+                    for rid, doc, meta in zip(got.ids, got.documents, got.metadatas)
+                }
+
+            before = _snapshot()
+            assert old_id in before
+            old_doc, old_meta = before[old_id]
+            # Force every chunk to contradiction-match the victim row.
+            victim = {"id": old_id, "doc": old_doc, "meta": dict(old_meta)}
+            monkeypatch.setattr(pal, "_best_lifecycle_candidate", lambda *a, **k: (victim, 0.99))
+            monkeypatch.setattr(pal, "classify_content_pair", lambda *a, **k: "contradiction")
+            # Fail ONLY the batch upsert: _mark_superseded() writes via
+            # update() (whose internal upsert must keep working so the
+            # supersede mark lands and the rollback path is exercised).
+            orig_upsert = col.upsert
+            calls = {"batch": 0}
+
+            def _boom_on_batch(*args: object, **kwargs: object) -> None:
+                call_ids = kwargs.get("ids", [])
+                assert isinstance(call_ids, list)
+                if old_id in [str(i) for i in call_ids]:
+                    orig_upsert(*args, **kwargs)
+                    return
+                calls["batch"] += 1
+                raise RuntimeError("batch upsert boom")
+
+            with mock.patch.object(col, "upsert", side_effect=_boom_on_batch):
+                with mock.patch.object(dm, "_collection", return_value=col):
+                    with pytest.raises(RuntimeError, match="batch upsert boom"):
+                        dm.mine(str(proj), wing="w", room="r")
+            assert calls["batch"] >= 1
+            after = _snapshot()
+            assert after == before
+            assert "valid_to" not in after[old_id][1]
+            assert "superseded_by" not in after[old_id][1]
+        finally:
+            dm.close()
+
     def test_list_and_health(self, tmp_path: Path):
         from dxrk.memory.palace import DxrkMemory
 
