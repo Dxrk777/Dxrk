@@ -184,7 +184,11 @@ class Layer1:
         scored.sort(key=lambda x: x[0], reverse=True)
         if effective_wing and not scored:
             return f"## L1 — No memories yet for wing={effective_wing}."
-        top = scored[: self.MAX_DRAWERS]
+        # Phase 3: pinned drawers always surface in wake_up — they lead the
+        # list (up to MAX_DRAWERS), then top-scored fill remaining slots.
+        pinned = [(s, m, d) for s, m, d in scored if isinstance(m, dict) and m.get("pinned")]
+        rest = [(s, m, d) for s, m, d in scored if not (isinstance(m, dict) and m.get("pinned"))]
+        top = (pinned + rest)[: self.MAX_DRAWERS]
         by_room: dict[str, list[tuple[float, dict[str, object], str]]] = defaultdict(list)
         for imp, meta, doc in top:
             room = str(meta.get("room", "general")) if isinstance(meta.get("room"), str) else "general"

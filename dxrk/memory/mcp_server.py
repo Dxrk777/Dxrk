@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: MIT
 """DxrkMemory MCP server — stdlib-only stdio JSON-RPC 2.0.
 
-Stdlib-only MCP engine (~420L) backed by SqliteBackend (FTS5 trigram) + KnowledgeGraph.
-Exposes ~19 tools under dxrk_memory_* namespace.
+Stdlib-only MCP engine backed by SqliteBackend (FTS5 trigram) + KnowledgeGraph.
+Exposes ~23 tools under dxrk_memory_* namespace.
 
 Transport: newline-delimited JSON (stdio). Handles initialize / tools/list / tools/call
 and notifications. Designed for ``dxrk-mcp --palace <path>`` or env DXRK_MEMORY_PATH.
@@ -54,6 +54,9 @@ _MCP_WRITE_TOOLS: frozenset[str] = frozenset(
         "dxrk_memory_mine",
         "dxrk_memory_kg_add",
         "dxrk_memory_kg_invalidate",
+        "dxrk_memory_consolidate",
+        "dxrk_memory_forget",
+        "dxrk_memory_pin",
     }
 )
 
@@ -283,6 +286,59 @@ TOOLS: dict[str, dict[str, Any]] = {
             "required": ["start"],
         },
     },
+    "dxrk_memory_consolidate": {
+        "description": "Merge drawers into one distilled drawer that supersedes them (extractive, no LLM)",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "drawer_ids": {"type": "array", "items": {"type": "string"}},
+                "wing": {"type": "string"},
+                "room": {"type": "string"},
+                "palace": {"type": "string"},
+            },
+            "required": ["drawer_ids"],
+        },
+    },
+    "dxrk_memory_forget": {
+        "description": "Scoped erase honoring the supersede model (soft-mark by default; KG never deleted)",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "drawer_ids": {"type": "array", "items": {"type": "string"}},
+                "wing": {"type": "string"},
+                "room": {"type": "string"},
+                "before": {"type": "string", "description": "ISO date: forget drawers filed strictly before"},
+                "hard": {"type": "boolean", "default": False},
+                "include_kg": {"type": "boolean", "default": False},
+                "palace": {"type": "string"},
+            },
+        },
+    },
+    "dxrk_memory_pin": {
+        "description": "Pin a drawer (or the L0 identity block) against decay-eviction; pinned drawers lead wake_up",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "drawer_id": {"type": "string"},
+                "scope": {"type": "string", "enum": ["drawer", "identity"], "default": "drawer"},
+                "pinned": {"type": "boolean", "default": True},
+                "palace": {"type": "string"},
+            },
+        },
+    },
+    "dxrk_memory_timeline": {
+        "description": "Chronological session + file-episode + pin timeline with [since, before) window",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "since": {"type": "string", "description": "ISO date inclusive"},
+                "before": {"type": "string", "description": "ISO date exclusive"},
+                "wing": {"type": "string"},
+                "limit": {"type": "integer", "default": 50},
+                "palace": {"type": "string"},
+            },
+        },
+    },
 }
 
 
@@ -300,6 +356,7 @@ def _handle_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
                 "detail": h.get("detail"),
                 "count": cnt,
                 "wings": wings,
+                "budgets": dm.budgets(),
                 "palace_path": palace_path,
             }
 
@@ -392,6 +449,12 @@ def _handle_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
                 meta["filed_at"] = datetime.now(UTC).isoformat()
             col = dm._collection(create=False)  # type: ignore[attr-defined]
             col.upsert(documents=[content], ids=[did], metadatas=[meta])  # type: ignore[arg-type]
+            # Phase 3: every write path enforces the per-wing budget — a
+            # wing/room move grows the destination wing, so cap it here.
+            try:
+                dm.enforce_wing_cap(wing)
+            except Exception:
+                pass
             return {"drawer_id": did, "updated": True}
 
         if name == "dxrk_memory_delete_drawer":
@@ -524,6 +587,61 @@ def _handle_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
             traversed = kg.traverse(str(args["start"]), depth=int(args.get("depth", 2)), as_of=args.get("as_of"))  # type: ignore[arg-type]
             kg.close()
             return {"start": args["start"], "traversed": traversed}
+
+        if name == "dxrk_memory_consolidate":
+            dm = _get_memory(palace_path)
+            raw_ids = args.get("drawer_ids") or []
+            ids = [str(d) for d in raw_ids] if isinstance(raw_ids, list) else []
+            res = dm.consolidate_drawers(
+                ids,
+                wing=str(args["wing"]) if args.get("wing") else None,
+                room=str(args["room"]) if args.get("room") else None,
+            )
+            return {"palace_path": palace_path, **res}
+
+        if name == "dxrk_memory_forget":
+            dm = _get_memory(palace_path)
+            raw_ids = args.get("drawer_ids")
+            forget_ids = [str(d) for d in raw_ids] if isinstance(raw_ids, list) else None
+            res = dm.forget(
+                drawer_ids=forget_ids,
+                wing=str(args["wing"]) if args.get("wing") else None,
+                room=str(args["room"]) if args.get("room") else None,
+                before=str(args["before"]) if args.get("before") else None,
+                hard=bool(args.get("hard", False)),
+                include_kg=bool(args.get("include_kg", False)),
+            )
+            return {"palace_path": palace_path, **res}
+
+        if name == "dxrk_memory_pin":
+            dm = _get_memory(palace_path)
+            scope = str(args.get("scope", "drawer"))
+            want_pinned = bool(args.get("pinned", True))
+            if scope == "identity":
+                if want_pinned:
+                    return {"palace_path": palace_path, **dm.pin_identity()}
+                return {"palace_path": palace_path, "unpinned": dm.unpin_identity()}
+            drawer_id = str(args.get("drawer_id") or "")
+            if not drawer_id:
+                return {"error": "drawer_id required for scope=drawer"}
+            ok = dm.pin_drawer(drawer_id) if want_pinned else dm.unpin_drawer(drawer_id)
+            if not ok:
+                return {"error": f"not found {drawer_id}"}
+            return {"drawer_id": drawer_id, "pinned": want_pinned, "palace_path": palace_path}
+
+        if name == "dxrk_memory_timeline":
+            dm = _get_memory(palace_path)
+            try:
+                lim = int(args.get("limit", 50))
+            except (TypeError, ValueError):
+                lim = 50
+            entries = dm.timeline(
+                since=str(args["since"]) if args.get("since") else None,
+                before=str(args["before"]) if args.get("before") else None,
+                wing=str(args["wing"]) if args.get("wing") else None,
+                limit=lim,
+            )
+            return {"entries": entries, "count": len(entries), "palace_path": palace_path}
 
         return {"error": f"unknown tool {name}"}
     except Exception as e:

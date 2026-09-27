@@ -27,6 +27,7 @@ from typing import Any, cast
 
 from .backend import PalaceRef, SqliteBackend
 from .backend.base import BaseCollection
+from .date_window import filed_at_in_window, parse_date_bound, parse_window
 from .scoring import score_meta
 from .types import DrawerRecord
 from .vectors import cosine as _vec_cosine
@@ -59,6 +60,19 @@ DEFAULT_MAX_ENTRIES_PER_WING = 1000
 # Upper bound on the wing snapshot scanned per write for dedupe/cap.
 WING_SNAPSHOT_LIMIT = 2000
 WING_EVICT_SCAN = 1000
+# Bounded scan for status/budget and timeline views (usage counts flag
+# `truncated` when the wing exceeds the scan so callers know the count is
+# a lower bound rather than silently exact).
+STATUS_SCAN_LIMIT = 10000
+TIMELINE_SCAN_LIMIT = 5000
+# Phase 3: extractive distillation bounds — the consolidated drawer never
+# exceeds these, no matter how many sources feed it.
+MAX_CONSOLIDATED_CHARS = 2000
+MAX_CONSOLIDATED_SENTENCES = 12
+# Timeline entry bounds.
+TIMELINE_DEFAULT_LIMIT = 50
+TIMELINE_MAX_LIMIT = 200
+TIMELINE_SUMMARY_CHARS = 160
 # Max entities linked to the KG per mined file (one episode per version).
 KG_ENTITY_LIMIT = 25
 
@@ -771,6 +785,149 @@ def _vec_similarity(a: str, b: str) -> float:
     return _vec_cosine(_vec_embed_counts(a or ""), _vec_embed_counts(b or ""))
 
 
+# ---------------------------------------------------------------------------
+# Phase 3 helpers: extractive distillation + timeline shaping (stdlib-only)
+# ---------------------------------------------------------------------------
+
+_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
+
+# Generic high-signal markers (decisions, obligations, facts) biasing the
+# extractive distillate toward actionable sentences over filler.
+_DISTILL_SIGNAL_WORDS: frozenset[str] = frozenset(
+    {
+        "decided",
+        "decision",
+        "must",
+        "should",
+        "never",
+        "always",
+        "requires",
+        "required",
+        "because",
+        "therefore",
+        "result",
+        "shipped",
+        "deployed",
+        "fixed",
+        "broke",
+        "launched",
+        "migrated",
+        "deprecated",
+        "removed",
+        "added",
+        "uses",
+        "using",
+        "api",
+        "jwt",
+        "token",
+        "database",
+        "migration",
+        "rollback",
+        "incident",
+        "deadline",
+        "release",
+        "contract",
+        "guarantee",
+    }
+)
+
+_DISTILL_STOPWORDS: frozenset[str] = frozenset(
+    "the a an and or but in on at to for of is it i me my you your we our this that with from by was were be been are not no yes can do did will would should could have has had just also like so if then very much more most too one two new first last next thing things well all any each every about into out up down over after before between get got make made need want use used using check look see run try know think right now still already really ok sure".split()
+)
+
+
+def _split_sentences(text: str) -> list[str]:
+    """Split text into candidate sentences (whitespace-normalized, non-empty)."""
+    out: list[str] = []
+    for part in _SENTENCE_SPLIT_RE.split((text or "").strip()):
+        sent = " ".join(part.split())
+        if len(sent) >= 20 and len(sent.split()) >= 3:
+            out.append(sent)
+    return out
+
+
+def _distill_sentences(texts: list[str], max_chars: int, max_sentences: int) -> str:
+    """Extractive distillation: keep highest-signal sentences within bounds.
+
+    Score = TF mass (pooled word frequencies, stopwords dropped, normalized
+    by sqrt length) + signal-word bonus, with a length preference for
+    8–45 word sentences. Near-identical sentences (overlap >= 0.9) collapse
+    to the first occurrence; survivors keep original order for readability.
+    """
+    indexed: list[tuple[int, int, str]] = []  # (text_idx, sent_idx, sentence)
+    for ti, text in enumerate(texts):
+        for si, sent in enumerate(_split_sentences(text)):
+            indexed.append((ti, si, sent))
+    if not indexed:
+        # Fallback: truncate the pooled text — distillation must not fail
+        # just because no sentence passed the length floor.
+        pooled = " ".join(" ".join((t or "").split()) for t in texts).strip()
+        return pooled[:max_chars]
+    freq: dict[str, int] = {}
+    tokenized: list[list[str]] = []
+    for _, _, sent in indexed:
+        toks = [t for t in _WORD_TOKEN_RE.findall(sent.lower()) if t not in _DISTILL_STOPWORDS]
+        tokenized.append(toks)
+        for t in toks:
+            freq[t] = freq.get(t, 0) + 1
+    scored: list[tuple[float, int, int, str]] = []
+    for (ti, si, sent), toks in zip(indexed, tokenized):
+        n_words = len(sent.split())
+        tf = sum(freq.get(t, 0) for t in toks) / max(1.0, len(toks) ** 0.5)
+        signals = sum(1 for t in _WORD_TOKEN_RE.findall(sent.lower()) if t in _DISTILL_SIGNAL_WORDS)
+        length_pref = 1.0 if 8 <= n_words <= 45 else 0.5
+        scored.append((length_pref * (tf + 2.0 * signals), ti, si, sent))
+    scored.sort(key=lambda t: (-t[0], t[1], t[2]))
+    kept: list[tuple[int, int, str]] = []
+    kept_tokens: list[set[str]] = []
+    for _, ti, si, sent in scored:
+        tok_set = set(_WORD_TOKEN_RE.findall(sent.lower()))
+        if any(_overlap_coeff(tok_set, prev) >= 0.9 for prev in kept_tokens):
+            continue
+        kept.append((ti, si, sent))
+        kept_tokens.append(tok_set)
+        if len(kept) >= max_sentences:
+            break
+    kept.sort()
+    out: list[str] = []
+    total = 0
+    for _, _, sent in kept:
+        extra = len(sent) + (1 if out else 0)
+        if out and total + extra > max_chars:
+            break
+        out.append(sent)
+        total += extra
+    if not out:
+        # Tightest bound still keeps the single best sentence (hard-cut).
+        out.append(kept[0][2][:max_chars])
+    return " ".join(out)
+
+
+def _one_line(text: str, max_chars: int) -> str:
+    """Collapse whitespace and hard-truncate a timeline/summary line."""
+    line = " ".join((text or "").split())
+    if len(line) > max_chars:
+        return line[: max_chars - 3] + "..."
+    return line
+
+
+def _filed_before(filed_at: object, before_dt: datetime) -> bool:
+    """True when a drawer's ``filed_at`` is strictly older than ``before``.
+
+    Missing/unparseable timestamps never match — forget-by-date must not
+    erase rows of unknown age.
+    """
+    try:
+        if not isinstance(filed_at, str):
+            return False
+        filed_dt = parse_date_bound(filed_at, "filed_at")
+    except ValueError:
+        return False
+    if filed_dt is None:
+        return False
+    return filed_dt < before_dt
+
+
 def classify_content_pair(new_text: str, old_text: str) -> str:
     """Classify a near-duplicate candidate: duplicate | contradiction | distinct.
 
@@ -1049,8 +1206,11 @@ class DxrkMemory:
     def _enforce_wing_cap(self, col: BaseCollection, wing: str) -> int:
         """Evict lowest-ranked drawers past the per-wing cap (best-effort).
 
-        Superseded rows go first, then lowest ``score_meta``. Returns the
-        number of rows deleted. Cap <= 0 disables (legacy unbounded).
+        Superseded/forgotten rows (``valid_to`` set) go first, then lowest
+        ``score_meta``. Pinned rows are NEVER evicted — when the wing is
+        over cap and only pinned rows remain, nothing is deleted (the wing
+        stays over budget until unpinned). Returns rows deleted.
+        Cap <= 0 disables (legacy unbounded).
         """
         cap = self._max_entries_per_wing
         if cap <= 0:
@@ -1061,14 +1221,18 @@ class DxrkMemory:
             return 0
         if len(got.ids) <= cap:
             return 0
-        scored: list[tuple[bool, float, str]] = []
+        over = len(got.ids) - cap
+        # Pinned rows are exempt: victims come from unpinned rows only.
+        candidates: list[tuple[bool, float, str]] = []
         for rid, meta in zip(got.ids, got.metadatas):
             m = meta if isinstance(meta, dict) else {}
-            scored.append((bool(m.get("valid_to")), score_meta(m, default_importance=1.0), rid))
+            if m.get("pinned"):
+                continue
+            candidates.append((bool(m.get("valid_to")), score_meta(m, default_importance=1.0), rid))
         # Superseded first (False sorts before True on `not superseded`),
-        # then ascending score — victims are the head past the cap.
-        scored.sort(key=lambda t: (not t[0], t[1]))
-        victims = [rid for _, _, rid in scored[: len(scored) - cap]]
+        # then ascending score — victims are the head.
+        candidates.sort(key=lambda t: (not t[0], t[1]))
+        victims = [rid for _, _, rid in candidates[:over]]
         evicted = 0
         for i in range(0, len(victims), DRAWER_UPSERT_BATCH_SIZE):
             try:
@@ -1078,6 +1242,525 @@ class DxrkMemory:
                 logger.debug("Wing-cap eviction failed for %s", wing, exc_info=True)
                 break
         return evicted
+
+    def enforce_wing_cap(self, wing: str) -> int:
+        """Public wrapper: enforce the per-wing budget now, return rows evicted."""
+        return self._enforce_wing_cap(self._collection(create=False), wing)
+
+    # ------------------------------------------------------------------
+    # Phase 3: agent-managed memory — consolidate / forget / pin
+    # ------------------------------------------------------------------
+
+    def consolidate_drawers(
+        self,
+        drawer_ids: list[str],
+        wing: str | None = None,
+        room: str | None = None,
+        agent: str = "consolidate",
+    ) -> dict[str, object]:
+        """Merge drawers into one distilled drawer that supersedes them.
+
+        Heuristic extractive distillation (no LLM, deterministic): pool the
+        source texts, split into sentences, keep the highest-signal ones up
+        to ``MAX_CONSOLIDATED_CHARS`` / ``MAX_CONSOLIDATED_SENTENCES``.
+        Every live source is marked superseded (``valid_to`` +
+        ``superseded_by``, never overwritten); the new drawer stamps
+        ``supersedes`` (first source) + ``consolidated_from`` (all sources).
+
+        Bypasses ``add_drawer`` on purpose: the distillate is usually
+        contained in a source, which the dedupe path would collapse back
+        onto the old row. The wing cap is enforced after insert.
+        """
+        ids = [str(d) for d in (drawer_ids or []) if str(d).strip()]
+        if len(ids) < 2:
+            raise ValueError(f"consolidate needs at least 2 drawer ids, got {len(ids)}")
+        col = self._collection(create=True)
+        try:
+            got = col.get(ids=ids, include=["documents", "metadatas"])
+        except Exception as exc:
+            raise ValueError(f"consolidate read failed: {exc}") from exc
+        live: list[tuple[str, str, dict[str, object]]] = []
+        missing: list[str] = []
+        found = {rid: (doc, meta) for rid, doc, meta in zip(got.ids, got.documents, got.metadatas)}
+        for rid in ids:
+            if rid not in found:
+                missing.append(rid)
+                continue
+            doc, meta = found[rid]
+            live.append((rid, doc or "", meta if isinstance(meta, dict) else {}))
+        if not live:
+            raise ValueError(f"consolidate found none of {len(ids)} drawers")
+        first_meta = live[0][2]
+        target_wing = wing or str(first_meta.get("wing") or "default")
+        target_room = room or str(first_meta.get("room") or "general")
+        distilled = _distill_sentences(
+            [doc for _, doc, _ in live],
+            max_chars=MAX_CONSOLIDATED_CHARS,
+            max_sentences=MAX_CONSOLIDATED_SENTENCES,
+        )
+        if not distilled.strip():
+            raise ValueError("consolidate produced empty distillate from sources")
+        digest = hashlib.sha256("\n".join(sorted(ids)).encode()).hexdigest()[:12]
+        new_id = DrawerRecord.make_id(target_wing, target_room, f"consolidated:{digest}", 0)
+        now_iso = datetime.now(UTC).isoformat()
+        for src_id, _, _ in live:
+            if src_id != new_id:
+                self._mark_superseded(col, src_id, new_id, now_iso)
+        importance = 1.0
+        for _, _, meta in live:
+            try:
+                imp = float(cast(Any, meta.get("importance", 1.0)))
+                importance = max(importance, imp)
+            except (TypeError, ValueError):
+                pass
+        meta = _build_drawer_metadata(
+            target_wing,
+            target_room,
+            f"consolidated:{digest}",
+            0,
+            agent,
+            distilled,
+            None,
+            chunk_total=1,
+            supersedes=live[0][0],
+            importance=importance,
+        )
+        meta["consolidated_from"] = [rid for rid, _, _ in live]
+        meta["consolidated_at"] = now_iso
+        col.upsert(documents=[distilled], ids=[new_id], metadatas=[meta])  # type: ignore[arg-type]
+        evicted = self._enforce_wing_cap(col, target_wing)
+        return {
+            "drawer_id": new_id,
+            "wing": target_wing,
+            "room": target_room,
+            "sources": len(live),
+            "missing": missing,
+            "chars": len(distilled),
+            "evicted": evicted,
+        }
+
+    def forget(
+        self,
+        drawer_ids: list[str] | None = None,
+        wing: str | None = None,
+        room: str | None = None,
+        before: str | None = None,
+        hard: bool = False,
+        include_kg: bool = False,
+    ) -> dict[str, object]:
+        """Scoped erase honoring the supersede model (never silent history loss).
+
+        - Soft (default): stamp ``valid_to`` + ``forgotten`` on matched rows.
+          They stay on disk and readable via ``get_drawer`` but vanish from
+          search / L1 / L2 exactly like superseded rows.
+        - ``hard=True``: physically delete the drawer rows.
+        - KG history is NEVER deleted. ``include_kg=True`` supersedes (sets
+          ``valid_to``, keeps rows) KG episodes for the matched source files;
+          without it the KG is untouched.
+        - Scope is the union of ``drawer_ids`` and the ``wing``/``room`` /
+          ``before`` filter (``before`` = filed_at strictly older, exclusive).
+          At least one selector is required.
+        """
+        ids = [str(d) for d in (drawer_ids or []) if str(d).strip()]
+        if not ids and wing is None and before is None and room is None:
+            raise ValueError("forget needs a scope: drawer_ids, wing/room, or before")
+        before_dt = parse_date_bound(before, "before") if before else None
+        col = self._collection(create=False)
+        matched: dict[str, dict[str, object]] = {}
+        missing: list[str] = []
+        if ids:
+            try:
+                got = col.get(ids=ids, include=["metadatas"])
+            except Exception:
+                got = None
+            if got is not None:
+                for rid, meta in zip(got.ids, got.metadatas):
+                    matched[rid] = meta if isinstance(meta, dict) else {}
+                for rid in ids:
+                    if rid not in matched:
+                        missing.append(rid)
+        if wing is not None or room is not None or before_dt is not None:
+            where: dict[str, object] | None = None
+            if wing is not None and room is not None:
+                where = {"$and": [{"wing": wing}, {"room": room}]}
+            elif wing is not None:
+                where = {"wing": wing}
+            elif room is not None:
+                where = {"room": room}
+            try:
+                scan = col.get(where=where, include=["metadatas"], limit=STATUS_SCAN_LIMIT)
+            except Exception:
+                scan = None
+            if scan is not None:
+                for rid, meta in zip(scan.ids, scan.metadatas):
+                    m = meta if isinstance(meta, dict) else {}
+                    if before_dt is not None and not _filed_before(m.get("filed_at"), before_dt):
+                        continue
+                    matched[rid] = m
+        now_iso = datetime.now(UTC).isoformat()
+        soft_forgotten = 0
+        deleted = 0
+        if hard:
+            victims = list(matched)
+            for i in range(0, len(victims), DRAWER_UPSERT_BATCH_SIZE):
+                try:
+                    col.delete(ids=victims[i : i + DRAWER_UPSERT_BATCH_SIZE])
+                    deleted += len(victims[i : i + DRAWER_UPSERT_BATCH_SIZE])
+                except Exception:
+                    logger.debug("Forget hard-delete failed", exc_info=True)
+                    break
+        else:
+            for rid, meta in matched.items():
+                m = dict(meta)
+                if not m.get("valid_to"):
+                    m["valid_to"] = now_iso
+                m["forgotten"] = True
+                m["forgotten_at"] = now_iso
+                try:
+                    col.update(ids=[rid], metadatas=[m])
+                    soft_forgotten += 1
+                except Exception:
+                    logger.debug("Forget soft-mark failed for %s", rid, exc_info=True)
+        kg_superseded = 0
+        if include_kg and matched:
+            kg = self._kg_or_none()
+            if kg is not None:
+                try:
+                    sources = {str(m.get("source_file")) for m in matched.values() if m.get("source_file")}
+                    for src in sorted(sources):
+                        try:
+                            kg.supersede_source(src, ended=now_iso)  # type: ignore[attr-defined]
+                            kg_superseded += 1
+                        except Exception:
+                            logger.debug("Forget KG supersede failed for %s", src, exc_info=True)
+                finally:
+                    try:
+                        kg.close()  # type: ignore[attr-defined]
+                    except Exception:
+                        pass
+        return {
+            "matched": len(matched),
+            "soft_forgotten": soft_forgotten,
+            "deleted": deleted,
+            "missing": missing,
+            "kg_superseded": kg_superseded,
+        }
+
+    def pin_drawer(self, drawer_id: str) -> bool:
+        """Pin a drawer: exempt from decay-eviction, always surfaced in wake_up."""
+        col = self._collection(create=False)
+        try:
+            got = col.get(ids=[drawer_id], include=["documents", "metadatas"])
+        except Exception:
+            return False
+        if not got.ids:
+            return False
+        meta = got.metadatas[0] if got.metadatas else {}
+        if not isinstance(meta, dict):
+            meta = {}
+        meta = dict(meta)
+        if meta.get("pinned"):
+            return True
+        meta["pinned"] = True
+        meta["pinned_at"] = datetime.now(UTC).isoformat()
+        try:
+            # upsert (replace), not update (merge) — merge would keep stale keys.
+            col.upsert(documents=[got.documents[0]], ids=[drawer_id], metadatas=[meta])  # type: ignore[arg-type]
+        except Exception:
+            logger.debug("Pin failed for %s", drawer_id, exc_info=True)
+            return False
+        return True
+
+    def unpin_drawer(self, drawer_id: str) -> bool:
+        """Remove a drawer pin; False when the drawer does not exist."""
+        col = self._collection(create=False)
+        try:
+            got = col.get(ids=[drawer_id], include=["documents", "metadatas"])
+        except Exception:
+            return False
+        if not got.ids:
+            return False
+        meta = got.metadatas[0] if got.metadatas else {}
+        if not isinstance(meta, dict):
+            meta = {}
+        meta = dict(meta)
+        meta.pop("pinned", None)
+        meta.pop("pinned_at", None)
+        try:
+            # upsert (replace): base update() merges, which would resurrect
+            # the popped pin keys from the stored row.
+            col.upsert(documents=[got.documents[0]], ids=[drawer_id], metadatas=[meta])  # type: ignore[arg-type]
+        except Exception:
+            logger.debug("Unpin failed for %s", drawer_id, exc_info=True)
+            return False
+        return True
+
+    def _pins_path(self) -> Path | None:
+        """Sidecar for palace-level pins (identity scope); None on sentinel paths."""
+        if not self.palace_path or self.palace_path in ("memory-only",):
+            return None
+        try:
+            return Path(self.palace_path) / "pins.json"
+        except Exception:
+            return None
+
+    def _read_pins(self) -> dict[str, object]:
+        import json
+
+        path = self._pins_path()
+        if path is None or not path.is_file():
+            return {}
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return {}
+        return data if isinstance(data, dict) else {}
+
+    def pin_identity(self) -> dict[str, object]:
+        """Pin the L0 identity block.
+
+        L0 renders on every wake_up unconditionally, so it is inherently
+        immune to decay/eviction — the pin just records the intent (with
+        timestamp) in the palace sidecar so agents can see it in status
+        and timeline. Returns the pin record (or a note on sentinel paths).
+        """
+        import json
+
+        record: dict[str, object] = {"scope": "identity", "pinned_at": datetime.now(UTC).isoformat()}
+        path = self._pins_path()
+        if path is None:
+            record["note"] = "sentinel palace: pin recorded in-memory only"
+            return record
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            pins = self._read_pins()
+            pins["identity"] = record
+            path.write_text(json.dumps(pins, ensure_ascii=False, indent=2), encoding="utf-8")
+        except OSError as exc:
+            record["note"] = f"sidecar write failed: {exc}"
+        return record
+
+    def unpin_identity(self) -> bool:
+        """Remove the L0 identity pin; False when none was recorded."""
+        import json
+
+        path = self._pins_path()
+        if path is None:
+            return False
+        pins = self._read_pins()
+        if "identity" not in pins:
+            return False
+        pins.pop("identity", None)
+        try:
+            path.write_text(json.dumps(pins, ensure_ascii=False, indent=2), encoding="utf-8")
+        except OSError:
+            return False
+        return True
+
+    def wing_usage(self, wing: str) -> dict[str, object]:
+        """Current budget usage for one wing: count vs cap + lifecycle mix."""
+        col = self._collection(create=False)
+        try:
+            got = col.get(where={"wing": wing}, include=["metadatas"], limit=STATUS_SCAN_LIMIT)
+        except Exception:
+            got = None
+        count = 0
+        pinned = 0
+        superseded = 0
+        forgotten = 0
+        truncated = False
+        if got is not None:
+            count = len(got.ids)
+            truncated = count >= STATUS_SCAN_LIMIT
+            for meta in got.metadatas:
+                m = meta if isinstance(meta, dict) else {}
+                if m.get("pinned"):
+                    pinned += 1
+                if m.get("valid_to"):
+                    superseded += 1
+                if m.get("forgotten"):
+                    forgotten += 1
+        budget = self._max_entries_per_wing
+        return {
+            "wing": wing,
+            "count": count,
+            "budget": budget,
+            "remaining": max(0, budget - count) if budget > 0 else -1,
+            "over": budget > 0 and count > budget,
+            "unbounded": budget <= 0,
+            "pinned": pinned,
+            "superseded": superseded,
+            "forgotten": forgotten,
+            "truncated": truncated,
+        }
+
+    def budgets(self) -> dict[str, dict[str, object]]:
+        """Budget usage for every wing (single bounded scan, grouped)."""
+        col = self._collection(create=False)
+        try:
+            got = col.get(include=["metadatas"], limit=STATUS_SCAN_LIMIT)
+        except Exception:
+            return {}
+        per_wing: dict[str, dict[str, object]] = {}
+        for meta in got.metadatas:
+            m = meta if isinstance(meta, dict) else {}
+            w = m.get("wing")
+            if not isinstance(w, str) or not w:
+                continue
+            entry = per_wing.setdefault(w, {"wing": w, "count": 0, "pinned": 0, "superseded": 0, "forgotten": 0})
+            entry["count"] = int(cast(Any, entry["count"])) + 1
+            if m.get("pinned"):
+                entry["pinned"] = int(cast(Any, entry["pinned"])) + 1
+            if m.get("valid_to"):
+                entry["superseded"] = int(cast(Any, entry["superseded"])) + 1
+            if m.get("forgotten"):
+                entry["forgotten"] = int(cast(Any, entry["forgotten"])) + 1
+        budget = self._max_entries_per_wing
+        for entry in per_wing.values():
+            count = int(cast(Any, entry["count"]))
+            entry["budget"] = budget
+            entry["remaining"] = max(0, budget - count) if budget > 0 else -1
+            entry["over"] = budget > 0 and count > budget
+            entry["unbounded"] = budget <= 0
+        return per_wing
+
+    def timeline(
+        self,
+        since: str | None = None,
+        before: str | None = None,
+        wing: str | None = None,
+        limit: int = TIMELINE_DEFAULT_LIMIT,
+    ) -> list[dict[str, object]]:
+        """Cross-session episodic timeline: session summaries + KG file episodes + pins.
+
+        One chronological (ascending) list of compact entries
+        ``{time, kind, summary, ref, wing}`` where kind is
+        ``session`` (hook_stop summaries, ``source_file=session:*``),
+        ``file`` (KG episode per source_file+valid_from version), or ``pin``
+        (pinned drawer / identity pin). Time filter reuses the
+        ``date_window [since, before)`` wall-clock semantics; output bounded
+        to ``limit`` (clamped to ``TIMELINE_MAX_LIMIT``).
+        """
+        since_dt, before_dt = parse_window(since, before)
+        bounds_active = since_dt is not None or before_dt is not None
+        try:
+            lim = int(limit)
+        except (TypeError, ValueError):
+            lim = TIMELINE_DEFAULT_LIMIT
+        lim = max(1, min(lim, TIMELINE_MAX_LIMIT))
+        entries: list[dict[str, object]] = []
+        col = self._collection(create=False)
+        try:
+            got = col.get(include=["documents", "metadatas"], limit=TIMELINE_SCAN_LIMIT)
+        except Exception:
+            got = None
+        if got is not None:
+            for rid, doc, meta in zip(got.ids, got.documents, got.metadatas):
+                m = meta if isinstance(meta, dict) else {}
+                w = str(m.get("wing") or "")
+                if wing is not None and w != wing:
+                    continue
+                src = str(m.get("source_file") or "")
+                if src.startswith("session:"):
+                    filed = m.get("filed_at")
+                    if bounds_active and not filed_at_in_window(filed, since_dt, before_dt):
+                        continue
+                    if not isinstance(filed, str) or not filed.strip():
+                        continue
+                    entries.append(
+                        {
+                            "time": filed,
+                            "kind": "session",
+                            "summary": _one_line(doc or "", TIMELINE_SUMMARY_CHARS),
+                            "ref": rid,
+                            "wing": w,
+                        }
+                    )
+                elif m.get("pinned"):
+                    pinned_at = m.get("pinned_at") or m.get("filed_at")
+                    if bounds_active and not filed_at_in_window(pinned_at, since_dt, before_dt):
+                        continue
+                    if not isinstance(pinned_at, str) or not pinned_at.strip():
+                        continue
+                    entries.append(
+                        {
+                            "time": pinned_at,
+                            "kind": "pin",
+                            "summary": f"pinned: {_one_line(doc or '', TIMELINE_SUMMARY_CHARS - 8)}",
+                            "ref": rid,
+                            "wing": w,
+                        }
+                    )
+        # KG file episodes (grouped per source_file + valid_from version).
+        kg = self._kg_or_none()
+        if kg is not None:
+            try:
+                episodes = kg.all_episodes(limit=TIMELINE_SCAN_LIMIT)  # type: ignore[attr-defined]
+            except Exception:
+                episodes = []
+                logger.debug("Timeline KG episode read failed", exc_info=True)
+            try:
+                grouped: dict[tuple[str, str], list[dict[str, object]]] = {}
+                for ep in episodes:
+                    if not isinstance(ep, dict):
+                        continue
+                    src = str(ep.get("source_file") or "")
+                    if not src:
+                        continue
+                    vf = str(ep.get("valid_from") or ep.get("extracted_at") or "")
+                    if not vf.strip():
+                        continue
+                    if bounds_active and not filed_at_in_window(vf, since_dt, before_dt):
+                        continue
+                    grouped.setdefault((src, vf), []).append(ep)
+                for (src, vf), eps in grouped.items():
+                    ep_wing: str | None = None
+                    drawer_ref = next(
+                        (str(e.get("source_drawer_id") or "") for e in eps if e.get("source_drawer_id")), ""
+                    )
+                    if drawer_ref and got is not None:
+                        for rid, meta in zip(got.ids, got.metadatas):
+                            if rid == drawer_ref and isinstance(meta, dict):
+                                ep_wing = str(meta.get("wing") or "") or None
+                                break
+                    if wing is not None and ep_wing != wing:
+                        continue
+                    facts = sorted({f"{e.get('subject')} {e.get('predicate')} {e.get('object')}" for e in eps})
+                    current = all(bool(e.get("current")) for e in eps)
+                    summary = f"{len(eps)} facts from {Path(src).name}: " + "; ".join(facts[:3])
+                    entries.append(
+                        {
+                            "time": vf,
+                            "kind": "file",
+                            "summary": summary[:TIMELINE_SUMMARY_CHARS],
+                            "ref": src,
+                            "wing": ep_wing,
+                            "current": current,
+                        }
+                    )
+            finally:
+                try:
+                    kg.close()  # type: ignore[attr-defined]
+                except Exception:
+                    pass
+        # Identity pin (palace-level, wing-agnostic — shown unless filtered).
+        pins = self._read_pins()
+        ident = pins.get("identity")
+        if isinstance(ident, dict) and (wing is None):
+            pinned_at = ident.get("pinned_at")
+            if isinstance(pinned_at, str) and pinned_at.strip():
+                if not bounds_active or filed_at_in_window(pinned_at, since_dt, before_dt):
+                    entries.append(
+                        {
+                            "time": pinned_at,
+                            "kind": "pin",
+                            "summary": "pinned: L0 identity block",
+                            "ref": "identity",
+                            "wing": None,
+                        }
+                    )
+        entries.sort(key=lambda e: str(e.get("time") or ""))
+        return entries[:lim]
 
     def _kg_or_none(self) -> object | None:
         """Palace-local KnowledgeGraph, or None when disabled/sentinel."""

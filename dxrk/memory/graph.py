@@ -336,6 +336,42 @@ class KnowledgeGraph:
                 )
                 return cur.rowcount if cur.rowcount is not None and cur.rowcount >= 0 else 0
 
+    def all_episodes(self, limit: int = 5000) -> list[dict[str, object]]:
+        """Every triple carrying file provenance (Phase 3 timeline input).
+
+        Returns current AND superseded rows ordered by ``valid_from`` — the
+        caller groups them into per-(source_file, version) episodes. Bounded
+        by ``limit`` (oldest first) so the timeline view cannot blow up.
+        """
+        try:
+            lim = max(1, int(limit))
+        except (TypeError, ValueError):
+            lim = 5000
+        q = (
+            "SELECT t.*, s.name as sub_name, o.name as obj_name FROM triples t "
+            "JOIN entities s ON t.subject=s.id JOIN entities o ON t.object=o.id "
+            "WHERE t.source_file IS NOT NULL AND t.source_file != '' "
+            "ORDER BY t.valid_from ASC LIMIT ?"
+        )
+        with self._lock:
+            conn = self._conn_or_create()
+            rows = conn.execute(q, [lim]).fetchall()
+        return [
+            {
+                "id": r["id"],
+                "subject": r["sub_name"],
+                "predicate": r["predicate"],
+                "object": r["obj_name"],
+                "valid_from": r["valid_from"],
+                "valid_to": r["valid_to"],
+                "extracted_at": r["extracted_at"],
+                "source_file": r["source_file"],
+                "source_drawer_id": r["source_drawer_id"],
+                "current": r["valid_to"] is None,
+            }
+            for r in rows
+        ]
+
     def query_entity(self, name: str, as_of: str | None = None, direction: str = "outgoing") -> list[dict[str, object]]:
         as_of = _sanitize_iso(as_of, "as_of") if as_of else None  # type: ignore[assignment]
         eid = self._eid(name)

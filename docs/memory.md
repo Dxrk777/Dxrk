@@ -210,6 +210,27 @@ Más en [MIGRATION_3.3.5_3.7.1.md](MIGRATION_3.3.5_3.7.1.md) y `docs/architectur
 
 ---
 
+## Ciclo de vida Phase 3 — consolidate/forget/pin, budgets, timeline
+
+Agentic memory management sobre el mismo modelo supersede (stdlib-only,
+determinista, sin LLM). MCP expone 4 herramientas nuevas (`dxrk_memory_*`,
+writes con gate RBAC `mine`): `consolidate`, `forget`, `pin` (writes) y
+`timeline` (read).
+
+| Pieza | Regla |
+|-------|-------|
+| Consolidate | `consolidate_drawers(ids≥2)` — destilación extractiva: pool de fuentes → frases (split `[.!?]`), score TF + bonus de señal (decisión/obligación/hechos) + preferencia 8–45 palabras, colapso de near-idénticas (overlap ≥ 0.9), tope `MAX_CONSOLIDATED_CHARS=2000` / 12 frases. Nueva drawer `consolidated:<sha12>` con `supersedes` (primera fuente) + `consolidated_from` (todas); cada fuente `valid_to` + `superseded_by`. Bypass de `add_drawer` a propósito (el destilado suele estar contenido en una fuente y dedupe lo colapsaría); cap enforced tras insert |
+| Forget | `forget(drawer_ids?, wing?, room?, before?, hard=False, include_kg=False)` — soft por defecto: `valid_to` + `forgotten` (legible vía `get`, invisible en search/L1/L2 como superseded). `hard=True` borra filas. KG **jamás** se borra: `include_kg=True` solo supersede (`valid_to`) episodios de los `source_file` matcheados. `before` = `filed_at` estrictamente anterior (filas sin fecha nunca matchean). Sin scope → `ValueError` |
+| Pin | `pin_drawer` (`pinned` + `pinned_at`; upsert-replace porque `update()` mergea y resucitaría claves) — exento de eviction (`_enforce_wing_cap` salta pinned; si solo quedan pinned over-cap, no se borra nada) y primero en L1/`wake_up` (pinned ordenados por score, luego resto hasta `MAX_DRAWERS`). `pin_identity` registra el bloque L0 en sidecar `<palace>/pins.json` (L0 ya renderiza siempre, inmune por construcción) |
+| Budgets | `wing_usage(wing)` → `{count, budget, remaining, over, unbounded, pinned, superseded, forgotten, truncated}`; `budgets()` agrupa todas en un scan acotado (`STATUS_SCAN_LIMIT=10000`). `dxrk_memory_status` incluye `budgets`. Write paths con cap: `add_drawer`, `mine`, `consolidate` y `update_drawer` (MCP, sobre wing destino). Orden de eviction: superseded/olvidados primero, luego menor `score_meta`, pinned nunca |
+| Timeline | `timeline(since?, before?, wing?, limit→50, max 200)` → `[{time, kind, summary≤160, ref, wing}]` cronológico ascendente: `session` (drawers `source_file=session:*` del hook_stop), `file` (episodios KG agrupados por `source_file+valid_from` vía `KnowledgeGraph.all_episodes`, con `wing` resuelto por `source_drawer_id` y flag `current`), `pin` (drawers pinned + pin L0). Ventana `[since, before)` wall-clock reutilizando `date_window` |
+
+Deliberadamente fuera: borrado físico de historia KG (ningún flag lo permite),
+re-ranking con boost de pinned en search (pin protege de *removal*, no de orden),
+agrupación de drawers minados en el timeline (los episodios KG son la vista file).
+
+---
+
 ## Ciclo de vida Phase 2 — distill/dedupe, decay, episodios KG, contradicción
 
 Heurístico, stdlib-only, determinista (sin LLM). Una fórmula de scoring
