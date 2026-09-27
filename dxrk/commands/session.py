@@ -16,10 +16,12 @@ from dxrk.utils.session import (
     new_session,
     now,
 )
+from dxrk.utils.session_storage import _atomic_write_text
 
 from .registry import Command, CommandContext, Flag, Registry, go_duration, go_quote
 
 SESSION_DIR_NAME = "sessions"
+QUARANTINE_DIR_NAME = ".quarantine"
 
 # Session ids are generated internally (hex/uuid); only these characters may
 # appear in a file name. Anything else skips the direct file lookup and goes
@@ -56,14 +58,50 @@ def _sort_key(s: Session) -> datetime:
     return s.updated_at if s.updated_at is not None else datetime.min.replace(tzinfo=UTC)
 
 
-def list_session_files() -> list[Session]:
-    """Lists all sessions, newest first."""
+def _quarantine_file(dir_path: str, name: str) -> bool:
+    """Move an unparseable session file into ``.quarantine/``.
+
+    Returns True when the file was moved. Never raises: a listing must not
+    fail because quarantine itself is unavailable (the file is then skipped
+    as before).
+    """
+    try:
+        os.makedirs(os.path.join(dir_path, QUARANTINE_DIR_NAME), mode=0o700, exist_ok=True)
+    except OSError:
+        return False
+    src = os.path.join(dir_path, name)
+    dst = os.path.join(dir_path, QUARANTINE_DIR_NAME, name)
+    if os.path.exists(dst):
+        base, ext = os.path.splitext(name)
+        i = 1
+        while True:
+            cand = os.path.join(dir_path, QUARANTINE_DIR_NAME, f"{base}-{i}{ext}")
+            if not os.path.exists(cand):
+                dst = cand
+                break
+            i += 1
+    try:
+        os.replace(src, dst)
+    except OSError:
+        return False
+    return True
+
+
+def list_session_files_with_quarantine() -> tuple[list[Session], int]:
+    """Lists all sessions newest-first, quarantining unparseable ``.json`` files.
+
+    Returns ``(sessions, quarantined)`` where ``quarantined`` is the number of
+    corrupt files moved to ``.quarantine/``. Non-``.json`` names, directories
+    (including ``.quarantine/`` itself) and transiently unreadable files are
+    still skipped silently.
+    """
     dir_path = session_dir()
     try:
         entries = os.listdir(dir_path)
     except OSError as exc:
         raise SessionError(f"al leer el directorio de sesiones: {exc}") from exc
     sessions: list[Session] = []
+    quarantined = 0
     for name in entries:
         full = os.path.join(dir_path, name)
         if os.path.isdir(full) or not name.endswith(".json"):
@@ -76,29 +114,29 @@ def list_session_files() -> list[Session]:
         try:
             sessions.append(import_json(data))
         except Exception:
+            if _quarantine_file(dir_path, name):
+                quarantined += 1
             continue
     sessions.sort(key=_sort_key, reverse=True)
+    return sessions, quarantined
+
+
+def list_session_files() -> list[Session]:
+    """Lists all sessions, newest first."""
+    sessions, _ = list_session_files_with_quarantine()
     return sessions
 
 
 def _write_private_file(path: str, data: str) -> None:
     """Write text to ``path`` with owner-only permissions, atomically.
 
-    ``os.open`` with mode 0o600 applies at creation time (no world-readable
-    window under a permissive umask); the follow-up chmod covers files that
-    already existed with wider permissions.
+    Tmp file in the same directory + fsync + ``os.replace`` + best-effort
+    dir fsync (see ``dxrk.utils.session_storage._atomic_write_text``), so a
+    crash can never leave a torn session file behind. The tmp file inherits
+    mode 0o600 at creation (no world-readable window under a permissive
+    umask); the follow-up chmod covers pre-existing files. Raises OSError.
     """
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            f.write(data)
-    except BaseException:
-        try:
-            os.close(fd)
-        except OSError:
-            pass
-        raise
-    os.chmod(path, 0o600)
+    _atomic_write_text(path, data)
 
 
 def load_session(session_id: str) -> Session:
@@ -182,11 +220,13 @@ def session_list_cmd() -> Command:
         tag_filter = ctx.flag_str("tag")
 
         try:
-            sessions = list_session_files()
+            sessions, quarantined = list_session_files_with_quarantine()
         except SessionError as exc:
             ctx.err.write(f"Error: {exc}\n")
             return 1
 
+        if quarantined:
+            out.write(f"Advertencia: {quarantined} archivo(s) de sesión corrupto(s) movido(s) a cuarentena.\n")
         if not sessions:
             out.write("No se encontraron sesiones.\n")
             return 0

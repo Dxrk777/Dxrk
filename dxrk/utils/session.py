@@ -146,6 +146,10 @@ from dxrk.utils.session_storage import NewFileStorage as NewFileStorage
 from dxrk.utils.session_storage import NewMemoryStorage as NewMemoryStorage
 from dxrk.utils.session_storage import SessionSummary as SessionSummary
 from dxrk.utils.session_storage import Storage as Storage
+from dxrk.utils.session_storage import _atomic_write_bytes as _atomic_write_bytes
+from dxrk.utils.session_storage import _atomic_write_gz_bytes as _atomic_write_gz_bytes
+from dxrk.utils.session_storage import _atomic_write_text as _atomic_write_text
 from dxrk.utils.session_storage import _cmp_int as _cmp_int
 from dxrk.utils.session_storage import _cmp_time as _cmp_time
+from dxrk.utils.session_storage import _fsync_parent as _fsync_parent
 from dxrk.utils.session_storage import _read_gz_file as _read_gz_file

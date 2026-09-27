@@ -244,14 +244,7 @@ def test_filestorage_save_tmp_write_error(tmp_path, monkeypatch):
     st = S.FileStorage(str(tmp_path))
     s = _mk_session()
     s.id = "e2"
-    real_open = open
-
-    def fake_open(path, *a, **k):
-        if str(path).endswith(".tmp"):
-            raise OSError("no write")
-        return real_open(path, *a, **k)
-
-    monkeypatch.setattr("builtins.open", fake_open)
+    monkeypatch.setattr("tempfile.mkstemp", lambda *a, **k: (_ for _ in ()).throw(OSError("no write")))
     with pytest.raises(S.SessionError, match="write temp"):
         st.save(s)
 
@@ -377,7 +370,7 @@ def test_filestorage_compress_errors(tmp_path, monkeypatch):
     s = _mk_session()
     s.id = "cz1"
     st.save(s)
-    monkeypatch.setattr(S.gzip, "open", lambda *a, **k: (_ for _ in ()).throw(OSError("gzfail")))
+    monkeypatch.setattr(S.gzip, "compress", lambda *a, **k: (_ for _ in ()).throw(OSError("gzfail")))
     with pytest.raises(S.SessionError):
         st.compress_session("cz1")
 
@@ -403,13 +396,22 @@ def test_filestorage_load_index_corrupt(tmp_path):
     s = _mk_session()
     s.id = "ci1"
     st.save(s)
-    # corrupt index
+    # corrupt index self-heals: rebuilt from the session files on disk
     with open(os.path.join(str(d), ".index.json"), "w", encoding="utf-8") as f:
         f.write("{bad")
     st2 = S.FileStorage(str(d))
-    # corrupt -> index reset to empty (no crash)
-    assert st2.index == {}
-    # mixed entries: non-dict, missing id, valid
+    assert "ci1" in st2.index
+    assert [x.id for x in st2.list()] == ["ci1"]
+    # missing index rebuilds too
+    os.remove(os.path.join(str(d), ".index.json"))
+    st2b = S.FileStorage(str(d))
+    assert "ci1" in st2b.index
+    # non-list payload also triggers a rebuild
+    with open(os.path.join(str(d), ".index.json"), "w", encoding="utf-8") as f:
+        f.write("123")
+    st2c = S.FileStorage(str(d))
+    assert "ci1" in st2c.index
+    # a valid non-empty index is used as-is (mixed junk entries skipped)
     payload = [
         123,
         {"noid": True},
@@ -434,14 +436,8 @@ def test_filestorage_write_index_error(tmp_path, monkeypatch):
     st = S.FileStorage(str(tmp_path))
     s = _mk_session()
     s.id = "wi1"
-    real_open = open
-
-    def fake_open(path, *a, **k):
-        if str(path).endswith(".index.json"):
-            raise OSError("idx fail")
-        return real_open(path, *a, **k)
-
-    monkeypatch.setattr("builtins.open", fake_open)
+    # durable writes go through tmp + os.replace: a rename failure surfaces
+    monkeypatch.setattr(S.os, "replace", lambda a, b: (_ for _ in ()).throw(OSError("idx fail")))
     with pytest.raises(S.SessionError):
         st.save(s)
     # direct _write_index also raises
@@ -455,8 +451,19 @@ def test_memorystorage_eviction_and_delete():
         s = _mk_session(title=f"s{i}")
         s.id = f"m{i}"
         st.save(s)
-    # eviction path executed (buggy but covers lines)
-    assert len(st.sessions) <= 3
+    # oldest entry (m0) is evicted; newest two survive
+    assert len(st.sessions) == 2
+    assert st.order == ["m1", "m2"]
+    assert not st.exists("m0")
+    assert st.exists("m1") and st.exists("m2")
+    with pytest.raises(S.SessionError):
+        st.load("m0")
+    # continued pressure evicts in FIFO order
+    s = _mk_session(title="s3")
+    s.id = "m3"
+    st.save(s)
+    assert st.order == ["m2", "m3"]
+    assert not st.exists("m1")
     # overwrite existing does not append
     s = _mk_session()
     s.id = "mm"

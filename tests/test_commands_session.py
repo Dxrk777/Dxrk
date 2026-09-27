@@ -15,6 +15,7 @@ from dxrk.commands.session import (
     _fmt_ts_short,
     delete_session_file,
     list_session_files,
+    list_session_files_with_quarantine,
     load_session,
     register_session_command,
     save_session,
@@ -87,8 +88,17 @@ def test_list_session_files_skips_non_json(sdir):
         f.write("x")
     with open(os.path.join(sdir, "corrupt.json"), "w", encoding="utf-8") as f:
         f.write("{not json")
-    got = list_session_files()
+    # corrupt .json files are quarantined (not silently dropped); the count
+    # is surfaced while non-JSON names and dirs are still skipped silently
+    got, quarantined = list_session_files_with_quarantine()
     assert [s.id for s in got] == ["sess-aaa"]
+    assert quarantined == 1
+    assert os.path.exists(os.path.join(sdir, ".quarantine", "corrupt.json"))
+    assert not os.path.exists(os.path.join(sdir, "corrupt.json"))
+    # legacy entry point keeps working and finds nothing left to quarantine
+    got2, quarantined2 = list_session_files_with_quarantine()
+    assert [s.id for s in got2] == ["sess-aaa"]
+    assert quarantined2 == 0
 
 
 def test_list_session_files_skips_unreadable(sdir, monkeypatch):
