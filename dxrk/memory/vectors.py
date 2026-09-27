@@ -58,7 +58,11 @@ def query_features(text: str) -> list[str]:
 
 
 def _bucket(feat: str) -> int:
-    digest = hashlib.md5(feat.encode("utf-8")).digest()
+    try:
+        digest = hashlib.md5(feat.encode("utf-8"), usedforsecurity=False).digest()
+    except TypeError:
+        # Old Pythons without the ``usedforsecurity`` kwarg.
+        digest = hashlib.md5(feat.encode("utf-8")).digest()
     return int.from_bytes(digest[:4], "little") % DIM
 
 

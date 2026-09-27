@@ -1,15 +1,19 @@
 # SPDX-License-Identifier: MIT
 """Session commands and storage helpers.
 
-Canonical persistence is :class:`dxrk.utils.session_storage.FileStorage`
-(single writer, single reader, single error type). ``~/.dxrk/sessions``
-files written by the legacy flat-file layout remain readable: every read
-goes through the store (which migrates registry versions lazily) and every
-write produces the canonical layout.
+Canonical persistence is the store returned by
+:func:`dxrk.utils.session_storage.open_session_storage` bound to
+``~/.dxrk/sessions``: the JSON dir (``FileStorage``) by default, or the
+SQLite/WAL store (``SQLiteSessionStorage``) when
+``DXRK_SESSION_BACKEND=sqlite``. Files written by the legacy flat-file
+layout remain readable on the file backend: every read goes through the
+store (which migrates registry versions lazily) and every write produces
+the canonical layout.
 """
 
 from __future__ import annotations
 
+import gzip
 import os
 import re
 from datetime import UTC, datetime
@@ -23,7 +27,13 @@ from dxrk.utils.session import (
     now,
 )
 from dxrk.utils.session_model import SessionError
-from dxrk.utils.session_storage import FileStorage, _atomic_write_text
+from dxrk.utils.session_storage import (
+    SESSION_BACKEND_ENV_VAR,
+    FileStorage,
+    SQLiteSessionStorage,
+    _atomic_write_text,
+    open_session_storage,
+)
 
 from .registry import Command, CommandContext, Flag, Registry, go_duration, go_quote
 
@@ -58,9 +68,26 @@ def session_dir() -> str:
     return dir_path
 
 
-def _store() -> FileStorage:
-    """Returns the canonical store bound to the sessions directory."""
-    return FileStorage(session_dir())
+def _store() -> FileStorage | SQLiteSessionStorage:
+    """Returns the store selected by ``DXRK_SESSION_BACKEND`` (default: file).
+
+    ``open_session_storage`` keeps the JSON dir the default; only an
+    explicit ``sqlite`` value opts into ``sessions.db``. Unknown values
+    fall back to ``FileStorage``.
+    """
+    return open_session_storage(session_dir())
+
+
+def _backend_kind() -> str:
+    """Backend selected by the environment, without opening a store.
+
+    Mirrors :func:`open_session_storage` selection (``"sqlite"`` or
+    ``"file"``) so CLI messages can describe backend-specific behavior
+    honestly without leaking store connections.
+    """
+    if os.environ.get(SESSION_BACKEND_ENV_VAR, "").strip().lower() == "sqlite":
+        return "sqlite"
+    return "file"
 
 
 def _sort_key(s: Session) -> datetime:
@@ -96,18 +123,73 @@ def _quarantine_file(dir_path: str, name: str) -> bool:
     return True
 
 
-def list_session_files_with_quarantine() -> tuple[list[Session], int]:
-    """Lists all sessions newest-first, quarantining unparseable ``.json`` files.
+def _is_corrupt_session_file(dir_path: str, name: str) -> bool:
+    """True when ``name`` exists in ``dir_path`` but holds no session payload.
 
-    Every session is read through the canonical store (single reader:
-    migration registry and ``.gz`` fallback apply). Returns ``(sessions,
-    quarantined)`` where ``quarantined`` is the number of corrupt files
-    moved to ``.quarantine/``. Non-session names (``.index.json``, tmp
-    files, non-``.json`` names), directories (including ``.quarantine/``
+    Missing or transiently unreadable files return False (skipped silently
+    as before — never quarantined). Anything present but undecodable or
+    unparseable (plain ``.json`` via ``import_json``, ``.json.gz`` via
+    gzip + ``import_json``) returns True.
+    """
+    path = os.path.join(dir_path, name)
+    try:
+        with open(path, "rb") as f:
+            raw = f.read()
+    except OSError:
+        return False
+    try:
+        text = gzip.decompress(raw).decode("utf-8") if name.endswith(".gz") else raw.decode("utf-8")
+    except Exception:
+        return True
+    try:
+        import_json(text)
+    except Exception:
+        return True
+    return False
+
+
+def _list_sqlite_with_row_errors(store: SQLiteSessionStorage) -> tuple[list[Session], int]:
+    """Lists sqlite sessions newest-first, counting corrupt rows.
+
+    The SQLite backend has no ``.quarantine/`` directory (payloads live
+    inline in ``sessions.db``): a row whose payload fails to parse is
+    skipped and counted, surfacing through the same warning slot the file
+    backend uses for quarantined files. Listing never fails because of
+    one bad row; a failing ``list`` itself still raises SessionError.
+    """
+    try:
+        summaries = store.list()
+    except SessionError as exc:
+        raise SessionError(f"al listar las sesiones: {exc}") from exc
+    sessions: list[Session] = []
+    corrupt = 0
+    for summary in summaries:
+        try:
+            sessions.append(store.load(summary.id))
+        except SessionError:
+            corrupt += 1
+    sessions.sort(key=_sort_key, reverse=True)
+    return sessions, corrupt
+
+
+def list_session_files_with_quarantine() -> tuple[list[Session], int]:
+    """Lists all sessions newest-first, quarantining unparseable files.
+
+    Backend-selected: on the file backend every session is read through
+    the canonical store (single reader: migration registry and ``.gz``
+    fallback apply) and each corrupt sibling (``.json`` and/or
+    ``.json.gz``) is moved to ``.quarantine/``; on the sqlite backend
+    corrupt rows are skipped and counted (no files to move — see
+    :func:`_list_sqlite_with_row_errors`). Returns ``(sessions,
+    quarantined)`` where ``quarantined`` is the number of corrupt
+    payloads set aside. Non-session names (``.index.json``, tmp files,
+    non-session suffixes), directories (including ``.quarantine/``
     itself) and transiently unreadable files are still skipped silently.
     """
     dir_path = session_dir()
-    store = FileStorage(dir_path)
+    store = open_session_storage(dir_path)
+    if isinstance(store, SQLiteSessionStorage):
+        return _list_sqlite_with_row_errors(store)
     try:
         entries = os.listdir(dir_path)
     except OSError as exc:
@@ -136,19 +218,11 @@ def list_session_files_with_quarantine() -> tuple[list[Session], int]:
             sessions.append(store.load(sid))
         except SessionError:
             # The store already tried ``.json`` then ``.gz``: nothing
-            # readable remains. Quarantine only a readable-but-corrupt
-            # plain file (legacy semantics); unreadable files are skipped
-            # silently as before.
-            plain = sid + ".json"
-            try:
-                with open(os.path.join(dir_path, plain), encoding="utf-8") as f:
-                    content = f.read()
-            except OSError:
-                continue
-            try:
-                import_json(content)
-            except Exception:
-                if _quarantine_file(dir_path, plain):
+            # readable remains. Quarantine each corrupt sibling (plain
+            # and/or compressed); unreadable files are skipped silently
+            # as before.
+            for sibling in (sid + ".json", sid + ".json.gz"):
+                if _is_corrupt_session_file(dir_path, sibling) and _quarantine_file(dir_path, sibling):
                     quarantined += 1
             continue
     sessions.sort(key=_sort_key, reverse=True)
@@ -270,7 +344,13 @@ def session_list_cmd() -> Command:
             return 1
 
         if quarantined:
-            out.write(f"Advertencia: {quarantined} archivo(s) de sesión corrupto(s) movido(s) a cuarentena.\n")
+            if _backend_kind() == "sqlite":
+                out.write(
+                    f"Advertencia: {quarantined} fila(s) de sesión corrupta(s) omitida(s) "
+                    "(backend sqlite, sin cuarentena en disco).\n"
+                )
+            else:
+                out.write(f"Advertencia: {quarantined} archivo(s) de sesión corrupto(s) movido(s) a cuarentena.\n")
         if not sessions:
             out.write("No se encontraron sesiones.\n")
             return 0

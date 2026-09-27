@@ -402,3 +402,116 @@ def test_factory_unknown_value_stays_default(tmp_path, monkeypatch):  # type: ig
         close = getattr(st, "close", None)
         if callable(close):
             close()
+
+
+# ─── CLI honors DXRK_SESSION_BACKEND end-to-end ────────────────────────
+
+
+def _cli_sdir(tmp_path, monkeypatch):  # type: ignore[no-untyped-def]
+    import dxrk.commands.session as CS
+
+    path = str(tmp_path / "sessions")
+    monkeypatch.setattr(CS, "session_dir", lambda: path)
+    return path
+
+
+def _cli_reg():  # type: ignore[no-untyped-def]
+    import io
+
+    from dxrk.commands.registry import Registry
+    from dxrk.commands.session import register_session_command
+
+    reg = Registry()
+    register_session_command(reg)
+
+    def run(args):  # type: ignore[no-untyped-def]
+        out, err = io.StringIO(), io.StringIO()
+        code = reg.execute(args, out=out, err=err)
+        return code, out.getvalue(), err.getvalue()
+
+    return run
+
+
+def test_cli_defaults_to_filestorage_without_env(tmp_path, monkeypatch):  # type: ignore[no-untyped-def]
+    import dxrk.commands.session as CS
+
+    monkeypatch.delenv("DXRK_SESSION_BACKEND", raising=False)
+    _cli_sdir(tmp_path, monkeypatch)
+    st = CS._store()
+    try:
+        assert isinstance(st, S.FileStorage)
+    finally:
+        close = getattr(st, "close", None)
+        if callable(close):
+            close()
+
+
+def test_cli_sqlite_list_info_load_against_sessions_db(tmp_path, monkeypatch):  # type: ignore[no-untyped-def]
+    import dxrk.commands.session as CS
+
+    monkeypatch.setenv("DXRK_SESSION_BACKEND", "sqlite")
+    sdir = _cli_sdir(tmp_path, monkeypatch)
+    run = _cli_reg()
+    st = CS._store()
+    try:
+        assert isinstance(st, S.SQLiteSessionStorage)  # type: ignore[attr-defined]
+    finally:
+        st.close()
+    code, out, err = run(["session", "create", "HelloSqlite"])
+    assert code == 0, err
+    assert os.path.exists(os.path.join(sdir, "sessions.db"))
+    assert not [n for n in os.listdir(sdir) if n.endswith(".json")]
+    code, out, err = run(["session", "list"])
+    assert code == 0, err
+    assert "HelloSqlite" in out
+    prefix = out.splitlines()[1].split("\t")[0]
+    assert len(prefix) == 8
+    code, out, err = run(["session", "info", prefix])
+    assert code == 0, err
+    assert "HelloSqlite" in out
+    assert CS.load_session(prefix).title == "HelloSqlite"
+
+
+def test_cli_unknown_backend_value_falls_back_to_file(tmp_path, monkeypatch):  # type: ignore[no-untyped-def]
+    import dxrk.commands.session as CS
+
+    monkeypatch.setenv("DXRK_SESSION_BACKEND", "nonsense")
+    sdir = _cli_sdir(tmp_path, monkeypatch)
+    run = _cli_reg()
+    assert isinstance(CS._store(), S.FileStorage)
+    code, out, err = run(["session", "create", "HelloFile"])
+    assert code == 0, err
+    assert not os.path.exists(os.path.join(sdir, "sessions.db"))
+    code, out, err = run(["session", "list"])
+    assert code == 0, err
+    assert "HelloFile" in out
+
+
+def test_cli_sqlite_corrupt_row_counted_not_quarantined(tmp_path, monkeypatch):  # type: ignore[no-untyped-def]
+    import sqlite3
+
+    import dxrk.commands.session as CS
+
+    monkeypatch.setenv("DXRK_SESSION_BACKEND", "sqlite")
+    sdir = _cli_sdir(tmp_path, monkeypatch)
+    run = _cli_reg()
+    code, out, err = run(["session", "create", "Good"])
+    assert code == 0, err
+    st = CS._store()
+    try:
+        good_id = st.list()[0].id
+        con = sqlite3.connect(st.db_path)  # type: ignore[attr-defined]
+        try:
+            con.execute("INSERT INTO sessions (id, payload) VALUES (?, ?)", ("corrupt-row", "{not json"))
+            con.commit()
+        finally:
+            con.close()
+    finally:
+        st.close()
+    sessions, corrupt = CS.list_session_files_with_quarantine()
+    assert [s.id for s in sessions] == [good_id]
+    assert corrupt == 1
+    assert not os.path.exists(os.path.join(sdir, ".quarantine"))
+    code, out, err = run(["session", "list"])
+    assert code == 0, err
+    assert "sin cuarentena en disco" in out

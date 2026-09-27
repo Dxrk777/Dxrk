@@ -88,6 +88,12 @@ class TaskScheduler:
         self._threads: list[threading.Thread] = []
         self._config = config
         self._handler = handler
+        # Shared handler pool: one executor for all task attempts (sized to
+        # the worker pool) instead of a per-task ThreadPoolExecutor churned
+        # on every _run_task. Shut down with the scheduler in Stop().
+        self._exec = concurrent.futures.ThreadPoolExecutor(
+            max_workers=config.max_concurrent_tasks, thread_name_prefix="swarm-handler"
+        )
 
     def RegisterHandler(self, handler: TaskPayloadHandler) -> None:
         """Register the callable that executes task payloads.
@@ -151,6 +157,7 @@ class TaskScheduler:
         for thread in self._threads:
             thread.join(timeout=2.0)
         self._threads.clear()
+        self._exec.shutdown(wait=True)
 
     def Submit(self, task: Task) -> SwarmError | None:
         """Submit a task to the scheduler queue. Mirrors TaskScheduler.Submit()."""
@@ -180,7 +187,7 @@ class TaskScheduler:
         if self._config.work_stealing:
             selected = self._select_backend_work_stealing(backends, task)
         else:
-            selected = self._select_backend_least_loaded(backends)
+            selected = self._select_backend_least_loaded(backends, task)
 
         if selected is None:
             task.error = "no suitable backend found"
@@ -252,10 +259,18 @@ class TaskScheduler:
                 best_depth = depth
         return best
 
-    def _select_backend_least_loaded(self, backends: list[Backend]) -> Backend | None:
+    def _select_backend_least_loaded(self, backends: list[Backend], task: Task) -> Backend | None:
+        """Return the least-loaded backend able to take ``task``, if any.
+
+        Mirrors :meth:`_select_backend_work_stealing`: saturated backends
+        and capability mismatches are skipped via ``CanHandle`` instead
+        of being picked and failed later.
+        """
         selected: Backend | None = None
         min_load = 1 << 62
         for b in backends:
+            if not b.CanHandle(task):
+                continue
             if b.load < min_load:
                 min_load = b.load
                 selected = b
@@ -345,33 +360,43 @@ class TaskScheduler:
         with self._mu:
             handler = self._handler
 
-        try:
-            if handler is None:
-                output = task.payload
-            else:
-                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-                    future = executor.submit(handler, task)
-                    output = future.result(timeout=timeout)
-        except concurrent.futures.TimeoutError:
-            task.error = _CTX_DEADLINE
-            return TaskResult(
-                task_id=task.id,
-                backend_id=backend_id,
-                session_id=task.session_id,
-                metrics={_STR_ERROR: 1.0, _STR_TIMEOUT: 1.0},
-                duration=_now() - start,
-                timestamp=_now(),
-            )
-        except Exception as exc:  # noqa: BLE001 - recorded on the task
-            task.error = str(exc) or "handler failed"
-            return TaskResult(
-                task_id=task.id,
-                backend_id=backend_id,
-                session_id=task.session_id,
-                metrics={_STR_ERROR: 1.0},
-                duration=_now() - start,
-                timestamp=_now(),
-            )
+        if handler is None:
+            output = task.payload
+        else:
+            try:
+                future = self._exec.submit(handler, task)
+            except RuntimeError as exc:  # executor shut down (Stop raced a task)
+                task.error = str(exc) or "handler failed"
+                return TaskResult(
+                    task_id=task.id,
+                    backend_id=backend_id,
+                    session_id=task.session_id,
+                    metrics={_STR_ERROR: 1.0},
+                    duration=_now() - start,
+                    timestamp=_now(),
+                )
+            try:
+                output = future.result(timeout=timeout)
+            except concurrent.futures.TimeoutError:
+                task.error = _CTX_DEADLINE
+                return TaskResult(
+                    task_id=task.id,
+                    backend_id=backend_id,
+                    session_id=task.session_id,
+                    metrics={_STR_ERROR: 1.0, _STR_TIMEOUT: 1.0},
+                    duration=_now() - start,
+                    timestamp=_now(),
+                )
+            except Exception as exc:  # noqa: BLE001 - recorded on the task
+                task.error = str(exc) or "handler failed"
+                return TaskResult(
+                    task_id=task.id,
+                    backend_id=backend_id,
+                    session_id=task.session_id,
+                    metrics={_STR_ERROR: 1.0},
+                    duration=_now() - start,
+                    timestamp=_now(),
+                )
 
         result = TaskResult(
             task_id=task.id,

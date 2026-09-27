@@ -237,6 +237,26 @@ class TestWingCap:
         finally:
             dm.close()
 
+    def test_massively_over_cap_converges_in_one_call(self, tmp_path: Path):
+        from dxrk.memory.palace import _build_drawer_metadata
+
+        dm = _dm(tmp_path, max_entries_per_wing=0)
+        try:
+            col = dm._collection(create=True)
+            n = 1500
+            ids = [f"cap-row-{i:04d}" for i in range(n)]
+            docs = [f"Over-cap filler record {i}: harbor lighthouse quantum sourdough fjord {i}." for i in range(n)]
+            metas = [_build_drawer_metadata("wcap", "r", f"/fill{i}.md", 0, "t", d, None) for i, d in enumerate(docs)]
+            for s in range(0, n, 500):
+                col.upsert(documents=docs[s : s + 500], ids=ids[s : s + 500], metadatas=metas[s : s + 500])
+            assert dm.count() == n
+            dm._max_entries_per_wing = 10
+            evicted = dm.enforce_wing_cap("wcap")
+            assert evicted == n - 10
+            assert dm.count() == 10
+        finally:
+            dm.close()
+
 
 # ---------------------------------------------------------------------------
 # C) KG auto-extraction on mine (one episode per file version)
@@ -401,3 +421,42 @@ class TestContradiction:
 @pytest.mark.skip(reason="documented non-goal: session summaries stay naive concatenation in Phase 2")
 def test_session_summaries_distill():
     """Placeholder proving the Phase 2 scope boundary (summaries untouched)."""
+
+
+class TestDeadRowLifecycleExclusion:
+    def test_readded_content_after_supersede_creates_visible_row(self, tmp_path: Path):
+        dm = _dm(tmp_path)
+        try:
+            first = dm.add_drawer("w", "r", AUTH, "/old.md", 0)
+            second = dm.add_drawer("w", "r", DEPLOY, "/new.md", 0, supersedes=first)
+            assert second != first
+            # Re-adding the dead row's content from a fresh source must NOT
+            # collapse back onto the dead id (which search/L1/L2 filter out).
+            third = dm.add_drawer("w", "r", AUTH, "/readded.md", 0)
+            assert third != first
+            got = dm.get_drawer(third)
+            assert got is not None
+            assert not got["metadata"].get("valid_to")
+            assert not got["metadata"].get("forgotten")
+            res = dm.search("authentication JWT bearer", wing="w")
+            texts = [str(h.get("text", "")) for h in res.get("results", [])]
+            assert any("authentication service issues" in t for t in texts)
+        finally:
+            dm.close()
+
+    def test_readded_content_after_forget_creates_visible_row(self, tmp_path: Path):
+        dm = _dm(tmp_path)
+        try:
+            first = dm.add_drawer("w", "r", AUTH, "/old.md", 0)
+            forgotten = dm.forget(drawer_ids=[first])
+            assert forgotten["soft_forgotten"] == 1
+            third = dm.add_drawer("w", "r", AUTH, "/readded.md", 0)
+            assert third != first
+            got = dm.get_drawer(third)
+            assert got is not None
+            assert not got["metadata"].get("valid_to")
+            res = dm.search("authentication JWT bearer", wing="w")
+            texts = [str(h.get("text", "")) for h in res.get("results", [])]
+            assert any("authentication service issues" in t for t in texts)
+        finally:
+            dm.close()

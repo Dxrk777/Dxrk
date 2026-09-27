@@ -1196,8 +1196,8 @@ def test_scheduler_select_backends():
     b1 = W.Backend(id="s1", name="a", capacity=5, load=2, status=W.BackendStatus.StatusHealthy)
     b2 = W.Backend(id="s2", name="b", capacity=5, load=0, status=W.BackendStatus.StatusHealthy)
     sch = W.NewTaskScheduler(reg, W.SchedulerConfig())
-    assert sch._select_backend_least_loaded([b1, b2]).id == "s2"  # type: ignore[union-attr]
-    assert sch._select_backend_least_loaded([]) is None
+    assert sch._select_backend_least_loaded([b1, b2], W.Task()).id == "s2"  # type: ignore[union-attr]
+    assert sch._select_backend_least_loaded([], W.Task()) is None
     # work stealing: no capacity -> None
     bf = W.Backend(id="f", name="f", capacity=1, load=1, status=W.BackendStatus.StatusHealthy)
     assert sch._select_backend_work_stealing([bf], W.Task(type="x")) is None
@@ -1252,6 +1252,72 @@ def test_scheduler_stats_active():
     st = sch.Stats()
     assert st.total_workers == 2
     assert st.active_workers == 1
+
+
+def test_scheduler_least_loaded_skips_saturated_backends():
+    reg = _mk_registry()
+    full = W.Backend(name="full", capacity=1)
+    assert reg.Register(_BG, full) is None
+    full.load = 1  # saturated: no capacity left
+    free = W.Backend(name="free", capacity=5)
+    assert reg.Register(_BG, free) is None
+    sch = W.NewTaskScheduler(reg, W.SchedulerConfig(work_stealing=False))
+    try:
+        # unit level: saturated backend never picked
+        assert sch._select_backend_least_loaded([full, free], W.Task()).id == free.id  # type: ignore[union-attr]
+        assert sch._select_backend_least_loaded([full], W.Task()) is None
+        # capability mismatch also skipped
+        assert sch._select_backend_least_loaded([free], W.Task(required_capabilities={"gpu": 1})) is None
+        # dispatch level under saturation: routed to the free backend
+        w = W._Worker(id="w-sat", tasks=queue.Queue(maxsize=10), results=sch._results)
+        sch._workers[w.id] = w
+        t = W.Task(id="t-sat", type="")
+        sch._dispatch_task(t)
+        assert t.assigned_backend == free.id
+        assert w.tasks.qsize() == 1
+        # full saturation: honest error instead of a doomed pick
+        free.load = 5
+        w2 = W._Worker(id="w-sat2", tasks=queue.Queue(maxsize=10), results=sch._results)
+        sch._workers[w2.id] = w2
+        t2 = W.Task(id="t-sat2", type="")
+        sch._dispatch_task(t2)
+        assert t2.error == "no suitable backend found"
+        res = sch._results.get_nowait()
+        assert res.task_id == "t-sat2"
+    finally:
+        sch.Stop()
+
+
+def test_scheduler_shared_handler_executor_no_leak():
+    import concurrent.futures
+
+    reg = _mk_registry()
+    sch = W.NewTaskScheduler(reg, W.SchedulerConfig(max_concurrent_tasks=4))
+    try:
+        # one shared pool sized to the worker pool (not a per-task executor)
+        assert isinstance(sch._exec, concurrent.futures.ThreadPoolExecutor)
+        assert sch._exec._max_workers == 4
+        sch.RegisterHandler(lambda task: (task.payload or b"") + b":out")
+        w = W._Worker(id="w-exec", tasks=queue.Queue(), results=sch._results)
+        # real results through the shared pool
+        for i in range(3):
+            t = W.Task(id=f"exec-{i}", payload=f"p{i}".encode(), started_at=W._now())
+            res = sch._run_task(w, t)
+            assert res.output == f"p{i}:out".encode()
+            assert t.IsCompleted() is True
+
+        def _handler_threads():
+            return [th for th in threading.enumerate() if th.name.startswith("swarm-handler")]
+
+        assert len(_handler_threads()) <= 4
+        before = len(_handler_threads())
+        for i in range(50):
+            t = W.Task(id=f"exec-many-{i}", payload=b"x", started_at=W._now())
+            sch._run_task(w, t)
+        # shared pool: no thread growth across many tasks (best-effort)
+        assert len(_handler_threads()) == before
+    finally:
+        sch.Stop()
 
 
 def test_healthmonitor_init_and_get():

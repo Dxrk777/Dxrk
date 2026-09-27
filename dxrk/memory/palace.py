@@ -60,6 +60,10 @@ DEFAULT_MAX_ENTRIES_PER_WING = 1000
 # Upper bound on the wing snapshot scanned per write for dedupe/cap.
 WING_SNAPSHOT_LIMIT = 2000
 WING_EVICT_SCAN = 1000
+# Upper bound on eviction passes per enforce_wing_cap call: one pass only
+# sees cap + WING_EVICT_SCAN rows, so each pass evicts at most
+# WING_EVICT_SCAN rows — 100 passes converge wings ~100k rows over cap.
+_WING_CAP_MAX_PASSES = 100
 # Bounded scan for status/budget and timeline views (usage counts flag
 # `truncated` when the wing exceeds the scan so callers know the count is
 # a lower bound rather than silently exact).
@@ -953,8 +957,25 @@ def classify_content_pair(new_text: str, old_text: str) -> str:
     return "distinct"
 
 
+def _is_dead_meta(meta: object) -> bool:
+    """True when a drawer row is superseded or forgotten (history only).
+
+    Dead rows stay on disk readable via ``get_drawer`` but are invisible
+    to search / L1 / L2 — and must be invisible to the write-time
+    lifecycle scan too, or re-added content duplicating a dead row would
+    collapse back onto the dead id and stay invisible everywhere.
+    """
+    if not isinstance(meta, dict):
+        return False
+    return bool(meta.get("valid_to") or meta.get("forgotten"))
+
+
 def _wing_snapshot(col: BaseCollection, wing: str, limit: int = WING_SNAPSHOT_LIMIT) -> list[dict[str, object]]:
-    """Fetch wing drawers as {id, doc, meta} for lifecycle scans (best-effort)."""
+    """Fetch live wing drawers as {id, doc, meta} for lifecycle scans (best-effort).
+
+    Superseded/forgotten rows are excluded: they are history, never
+    dedupe/supersede candidates.
+    """
     try:
         got = col.get(where={"wing": wing}, include=["documents", "metadatas"], limit=limit)
     except Exception:
@@ -963,6 +984,8 @@ def _wing_snapshot(col: BaseCollection, wing: str, limit: int = WING_SNAPSHOT_LI
     for rid, doc, meta in zip(got.ids, got.documents, got.metadatas):
         if not isinstance(meta, dict):
             meta = {}
+        if _is_dead_meta(meta):
+            continue
         out.append({"id": rid, "doc": doc or "", "meta": meta})
     return out
 
@@ -972,7 +995,13 @@ def _best_lifecycle_candidate(
     content: str,
     exclude_ids: set[str] | None = None,
 ) -> tuple[dict[str, object] | None, float]:
-    """Highest-similarity snapshot entry at/above DEDUPE_SIM_THRESHOLD."""
+    """Highest-similarity live snapshot entry at/above DEDUPE_SIM_THRESHOLD.
+
+    Dead (superseded/forgotten) candidates are skipped defensively: most
+    snapshots come pre-filtered from :func:`_wing_snapshot`, but callers
+    assembling their own lists (e.g. the mine ``running`` pool) must not
+    match history rows either.
+    """
     excluded = exclude_ids or set()
     new_vec = _vec_embed_counts(content or "")
     best: dict[str, object] | None = None
@@ -980,6 +1009,8 @@ def _best_lifecycle_candidate(
     for cand in snapshot:
         cid = str(cand.get("id", ""))
         if cid in excluded:
+            continue
+        if _is_dead_meta(cand.get("meta")):
             continue
         cdoc = str(cand.get("doc", ""))
         if not cdoc:
@@ -1203,24 +1234,22 @@ class DxrkMemory:
             return False
         return True
 
-    def _enforce_wing_cap(self, col: BaseCollection, wing: str) -> int:
-        """Evict lowest-ranked drawers past the per-wing cap (best-effort).
+    def _enforce_wing_cap_once(self, col: BaseCollection, wing: str, cap: int) -> tuple[int, int, bool]:
+        """One eviction pass; returns ``(evicted, remaining, scan_full)``.
 
-        Superseded/forgotten rows (``valid_to`` set) go first, then lowest
-        ``score_meta``. Pinned rows are NEVER evicted — when the wing is
-        over cap and only pinned rows remain, nothing is deleted (the wing
-        stays over budget until unpinned). Returns rows deleted.
-        Cap <= 0 disables (legacy unbounded).
+        ``remaining`` is exact only when the scan window was NOT full
+        (``scan_full`` False); a full window means the wing may hold more
+        rows than observed. ``evicted == 0`` with ``remaining > cap``
+        means no progress is possible (only pinned rows left, or every
+        delete failed).
         """
-        cap = self._max_entries_per_wing
-        if cap <= 0:
-            return 0
         try:
             got = col.get(where={"wing": wing}, include=["documents", "metadatas"], limit=cap + WING_EVICT_SCAN)
         except Exception:
-            return 0
+            return 0, 0, False
+        scan_full = len(got.ids) >= cap + WING_EVICT_SCAN
         if len(got.ids) <= cap:
-            return 0
+            return 0, len(got.ids), scan_full
         over = len(got.ids) - cap
         # Pinned rows are exempt: victims come from unpinned rows only.
         candidates: list[tuple[bool, float, str]] = []
@@ -1241,7 +1270,36 @@ class DxrkMemory:
             except Exception:
                 logger.debug("Wing-cap eviction failed for %s", wing, exc_info=True)
                 break
-        return evicted
+        return evicted, len(got.ids) - evicted, scan_full
+
+    def _enforce_wing_cap(self, col: BaseCollection, wing: str) -> int:
+        """Evict lowest-ranked drawers past the per-wing cap (best-effort).
+
+        Superseded/forgotten rows (``valid_to`` set) go first, then lowest
+        ``score_meta``. Pinned rows are NEVER evicted — when the wing is
+        over cap and only pinned rows remain, nothing is deleted (the wing
+        stays over budget until unpinned). Returns rows deleted.
+        Cap <= 0 disables (legacy unbounded).
+
+        Loops until under budget or no progress: a single pass only sees
+        ``cap + WING_EVICT_SCAN`` rows, so a massively-over-cap wing needs
+        several passes to converge. Bounded by ``_WING_CAP_MAX_PASSES``.
+        """
+        cap = self._max_entries_per_wing
+        if cap <= 0:
+            return 0
+        total = 0
+        for _ in range(_WING_CAP_MAX_PASSES):
+            evicted, remaining, scan_full = self._enforce_wing_cap_once(col, wing, cap)
+            total += evicted
+            if evicted == 0:
+                break
+            # A full scan window hides rows beyond it: the remaining
+            # estimate is a lower bound, so keep passing until a pass
+            # sees the whole wing under budget.
+            if not scan_full and remaining <= cap:
+                break
+        return total
 
     def enforce_wing_cap(self, wing: str) -> int:
         """Public wrapper: enforce the per-wing budget now, return rows evicted."""

@@ -395,3 +395,36 @@ def test_d_coordinator_session_summary(tmp_path):
             coord.Stop()
     finally:
         store.Close()
+
+
+def test_d_task_result_timestamps_survive_reopen(tmp_path):
+    from datetime import UTC, datetime
+
+    fixed = datetime(2024, 5, 1, 12, 0, 0, tzinfo=UTC)
+    db = str(tmp_path / "ts.db")
+    store = W.NewSwarmTaskStore(db)
+    try:
+        t = W.Task(id="ts-1", type="work", payload=b"abc", session_id="sess-ts")
+        store.RecordTask(t)
+        res = W.TaskResult(
+            task_id="ts-1",
+            backend_id="b1",
+            output=b"done",
+            session_id="sess-ts",
+            duration=timedelta(seconds=2),
+            timestamp=fixed,
+        )
+        store.RecordResult(res)
+    finally:
+        store.Close()
+    reopened = W.NewSwarmTaskStore(db)
+    try:
+        got = reopened.GetResult("ts-1")
+        assert got is not None
+        assert got.timestamp == fixed
+        listed = reopened.ListSession("sess-ts")
+        assert [r.task_id for r in listed] == ["ts-1"]
+        assert listed[0].timestamp == fixed
+        assert listed[0].duration == timedelta(seconds=2)
+    finally:
+        reopened.Close()

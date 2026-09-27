@@ -226,6 +226,40 @@ class TestLocalVectors:
 
         assert embed_query_counts("how do we handle auth?") == embed_counts("handle auth")
 
+    def test_bucket_uses_non_security_md5(self, monkeypatch):
+        import hashlib
+
+        import dxrk.memory.vectors as V
+
+        real_md5 = hashlib.md5
+        seen: dict[str, object] = {}
+
+        def spy(data: bytes, **kw: object):  # type: ignore[no-untyped-def]
+            seen.update(kw)
+            return real_md5(data)
+
+        monkeypatch.setattr(hashlib, "md5", spy)
+        b = V._bucket("w:jwt")
+        assert 0 <= b < V.DIM
+        # the FIPS-safe flag is passed on hardened interpreters
+        assert seen.get("usedforsecurity") is False
+
+    def test_bucket_falls_back_without_usedforsecurity_flag(self, monkeypatch):
+        import hashlib
+
+        import dxrk.memory.vectors as V
+
+        real_md5 = hashlib.md5
+
+        def old_md5(data: bytes, **kw: object):  # type: ignore[no-untyped-def]
+            if kw:
+                raise TypeError("unexpected keyword argument 'usedforsecurity'")
+            return real_md5(data)
+
+        monkeypatch.setattr(hashlib, "md5", old_md5)
+        assert V._bucket("w:jwt") == V._bucket("w:jwt")
+        assert 0 <= V.embed_counts("jwt auth")[V._bucket("w:jwt")]
+
     def test_query_embeddings_dim_matched_ranks(self, tmp_path: Path):
         """Explicit DIM-wide embeddings are honored (true hybrid, not neutral)."""
         from dxrk.memory.backend import PalaceRef, SqliteBackend

@@ -24,7 +24,7 @@ from __future__ import annotations
 import os
 import sqlite3
 import threading
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from dxrk.utils.swarm_model import Task as Task
 from dxrk.utils.swarm_model import TaskResult as TaskResult
@@ -53,6 +53,22 @@ CREATE TABLE IF NOT EXISTS swarm_results (
 );
 CREATE INDEX IF NOT EXISTS idx_swarm_results_session ON swarm_results(session_id);
 """
+
+
+def _parse_result_timestamp(value: object) -> datetime:
+    """Parse a stored ISO timestamp back; ``_now()`` when missing/unparseable.
+
+    ``RecordResult`` persists ``result.timestamp.isoformat()`` (empty
+    string when unset). Returning ``_now()`` on garbage keeps the
+    historical fallback for rows predating honest timestamps instead of
+    raising on read.
+    """
+    if isinstance(value, str) and value:
+        try:
+            return datetime.fromisoformat(value)
+        except ValueError:
+            pass
+    return _now()
 
 
 class SwarmTaskStore:
@@ -139,14 +155,14 @@ class SwarmTaskStore:
             output=bytes(row[3]) if row[3] is not None else None,
             session_id=str(row[1]),
             duration=timedelta(seconds=float(row[4] or 0.0)),
-            timestamp=_now(),
+            timestamp=_parse_result_timestamp(row[5]),
         )
 
     def ListSession(self, session_id: str) -> list[TaskResult]:
         """Return persisted results for a session, ordered by task id."""
         with self._mu:
             rows = self._conn.execute(
-                "SELECT task_id, session_id, backend_id, output, duration_s"
+                "SELECT task_id, session_id, backend_id, output, duration_s, timestamp"
                 " FROM swarm_results WHERE session_id=? ORDER BY task_id",
                 (session_id,),
             ).fetchall()
@@ -157,7 +173,7 @@ class SwarmTaskStore:
                 output=bytes(r[3]) if r[3] is not None else None,
                 session_id=str(r[1]),
                 duration=timedelta(seconds=float(r[4] or 0.0)),
-                timestamp=_now(),
+                timestamp=_parse_result_timestamp(r[5]),
             )
             for r in rows
         ]

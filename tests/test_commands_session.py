@@ -350,3 +350,62 @@ def test_session_parent_error(reg):
     code, out, err = _run(reg, ["session"])
     assert code == 1
     assert "usa 'dxrk session list'" in err
+
+
+def _write_bytes(path, data: bytes):
+    with open(path, "wb") as f:
+        f.write(data)
+
+
+def test_quarantines_corrupt_gz_only_session(sdir, monkeypatch):
+    monkeypatch.delenv("DXRK_SESSION_BACKEND", raising=False)
+    _mk("sess-good", title="Good")
+    with open(os.path.join(sdir, "corrupt.json.gz"), "wb") as f:
+        f.write(b"this is not gzip nor json")
+    got, quarantined = list_session_files_with_quarantine()
+    assert [s.id for s in got] == ["sess-good"]
+    assert quarantined == 1
+    assert os.path.exists(os.path.join(sdir, ".quarantine", "corrupt.json.gz"))
+    assert not os.path.exists(os.path.join(sdir, "corrupt.json.gz"))
+    got2, quarantined2 = list_session_files_with_quarantine()
+    assert [s.id for s in got2] == ["sess-good"]
+    assert quarantined2 == 0
+
+
+def test_quarantines_gz_with_valid_gzip_but_bad_payload(sdir, monkeypatch):
+    import gzip
+
+    monkeypatch.delenv("DXRK_SESSION_BACKEND", raising=False)
+    _mk("sess-good", title="Good")
+    _write_bytes(os.path.join(sdir, "bad.json.gz"), gzip.compress(b"{not json"))
+    got, quarantined = list_session_files_with_quarantine()
+    assert [s.id for s in got] == ["sess-good"]
+    assert quarantined == 1
+    assert os.path.exists(os.path.join(sdir, ".quarantine", "bad.json.gz"))
+
+
+def test_quarantines_both_siblings_when_both_corrupt(sdir, monkeypatch):
+    import gzip
+
+    monkeypatch.delenv("DXRK_SESSION_BACKEND", raising=False)
+    with open(os.path.join(sdir, "both.json"), "w", encoding="utf-8") as f:
+        f.write("{not json")
+    _write_bytes(os.path.join(sdir, "both.json.gz"), gzip.compress(b"also not json"))
+    got, quarantined = list_session_files_with_quarantine()
+    assert got == []
+    assert quarantined == 2
+    assert os.path.exists(os.path.join(sdir, ".quarantine", "both.json"))
+    assert os.path.exists(os.path.join(sdir, ".quarantine", "both.json.gz"))
+
+
+def test_healthy_gz_sibling_never_quarantined(sdir, monkeypatch):
+    from dxrk.utils.session_storage import FileStorage
+
+    monkeypatch.delenv("DXRK_SESSION_BACKEND", raising=False)
+    _mk("sess-aaa", title="Zipped")
+    FileStorage(sdir).compress_session("sess-aaa")
+    assert not os.path.exists(os.path.join(sdir, "sess-aaa.json"))
+    got, quarantined = list_session_files_with_quarantine()
+    assert [x.id for x in got] == ["sess-aaa"]
+    assert quarantined == 0
+    assert not os.path.exists(os.path.join(sdir, ".quarantine"))

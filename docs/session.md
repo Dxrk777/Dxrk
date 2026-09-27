@@ -54,15 +54,21 @@ archivos legibles-pero-corruptos se mueven a
 Advertencia: N archivo(s) de sesión corrupto(s) movido(s) a cuarentena.
 ```
 
-Nombres no-sesión (`.index.json`, tmps, no-`.json`) y directorios
-(incluido `.quarantine/`) se ignoran.
+Cada sesión corrupta pone en cuarentena a sus hermanos
+(`<id>.json` y/o `<id>.json.gz` si ambos están corruptos); una copia
+sana nunca se mueve (el store lee `.json` primero y usa `.gz` como
+fallback). Con el backend SQLite no hay archivos que mover: las filas
+corruptas se omiten y se cuentan con un aviso ajustado
+(`fila(s) ... omitida(s) ... sin cuarentena en disco`).
+
+Nombres no-sesión (`.index.json`, tmps, sufijos que no son
+`.json`/`.json.gz`) y directorios (incluido `.quarantine/`) se ignoran.
 
 ## IDs sanitizados — sin path traversal
 
 `_validate_session_id()` (compartida por todos los stores en disco)
 rechaza IDs vacíos, `.`/`..`, separadores, bytes NUL y cualquier cosa
-que resuelva fuera del directorio base. El CLI además filtra patrones
-glob en `rename`/`rewind`/`tag`.
+que resuelva fuera del directorio base.
 
 ## Backend SQLite-WAL opt-in
 
@@ -73,6 +79,10 @@ DXRK_SESSION_BACKEND=sqlite dxrk-py session list
 - `open_session_storage()` elige el backend:
   `DXRK_SESSION_BACKEND=sqlite` → `SQLiteSessionStorage` (WAL);
   cualquier otro valor → `FileStorage` (default, dir JSON).
+- El CLI honra la variable de punta a punta: `session
+  list/create/switch/delete/info` (más `rename`, `rewind`, `tag`,
+  `resume`, `share`) operan sobre el store seleccionado — con
+  `sqlite`, `list`/`info` leen de `sessions.db`.
 - Misma semántica (`save`/`load`/`delete`/`exists`/`list`,
   contrato `SessionError`, sanitización, migración-on-load).
 - Diferencia intencional (fijada en test): una fila con payload corrupto
