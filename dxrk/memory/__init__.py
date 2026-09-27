@@ -109,6 +109,33 @@ def top_by_importance(entries: list[MemoryEntry], limit: int) -> list[MemoryEntr
     return sorted(entries, key=lambda e: e.importance, reverse=True)[:limit]
 
 
+# Light relevance floor on the fused similarity (1 - distance) returned by
+# the sqlite hybrid backend. Measured bands on the eval corpus
+# (tests/test_memory_recall_eval.py): true conceptual hits >= ~0.18,
+# gibberish <= ~0.10 (recency-only + hash noise). 0.15 splits the gap.
+_RELEVANCE_FLOOR = 0.15
+
+
+def _fused_similarity(dist: object) -> float:
+    try:
+        return max(0.0, 1.0 - float(dist)) if dist is not None else 0.0  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _below_relevance_floor(dist: object) -> bool:
+    """True only for a numeric distance scoring below the floor.
+
+    Unknown signals (None/unparseable — backends that report no distance)
+    are kept: the floor drops proven-irrelevant hits, never unknowns.
+    """
+    try:
+        sim = 1.0 - float(dist)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return False
+    return sim < _RELEVANCE_FLOOR
+
+
 class AgentMemory:
     """In-memory entry store persisted as JSON, indexed by project, session and type.
 
@@ -361,13 +388,12 @@ class AgentMemory:
                     for rid, doc, meta, dist in zip(ids, docs, metas, dists):
                         if not isinstance(meta, dict):
                             meta = {}
-                        # FTS ya rankeo; el post-filtro solo descarta falsos
-                        # positivos del trigram: basta que TODOS los tokens
-                        # esten presentes (AND), no la frase contigua.
-                        if query:
-                            doc_low = str(doc or "").lower()
-                            if not all(t in doc_low for t in query.lower().split()):
-                                continue
+                        # BM25+vector ranking decides order; only a light
+                        # relevance floor drops near-zero fused hits so
+                        # gibberish queries return [] instead of top-k noise.
+                        # Unknown distances (None/unparseable) are kept.
+                        if query and _below_relevance_floor(dist):
+                            continue
                         if date_active and not filed_at_in_window(meta.get("filed_at"), since_dt, before_dt):
                             continue
                         if mem_type and int(mem_type) != 0:

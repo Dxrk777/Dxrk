@@ -627,15 +627,48 @@ def hook_stop(data: dict, harness: str) -> None:
         _output({})
 
 
+_SESSION_START_MAX_CHARS = 1800
+
+
 def hook_session_start(data: dict, harness: str) -> None:
     if not _palace_root_exists():
         _output({})
         return
     parsed = _parse_harness_input(data, harness)
     session_id = parsed["session_id"]
+    transcript_path = parsed["transcript_path"]
     _log(f"SESSION START for session {session_id}")
     STATE_DIR.mkdir(parents=True, exist_ok=True)
-    _output({})
+    try:
+        _output(_session_start_context(transcript_path))
+    except Exception as e:
+        _log(f"session-start recall failed: {e}")
+        _output({})
+
+
+def _session_start_context(transcript_path: str) -> dict:
+    """L0 identity + L1 top drawers via MemoryStack.wake_up (compact)."""
+    from dxrk.memory.layers import MemoryStack
+
+    wing: str | None = None
+    if transcript_path:
+        try:
+            wing = _wing_from_transcript_path(transcript_path)
+        except Exception:
+            wing = None
+    stack = MemoryStack(palace_path=str(PALACE_ROOT))
+    text = stack.wake_up(wing=wing) if wing else stack.wake_up()
+    if wing and "No memories yet" in text:
+        # project wing with no drawers yet — fall back to unscoped recall
+        text = stack.wake_up()
+    if "No palace found" in text or "No memories yet" in text:
+        return {}
+    text = text.strip()
+    if len(text) > _SESSION_START_MAX_CHARS:
+        text = text[:_SESSION_START_MAX_CHARS] + "\n... (more in DxrkMemory search)"
+    if not text:
+        return {}
+    return {"systemMessage": text}
 
 
 def hook_precompact(data: dict, harness: str) -> None:

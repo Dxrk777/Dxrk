@@ -2365,9 +2365,13 @@ class TestAgentMemorySearchSqlite:
         assert out[0].type == MemoryType.SEMANTIC
         assert out[0].importance == pytest.approx(0.6)
 
-    def test_substring_skip_falls_back(self, tmp_path, _iso_tenant):
+    def test_relevance_floor_drops_near_zero(self, tmp_path, _iso_tenant):
+        # Phase 1B: the AND-token post-filter is gone — backend ranking
+        # decides; only a light relevance floor drops near-zero fused hits.
         m = _sqlite_mem(tmp_path, "sq1")
         m._palace_collection = _StubCol(qres=_qres(["a"], ["nothing here"], [self._meta()], [0.1]))
+        assert [e.id for e in m.search("p1", "zzz_no_match")] == ["a"]
+        m._palace_collection = _StubCol(qres=_qres(["a"], ["nothing here"], [self._meta()], [0.99]))
         assert m.search("p1", "zzz_no_match") == []
 
     def test_memtype_filter(self, tmp_path, _iso_tenant):
