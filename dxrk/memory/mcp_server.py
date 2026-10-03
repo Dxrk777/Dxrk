@@ -87,6 +87,31 @@ def _check_mcp_op(name: str, args: dict[str, Any]) -> None:
     require_op(tenant, resolve_user(), _MCP_TOOL_OPS.get(name, "mine"))
 
 
+# MCP reads project drawer metadata: the score ledger ships truncated to
+# the last entries (with score_ledger_dropped adjusted so the visible
+# slice stays hash-chain verifiable) and the raw access_history list is
+# replaced by its length — timestamps are bookkeeping, not read payload.
+_MCP_LEDGER_LAST = 5
+
+
+def _project_meta_for_mcp(meta: dict[str, Any]) -> dict[str, Any]:
+    """Copy ``meta`` safe for MCP read responses (never mutates the input)."""
+    m = dict(meta)
+    m.pop("_embedding", None)
+    hist = m.get("access_history")
+    if isinstance(hist, list):
+        m = {k: v for k, v in m.items() if k != "access_history"}
+        m["access_history_len"] = len(hist)
+    ledger = m.get("score_ledger")
+    if isinstance(ledger, list) and len(ledger) > _MCP_LEDGER_LAST:
+        kept = ledger[-_MCP_LEDGER_LAST:]
+        dropped_raw = m.get("score_ledger_dropped")
+        dropped = dropped_raw if isinstance(dropped_raw, int) and not isinstance(dropped_raw, bool) else 0
+        m["score_ledger"] = kept
+        m["score_ledger_dropped"] = max(0, dropped) + (len(ledger) - len(kept))
+    return m
+
+
 def _get_memory(palace_path: str) -> DxrkMemory:
     dm = DxrkMemory(palace_path)
     dm.init()
@@ -427,6 +452,11 @@ def _handle_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
         if name == "dxrk_memory_get_drawer":
             dm = _get_memory(palace_path)
             got = dm.get_drawer(str(args["drawer_id"]))
+            got_meta = got.get("metadata") if isinstance(got, dict) else None
+            if isinstance(got, dict) and isinstance(got_meta, dict):
+                projected_got = dict(got)
+                projected_got["metadata"] = _project_meta_for_mcp(got_meta)
+                got = projected_got
             return {"drawer": got, "palace_path": palace_path}
 
         if name == "dxrk_memory_list_drawers":
@@ -443,15 +473,17 @@ def _handle_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
             )
             out = []
             for drawer in drawers:
+                raw_meta = drawer.get("metadata")
+                projected = _project_meta_for_mcp(raw_meta) if isinstance(raw_meta, dict) else raw_meta
                 if drawer.get("quarantined"):
-                    out.append({"id": drawer.get("id"), "metadata": drawer.get("metadata"), "quarantined": True})
+                    out.append({"id": drawer.get("id"), "metadata": projected, "quarantined": True})
                 else:
                     doc = drawer.get("document")
                     out.append(
                         {
                             "id": drawer.get("id"),
                             "document": str(doc)[:500] if isinstance(doc, str) else "",
-                            "metadata": drawer.get("metadata"),
+                            "metadata": projected,
                         }
                     )
             return {"drawers": out, "count": len(out), "palace_path": palace_path}
