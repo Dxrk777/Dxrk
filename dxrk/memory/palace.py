@@ -1006,12 +1006,12 @@ def _fail_closed_stub(drawer_id: str, meta: dict[str, object]) -> dict[str, obje
     }
 
 
-def _apply_quarantine(meta: dict[str, object], reason: str, now_iso: str) -> dict[str, object]:
-    """Stamp quarantine flags plus lapse dynamics on a metadata dict (in place).
+def _lapse_meta_in_place(meta: dict[str, object], reason: str) -> dict[str, object]:
+    """Apply lapse dynamics plus a ledger entry to a metadata dict (in place).
 
-    Quarantine is a lapse outcome: stability collapses via ``update_lapse``,
-    difficulty rises, rd bumps, and the event lands in the score ledger.
-    Never raises — callers treat quarantine as best-effort.
+    Stability collapses via ``update_lapse``, difficulty rises, rd bumps,
+    and the event lands in the hash-chained score ledger. Never raises —
+    callers treat lapse bookkeeping as best-effort.
     """
     try:
         meta = ensure_spine_defaults(meta)
@@ -1019,14 +1019,6 @@ def _apply_quarantine(meta: dict[str, object], reason: str, now_iso: str) -> dic
             stability = float(cast(Any, meta.get("S", SPINE_S_DEFAULT)))
         except (TypeError, ValueError):
             stability = SPINE_S_DEFAULT
-        accessed_raw = meta.get("accessed_at") or meta.get("filed_at")
-        accessed_dt = _parse_dt(accessed_raw)
-        if accessed_dt is None:
-            idle_days = 0.0
-        else:
-            if accessed_dt.tzinfo is None:
-                accessed_dt = accessed_dt.replace(tzinfo=UTC)
-            idle_days = max(0.0, (datetime.now(UTC) - accessed_dt).total_seconds() / 86400.0)
         try:
             difficulty = float(cast(Any, meta.get("D", SPINE_D_DEFAULT)))
         except (TypeError, ValueError):
@@ -1035,6 +1027,13 @@ def _apply_quarantine(meta: dict[str, object], reason: str, now_iso: str) -> dic
             rd = float(cast(Any, meta.get("rd", SPINE_RD_DEFAULT)))
         except (TypeError, ValueError):
             rd = SPINE_RD_DEFAULT
+        accessed_dt = _parse_dt(meta.get("accessed_at") or meta.get("filed_at"))
+        if accessed_dt is None:
+            idle_days = 0.0
+        else:
+            if accessed_dt.tzinfo is None:
+                accessed_dt = accessed_dt.replace(tzinfo=UTC)
+            idle_days = max(0.0, (datetime.now(UTC) - accessed_dt).total_seconds() / 86400.0)
         s_new, d_new, rd_new = update_lapse(stability, difficulty, rd, r_fsrs(idle_days, stability))
         meta["S"] = s_new
         meta["D"] = d_new
@@ -1046,9 +1045,20 @@ def _apply_quarantine(meta: dict[str, object], reason: str, now_iso: str) -> dic
         try:
             ledger_append(meta, score=score_meta(meta), S=s_new, D=d_new, reason=reason)
         except Exception:
-            logger.debug("Quarantine ledger append failed", exc_info=True)
+            logger.debug("Lapse ledger append failed", exc_info=True)
     except Exception:
-        logger.debug("Quarantine lapse dynamics failed", exc_info=True)
+        logger.debug("Lapse dynamics failed", exc_info=True)
+    return meta
+
+
+def _apply_quarantine(meta: dict[str, object], reason: str, now_iso: str) -> dict[str, object]:
+    """Stamp quarantine flags plus lapse dynamics on a metadata dict (in place).
+
+    Quarantine is a lapse outcome: stability collapses via ``update_lapse``,
+    difficulty rises, rd bumps, and the event lands in the score ledger.
+    Never raises — callers treat quarantine as best-effort.
+    """
+    _lapse_meta_in_place(meta, reason)
     meta["quarantined"] = True
     meta["quarantine_reason"] = str(reason or "")
     meta["quarantined_at"] = now_iso
@@ -1312,6 +1322,9 @@ class DxrkMemory:
         if old_meta.get("valid_to"):
             return False
         old_meta = dict(old_meta)
+        # Supersede is a lapse outcome for the old revision: collapse its
+        # stability and record the event before stamping lineage.
+        _lapse_meta_in_place(old_meta, "superseded")
         old_meta["valid_to"] = now_iso
         old_meta["superseded_by"] = new_id
         try:
@@ -1562,6 +1575,9 @@ class DxrkMemory:
                     m["valid_to"] = now_iso
                 m["forgotten"] = True
                 m["forgotten_at"] = now_iso
+                # Forgetting is a lapse outcome: collapse stability and
+                # record the event alongside the forgotten stamp.
+                _lapse_meta_in_place(m, "forgotten")
                 try:
                     col.update(ids=[rid], metadatas=[m])
                     soft_forgotten += 1
@@ -1705,6 +1721,37 @@ class DxrkMemory:
             )
         except Exception:
             logger.debug("Unquarantine failed for %s", drawer_id, exc_info=True)
+            return False
+        return True
+
+    def record_lapse(self, drawer_id: str, reason: str = "contradiction") -> bool:
+        """Apply a lapse outcome to a drawer (contradiction / supersede / forget).
+
+        Collapses stability, raises difficulty, bumps rd, and appends the
+        event to the hash-chained score ledger; the row is replaced
+        (document preserved). Time alone never moves S/D — this hook (and
+        the supersede / forget / quarantine paths that share it) is the only
+        way stability falls. False when the drawer does not exist.
+        """
+        col = self._collection(create=False)
+        try:
+            got = col.get(ids=[drawer_id], include=["documents", "metadatas"])
+        except Exception:
+            return False
+        if not got.ids:
+            return False
+        meta = got.metadatas[0] if got.metadatas else {}
+        meta = ensure_spine_defaults(dict(meta) if isinstance(meta, dict) else {})
+        _lapse_meta_in_place(meta, reason or "contradiction")
+        doc = got.documents[0] if got.documents else ""
+        try:
+            col.upsert(
+                documents=[doc if isinstance(doc, str) else ""],
+                ids=[drawer_id],
+                metadatas=[meta],  # type: ignore[arg-type]
+            )
+        except Exception:
+            logger.debug("Record-lapse failed for %s", drawer_id, exc_info=True)
             return False
         return True
 
