@@ -28,6 +28,8 @@ from typing import Any, cast
 from .backend import PalaceRef, SqliteBackend
 from .backend.base import BaseCollection
 from .date_window import filed_at_in_window, parse_date_bound, parse_window
+from .migrate import SCHEMA_VERSION as SPINE_SCHEMA_VERSION
+from .migrate import SPINE_D_DEFAULT, SPINE_RD_DEFAULT, SPINE_S_DEFAULT, content_sha256_of, ensure_spine_defaults
 from .scoring import score_meta
 from .types import DrawerRecord
 from .vectors import cosine as _vec_cosine
@@ -750,6 +752,22 @@ def _build_drawer_metadata(
             meta["importance"] = float(importance)
         except (TypeError, ValueError):
             pass
+    # RDU spine (schema v2): every new drawer is born migrated — stability,
+    # difficulty, rating deviation, integrity checksum, quarantine flags,
+    # hash-chained score ledger, and capped access history.
+    meta["schema_version"] = SPINE_SCHEMA_VERSION
+    meta["S"] = SPINE_S_DEFAULT
+    meta["D"] = SPINE_D_DEFAULT
+    meta["rd"] = SPINE_RD_DEFAULT
+    meta["s_updates"] = 0
+    meta["content_sha256"] = content_sha256_of(content)
+    meta["quarantined"] = False
+    meta["quarantine_reason"] = ""
+    meta["quarantined_at"] = ""
+    meta["score_ledger"] = []
+    meta["score_ledger_dropped"] = 0
+    meta["access_history"] = []
+    meta["access_count_total"] = 0
     ents = _extract_entities(content)
     if ents:
         meta["entities"] = ents
@@ -984,6 +1002,8 @@ def _wing_snapshot(col: BaseCollection, wing: str, limit: int = WING_SNAPSHOT_LI
     for rid, doc, meta in zip(got.ids, got.documents, got.metadatas):
         if not isinstance(meta, dict):
             meta = {}
+        else:
+            meta = ensure_spine_defaults(dict(meta))
         if _is_dead_meta(meta):
             continue
         out.append({"id": rid, "doc": doc or "", "meta": meta})
@@ -2135,7 +2155,8 @@ class DxrkMemory:
         res = col.get(ids=[drawer_id], include=["documents", "metadatas"])
         if not res.ids:
             return None
-        meta = dict(res.metadatas[0] or {}) if isinstance(res.metadatas[0], dict) else {}
+        raw_meta = res.metadatas[0] if res.metadatas else {}
+        meta = ensure_spine_defaults(dict(raw_meta) if isinstance(raw_meta, dict) else {})
         # Phase 2: access tracking feeds decay-aware ranking (B). Superseded
         # rows are readable history but do not accrue access counts.
         if not meta.get("valid_to"):
@@ -2148,6 +2169,13 @@ class DxrkMemory:
                 col.update(ids=[drawer_id], metadatas=[meta])
             except Exception:
                 logger.debug("Drawer access bump failed for %s", drawer_id, exc_info=True)
+        else:
+            # Dead rows still get their lazy migration persisted so later
+            # scans score them with v2 priors (no access accrual, history only).
+            try:
+                col.update(ids=[drawer_id], metadatas=[meta])
+            except Exception:
+                logger.debug("Drawer migration write-back failed for %s", drawer_id, exc_info=True)
         return {"id": res.ids[0], "document": res.documents[0], "metadata": meta}
 
     def list_rooms(self, wing: str | None = None) -> list[str]:
