@@ -11,6 +11,18 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _isolated_home(tmp_path, monkeypatch):  # type: ignore[no-untyped-def]
+    """Aisla HOME y limpia DXRK_TENANT (la CLI --tenant muta environ sin revertir)."""
+    home = tmp_path / "home"
+    home.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.delenv("DXRK_TENANT", raising=False)
+    monkeypatch.delenv("DXRK_USER", raising=False)
+
 
 def _dm(tmp_path: Path):  # type: ignore[no-untyped-def]
     from dxrk.memory.palace import DxrkMemory

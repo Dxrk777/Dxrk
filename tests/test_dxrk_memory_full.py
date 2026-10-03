@@ -1422,7 +1422,7 @@ class TestMcpServer:
     def test_tool_registry_19(self):
         from dxrk.memory.mcp_server import TOOLS
 
-        assert len(TOOLS) == 23
+        assert len(TOOLS) == 24
         expected = {
             "dxrk_memory_status",
             "dxrk_memory_search",
@@ -1447,6 +1447,7 @@ class TestMcpServer:
             "dxrk_memory_forget",
             "dxrk_memory_pin",
             "dxrk_memory_timeline",
+            "dxrk_memory_quarantine",
         }
         assert set(TOOLS.keys()) == expected
 
@@ -1462,7 +1463,7 @@ class TestMcpServer:
         from dxrk.memory.mcp_server import _dispatch
 
         resp = _dispatch({"method": "tools/list", "id": 2, "params": {}})
-        assert len(resp["result"]["tools"]) == 23
+        assert len(resp["result"]["tools"]) == 24
         names = {t["name"] for t in resp["result"]["tools"]}
         assert "dxrk_memory_status" in names
 

@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from enum import IntEnum
 
 logger = logging.getLogger(__name__)
 
@@ -30,14 +29,6 @@ CAPABILITIES = (
     CapExec,
     CapMemoryMaintain,
 )
-
-
-class PermissionLevel(IntEnum):
-    """Defined for parity; not used in current logic."""
-
-    PermAllowed = 0
-    PermAskBefore = 1
-    PermDenied = 2
 
 
 RequestFn = Callable[[str, str], tuple[bool, str | None]]

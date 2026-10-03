@@ -1,60 +1,41 @@
 # SPDX-License-Identifier: MIT
-"""Autonomy package: self-update, self-verify, self-learn loop."""
+"""Autonomy package (culled): only the capability store survives.
 
-from .autonomy import Autonomy, New
-from .evolution import EvolutionEngine, Genome, NewEvolutionEngine
-from .learner import Learner, MemoryItem, NewLearner, Pattern
-from .metrics import IQMetrics, IQSnapshot, NewIQMetrics
+The self-update / self-verify / self-learn loop (autonomy, learner,
+metrics, swarm, updater, evolution) was removed — unverified background
+mutation has no place next to a memory palace. Verification lives on as
+the external judge in :mod:`dxrk.judge` (observe-only, auto-fix
+default-off). What remains here is the capability vocabulary
+(``memory.maintain`` included) consumed by the RBAC layers in
+:mod:`dxrk.security`.
+"""
+
 from .permissions import (
+    CAPABILITIES,
     CapDocker,
     CapExec,
     CapFSRead,
     CapFSWrite,
     CapGit,
+    CapMemoryMaintain,
     CapNetHTTP,
     CapPkgInstall,
     CapSudo,
     NewPermissionStore,
-    PermissionLevel,
     PermissionStore,
 )
-from .swarm import AgentRole, NewSwarmOrchestrator, SwarmOrchestrator, SwarmResult, SwarmTask
-from .updater import NewUpdater, Updater, UpdateResult
-from .verifier import NewVerifier, Verifier, VerifyResult
 
 __all__ = [
-    "AgentRole",
-    "Autonomy",
+    "CAPABILITIES",
     "CapDocker",
     "CapExec",
     "CapFSRead",
     "CapFSWrite",
     "CapGit",
+    "CapMemoryMaintain",
     "CapNetHTTP",
     "CapPkgInstall",
     "CapSudo",
-    "EvolutionEngine",
-    "Genome",
-    "IQMetrics",
-    "IQSnapshot",
-    "Learner",
-    "MemoryItem",
-    "New",
-    "NewEvolutionEngine",
-    "NewIQMetrics",
-    "NewLearner",
     "NewPermissionStore",
-    "NewUpdater",
-    "NewVerifier",
-    "Pattern",
-    "PermissionLevel",
     "PermissionStore",
-    "SwarmOrchestrator",
-    "SwarmResult",
-    "SwarmTask",
-    "NewSwarmOrchestrator",
-    "UpdateResult",
-    "Updater",
-    "VerifyResult",
-    "Verifier",
 ]

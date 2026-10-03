@@ -12,7 +12,8 @@ integra con agentes de código mediante hooks, permisos y sesiones.
 
 | Paquete | Responsabilidad |
 | --- | --- |
-| `dxrk/autonomy/` | Evolución de prompts, aprendizaje, métricas, verificación |
+| `dxrk/autonomy/` | Solo vocabulario de capabilities (`permissions.py`, incluye `memory.maintain`); el loop self-update/self-verify/self-learn se elimino |
+| `dxrk/judge/` | Juez externo de verificacion (observe-only, auto-fix default-off) |
 | `dxrk/cli/` | Parsing de argumentos, instalador, dry-run, run |
 | `dxrk/commands/` | Comandos del agente: plan, commit, PR, files, model, mcp, ... |
 | `dxrk/config/` | Settings, perfiles, validación |
