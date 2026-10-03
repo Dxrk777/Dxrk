@@ -1108,7 +1108,11 @@ integra con agentes de código mediante hooks, permisos y sesiones.</p>
 <tbody>
 <tr>
 <td><code>dxrk/autonomy/</code></td>
-<td>Evolución de prompts, aprendizaje, métricas, verificación</td>
+<td>Solo vocabulario de capabilities (<code>permissions.py</code>, incluye <code>memory.maintain</code>); el loop self-update/self-verify/self-learn se elimino</td>
+</tr>
+<tr>
+<td><code>dxrk/judge/</code></td>
+<td>Juez externo de verificacion (observe-only, auto-fix default-off)</td>
 </tr>
 <tr>
 <td><code>dxrk/cli/</code></td>

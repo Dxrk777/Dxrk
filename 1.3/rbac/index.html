@@ -653,6 +653,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#cap-memorymaintain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cap memory.maintain
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#politica-por-tenant" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1136,12 +1147,27 @@
    permitido también se rechazan.</li>
 <li><strong>Gate de dispatch</strong> (<code>dxrk/security/enforcement.py</code>): <code>require_op</code>
    mapea <code>read</code>/<code>mine</code>/<code>manage</code> → caps <code>fs.read</code>/<code>fs.write</code>/<code>sudo</code> y
-   deniega con <code>PermissionError("RBAC_DENIED: ...")</code>. Cableado en
+   <code>maintain</code>/<code>memory.maintain</code> → cap <code>memory.maintain</code>; deniega con
+   <code>PermissionError("RBAC_DENIED: ...")</code>. Cableado en
    <code>tenant create/delete</code> (manage), <code>python -m dxrk.memory mine/search</code>
    (mine/read) y tools MCP de escritura (<code>_check_mcp_op</code>, responden
    error <code>RBAC_DENIED</code> con <code>isError=true</code>). Sin tenant o sin <code>DXRK_USER</code>
    → trusted mode local (retorna <code>""</code>, no rompe nada).</li>
 </ol>
+<h2 id="cap-memorymaintain">Cap <code>memory.maintain</code></h2>
+<p>Gobierna quarantine y policy (<code>dxrk_memory_quarantine</code>,
+<code>PolicyEngine.maybe_run</code>). <strong>Denegada por defecto a los 3 roles</strong>
+(ningún rol la lleva en <code>ROLE_CAPS</code>); solo un grant explícito por tenant
+la otorga:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">dxrk.security.rbac</span><span class="w"> </span><span class="kn">import</span> <span class="n">grant_memory_maintain</span><span class="p">,</span> <span class="n">revoke_memory_maintain</span>
+<span class="n">grant_memory_maintain</span><span class="p">(</span><span class="s2">&quot;acme&quot;</span><span class="p">,</span> <span class="s2">&quot;dev&quot;</span><span class="p">)</span>    <span class="c1"># otorga</span>
+<span class="n">revoke_memory_maintain</span><span class="p">(</span><span class="s2">&quot;acme&quot;</span><span class="p">,</span> <span class="s2">&quot;dev&quot;</span><span class="p">)</span>   <span class="c1"># revoca</span>
+</code></pre></div>
+<p>Persistencia: <code>&lt;tenant&gt;/memory_maintain.json</code> (<code>{"memory.maintain": [...]}</code>,
+<code>0o600</code>). El policy engine corre como actor <code>system:policy</code>, así que el
+mantenimiento programado requiere
+<code>grant_memory_maintain(tenant, "system:policy")</code>; sin grant aborta con
+<code>RBAC_DENIED</code> (el chequeo nunca se bypassea).</p>
 <h2 id="politica-por-tenant">Política por tenant</h2>
 <p>Archivo JSON por tenant (ver <code>TenantRoleResolver</code>):</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span><span class="nt">&quot;users&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;alice&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;admin&quot;</span><span class="p">},</span><span class="w"> </span><span class="nt">&quot;default_role&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;readonly&quot;</span><span class="p">}</span>
@@ -1170,8 +1196,8 @@
 <code>build_permission_store_for_role</code>, <code>authorize_via_jwt</code> cross-tenant),
 <code>tests/test_enterprise_jwt_vault.py</code> (18 tests),
 <code>tests/test_rbac_enforcement.py</code> (32 tests: matriz <code>require_op</code> +
-wiring CLI) y <code>tests/test_memory_rbac.py</code> (30 tests: gate mine/search +
-MCP <code>RBAC_DENIED</code> con <code>isError=true</code>).</p>
+wiring CLI) y <code>tests/test_memory_rbac.py</code> (gate mine/search + MCP <code>RBAC_DENIED</code> con
+<code>isError=true</code>, más cap <code>memory.maintain</code> y tool <code>dxrk_memory_quarantine</code>).</p>
 
 
 

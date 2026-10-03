@@ -732,6 +732,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#ranking-rdu-fase-0-spine-schema_version2-quarantine-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ranking RDU Fase 0 — spine schema_version=2, quarantine, policy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#ciclo-de-vida-phase-2-distilldedupe-decay-episodios-kg-contradiccion" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1349,6 +1360,27 @@
 <td>398</td>
 <td><code>GitignoreMatcher</code> + <code>scan_project</code>/<code>chunk_text</code>, <code>SKIP_DIRS</code>, <code>READABLE_EXTENSIONS</code>, safe <code>O_NONBLOCK</code></td>
 </tr>
+<tr>
+<td>14</td>
+<td><code>migrate</code></td>
+<td><code>dxrk/memory/migrate.py</code></td>
+<td>—</td>
+<td>Migración lazy a spine <code>schema_version=2</code>, checksums <code>content_sha256</code>, ledger hash-chain (<code>verify_chain</code>), <code>merkle_root</code></td>
+</tr>
+<tr>
+<td>15</td>
+<td><code>scoring</code></td>
+<td><code>dxrk/memory/scoring.py</code></td>
+<td>—</td>
+<td>Ranking RDU: <code>R_fsrs</code> + updates success/lapse (<code>S</code>/<code>D</code>/<code>rd</code>), <code>score_meta</code> unificado</td>
+</tr>
+<tr>
+<td>16</td>
+<td><code>policy</code></td>
+<td><code>dxrk/memory/policy.py</code></td>
+<td>—</td>
+<td><code>PolicyEngine</code>: triggers de higiene (<code>over_budget</code>, <code>rescore_stale</code>, <code>checksum_sweep</code>, <code>quarantine_sweep</code>) gateados por <code>memory.maintain</code></td>
+</tr>
 </tbody>
 </table>
 <p><strong>Total stdlib-only:</strong> 13 archivos, <strong>4652 LOC</strong> (sin <code>chromadb</code>, sin <code>onnx</code>, sin <code>numpy</code>, solo <code>sqlite3</code>, <code>hashlib</code>, <code>re</code>, <code>pathlib</code>, <code>threading</code>).</p>
@@ -1660,10 +1692,11 @@ grep<span class="w"> </span>-rn<span class="w"> </span><span class="s2">&quot;en
 <code>mcp_server.py</code>; suite <code>tests/test_dxrk_memory_full.py</code>).</p>
 <h2 id="ciclo-de-vida-phase-3-consolidateforgetpin-budgets-timeline">Ciclo de vida Phase 3 — consolidate/forget/pin, budgets, timeline</h2>
 <p>Agentic memory management sobre el mismo modelo supersede (stdlib-only,
-determinista, sin LLM). MCP expone 4 herramientas nuevas (<code>dxrk_memory_*</code>,
+determinista, sin LLM). MCP expone 5 herramientas de escritura (<code>dxrk_memory_*</code>,
 writes con gate RBAC <code>mine</code> → <code>PermissionError("RBAC_DENIED")</code> si
-<code>DXRK_USER</code> no tiene el op en el tenant): <code>consolidate</code>, <code>forget</code>, <code>pin</code>
-(writes) y <code>timeline</code> (read). Total del servidor: <strong>23 tools</strong>
+<code>DXRK_USER</code> no tiene el op en el tenant; <code>quarantine</code> exige además la cap
+<code>memory.maintain</code>): <code>consolidate</code>, <code>forget</code>, <code>pin</code>, <code>quarantine</code> (writes) y
+<code>timeline</code> (read). Total del servidor: <strong>24 tools</strong>
 (<code>dxrk/memory/mcp_server.py</code>; eran 19 antes de Phase 3).</p>
 <table>
 <thead>
@@ -1688,6 +1721,11 @@ writes con gate RBAC <code>mine</code> → <code>PermissionError("RBAC_DENIED")<
 <td><code>dxrk_memory_pin</code></td>
 <td>write</td>
 <td><code>drawer_id</code> + <code>scope</code> (<code>drawer</code> | <code>identity</code>, default <code>drawer</code>), <code>pinned</code> (default <code>True</code>)</td>
+</tr>
+<tr>
+<td><code>dxrk_memory_quarantine</code></td>
+<td>write (<code>memory.maintain</code>)</td>
+<td><code>drawer_id</code> (required), <code>reason</code>, <code>unquarantine</code> (default <code>False</code>), <code>palace</code></td>
 </tr>
 <tr>
 <td><code>dxrk_memory_timeline</code></td>
@@ -1730,6 +1768,55 @@ writes con gate RBAC <code>mine</code> → <code>PermissionError("RBAC_DENIED")<
 re-ranking con boost de pinned en search (pin protege de <em>removal</em>, no de orden),
 agrupación de drawers minados en el timeline (los episodios KG son la vista file).</p>
 <hr />
+<h2 id="ranking-rdu-fase-0-spine-schema_version2-quarantine-policy">Ranking RDU Fase 0 — spine <code>schema_version=2</code>, quarantine, policy</h2>
+<p>RDU (Recall-Decay-Update, estilo FSRS) reemplaza los rankers dispersos por una
+sola señal por drawer. Cada metadata lleva el spine (<code>dxrk/memory/migrate.py</code>):</p>
+<ul>
+<li><code>S</code> (estabilidad, días), <code>D</code> (dificultad 1–10), <code>rd</code> (desviación, arranca 350),
+  <code>s_updates</code> — el estado de memoria.</li>
+<li><code>content_sha256</code> — checksum de integridad (<code>""</code> = pendiente de rehash).</li>
+<li><code>quarantined</code> / <code>quarantine_reason</code> / <code>quarantined_at</code>.</li>
+<li><code>score_ledger</code> (hash-chain, tope 20 + contador <code>score_ledger_dropped</code>) y
+  <code>access_history</code> (topes 20 + <code>access_count_total</code>).</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Pieza</th>
+<th>Regla</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Recall <code>R_fsrs</code></td>
+<td><code>get_drawer</code> es un outcome <em>success</em>: crece <code>S</code>, cae <code>rd</code>, suma ledger <code>access</code>. Contradicción/supersede/forget/quarantine son <em>lapse</em>: colapsa <code>S</code>, sube <code>D</code>, suma ledger con su motivo. Solo el tiempo nunca mueve <code>S</code>/<code>D</code></td>
+</tr>
+<tr>
+<td>Migración lazy</td>
+<td>Filas legacy (<code>schema_version &lt; 2</code>) migran al leer: <code>S = 1 + log1p(access_count)</code>, <code>D = 5.0</code>, <code>rd = 350 / (1 + n)</code>, checksum <code>""</code> (rehash en el próximo read)</td>
+</tr>
+<tr>
+<td>Integridad</td>
+<td>Read con checksum ausente → adopta el actual (rehash); mismatch → auto-quarantine + contador <code>checksum_mismatches</code> (sidecar). <code>status()</code> expone <code>merkle_root</code>, <code>quarantined</code>, <code>quarantine_warning</code>, <code>needs_rehash</code></td>
+</tr>
+<tr>
+<td>Quarantine</td>
+<td><code>quarantine_drawer</code> aísla fail-closed: invisible en search/L1/L2/timeline, <code>get</code> devuelve flags + motivo sin documento. <code>unquarantine</code> libera sin devolver la estabilidad perdida. Vía MCP solo con cap <code>memory.maintain</code></td>
+</tr>
+<tr>
+<td>Reads MCP</td>
+<td><code>get_drawer</code>/<code>list_drawers</code> proyectan metadata: <code>score_ledger</code> truncado a los últimos 5 (con <code>score_ledger_dropped</code> ajustado para que el slice siga verificando con <code>verify_chain</code>) y <code>access_history</code> crudo reemplazado por <code>access_history_len</code></td>
+</tr>
+<tr>
+<td>Policy</td>
+<td><code>PolicyEngine(palace).maybe_run("write" \| "periodic")</code>: <code>write</code> corre <code>over_budget</code> inline (wing.count &gt; cap → <code>enforce_wing_cap</code>); <code>periodic</code> corre <code>rescore_stale</code> (filed &gt; 30d sin ledger reciente → append con score actual), <code>checksum_sweep</code> (ventana rotativa de 200, rehash de faltantes) y <code>quarantine_sweep</code> (documento vacío / sha mismatch → quarantine), cada uno máx. 1/15 min (sidecar <code>&lt;palace&gt;/.policy_state.json</code>). Todo trigger corre bajo <code>mine_palace_lock</code> como tenant efectivo con <code>require_op(tenant, "system:policy", "memory.maintain")</code> — sin grant aborta <code>RBAC_DENIED</code>, nunca bypassea el chequeo</td>
+</tr>
+</tbody>
+</table>
+<p>Suites: <code>tests/test_rdu_goldens.py</code> (bandas de recall), <code>tests/test_scoring.py</code>,
+<code>tests/test_migrate.py</code>, <code>tests/test_spine_{checksum,quarantine,ledger,status,actr_history}.py</code>,
+<code>tests/test_policy.py</code>, <code>tests/test_memory_mcp_reads.py</code>.</p>
+<hr />
 <h2 id="ciclo-de-vida-phase-2-distilldedupe-decay-episodios-kg-contradiccion">Ciclo de vida Phase 2 — distill/dedupe, decay, episodios KG, contradicción</h2>
 <p>Heurístico, stdlib-only, determinista (sin LLM). Una fórmula de scoring
 (<code>dxrk/memory/scoring.py:rank_score</code>) en todos lados: <code>top_by_importance</code>,
@@ -1764,10 +1851,14 @@ importance 0.05 + access 0.03</code>), rerank híbrido (<code>_hybrid_rank</code
 <hr />
 <h2 id="relacion-con-autonomy-y-rag-ver-adr-002">Relación con Autonomy y RAG — ver <a href="../adr/ADR-002-memory-separation/">ADR-002</a></h2>
 <blockquote>
-<p><strong>Decisión: AISLAR</strong> — <code>dxrk/memory</code> (DxrkMemory), <code>dxrk/autonomy/learner</code> y <code>dxrk/rag</code> son <strong>3 sistemas aislados</strong> con contratos y persistencias distintas.
+<p><strong>Decisión: AISLAR</strong> — <code>dxrk/memory</code> (DxrkMemory) y <code>dxrk/rag</code> son
+<strong>sistemas aislados</strong> con contratos y persistencias distintas. El
+<code>Learner</code> de <code>dxrk/autonomy/</code> se eliminó (tanda 2: solo sobrevive el
+vocabulario de capabilities en <code>permissions.py</code>); la verificación vive
+como juez externo en <code>dxrk/judge/</code> (observe-only, auto-fix default-off).
 Detalle formal en <strong><a href="../adr/ADR-002-memory-separation/">ADR-002: Separación DxrkMemory vs Autonomy/Learner vs RAG/Store</a></strong> (Accepted 2026-08-27).</p>
 </blockquote>
-<p><strong>Frontera por diseño — 3 dominios, 3 stores, 0 coupling:</strong></p>
+<p><strong>Frontera por diseño — 2 dominios, 2 stores, 0 coupling:</strong></p>
 <table>
 <thead>
 <tr>
@@ -1787,13 +1878,6 @@ Detalle formal en <strong><a href="../adr/ADR-002-memory-separation/">ADR-002: S
 <td><strong>stdlib-only</strong> (<code>sqlite3</code>, <code>hashlib</code>, <code>re</code>)</td>
 </tr>
 <tr>
-<td><strong>Learner</strong> (patrones)</td>
-<td><code>dxrk/autonomy/learner.py</code> — <code>Learner</code>, <code>MemoryItem</code></td>
-<td><code>.dxrk/memories.json</code> — JSON <code>0o600</code>, <code>max_items 1000</code>, <code>RLock</code></td>
-<td><code>record()</code>, <code>suggest()</code>, <code>top_errors()</code>, <code>recent_memories()</code></td>
-<td>stdlib (<code>json</code>, <code>hashlib</code>)</td>
-</tr>
-<tr>
 <td><strong>RAG</strong> (code index)</td>
 <td><code>dxrk/rag</code> — <code>chunker</code>, <code>indexer</code>, <code>VectorStore</code>, <code>OpenAIEmbedder</code></td>
 <td>in-memory <code>dict[str,VectorRecord]</code> + JSON opcional</td>
@@ -1805,19 +1889,19 @@ Detalle formal en <strong><a href="../adr/ADR-002-memory-separation/">ADR-002: S
 <p><strong>Por qué no fusionar.</strong> Fusionar contaminaría <code>memory</code> (offline, &lt;50 ms cold, <code>pip install dxrk</code> sin extras) con deps de red/modelo, rompería <code>zero-trace</code> (<code>grep engram|mempal == 0</code>, <code>LEGACY</code> <code>chr-join</code> ofuscado), mezclaría semánticas incompatibles (<code>filed_at</code>/<code>wing</code> vs <code>success_rate</code>/<code>error</code> vs <code>start_line</code>/<code>language</code>) y acoplaría <code>WAL</code>/<code>mine_palace_lock</code>/<code>reap 900 s</code>/<code>FIFO guard</code> (<code>db29959</code>/<code>27212e5</code>) a dominios que no los necesitan. Alternativas <code>SQLite compartido</code> (colecciones separadas en mismo <code>.db</code>) y <code>shared vector store</code> (todo a <code>OpenAIEmbedder</code> + HNSW) se rechazan en el ADR — ver <code>MIGRATION_3.3.5_3.7.1.md</code> “No portados” (<code>HNSW</code>/<code>numpy2</code>/<code>onnx</code>).</p>
 <p><strong>Puentes opcionales sin storage coupling:</strong></p>
 <ul>
-<li><code>Learner → Palace</code> via <strong>hooks</strong> (<code>dxrk/memory/hooks_cli.py</code>, <code>~/.config/dxrk/hooks.json</code>): export fire-and-forget de <code>MemoryItem</code> exitoso a <code>wing=autonomy/room=pattern</code> (<code>source_file=learner:&lt;id&gt;</code>). Si <code>Palace</code> falla, <code>Learner</code> no falla — sin transacción compartida.</li>
 <li><code>RAG → Palace</code> via <strong>enrichment</strong> (<code>dxrk/memory/__init__.py:148-157</code>): <code>AgentMemory(path, rag=rag)</code> inyecta <code>rag.is_enabled()/query(text,1)</code> en <code>store()</code> para poblar <code>entry.embedding</code> antes del <code>upsert</code>. Sin <code>rag</code> o sin <code>OPENAI_API_KEY</code>, <code>memory</code> opera <strong>BM25 puro</strong>. <code>RAG</code> nunca lee <code>sqlite_palace.db</code>.</li>
+<li>El puente histórico <code>Learner → Palace</code> (export fire-and-forget a <code>wing=autonomy/room=pattern</code>) murió con el <code>Learner</code>; <code>wing=autonomy</code> queda como datos históricos legibles, sin productor.</li>
 </ul>
 <p><strong>Reglas de frontera (ADR-002):</strong></p>
 <ul>
 <li><code>R1 stdlib-only</code> — <code>memory</code> sin <code>openai</code>/<code>numpy</code>/<code>chromadb</code>.</li>
-<li><code>R2 DB por dominio</code> — <code>memory</code> WAL, <code>learner</code> JSON, <code>rag</code> in-memory/JSON.</li>
+<li><code>R2 DB por dominio</code> — <code>memory</code> WAL, <code>rag</code> in-memory/JSON.</li>
 <li><code>R3 no read-through</code> — ningún sistema importa el store interno de otro.</li>
 <li><code>R4 zero-trace</code> — <code>grep engram|mempal dxrk/memory → 0</code>.</li>
-<li><code>R5 multi-tenant ready</code> — <code>palace_path</code> por proyecto/usuario, <code>learner</code> por repo, <code>rag</code> por índice.</li>
+<li><code>R5 multi-tenant ready</code> — <code>palace_path</code> por proyecto/usuario, <code>rag</code> por índice.</li>
 <li><code>R6 fallback sin regresión</code> — si <code>rag</code>/<code>Palace</code> falla, cada sistema sigue operativo.</li>
 </ul>
-<p>Verificación y plan de migración completos en <a href="../adr/ADR-002-memory-separation/">ADR-002</a> — ningún <code>from dxrk.memory</code> en <code>learner</code>/<code>rag</code>, ningún <code>from dxrk.rag</code> en <code>memory</code> salvo <code>Protocol</code> <code>rag: object</code>.</p>
+<p>Verificación y plan de migración completos en <a href="../adr/ADR-002-memory-separation/">ADR-002</a> — ningún <code>from dxrk.memory</code> en <code>rag</code>, ningún <code>from dxrk.rag</code> en <code>memory</code> salvo <code>Protocol</code> <code>rag: object</code>.</p>
 
 
 
