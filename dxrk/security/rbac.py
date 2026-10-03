@@ -30,6 +30,7 @@ from dxrk.autonomy.permissions import (
     CapFSRead,
     CapFSWrite,
     CapGit,
+    CapMemoryMaintain,
     CapNetHTTP,
     CapPkgInstall,
     CapSudo,
@@ -400,3 +401,78 @@ def authorize_via_jwt(token: str, expected_tenant: str | None = None) -> str:
     role_raw = claims.get("role")
     role = role_raw if isinstance(role_raw, str) and role_raw in VALID_ROLES else DEFAULT_ROLE
     return role
+
+
+# ---------------------------------------------------------------------------
+# memory.maintain explicit grants — denied by default for every role
+# ---------------------------------------------------------------------------
+
+_MAINTAIN_GRANTS_FILE = "memory_maintain.json"
+
+
+def _maintain_grants_path(tenant_id: str) -> Path:
+    from dxrk.tenant.migration import tenant_root
+
+    return tenant_root(tenant_id) / _MAINTAIN_GRANTS_FILE
+
+
+def _load_maintain_grants(tenant_id: str) -> dict[str, list[str]]:
+    path = _maintain_grants_path(tenant_id)
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    out: dict[str, list[str]] = {}
+    for cap, users in data.items():
+        if isinstance(cap, str) and isinstance(users, list):
+            out[cap] = [u for u in users if isinstance(u, str) and u.strip()]
+    return out
+
+
+def has_memory_maintain(tenant_id: str, user: str) -> bool:
+    """True when ``user`` holds an explicit ``memory.maintain`` grant in ``tenant_id``."""
+    if not tenant_id.strip() or not user.strip():
+        return False
+    return user in _load_maintain_grants(tenant_id).get(CapMemoryMaintain, [])
+
+
+def grant_memory_maintain(tenant_id: str, user: str) -> None:
+    """Persist an explicit ``memory.maintain`` grant for ``user`` (0o600)."""
+    if not tenant_id.strip():
+        raise ValueError("tenant_id required")
+    if not user.strip():
+        raise ValueError("user required")
+    path = _maintain_grants_path(tenant_id)
+    _ensure_parent_dir(path)
+    grants = _load_maintain_grants(tenant_id)
+    holders = grants.setdefault(CapMemoryMaintain, [])
+    if user not in holders:
+        holders.append(user)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(grants, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    _harden_file(tmp, 0o600)
+    os.replace(tmp, path)
+    _harden_file(path, 0o600)
+
+
+def revoke_memory_maintain(tenant_id: str, user: str) -> None:
+    """Remove an explicit ``memory.maintain`` grant (no-op when absent)."""
+    if not tenant_id.strip() or not user.strip():
+        return
+    path = _maintain_grants_path(tenant_id)
+    grants = _load_maintain_grants(tenant_id)
+    holders = grants.get(CapMemoryMaintain, [])
+    if user not in holders:
+        return
+    grants[CapMemoryMaintain] = [u for u in holders if u != user]
+    try:
+        _ensure_parent_dir(path)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(grants, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        _harden_file(tmp, 0o600)
+        os.replace(tmp, path)
+        _harden_file(path, 0o600)
+    except OSError:
+        pass

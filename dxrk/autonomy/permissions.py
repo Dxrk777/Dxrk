@@ -17,6 +17,7 @@ CapDocker = "docker"
 CapSudo = "sudo"
 CapPkgInstall = "pkg.install"
 CapExec = "exec"
+CapMemoryMaintain = "memory.maintain"
 
 CAPABILITIES = (
     CapFSRead,
@@ -27,6 +28,7 @@ CAPABILITIES = (
     CapSudo,
     CapPkgInstall,
     CapExec,
+    CapMemoryMaintain,
 )
 
 

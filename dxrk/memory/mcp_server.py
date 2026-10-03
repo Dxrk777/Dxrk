@@ -57,8 +57,17 @@ _MCP_WRITE_TOOLS: frozenset[str] = frozenset(
         "dxrk_memory_consolidate",
         "dxrk_memory_forget",
         "dxrk_memory_pin",
+        "dxrk_memory_quarantine",
     }
 )
+
+
+# Per-tool RBAC op: quarantine/policy tools need ``memory.maintain``
+# (denied by default, explicit grant only); every other write tool
+# keeps the legacy ``mine`` op.
+_MCP_TOOL_OPS: dict[str, str] = {
+    "dxrk_memory_quarantine": "memory.maintain",
+}
 
 
 def _check_mcp_op(name: str, args: dict[str, Any]) -> None:
@@ -75,7 +84,7 @@ def _check_mcp_op(name: str, args: dict[str, Any]) -> None:
     from dxrk.security.enforcement import require_op, resolve_user
 
     tenant = str(args.get("tenant") or os.environ.get("DXRK_TENANT", "") or "").strip()
-    require_op(tenant, resolve_user(), "mine")
+    require_op(tenant, resolve_user(), _MCP_TOOL_OPS.get(name, "mine"))
 
 
 def _get_memory(palace_path: str) -> DxrkMemory:
@@ -337,6 +346,19 @@ TOOLS: dict[str, dict[str, Any]] = {
                 "limit": {"type": "integer", "default": 50},
                 "palace": {"type": "string"},
             },
+        },
+    },
+    "dxrk_memory_quarantine": {
+        "description": "Quarantine (or release) a drawer fail-closed; gated by the memory.maintain cap",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "drawer_id": {"type": "string"},
+                "reason": {"type": "string", "default": ""},
+                "unquarantine": {"type": "boolean", "default": False},
+                "palace": {"type": "string"},
+            },
+            "required": ["drawer_id"],
         },
     },
 }
@@ -660,6 +682,21 @@ def _handle_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
                 limit=lim,
             )
             return {"entries": entries, "count": len(entries), "palace_path": palace_path}
+
+        if name == "dxrk_memory_quarantine":
+            dm = _get_memory(palace_path)
+            drawer_id = str(args.get("drawer_id") or "")
+            if not drawer_id:
+                return {"error": "drawer_id required"}
+            if bool(args.get("unquarantine", False)):
+                ok = dm.unquarantine_drawer(drawer_id)
+                if not ok:
+                    return {"error": f"not found {drawer_id}"}
+                return {"drawer_id": drawer_id, "quarantined": False, "palace_path": palace_path}
+            ok = dm.quarantine_drawer(drawer_id, reason=str(args.get("reason") or ""))
+            if not ok:
+                return {"error": f"not found {drawer_id}"}
+            return {"drawer_id": drawer_id, "quarantined": True, "palace_path": palace_path}
 
         return {"error": f"unknown tool {name}"}
     except Exception as e:

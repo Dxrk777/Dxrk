@@ -109,7 +109,7 @@ class TestRequireOpLocalMode:
         assert require_op("acme", "   ", "manage") == ""
 
     def test_valid_ops_constant(self) -> None:
-        assert VALID_OPS == frozenset({"read", "mine", "manage"})
+        assert VALID_OPS == frozenset({"read", "mine", "manage", "maintain", "memory.maintain"})
 
 
 class TestRequireOpUsers:

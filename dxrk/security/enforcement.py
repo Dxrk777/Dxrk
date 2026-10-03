@@ -6,6 +6,9 @@ Maps high-level ops to capability requirements:
 - ``read``   <- search/recall/list (requires ``fs.read``; all roles pass)
 - ``mine``   <- mine/write (requires ``fs.write``; admin/dev pass, readonly denied)
 - ``manage`` <- tenant create/delete (requires ``sudo``; admin only)
+- ``maintain`` / ``memory.maintain`` <- quarantine/policy (requires the
+  ``memory.maintain`` cap; denied for every role by default, granted only
+  via explicit per-tenant ``grant_memory_maintain``)
 
 Local trusted mode: empty ``tenant_id`` OR empty ``user`` bypasses
 enforcement (returns ``""`` without raising) to preserve back-compat
@@ -16,15 +19,17 @@ from __future__ import annotations
 
 import os
 
-from dxrk.autonomy.permissions import CapFSRead, CapFSWrite, CapSudo
-from dxrk.security.rbac import TenantRoleResolver, get_caps_for_role
+from dxrk.autonomy.permissions import CapFSRead, CapFSWrite, CapMemoryMaintain, CapSudo
+from dxrk.security.rbac import TenantRoleResolver, get_caps_for_role, has_memory_maintain
 
-VALID_OPS: frozenset[str] = frozenset({"read", "mine", "manage"})
+VALID_OPS: frozenset[str] = frozenset({"read", "mine", "manage", "maintain", "memory.maintain"})
 
 _OP_CAP: dict[str, str] = {
     "read": CapFSRead,
     "mine": CapFSWrite,
     "manage": CapSudo,
+    "maintain": CapMemoryMaintain,
+    "memory.maintain": CapMemoryMaintain,
 }
 
 
@@ -39,7 +44,8 @@ def resolve_user() -> str:
 def require_op(tenant_id: str, user: str, op: str) -> str:
     """Enforce ``op`` for ``user`` in ``tenant_id``; return role on success.
 
-    - ``op`` must be one of ``{"read", "mine", "manage"}`` else ``ValueError``.
+    - ``op`` must be one of ``{"read", "mine", "manage", "maintain",
+      "memory.maintain"}`` else ``ValueError``.
     - Empty ``tenant_id`` or empty ``user`` -> return ``""`` without
       enforcing (local trusted mode, back-compat).
     - Unknown user falls back to the tenant ``default_role`` via
@@ -59,6 +65,10 @@ def require_op(tenant_id: str, user: str, op: str) -> str:
     role = resolver.resolve(usr)
     caps = get_caps_for_role(role)
     needed = _OP_CAP[op]
-    if needed not in caps:
-        raise PermissionError(f"RBAC_DENIED: role={role} op={op} tenant={tid}")
-    return role
+    if needed in caps:
+        return role
+    # memory.maintain is denied to every role by default — only an
+    # explicit per-tenant grant (grant_memory_maintain) opens it.
+    if needed == CapMemoryMaintain and has_memory_maintain(tid, usr):
+        return role
+    raise PermissionError(f"RBAC_DENIED: role={role} op={op} tenant={tid}")

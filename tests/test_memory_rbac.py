@@ -274,3 +274,105 @@ class TestTenantAwareMineSearch:
         _as_user(monkeypatch, "bob", "bob")
         assert mem_cli._cmd_search(["Hola Mundo"]) == 0
         assert "Hola Mundo" not in capsys.readouterr().out  # bob no ve datos de acme
+
+
+class TestQuarantineCap:
+    """Tarea 8: cap memory.maintain + tool dxrk_memory_quarantine.
+
+    Por defecto DENEGADA para los 3 roles; solo una config explicita
+    (grant_memory_maintain) la otorga.
+    """
+
+    def test_maintain_denied_by_default_all_roles(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from dxrk.security.enforcement import require_op
+
+        _iso_home(tmp_path, monkeypatch)
+        _seed_tenant("acme", {"boss": "admin", "dev": "dev", "ro": "readonly"})
+        for user in ("boss", "dev", "ro"):
+            with pytest.raises(PermissionError, match="RBAC_DENIED"):
+                require_op("acme", user, "memory.maintain")
+
+    def test_maintain_allowed_after_explicit_grant(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from dxrk.security.enforcement import require_op
+        from dxrk.security.rbac import grant_memory_maintain, revoke_memory_maintain
+
+        _iso_home(tmp_path, monkeypatch)
+        _seed_tenant("acme", {"dev": "dev"})
+        with pytest.raises(PermissionError, match="RBAC_DENIED"):
+            require_op("acme", "dev", "memory.maintain")
+        grant_memory_maintain("acme", "dev")
+        require_op("acme", "dev", "memory.maintain")  # no raise
+        revoke_memory_maintain("acme", "dev")
+        with pytest.raises(PermissionError, match="RBAC_DENIED"):
+            require_op("acme", "dev", "memory.maintain")
+
+    def test_quarantine_tool_denied_without_cap(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        _iso_home(tmp_path, monkeypatch)
+        _seed_tenant("acme", {"dev": "dev"})
+        _as_user(monkeypatch, "acme", "dev")
+        with pytest.raises(PermissionError, match="RBAC_DENIED"):
+            _check_mcp_op("dxrk_memory_quarantine", {"drawer_id": "x"})
+
+    def test_quarantine_tool_allowed_with_cap(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from dxrk.security.rbac import grant_memory_maintain
+
+        _iso_home(tmp_path, monkeypatch)
+        _seed_tenant("acme", {"dev": "dev"})
+        _as_user(monkeypatch, "acme", "dev")
+        grant_memory_maintain("acme", "dev")
+        _check_mcp_op("dxrk_memory_quarantine", {"drawer_id": "x"})  # no raise
+
+    def test_quarantine_tool_roundtrip(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from dxrk.memory.mcp_server import TOOLS
+        from dxrk.security.rbac import grant_memory_maintain
+
+        assert "dxrk_memory_quarantine" in TOOLS
+        _iso_home(tmp_path, monkeypatch)
+        _seed_tenant("acme", {"dev": "dev"})
+        _as_user(monkeypatch, "acme", "dev")
+        pal = tmp_path / "pal"
+        res = _handle_tool(
+            "dxrk_memory_quarantine",
+            {"drawer_id": "nope", "palace": str(pal)},
+        )
+        assert "RBAC_DENIED" in res.get("error", "")
+        grant_memory_maintain("acme", "dev")
+        res = _handle_tool(
+            "dxrk_memory_quarantine",
+            {"drawer_id": "nope", "palace": str(pal)},
+        )
+        assert "RBAC_DENIED" not in res.get("error", "")
+
+    def test_quarantine_unquarantine_cycle(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from dxrk.memory.palace import DxrkMemory
+        from dxrk.security.rbac import grant_memory_maintain
+
+        _iso_home(tmp_path, monkeypatch)
+        _seed_tenant("acme", {"dev": "dev"})
+        _as_user(monkeypatch, "acme", "dev")
+        grant_memory_maintain("acme", "dev")
+        pal = tmp_path / "pal"
+        dm = DxrkMemory(str(pal))
+        dm.init()
+        did = dm.add_drawer("w", "r", "quarantine me please " * 5, "f.py", 0)
+        res = _handle_tool("dxrk_memory_quarantine", {"drawer_id": did, "reason": "t8", "palace": str(pal)})
+        assert res.get("quarantined") is True
+        assert dm.get_drawer(did) is not None and dm.get_drawer(did).get("quarantined") is True  # type: ignore[union-attr]
+        res = _handle_tool(
+            "dxrk_memory_quarantine", {"drawer_id": did, "unquarantine": True, "palace": str(pal)}
+        )
+        assert res.get("quarantined") is False
+        got = dm.get_drawer(did)
+        assert got is not None and got.get("document", "") != ""  # type: ignore[union-attr]
