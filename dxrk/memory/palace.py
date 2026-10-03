@@ -29,8 +29,16 @@ from .backend import PalaceRef, SqliteBackend
 from .backend.base import BaseCollection
 from .date_window import filed_at_in_window, parse_date_bound, parse_window
 from .migrate import SCHEMA_VERSION as SPINE_SCHEMA_VERSION
-from .migrate import SPINE_D_DEFAULT, SPINE_RD_DEFAULT, SPINE_S_DEFAULT, content_sha256_of, ensure_spine_defaults
-from .scoring import score_meta
+from .migrate import (
+    SPINE_D_DEFAULT,
+    SPINE_RD_DEFAULT,
+    SPINE_S_DEFAULT,
+    content_sha256_of,
+    ensure_spine_defaults,
+    ledger_append,
+)
+from .scoring import parse_dt as _parse_dt
+from .scoring import r_fsrs, score_meta, update_lapse
 from .types import DrawerRecord
 from .vectors import cosine as _vec_cosine
 from .vectors import embed_counts as _vec_embed_counts
@@ -976,7 +984,7 @@ def classify_content_pair(new_text: str, old_text: str) -> str:
 
 
 def _is_dead_meta(meta: object) -> bool:
-    """True when a drawer row is superseded or forgotten (history only).
+    """True when a drawer row is superseded, forgotten, or quarantined (history only).
 
     Dead rows stay on disk readable via ``get_drawer`` but are invisible
     to search / L1 / L2 — and must be invisible to the write-time
@@ -985,7 +993,66 @@ def _is_dead_meta(meta: object) -> bool:
     """
     if not isinstance(meta, dict):
         return False
-    return bool(meta.get("valid_to") or meta.get("forgotten"))
+    return bool(meta.get("valid_to") or meta.get("forgotten") or meta.get("quarantined"))
+
+
+def _fail_closed_stub(drawer_id: str, meta: dict[str, object]) -> dict[str, object]:
+    """Fail-closed view of a quarantined drawer: flags + reason, no document."""
+    return {
+        "id": drawer_id,
+        "metadata": meta,
+        "quarantined": True,
+        "quarantine_reason": str(meta.get("quarantine_reason") or ""),
+    }
+
+
+def _apply_quarantine(meta: dict[str, object], reason: str, now_iso: str) -> dict[str, object]:
+    """Stamp quarantine flags plus lapse dynamics on a metadata dict (in place).
+
+    Quarantine is a lapse outcome: stability collapses via ``update_lapse``,
+    difficulty rises, rd bumps, and the event lands in the score ledger.
+    Never raises — callers treat quarantine as best-effort.
+    """
+    try:
+        meta = ensure_spine_defaults(meta)
+        try:
+            stability = float(cast(Any, meta.get("S", SPINE_S_DEFAULT)))
+        except (TypeError, ValueError):
+            stability = SPINE_S_DEFAULT
+        accessed_raw = meta.get("accessed_at") or meta.get("filed_at")
+        accessed_dt = _parse_dt(accessed_raw)
+        if accessed_dt is None:
+            idle_days = 0.0
+        else:
+            if accessed_dt.tzinfo is None:
+                accessed_dt = accessed_dt.replace(tzinfo=UTC)
+            idle_days = max(0.0, (datetime.now(UTC) - accessed_dt).total_seconds() / 86400.0)
+        try:
+            difficulty = float(cast(Any, meta.get("D", SPINE_D_DEFAULT)))
+        except (TypeError, ValueError):
+            difficulty = SPINE_D_DEFAULT
+        try:
+            rd = float(cast(Any, meta.get("rd", SPINE_RD_DEFAULT)))
+        except (TypeError, ValueError):
+            rd = SPINE_RD_DEFAULT
+        s_new, d_new, rd_new = update_lapse(stability, difficulty, rd, r_fsrs(idle_days, stability))
+        meta["S"] = s_new
+        meta["D"] = d_new
+        meta["rd"] = rd_new
+        try:
+            meta["s_updates"] = int(cast(Any, meta.get("s_updates", 0))) + 1
+        except (TypeError, ValueError):
+            meta["s_updates"] = 1
+        try:
+            ledger_append(meta, score=score_meta(meta), S=s_new, D=d_new, reason=reason)
+        except Exception:
+            logger.debug("Quarantine ledger append failed", exc_info=True)
+    except Exception:
+        logger.debug("Quarantine lapse dynamics failed", exc_info=True)
+    meta["quarantined"] = True
+    meta["quarantine_reason"] = str(reason or "")
+    meta["quarantined_at"] = now_iso
+    return meta
 
 
 def _wing_snapshot(col: BaseCollection, wing: str, limit: int = WING_SNAPSHOT_LIMIT) -> list[dict[str, object]]:
@@ -1635,6 +1702,57 @@ class DxrkMemory:
             return False
         return True
 
+    def _counters_path(self) -> Path | None:
+        """Sidecar for palace-level spine counters; None on sentinel paths."""
+        if not self.palace_path or self.palace_path in ("memory-only",):
+            return None
+        try:
+            return Path(self.palace_path) / "spine_counters.json"
+        except Exception:
+            return None
+
+    def _read_spine_counters(self) -> dict[str, int]:
+        import json
+
+        path = self._counters_path()
+        if path is None or not path.is_file():
+            return {}
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return {}
+        if not isinstance(data, dict):
+            return {}
+        out: dict[str, int] = {}
+        for key, val in data.items():
+            try:
+                out[str(key)] = max(0, int(cast(Any, val)))
+            except (TypeError, ValueError):
+                continue
+        return out
+
+    def _bump_spine_counter(self, name: str, delta: int = 1) -> int:
+        """Best-effort increment of a palace-level spine counter (no-op on sentinel)."""
+        import json
+
+        path = self._counters_path()
+        if path is None:
+            return 0
+        try:
+            counters = self._read_spine_counters()
+            counters[name] = counters.get(name, 0) + delta
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(counters, ensure_ascii=False, indent=2), encoding="utf-8")
+            return counters[name]
+        except OSError:
+            logger.debug("Spine counter bump failed for %s", name, exc_info=True)
+            return 0
+
+    def spine_counters(self) -> dict[str, int]:
+        """Palace-level spine event counters (currently: checksum_mismatches)."""
+        counters = self._read_spine_counters()
+        return {"checksum_mismatches": counters.get("checksum_mismatches", 0)}
+
     def wing_usage(self, wing: str) -> dict[str, object]:
         """Current budget usage for one wing: count vs cap + lifecycle mix."""
         col = self._collection(create=False)
@@ -2157,6 +2275,26 @@ class DxrkMemory:
             return None
         raw_meta = res.metadatas[0] if res.metadatas else {}
         meta = ensure_spine_defaults(dict(raw_meta) if isinstance(raw_meta, dict) else {})
+        # Quarantined rows are fail-closed: flags + reason, never the document.
+        if meta.get("quarantined"):
+            return _fail_closed_stub(res.ids[0], meta)
+        doc = res.documents[0] if res.documents else ""
+        doc = doc if isinstance(doc, str) else ""
+        # Integrity gate: empty checksum means "needs rehash" (legacy rows) —
+        # adopt the current document; a real mismatch auto-quarantines.
+        computed_sha = content_sha256_of(doc)
+        stored_sha = meta.get("content_sha256")
+        if not (isinstance(stored_sha, str) and stored_sha.strip()):
+            meta["content_sha256"] = computed_sha
+        elif stored_sha != computed_sha:
+            now_iso = datetime.now(UTC).isoformat()
+            try:
+                _apply_quarantine(meta, "checksum_mismatch", now_iso)
+                col.update(ids=[drawer_id], metadatas=[meta])
+                self._bump_spine_counter("checksum_mismatches")
+            except Exception:
+                logger.debug("Drawer auto-quarantine failed for %s", drawer_id, exc_info=True)
+            return _fail_closed_stub(res.ids[0], meta)
         # Phase 2: access tracking feeds decay-aware ranking (B). Superseded
         # rows are readable history but do not accrue access counts.
         if not meta.get("valid_to"):
@@ -2176,7 +2314,7 @@ class DxrkMemory:
                 col.update(ids=[drawer_id], metadatas=[meta])
             except Exception:
                 logger.debug("Drawer migration write-back failed for %s", drawer_id, exc_info=True)
-        return {"id": res.ids[0], "document": res.documents[0], "metadata": meta}
+        return {"id": res.ids[0], "document": doc, "metadata": meta}
 
     def list_rooms(self, wing: str | None = None) -> list[str]:
         col = self._collection(create=False)

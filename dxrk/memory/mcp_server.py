@@ -447,6 +447,13 @@ def _handle_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
             meta.setdefault("chunk_index", 0)
             if content != (existing.get("document") or ""):
                 meta["filed_at"] = datetime.now(UTC).isoformat()
+                # Spine integrity: a content change invalidates the checksum —
+                # rehash here so the read-path gate does not auto-quarantine
+                # our own write.
+                from .migrate import content_sha256_of, ensure_spine_defaults
+
+                ensure_spine_defaults(meta)
+                meta["content_sha256"] = content_sha256_of(content)
             col = dm._collection(create=False)  # type: ignore[attr-defined]
             col.upsert(documents=[content], ids=[did], metadatas=[meta])  # type: ignore[arg-type]
             # Phase 3: every write path enforces the per-wing budget — a
