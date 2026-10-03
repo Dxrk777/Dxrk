@@ -9,6 +9,7 @@ orphan lock reap, non-regular file guards, date-window and SIGTERM handling.
 from __future__ import annotations
 
 import contextlib
+import copy
 import errno
 import hashlib
 import logging
@@ -1363,19 +1364,31 @@ class DxrkMemory:
         return drawer_id
 
     @staticmethod
-    def _mark_superseded(col: BaseCollection, old_id: str, new_id: str, now_iso: str) -> bool:
-        """Stamp valid_to/superseded_by on a live drawer; False when absent."""
+    def _mark_superseded(
+        col: BaseCollection, old_id: str, new_id: str, now_iso: str
+    ) -> tuple[bool, dict[str, object] | None]:
+        """Stamp valid_to/superseded_by on a live drawer.
+
+        Returns ``(marked, pre_image)``: ``marked`` False when the row is
+        absent or already dead; ``pre_image`` is the exact stored metadata
+        before the mark (including lapse dynamics) so failed writes can
+        roll back byte-faithfully.
+        """
         try:
             got = col.get(ids=[old_id], include=["metadatas"])
         except Exception:
-            return False
+            return False, None
         if not got.ids:
-            return False
+            return False, None
         old_meta = got.metadatas[0] if got.metadatas else {}
         if not isinstance(old_meta, dict):
             old_meta = {}
         if old_meta.get("valid_to"):
-            return False
+            return False, None
+        # Deep copy: the lapse below mutates nested structures (ledger
+        # append) in place — a shallow copy would alias them and corrupt
+        # the pre-image the rollback depends on.
+        pre_image = copy.deepcopy(old_meta)
         old_meta = dict(old_meta)
         # Supersede is a lapse outcome for the old revision: collapse its
         # stability and record the event before stamping lineage.
@@ -1386,8 +1399,8 @@ class DxrkMemory:
             col.update(ids=[old_id], metadatas=[old_meta])
         except Exception:
             logger.debug("Supersede mark failed for %s", old_id, exc_info=True)
-            return False
-        return True
+            return False, None
+        return True, pre_image
 
     def _enforce_wing_cap_once(self, col: BaseCollection, wing: str, cap: int) -> tuple[int, int, bool]:
         """One eviction pass; returns ``(evicted, remaining, scan_full)``.
@@ -2404,7 +2417,7 @@ class DxrkMemory:
                     batch_docs: list[str] = []
                     batch_ids: list[str] = []
                     batch_metas: list[dict[str, object]] = []
-                    supersede_marks: list[tuple[str, str]] = []  # (old_id, new_id) for rollback
+                    supersede_marks: list[tuple[str, str, dict[str, object]]] = []  # (old,new,pre) for rollback
                     file_drawer_ids: list[str] = []
                     try:
                         for chunk in chunks:
@@ -2431,8 +2444,9 @@ class DxrkMemory:
                                     continue
                                 if verdict == "contradiction":
                                     old_id = str(best.get("id", ""))
-                                    if self._mark_superseded(col, old_id, drawer_id, now_iso):
-                                        supersede_marks.append((old_id, drawer_id))
+                                    marked, pre_image = self._mark_superseded(col, old_id, drawer_id, now_iso)
+                                    if marked and pre_image is not None:
+                                        supersede_marks.append((old_id, drawer_id, pre_image))
                                     batch_docs.append(text)
                                     batch_ids.append(drawer_id)
                                     batch_metas.append(
@@ -2479,17 +2493,18 @@ class DxrkMemory:
                         # Source lock prevents deleting another miner's work.
                         # Best-effort rollback of supersede marks we set: those
                         # old rows stay live (their replacement never landed).
-                        for old_id, new_id in supersede_marks:
+                        # Pre-images restore the exact pre-mark state —
+                        # including the lapse dynamics the mark applied — so
+                        # the store equals its pre-mine snapshot.
+                        for old_id, new_id, pre_image in supersede_marks:
                             try:
                                 got = col.get(ids=[old_id], include=["documents", "metadatas"])
                                 if got.ids:
-                                    m = dict(got.metadatas[0] or {})
+                                    m = dict(got.metadatas[0] or {}) if isinstance(got.metadatas[0], dict) else {}
                                     if m.get("superseded_by") == new_id:
-                                        m.pop("valid_to", None)
-                                        m.pop("superseded_by", None)
                                         # upsert (replace): update() merges, which would
-                                        # resurrect the popped keys from the stored row.
-                                        col.upsert(documents=[got.documents[0]], ids=[old_id], metadatas=[m])  # type: ignore[arg-type]
+                                        # resurrect lineage keys from the stored row.
+                                        col.upsert(documents=[got.documents[0]], ids=[old_id], metadatas=[pre_image])  # type: ignore[arg-type]
                             except Exception:
                                 logger.debug("Supersede rollback failed for %s", old_id, exc_info=True)
                         try:
