@@ -28,8 +28,8 @@ from typing import Any, cast
 from .backend import PalaceRef, SqliteBackend
 from .backend.base import BaseCollection
 from .date_window import filed_at_in_window, parse_date_bound, parse_window
-from .migrate import SCHEMA_VERSION as SPINE_SCHEMA_VERSION
 from .migrate import (
+    ACCESS_HISTORY_CAP,
     SPINE_D_DEFAULT,
     SPINE_RD_DEFAULT,
     SPINE_S_DEFAULT,
@@ -37,8 +37,9 @@ from .migrate import (
     ensure_spine_defaults,
     ledger_append,
 )
+from .migrate import SCHEMA_VERSION as SPINE_SCHEMA_VERSION
 from .scoring import parse_dt as _parse_dt
-from .scoring import r_fsrs, score_meta, update_lapse
+from .scoring import r_fsrs, score_meta, update_lapse, update_success
 from .types import DrawerRecord
 from .vectors import cosine as _vec_cosine
 from .vectors import embed_counts as _vec_embed_counts
@@ -1004,6 +1005,59 @@ def _fail_closed_stub(drawer_id: str, meta: dict[str, object]) -> dict[str, obje
         "quarantined": True,
         "quarantine_reason": str(meta.get("quarantine_reason") or ""),
     }
+
+
+def _apply_access(meta: dict[str, object], now_iso: str) -> dict[str, object]:
+    """Apply the success outcome of a drawer read (in place).
+
+    Appends ``access_history`` (capped), bumps ``access_count_total`` (and
+    the legacy ``access_count``), grows stability via ``update_success``,
+    decays rd, and records the event in the score ledger. Raises on
+    unexpected failure — callers fall back to the legacy bump so a read
+    never fails because ranking bookkeeping did.
+    """
+    meta = ensure_spine_defaults(meta)
+    try:
+        stability = float(cast(Any, meta.get("S", SPINE_S_DEFAULT)))
+    except (TypeError, ValueError):
+        stability = SPINE_S_DEFAULT
+    try:
+        difficulty = float(cast(Any, meta.get("D", SPINE_D_DEFAULT)))
+    except (TypeError, ValueError):
+        difficulty = SPINE_D_DEFAULT
+    try:
+        rd = float(cast(Any, meta.get("rd", SPINE_RD_DEFAULT)))
+    except (TypeError, ValueError):
+        rd = SPINE_RD_DEFAULT
+    accessed_dt = _parse_dt(meta.get("accessed_at") or meta.get("filed_at"))
+    if accessed_dt is None:
+        idle_days = 0.0
+    else:
+        if accessed_dt.tzinfo is None:
+            accessed_dt = accessed_dt.replace(tzinfo=UTC)
+        idle_days = max(0.0, (datetime.now(UTC) - accessed_dt).total_seconds() / 86400.0)
+    s_new, rd_new = update_success(stability, difficulty, rd, r_fsrs(idle_days, stability))
+    meta["S"] = s_new
+    meta["rd"] = rd_new
+    try:
+        meta["s_updates"] = int(cast(Any, meta.get("s_updates", 0))) + 1
+    except (TypeError, ValueError):
+        meta["s_updates"] = 1
+    try:
+        meta["access_count"] = int(cast(Any, meta.get("access_count", 0))) + 1
+    except (TypeError, ValueError):
+        meta["access_count"] = 1
+    try:
+        meta["access_count_total"] = int(cast(Any, meta.get("access_count_total", 0))) + 1
+    except (TypeError, ValueError):
+        meta["access_count_total"] = 1
+    meta["accessed_at"] = now_iso
+    raw_history = meta.get("access_history") or []
+    history = [ts for ts in raw_history if isinstance(ts, str) and ts] if isinstance(raw_history, list) else []
+    history.append(now_iso)
+    meta["access_history"] = history[-ACCESS_HISTORY_CAP:]
+    ledger_append(meta, score=score_meta(meta), S=s_new, D=meta.get("D", SPINE_D_DEFAULT), reason="access")
+    return meta
 
 
 def _lapse_meta_in_place(meta: dict[str, object], reason: str) -> dict[str, object]:
@@ -2457,13 +2511,21 @@ class DxrkMemory:
                 logger.debug("Drawer auto-quarantine failed for %s", drawer_id, exc_info=True)
             return _fail_closed_stub(res.ids[0], meta)
         # Phase 2: access tracking feeds decay-aware ranking (B). Superseded
-        # rows are readable history but do not accrue access counts.
+        # rows are readable history but do not accrue access counts. A live
+        # read is a success outcome: history, counters, stability growth,
+        # rd decay, and a ledger entry (best-effort; the legacy bump below
+        # always runs so reads never fail on bookkeeping).
         if not meta.get("valid_to"):
+            now_iso = datetime.now(UTC).isoformat()
             try:
-                meta["access_count"] = int(cast(Any, meta.get("access_count", 0))) + 1
-            except (TypeError, ValueError):
-                meta["access_count"] = 1
-            meta["accessed_at"] = datetime.now(UTC).isoformat()
+                _apply_access(meta, now_iso)
+            except Exception:
+                logger.debug("RDU access update failed for %s", drawer_id, exc_info=True)
+                try:
+                    meta["access_count"] = int(cast(Any, meta.get("access_count", 0))) + 1
+                except (TypeError, ValueError):
+                    meta["access_count"] = 1
+                meta["accessed_at"] = now_iso
             try:
                 col.update(ids=[drawer_id], metadatas=[meta])
             except Exception:
