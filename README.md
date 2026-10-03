@@ -23,7 +23,7 @@
 ## 30s Quickstart
 
 ```bash
-uv tool install dxrk                                            # 1) instala (14 agentes, memoria, MCP)
+uv tool install git+https://github.com/Dxrk777/Dxrk.git          # 1) instala (14 agentes, memoria, MCP)
 dxrk-py install --agent claude-code --preset full-dxrk --dry-run  # 2) vista previa del setup
 python -m dxrk.memory mine ./mi-proyecto                        # 3) indexa tu codigo (FTS5 + BM25, offline)
 python -m dxrk.memory search "arquitectura memoria"             # 4) busca (AND de tokens; ver docs/tutorial.md)
@@ -38,15 +38,11 @@ python -m dxrk.memory search "arquitectura memoria"             # 4) busca (AND 
 ## Instalación
 
 > Requisito: **Python 3.13+**
+>
+> Dxrk no se publica en PyPI: se instala directo desde GitHub.
 
 ```bash
-pip install dxrk
-```
-
-También disponible vía `uv`:
-
-```bash
-uv tool install dxrk
+uv tool install git+https://github.com/Dxrk777/Dxrk.git
 ```
 
 **Desde el código fuente:**

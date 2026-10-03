@@ -1,4 +1,4 @@
-name: Publish to PyPI
+name: Release
 
 on:
   push:
@@ -8,12 +8,10 @@ permissions:
   contents: read
 
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
-    environment: pypi
     permissions:
       contents: write
-      id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -25,15 +23,12 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Build package
+      # Nota: sin publicación a PyPI. La distribución es vía git
+      # (uv tool install git+https://github.com/Dxrk777/Dxrk.git) y
+      # GitHub Releases. Si se quiere PyPI en el futuro, re-agregar un
+      # job con Trusted Publishing (OIDC) + environment `pypi`.
+      - name: Build package (smoke)
         run: uv build
-
-      # Trusted Publishing (OIDC): sin tokens. Requiere el publisher
-      # registrado en PyPI (proyecto dxrk → Settings → Publishing →
-      # GitHub: owner Dxrk777, repo Dxrk, workflow publish.yml).
-      # uv usa OIDC automáticamente al no haber credenciales.
-      - name: Publish to PyPI
-        run: uv publish
 
       - name: Generate changelog
         uses: orhun/git-cliff-action@3d96a18cc4ec17e9dc69ddcc424ccafaf1f78ce2 # v4
