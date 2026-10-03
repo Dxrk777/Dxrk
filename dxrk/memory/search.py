@@ -79,7 +79,6 @@ def _hybrid_rank(
 ) -> list[dict[str, object]]:
     if not results:
         return results
-    from .scoring import decay_factor
 
     docs = [str(r.get("text", "")) for r in results]
     bm25_raw = _bm25_scores(query, docs)
@@ -97,10 +96,7 @@ def _hybrid_rank(
                 vec_sim = 0.0
         r["bm25_score"] = round(raw, 3)
         base = vector_weight * vec_sim + bm25_weight * norm
-        # Phase 2 decay nudge: stale hits (old created_at) sink up to 30%.
-        # Missing created_at is neutral (factor 1.0) — legacy order preserved.
-        freshness = 0.7 + 0.3 * decay_factor(r.get("created_at"))
-        scored.append((base * freshness, r))
+        scored.append((base, r))
     scored.sort(key=lambda p: p[0], reverse=True)
     results[:] = [r for _, r in scored]
     return results
@@ -138,6 +134,8 @@ def hybrid_search(
     since/before are inclusive/exclusive ISO date bounds on filed_at
     (stdlib-only date windowing, inclusive since / exclusive before).
     """
+    from .palace import _is_dead_meta
+
     # Parse date window first — invalid bounds are caller errors identical
     # whether or not the index is healthy (mirrors upstream pre-probe parse).
     try:
@@ -204,10 +202,9 @@ def hybrid_search(
         meta = meta or {}
         if not isinstance(meta, dict):
             meta = {}
-        # Phase 2 contradiction lifecycle: superseded drawers (valid_to set)
-        # stay on disk for history but never rank — the drawer carrying
-        # `supersedes` is the current version.
-        if meta.get("valid_to"):
+        # Dead drawers (superseded / forgotten / quarantined) stay on disk
+        # for history but never rank — the live revision carries on.
+        if _is_dead_meta(meta):
             continue
         # Date window is a post-filter: Chroma string metadata can't be range-filtered
         # server-side, and excluding here keeps the design requirement of recall

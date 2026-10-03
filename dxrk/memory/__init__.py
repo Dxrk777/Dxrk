@@ -393,6 +393,8 @@ class AgentMemory:
                     for rid, doc, meta, dist in zip(ids, docs, metas, dists):
                         if not isinstance(meta, dict):
                             meta = {}
+                        if meta.get("quarantined"):
+                            continue
                         # BM25+vector ranking decides order; only a light
                         # relevance floor drops near-zero fused hits so
                         # gibberish queries return [] instead of top-k noise.
@@ -503,6 +505,8 @@ class AgentMemory:
                     for rid, doc, meta in zip(got.ids, got.documents, got.metadatas):
                         if not isinstance(meta, dict):
                             meta = {}
+                        if meta.get("quarantined"):
+                            continue
                         if date_active and not filed_at_in_window(meta.get("filed_at"), since_dt, before_dt):
                             continue
                         if mem_type and int(mem_type) != 0:

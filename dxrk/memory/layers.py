@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from .backend.base import BaseCollection
-from .palace import Palace
+from .palace import Palace, _is_dead_meta
 from .scoring import rank_score
 
 # Limits
@@ -160,9 +160,9 @@ class Layer1:
                 meta = {}
             if effective_wing and str(meta.get("wing") or "") != effective_wing:
                 continue
-            # Phase 2: superseded drawers never surface — the `supersedes`
-            # drawer is the current version (mirrors hybrid_search filter).
-            if meta.get("valid_to"):
+            # Dead drawers (superseded / forgotten / quarantined) never
+            # surface — the live revision is the current version.
+            if _is_dead_meta(meta):
                 continue
             doc = doc or ""
             imp = 3.0
@@ -252,13 +252,13 @@ class Layer2:
             if room:
                 label += f" room={room}" if label else f"room={room}"
             return f"No drawers found for {label}."
-        # Phase 2: drop superseded drawers (valid_to set) — history only.
+        # Dead drawers (superseded / forgotten / quarantined) are history only.
         kept: list[tuple[str, dict[str, object]]] = []
         for doc, meta in zip(docs[:n_results], metas[:n_results]):
             meta = meta or {}
             if not isinstance(meta, dict):
                 meta = {}
-            if meta.get("valid_to"):
+            if _is_dead_meta(meta):
                 continue
             kept.append((doc or "", meta))
         if not kept:

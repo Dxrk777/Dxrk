@@ -407,20 +407,25 @@ def _handle_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
             where_wing = args.get("wing")
             where_room = args.get("room")
             lim = int(args.get("limit", 20))
-            # use direct collection get for fidelity
-            col = dm._collection(create=False)  # type: ignore[attr-defined]
-            # build where via search helper
-            from .search import build_where_filter
-
-            wf = build_where_filter(
-                where_wing if isinstance(where_wing, str) and where_wing else None,
-                where_room if isinstance(where_room, str) and where_room else None,
+            drawers = dm.list_drawers(
+                wing=where_wing if isinstance(where_wing, str) and where_wing else None,
+                room=where_room if isinstance(where_room, str) and where_room else None,
+                limit=lim,
+                include_quarantined=bool(args.get("include_quarantined", False)),
             )
-            got2 = col.get(where=wf or None, include=["documents", "metadatas"], limit=lim)  # type: ignore[assignment]
-            out = [
-                {"id": did, "document": doc[:500], "metadata": meta}  # type: ignore[arg-type]
-                for did, doc, meta in zip(got2.ids, got2.documents, got2.metadatas)  # type: ignore[attr-defined]
-            ]
+            out = []
+            for drawer in drawers:
+                if drawer.get("quarantined"):
+                    out.append({"id": drawer.get("id"), "metadata": drawer.get("metadata"), "quarantined": True})
+                else:
+                    doc = drawer.get("document")
+                    out.append(
+                        {
+                            "id": drawer.get("id"),
+                            "document": str(doc)[:500] if isinstance(doc, str) else "",
+                            "metadata": drawer.get("metadata"),
+                        }
+                    )
             return {"drawers": out, "count": len(out), "palace_path": palace_path}
 
         if name == "dxrk_memory_update_drawer":

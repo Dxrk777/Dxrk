@@ -1338,11 +1338,12 @@ class DxrkMemory:
         if len(got.ids) <= cap:
             return 0, len(got.ids), scan_full
         over = len(got.ids) - cap
-        # Pinned rows are exempt: victims come from unpinned rows only.
+        # Pinned and quarantined rows are exempt: victims come from live,
+        # unpinned rows only.
         candidates: list[tuple[bool, float, str]] = []
         for rid, meta in zip(got.ids, got.metadatas):
             m = meta if isinstance(meta, dict) else {}
-            if m.get("pinned"):
+            if m.get("pinned") or m.get("quarantined"):
                 continue
             candidates.append((bool(m.get("valid_to")), score_meta(m, default_importance=1.0), rid))
         # Superseded first (False sorts before True on `not superseded`),
@@ -1639,6 +1640,119 @@ class DxrkMemory:
             logger.debug("Unpin failed for %s", drawer_id, exc_info=True)
             return False
         return True
+
+    def quarantine_drawer(self, drawer_id: str, reason: str = "") -> bool:
+        """Isolate a drawer fail-closed: invisible everywhere, no document on read.
+
+        Upsert-replace preserving the document and the original ``valid_to``
+        (quarantine never rewrites lineage). Quarantine is a lapse outcome,
+        so stability collapses and the event lands in the score ledger.
+        Idempotent for already-quarantined rows (first reason wins); False
+        when the drawer does not exist.
+        """
+        col = self._collection(create=False)
+        try:
+            got = col.get(ids=[drawer_id], include=["documents", "metadatas"])
+        except Exception:
+            return False
+        if not got.ids:
+            return False
+        meta = got.metadatas[0] if got.metadatas else {}
+        meta = ensure_spine_defaults(dict(meta) if isinstance(meta, dict) else {})
+        if meta.get("quarantined"):
+            return True
+        _apply_quarantine(meta, reason, datetime.now(UTC).isoformat())
+        doc = got.documents[0] if got.documents else ""
+        try:
+            col.upsert(
+                documents=[doc if isinstance(doc, str) else ""],
+                ids=[drawer_id],
+                metadatas=[meta],  # type: ignore[arg-type]
+            )
+        except Exception:
+            logger.debug("Quarantine failed for %s", drawer_id, exc_info=True)
+            return False
+        return True
+
+    def unquarantine_drawer(self, drawer_id: str) -> bool:
+        """Release a drawer from quarantine; False when it does not exist.
+
+        Clears the flags (idempotent) but keeps the lapse dynamics — the
+        stability lost to quarantine is learned, not refunded. The checksum
+        still matches (quarantine never touches the document), so the next
+        read serves the drawer live again.
+        """
+        col = self._collection(create=False)
+        try:
+            got = col.get(ids=[drawer_id], include=["documents", "metadatas"])
+        except Exception:
+            return False
+        if not got.ids:
+            return False
+        meta = got.metadatas[0] if got.metadatas else {}
+        meta = ensure_spine_defaults(dict(meta) if isinstance(meta, dict) else {})
+        if not meta.get("quarantined"):
+            return True
+        meta["quarantined"] = False
+        meta["quarantine_reason"] = ""
+        meta["quarantined_at"] = ""
+        doc = got.documents[0] if got.documents else ""
+        try:
+            col.upsert(
+                documents=[doc if isinstance(doc, str) else ""],
+                ids=[drawer_id],
+                metadatas=[meta],  # type: ignore[arg-type]
+            )
+        except Exception:
+            logger.debug("Unquarantine failed for %s", drawer_id, exc_info=True)
+            return False
+        return True
+
+    def list_drawers(
+        self,
+        wing: str | None = None,
+        room: str | None = None,
+        limit: int = 20,
+        include_quarantined: bool = False,
+    ) -> list[dict[str, object]]:
+        """List drawers with wing/room filter; quarantined excluded by default.
+
+        Quarantined rows included via ``include_quarantined=True`` stay
+        fail-closed (flags + reason, no document).
+        """
+        col = self._collection(create=False)
+        where: dict[str, object] | None = None
+        if wing and room:
+            where = {"$and": [{"wing": wing}, {"room": room}]}
+        elif wing:
+            where = {"wing": wing}
+        elif room:
+            where = {"room": room}
+        try:
+            lim = max(1, int(limit))
+        except (TypeError, ValueError):
+            lim = 20
+        try:
+            got = col.get(where=where, include=["documents", "metadatas"], limit=lim)
+        except Exception:
+            return []
+        out: list[dict[str, object]] = []
+        for rid, doc, meta in zip(got.ids, got.documents, got.metadatas):
+            m = meta if isinstance(meta, dict) else {}
+            if m.get("quarantined"):
+                if not include_quarantined:
+                    continue
+                out.append(
+                    {
+                        "id": rid,
+                        "metadata": ensure_spine_defaults(dict(m)),
+                        "quarantined": True,
+                        "quarantine_reason": str(m.get("quarantine_reason") or ""),
+                    }
+                )
+            else:
+                out.append({"id": rid, "document": doc or "", "metadata": ensure_spine_defaults(dict(m))})
+        return out
 
     def _pins_path(self) -> Path | None:
         """Sidecar for palace-level pins (identity scope); None on sentinel paths."""
