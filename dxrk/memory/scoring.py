@@ -142,14 +142,19 @@ def r_fsrs(t_days: object, stability_days: object) -> float:
 
 
 def frequency_factor(n: object) -> float:
-    """Access-frequency multiplier in [0.7, 1.0]: ``0.7 + 0.3*log1p(n)/log1p(20)``."""
+    """Access-frequency multiplier in [0.7, 1.0]: ``0.7 + 0.3*log1p(n)/log1p(20)``.
+
+    Saturates at 1.0 past n=20 reads (the ``/log1p(20)`` normalization
+    point) — without the clamp, huge access counts would push the factor
+    past 1.0 and let frequency dominate retrievability.
+    """
     try:
         count = int(cast(Any, n))
     except (TypeError, ValueError):
         count = 0
     if count < 0:
         count = 0
-    return RDU_FREQ_BASE + RDU_FREQ_GAIN * math.log1p(count) / math.log1p(RDU_FREQ_NORM_N)
+    return min(1.0, RDU_FREQ_BASE + RDU_FREQ_GAIN * math.log1p(count) / math.log1p(RDU_FREQ_NORM_N))
 
 
 def effective_rd(rd: object, t_days: object) -> float:
