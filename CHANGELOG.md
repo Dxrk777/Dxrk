@@ -4,6 +4,50 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [1.3.0](https://github.com/Dxrk777/Dxrk/releases/tag/v1.3.0) - 2026-09-27
+
+### Features
+
+- **memory:** Phase 1 local hybrid recall with eval harness
+- **memory:** Phase 2 lifecycle with dedupe, decay and KG episodes
+- **memory:** Phase 3 agentic tools, budgets and timeline
+- **session:** Optional SQLite-WAL storage backend with conformance suite
+- **swarm:** Real dispatch, honest health and session linkage
+- **cli:** Implement upgrade and model commands
+
+### Bug Fixes
+
+- **memory:** Phase 0 cleanup, duplicate and recall-filter fixes
+- **session:** Atomic durable writes, index self-heal and eviction fix
+- **cli:** Single source of truth for argv in __main__
+- **tui:** Refresh welcome tenant badge on resume; re-record demos
+- **release:** Resolve adversarial review HOLD findings
+
+### Refactoring
+
+- **session:** Unify CLI on FileStorage with migration and id sanitization
+- **cli:** Split install, install_steps and install_runtime into focused modules behind facades
+- **utils:** Split session, swarm, hooks_model, fileops, filemerge, bashparse, image, messages and permissions/diff into focused modules behind facades
+- **hooks:** Split utils/hooks.py into focused modules behind a facade
+
+### Testing
+
+- **commands:** Cover rewind, resume and share modules
+- Pin facade parity for split modules
+- Cover enterprise cli and memory engine shims
+
+### Documentation
+
+- Release notes v1.3.0 draft and capability showcase
+- Recall benchmarks, 60s demo and showcase
+- **ui:** Real Dxrk identity in TUI, README and metadata
+- **brand:** Dxrk logo in README, docs and site favicon
+
+### Chores
+
+- **memory:** Remove dead cortex and autonomous packages, fix mine rollback
+- **release:** Bump version to 1.3.0
+
 ## [1.2.0](https://github.com/Dxrk777/Dxrk/releases/tag/v1.2.0) - 2026-09-22
 
 ### Bug Fixes
