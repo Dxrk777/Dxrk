@@ -23,6 +23,9 @@ DxrkMemory 2.0 es el resultado de la fusión **mempalace 3.3.5** (`feat/opencode
 | 11 | `graph` | `dxrk/memory/graph.py` | 381 | `KnowledgeGraph` temporal SQLite WAL, `valid_from`/`valid_to`, `as_of`, `traverse` BFS, `stats` |
 | 12 | `layers` | `dxrk/memory/layers.py` | 263 | `MemoryStack` **L0-L3** wake-up 600–900 tok (L0 identity 100 tok, L1 500–800, L2 on-demand, L3 deep) |
 | 13 | `miner` | `dxrk/memory/miner.py` | 398 | `GitignoreMatcher` + `scan_project`/`chunk_text`, `SKIP_DIRS`, `READABLE_EXTENSIONS`, safe `O_NONBLOCK` |
+| 14 | `migrate` | `dxrk/memory/migrate.py` | — | Migración lazy a spine `schema_version=2`, checksums `content_sha256`, ledger hash-chain (`verify_chain`), `merkle_root` |
+| 15 | `scoring` | `dxrk/memory/scoring.py` | — | Ranking RDU: `R_fsrs` + updates success/lapse (`S`/`D`/`rd`), `score_meta` unificado |
+| 16 | `policy` | `dxrk/memory/policy.py` | — | `PolicyEngine`: triggers de higiene (`over_budget`, `rescore_stale`, `checksum_sweep`, `quarantine_sweep`) gateados por `memory.maintain` |
 
 **Total stdlib-only:** 13 archivos, **4652 LOC** (sin `chromadb`, sin `onnx`, sin `numpy`, solo `sqlite3`, `hashlib`, `re`, `pathlib`, `threading`).
 
@@ -231,10 +234,11 @@ Phase 0 (limpieza previa): filtros de recall y duplicados corregidos
 ## Ciclo de vida Phase 3 — consolidate/forget/pin, budgets, timeline
 
 Agentic memory management sobre el mismo modelo supersede (stdlib-only,
-determinista, sin LLM). MCP expone 4 herramientas nuevas (`dxrk_memory_*`,
+determinista, sin LLM). MCP expone 5 herramientas de escritura (`dxrk_memory_*`,
 writes con gate RBAC `mine` → `PermissionError("RBAC_DENIED")` si
-`DXRK_USER` no tiene el op en el tenant): `consolidate`, `forget`, `pin`
-(writes) y `timeline` (read). Total del servidor: **23 tools**
+`DXRK_USER` no tiene el op en el tenant; `quarantine` exige además la cap
+`memory.maintain`): `consolidate`, `forget`, `pin`, `quarantine` (writes) y
+`timeline` (read). Total del servidor: **24 tools**
 (`dxrk/memory/mcp_server.py`; eran 19 antes de Phase 3).
 
 | Tool MCP | Tipo | Input clave |
@@ -242,6 +246,7 @@ writes con gate RBAC `mine` → `PermissionError("RBAC_DENIED")` si
 | `dxrk_memory_consolidate` | write | `drawer_ids[]` (≥2, required), `wing`, `room`, `palace` |
 | `dxrk_memory_forget` | write | `drawer_ids[]` / `wing` / `room` / `before` (ISO, `filed_at` estrictamente anterior) / `hard` (default `False`) / `include_kg` (default `False`, solo supersede) |
 | `dxrk_memory_pin` | write | `drawer_id` + `scope` (`drawer` \| `identity`, default `drawer`), `pinned` (default `True`) |
+| `dxrk_memory_quarantine` | write (`memory.maintain`) | `drawer_id` (required), `reason`, `unquarantine` (default `False`), `palace` |
 | `dxrk_memory_timeline` | read | `since` (incl.) / `before` (excl.), `wing`, `limit` (default 50, max 200) |
 
 | Pieza | Regla |
@@ -255,6 +260,33 @@ writes con gate RBAC `mine` → `PermissionError("RBAC_DENIED")` si
 Deliberadamente fuera: borrado físico de historia KG (ningún flag lo permite),
 re-ranking con boost de pinned en search (pin protege de *removal*, no de orden),
 agrupación de drawers minados en el timeline (los episodios KG son la vista file).
+
+---
+
+## Ranking RDU Fase 0 — spine `schema_version=2`, quarantine, policy
+
+RDU (Recall-Decay-Update, estilo FSRS) reemplaza los rankers dispersos por una
+sola señal por drawer. Cada metadata lleva el spine (`dxrk/memory/migrate.py`):
+
+- `S` (estabilidad, días), `D` (dificultad 1–10), `rd` (desviación, arranca 350),
+  `s_updates` — el estado de memoria.
+- `content_sha256` — checksum de integridad (`""` = pendiente de rehash).
+- `quarantined` / `quarantine_reason` / `quarantined_at`.
+- `score_ledger` (hash-chain, tope 20 + contador `score_ledger_dropped`) y
+  `access_history` (topes 20 + `access_count_total`).
+
+| Pieza | Regla |
+|-------|-------|
+| Recall `R_fsrs` | `get_drawer` es un outcome *success*: crece `S`, cae `rd`, suma ledger `access`. Contradicción/supersede/forget/quarantine son *lapse*: colapsa `S`, sube `D`, suma ledger con su motivo. Solo el tiempo nunca mueve `S`/`D` |
+| Migración lazy | Filas legacy (`schema_version < 2`) migran al leer: `S = 1 + log1p(access_count)`, `D = 5.0`, `rd = 350 / (1 + n)`, checksum `""` (rehash en el próximo read) |
+| Integridad | Read con checksum ausente → adopta el actual (rehash); mismatch → auto-quarantine + contador `checksum_mismatches` (sidecar). `status()` expone `merkle_root`, `quarantined`, `quarantine_warning`, `needs_rehash` |
+| Quarantine | `quarantine_drawer` aísla fail-closed: invisible en search/L1/L2/timeline, `get` devuelve flags + motivo sin documento. `unquarantine` libera sin devolver la estabilidad perdida. Vía MCP solo con cap `memory.maintain` |
+| Reads MCP | `get_drawer`/`list_drawers` proyectan metadata: `score_ledger` truncado a los últimos 5 (con `score_ledger_dropped` ajustado para que el slice siga verificando con `verify_chain`) y `access_history` crudo reemplazado por `access_history_len` |
+| Policy | `PolicyEngine(palace).maybe_run("write" \| "periodic")`: `write` corre `over_budget` inline (wing.count > cap → `enforce_wing_cap`); `periodic` corre `rescore_stale` (filed > 30d sin ledger reciente → append con score actual), `checksum_sweep` (ventana rotativa de 200, rehash de faltantes) y `quarantine_sweep` (documento vacío / sha mismatch → quarantine), cada uno máx. 1/15 min (sidecar `<palace>/.policy_state.json`). Todo trigger corre bajo `mine_palace_lock` como tenant efectivo con `require_op(tenant, "system:policy", "memory.maintain")` — sin grant aborta `RBAC_DENIED`, nunca bypassea el chequeo |
+
+Suites: `tests/test_rdu_goldens.py` (bandas de recall), `tests/test_scoring.py`,
+`tests/test_migrate.py`, `tests/test_spine_{checksum,quarantine,ledger,status,actr_history}.py`,
+`tests/test_policy.py`, `tests/test_memory_mcp_reads.py`.
 
 ---
 
@@ -276,31 +308,34 @@ importance 0.05 + access 0.03`), rerank híbrido (`_hybrid_rank` × frescura).
 
 ## Relación con Autonomy y RAG — ver [ADR-002](adr/ADR-002-memory-separation.md)
 
-> **Decisión: AISLAR** — `dxrk/memory` (DxrkMemory), `dxrk/autonomy/learner` y `dxrk/rag` son **3 sistemas aislados** con contratos y persistencias distintas.
+> **Decisión: AISLAR** — `dxrk/memory` (DxrkMemory) y `dxrk/rag` son
+> **sistemas aislados** con contratos y persistencias distintas. El
+> `Learner` de `dxrk/autonomy/` se eliminó (tanda 2: solo sobrevive el
+> vocabulario de capabilities en `permissions.py`); la verificación vive
+> como juez externo en `dxrk/judge/` (observe-only, auto-fix default-off).
 > Detalle formal en **[ADR-002: Separación DxrkMemory vs Autonomy/Learner vs RAG/Store](adr/ADR-002-memory-separation.md)** (Accepted 2026-08-27).
 
-**Frontera por diseño — 3 dominios, 3 stores, 0 coupling:**
+**Frontera por diseño — 2 dominios, 2 stores, 0 coupling:**
 
 | Sistema | Módulo | Persistencia | API clave | Deps |
 |---------|--------|--------------|-----------|------|
 | **DxrkMemory** (canónico) | `dxrk/memory` — `Palace`, `AgentMemory`, `KnowledgeGraph`, `AAAK` | `~/.dxrk/palace/sqlite_palace.db` — `sqlite3` FTS5 `trigram` + BM25, `WAL`, `0o600` | `mine()`, `search(since,before)`, `hybrid_search`, `traverse()` | **stdlib-only** (`sqlite3`, `hashlib`, `re`) |
-| **Learner** (patrones) | `dxrk/autonomy/learner.py` — `Learner`, `MemoryItem` | `.dxrk/memories.json` — JSON `0o600`, `max_items 1000`, `RLock` | `record()`, `suggest()`, `top_errors()`, `recent_memories()` | stdlib (`json`, `hashlib`) |
 | **RAG** (code index) | `dxrk/rag` — `chunker`, `indexer`, `VectorStore`, `OpenAIEmbedder` | in-memory `dict[str,VectorRecord]` + JSON opcional | `VectorStore.Search()`, `embed()`, `cosine_similarity` | `urllib` + `OPENAI_API_KEY` opcional |
 
 **Por qué no fusionar.** Fusionar contaminaría `memory` (offline, <50 ms cold, `pip install dxrk` sin extras) con deps de red/modelo, rompería `zero-trace` (`grep engram|mempal == 0`, `LEGACY` `chr-join` ofuscado), mezclaría semánticas incompatibles (`filed_at`/`wing` vs `success_rate`/`error` vs `start_line`/`language`) y acoplaría `WAL`/`mine_palace_lock`/`reap 900 s`/`FIFO guard` (`db29959`/`27212e5`) a dominios que no los necesitan. Alternativas `SQLite compartido` (colecciones separadas en mismo `.db`) y `shared vector store` (todo a `OpenAIEmbedder` + HNSW) se rechazan en el ADR — ver `MIGRATION_3.3.5_3.7.1.md` “No portados” (`HNSW`/`numpy2`/`onnx`).
 
 **Puentes opcionales sin storage coupling:**
 
-- `Learner → Palace` via **hooks** (`dxrk/memory/hooks_cli.py`, `~/.config/dxrk/hooks.json`): export fire-and-forget de `MemoryItem` exitoso a `wing=autonomy/room=pattern` (`source_file=learner:<id>`). Si `Palace` falla, `Learner` no falla — sin transacción compartida.
 - `RAG → Palace` via **enrichment** (`dxrk/memory/__init__.py:148-157`): `AgentMemory(path, rag=rag)` inyecta `rag.is_enabled()/query(text,1)` en `store()` para poblar `entry.embedding` antes del `upsert`. Sin `rag` o sin `OPENAI_API_KEY`, `memory` opera **BM25 puro**. `RAG` nunca lee `sqlite_palace.db`.
+- El puente histórico `Learner → Palace` (export fire-and-forget a `wing=autonomy/room=pattern`) murió con el `Learner`; `wing=autonomy` queda como datos históricos legibles, sin productor.
 
 **Reglas de frontera (ADR-002):**
 
 - `R1 stdlib-only` — `memory` sin `openai`/`numpy`/`chromadb`.
-- `R2 DB por dominio` — `memory` WAL, `learner` JSON, `rag` in-memory/JSON.
+- `R2 DB por dominio` — `memory` WAL, `rag` in-memory/JSON.
 - `R3 no read-through` — ningún sistema importa el store interno de otro.
 - `R4 zero-trace` — `grep engram|mempal dxrk/memory → 0`.
-- `R5 multi-tenant ready` — `palace_path` por proyecto/usuario, `learner` por repo, `rag` por índice.
+- `R5 multi-tenant ready` — `palace_path` por proyecto/usuario, `rag` por índice.
 - `R6 fallback sin regresión` — si `rag`/`Palace` falla, cada sistema sigue operativo.
 
-Verificación y plan de migración completos en [ADR-002](adr/ADR-002-memory-separation.md) — ningún `from dxrk.memory` en `learner`/`rag`, ningún `from dxrk.rag` en `memory` salvo `Protocol` `rag: object`.
+Verificación y plan de migración completos en [ADR-002](adr/ADR-002-memory-separation.md) — ningún `from dxrk.memory` en `rag`, ningún `from dxrk.rag` en `memory` salvo `Protocol` `rag: object`.

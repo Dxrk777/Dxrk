@@ -27,11 +27,31 @@ Usuario desconocido → `readonly`. Los roles `member`/`viewer` que acepta
    permitido también se rechazan.
 4. **Gate de dispatch** (`dxrk/security/enforcement.py`): `require_op`
    mapea `read`/`mine`/`manage` → caps `fs.read`/`fs.write`/`sudo` y
-   deniega con `PermissionError("RBAC_DENIED: ...")`. Cableado en
+   `maintain`/`memory.maintain` → cap `memory.maintain`; deniega con
+   `PermissionError("RBAC_DENIED: ...")`. Cableado en
    `tenant create/delete` (manage), `python -m dxrk.memory mine/search`
    (mine/read) y tools MCP de escritura (`_check_mcp_op`, responden
    error `RBAC_DENIED` con `isError=true`). Sin tenant o sin `DXRK_USER`
    → trusted mode local (retorna `""`, no rompe nada).
+
+## Cap `memory.maintain`
+
+Gobierna quarantine y policy (`dxrk_memory_quarantine`,
+`PolicyEngine.maybe_run`). **Denegada por defecto a los 3 roles**
+(ningún rol la lleva en `ROLE_CAPS`); solo un grant explícito por tenant
+la otorga:
+
+```python
+from dxrk.security.rbac import grant_memory_maintain, revoke_memory_maintain
+grant_memory_maintain("acme", "dev")    # otorga
+revoke_memory_maintain("acme", "dev")   # revoca
+```
+
+Persistencia: `<tenant>/memory_maintain.json` (`{"memory.maintain": [...]}`,
+`0o600`). El policy engine corre como actor `system:policy`, así que el
+mantenimiento programado requiere
+`grant_memory_maintain(tenant, "system:policy")`; sin grant aborta con
+`RBAC_DENIED` (el chequeo nunca se bypassea).
 
 ## Política por tenant
 
@@ -65,5 +85,5 @@ Matriz rol×acción completa en `tests/test_enterprise_rbac_matrix.py`
 `build_permission_store_for_role`, `authorize_via_jwt` cross-tenant),
 `tests/test_enterprise_jwt_vault.py` (18 tests),
 `tests/test_rbac_enforcement.py` (32 tests: matriz `require_op` +
-wiring CLI) y `tests/test_memory_rbac.py` (30 tests: gate mine/search +
-MCP `RBAC_DENIED` con `isError=true`).
+wiring CLI) y `tests/test_memory_rbac.py` (gate mine/search + MCP `RBAC_DENIED` con
+`isError=true`, más cap `memory.maintain` y tool `dxrk_memory_quarantine`).

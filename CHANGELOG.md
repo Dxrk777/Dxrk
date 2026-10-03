@@ -4,6 +4,33 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Features
+
+- **memory:** Cap `memory.maintain` (denied by default, explicit per-tenant
+  grant) and `dxrk_memory_quarantine` MCP tool (24th tool) gated by it
+- **memory:** `PolicyEngine` with RBAC-gated triggers (`over_budget`,
+  `rescore_stale`, `checksum_sweep`, `quarantine_sweep`), 15min throttling
+  in `<palace>/.policy_state.json`
+- **memory:** MCP reads project metadata (score ledger last 5, raw
+  `access_history` replaced by its length)
+- **judge:** External `dxrk/judge/` verifier (observe-only, auto-fix
+  default-off, no autonomy coupling)
+
+### Refactoring
+
+- **autonomy:** Cull self-update/self-learn engine (`autonomy`, `learner`,
+  `metrics`, `swarm`, `updater`, `evolution` removed); only the capability
+  vocabulary survives in `autonomy/permissions.py` (dead `PermissionLevel`
+  dropped, `memory.maintain` added)
+
+### Documentation
+
+- RDU spine (`schema_version=2`), quarantine and policy in `docs/memory.md`;
+  `memory.maintain` grants in `docs/rbac.md`
+
 ## [1.3.0](https://github.com/Dxrk777/Dxrk/releases/tag/v1.3.0) - 2026-09-27
 
 ### Features
