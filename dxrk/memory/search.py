@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 
 from .backend.base import BaseCollection
+from .backend.sqlite import SqliteCollection
 from .date_window import filed_at_in_window, parse_window
 
 _TOKEN_RE = re.compile(r"\w{2,}", re.UNICODE)
@@ -76,16 +77,23 @@ def _hybrid_rank(
     query: str,
     vector_weight: float = 0.6,
     bm25_weight: float = 0.4,
+    rank_nudge: list[float] | None = None,
 ) -> list[dict[str, object]]:
+    """Rerank hybrid hits: ``vector_weight * vec_sim + bm25_weight * bm25n``.
+
+    The legacy freshness multiplier is gone — recency lives inside the RDU
+    rank now. ``rank_nudge[i]`` (when given) adds a per-hit bonus; the
+    sqlite backend already fuses the RDU rank into its distances, so
+    :func:`hybrid_search` only passes nudges for non-sqlite backends.
+    """
     if not results:
         return results
-
     docs = [str(r.get("text", "")) for r in results]
     bm25_raw = _bm25_scores(query, docs)
     max_b = max(bm25_raw) if bm25_raw else 0.0
     bm25_norm = [s / max_b if max_b > 0 else 0.0 for s in bm25_raw]
     scored: list[tuple[float, dict[str, object]]] = []
-    for r, raw, norm in zip(results, bm25_raw, bm25_norm):
+    for i, (r, raw, norm) in enumerate(zip(results, bm25_raw, bm25_norm)):
         dist = r.get("distance")
         if dist is None:
             vec_sim = 0.0
@@ -96,6 +104,11 @@ def _hybrid_rank(
                 vec_sim = 0.0
         r["bm25_score"] = round(raw, 3)
         base = vector_weight * vec_sim + bm25_weight * norm
+        if rank_nudge is not None and i < len(rank_nudge):
+            try:
+                base += float(rank_nudge[i])  # type: ignore[arg-type]
+            except (TypeError, ValueError):
+                pass
         scored.append((base, r))
     scored.sort(key=lambda p: p[0], reverse=True)
     results[:] = [r for _, r in scored]
@@ -240,17 +253,29 @@ def hybrid_search(
                 "_sort_key": eff,
                 "_source_file_full": source,
                 "_filed_at": str(meta.get("filed_at", "")),
+                "_meta": meta,
             }
         )
 
     scored.sort(key=lambda h: float(h.get("_sort_key", 0)))  # type: ignore[arg-type]
     hits = scored[:n_results]
+    # Rerank: the sqlite backend already fused the RDU rank into its
+    # distances, so only non-sqlite backends get a score_meta nudge here.
+    nudges: list[float] | None = None
+    if not isinstance(collection, SqliteCollection):
+        from .scoring import score_meta
+
+        nudges = []
+        for h in hits:
+            m = h.get("_meta")
+            nudges.append(0.1 * min(1.0, max(0.0, score_meta(m if isinstance(m, dict) else {}))))
     # finalize bm25 hybrid rerank
-    hits = _hybrid_rank(hits, q)[:n_results]
+    hits = _hybrid_rank(hits, q, rank_nudge=nudges)[:n_results]
     for h in hits:
         h.pop("_sort_key", None)
         h.pop("_source_file_full", None)
         h.pop("_filed_at", None)
+        h.pop("_meta", None)
 
     # Build filters envelope including date bounds for observability
     filt_out: dict[str, object] = dict(where or {})

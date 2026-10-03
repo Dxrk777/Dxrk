@@ -351,6 +351,7 @@ def _handle_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
             h = dm.health()
             cnt = dm.count()
             wings = dm.list_wings()
+            spine = dm.status()
             return {
                 "ok": h.get("ok"),
                 "detail": h.get("detail"),
@@ -358,6 +359,11 @@ def _handle_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
                 "wings": wings,
                 "budgets": dm.budgets(),
                 "palace_path": palace_path,
+                "quarantined": spine.get("quarantined", 0),
+                "quarantine_warning": spine.get("quarantine_warning", False),
+                "checksum_mismatches": spine.get("checksum_mismatches", 0),
+                "needs_rehash": spine.get("needs_rehash", 0),
+                "merkle_root": spine.get("merkle_root", ""),
             }
 
         if name == "dxrk_memory_search":

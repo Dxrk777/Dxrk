@@ -17,9 +17,8 @@ import json
 import re
 import sqlite3
 import threading
-from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, ClassVar, cast
+from typing import ClassVar, cast
 
 from ..vectors import DIM as _VEC_DIM
 from ..vectors import (
@@ -156,16 +155,16 @@ def _where_to_sql(where: dict[str, object] | None) -> tuple[str, list[object]]:
     return "", []
 
 
-# Fusion weights for hybrid score = COS_W*cos + BM25_W*bm25n + REC_W*recency
-# + IMP_W*importance + ACC_W*access. Cosine dominates so vocabulary-mismatch
-# queries still recall; BM25 keeps exact matches on top; recency is a small
-# tie-breaker only. Importance/access (Phase 2 decay-aware scoring) are
-# deliberately small nudges — they re-order near-ties, never bury relevance.
+# Fusion weights for hybrid score = COS_W*cos + BM25_W*bm25n + RANK_W*rdu.
+# Cosine dominates so vocabulary-mismatch queries still recall; BM25 keeps
+# exact matches on top; the RDU rank (retrievability x frequency + rd
+# boost, normalized to [0, 1]) is a small tie-breaker only — it re-orders
+# near-ties, never buries relevance. One formula everywhere: the same
+# score_meta drives the wing-cap eviction, Layer1, and the non-sqlite
+# hybrid nudge.
 COS_W = 0.6
 BM25_W = 0.3
-REC_W = 0.05
-IMP_W = 0.05
-ACC_W = 0.03
+RANK_W = 0.1
 # Importance saturates at 5.0 (Layer1 default is 3.0); access saturates at
 # ~20 reads via log1p — both normalized to [0, 1] before weighting.
 # Candidate pool bounds: FTS hits union recent rows so vector similarity can
@@ -173,25 +172,6 @@ ACC_W = 0.03
 _FTS_CANDIDATE_MULT = 5
 _POOL_MIN = 100
 _POOL_MAX = 500
-
-
-def _recency(meta: dict[str, object]) -> float:
-    """Recency in [0,1]: exp decay (half-life ~125d); 0.0 when unknown."""
-    raw = meta.get("filed_at") if isinstance(meta, dict) else None
-    if not isinstance(raw, str) or not raw:
-        return 0.0
-    try:
-        dt = datetime.fromisoformat(raw)
-    except ValueError:
-        return 0.0
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=UTC)
-    age_days = (datetime.now(UTC) - dt).total_seconds() / 86400.0
-    if age_days < 0:
-        age_days = 0.0
-    import math
-
-    return math.exp(-age_days / 180.0)
 
 
 def _parse_meta(meta_json: str | None) -> dict[str, object]:
@@ -203,10 +183,20 @@ def _parse_meta(meta_json: str | None) -> dict[str, object]:
 
 
 def _public_meta(meta_json: str | None) -> dict[str, object]:
-    """Metadata with the internal `_embedding` key stripped."""
+    """Metadata safe for query results: internals stripped.
+
+    Drops the internal ``_embedding`` vector and replaces the raw
+    ``access_history`` list with its length (``access_history_len``) —
+    timestamps are bookkeeping, not search payload.
+    """
     m = _parse_meta(meta_json)
     if "_embedding" in m:
         m = {k: v for k, v in m.items() if k != "_embedding"}
+    if isinstance(m.get("access_history"), list):
+        history = m["access_history"]
+        assert isinstance(history, list)
+        m = {k: v for k, v in m.items() if k != "access_history"}
+        m["access_history_len"] = len(history)
     return m
 
 
@@ -668,16 +658,17 @@ class SqliteCollection(BaseCollection):
         qtext: str,
         qemb: list[float] | None,
     ) -> list[tuple[tuple[str, str, str, int], float]]:
-        """Fused rank: COS_W*cosine + BM25_W*bm25norm + REC_W*recency + IMP/ACC.
+        """Fused rank: COS_W*cosine + BM25_W*bm25norm + RANK_W*rdu_norm.
 
-        Importance and access_count (Phase 2 scoring) enter normalized to
-        [0, 1] with small weights — near-tie nudges only. Metas without
-        those keys score 0.0 there, i.e. legacy behavior unchanged.
+        The RDU rank comes from the single shared ``score_meta`` (clamped
+        to [0, 1]) — no inline recency decay, no inline importance/access
+        weights. Metas without spine keys score through their migrated
+        priors, i.e. legacy behavior degrades gracefully.
 
         Returns (row, distance) with distance = 1 - fused in [0, 1],
         sorted best-first.
         """
-        import math as _math
+        from ..scoring import score_meta
 
         docs = [r[1] or "" for r in pool]
         metas = [_parse_meta(r[2]) for r in pool]
@@ -696,30 +687,8 @@ class SqliteCollection(BaseCollection):
             cos = [_vec_weighted_cosine(qcounts, c, idf) for c in counts]
         else:
             cos = [0.0] * len(pool)
-        rec = [_recency(m) for m in metas]
-        impn: list[float] = []
-        accn: list[float] = []
-        for m in metas:
-            imp_raw: object = None
-            for key in ("importance", "emotional_weight", "weight"):
-                if m.get(key) is not None:
-                    imp_raw = m.get(key)
-                    break
-            try:
-                impn.append(min(1.0, max(0.0, float(imp_raw))))  # type: ignore[arg-type]
-            except (TypeError, ValueError):
-                impn.append(0.0)
-            try:
-                acc_raw = m.get("access_count", 0)
-                accn.append(min(1.0, _math.log1p(max(0, int(cast(Any, acc_raw))))) / _math.log1p(20))
-            except (TypeError, ValueError):
-                accn.append(0.0)
-        # importance saturates at 5.0 (Layer1 default 3.0 -> 0.6)
-        impn = [min(1.0, v / 5.0) for v in impn]
-        fused = [
-            COS_W * c + BM25_W * b + REC_W * r + IMP_W * i + ACC_W * a
-            for c, b, r, i, a in zip(cos, bm25_norm, rec, impn, accn)
-        ]
+        rdu_norm = [min(1.0, max(0.0, score_meta(m))) for m in metas]
+        fused = [COS_W * c + BM25_W * b + RANK_W * r for c, b, r in zip(cos, bm25_norm, rdu_norm)]
         order = sorted(range(len(pool)), key=lambda i: fused[i], reverse=True)
         out: list[tuple[tuple[str, str, str, int], float]] = []
         for i in order:

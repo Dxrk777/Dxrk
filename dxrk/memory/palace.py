@@ -36,6 +36,7 @@ from .migrate import (
     content_sha256_of,
     ensure_spine_defaults,
     ledger_append,
+    merkle_root,
 )
 from .migrate import SCHEMA_VERSION as SPINE_SCHEMA_VERSION
 from .scoring import parse_dt as _parse_dt
@@ -1979,6 +1980,8 @@ class DxrkMemory:
         pinned = 0
         superseded = 0
         forgotten = 0
+        quarantined = 0
+        needs_rehash = 0
         truncated = False
         if got is not None:
             count = len(got.ids)
@@ -1991,6 +1994,10 @@ class DxrkMemory:
                     superseded += 1
                 if m.get("forgotten"):
                     forgotten += 1
+                if m.get("quarantined"):
+                    quarantined += 1
+                if not (isinstance(m.get("content_sha256"), str) and str(m.get("content_sha256")).strip()):
+                    needs_rehash += 1
         budget = self._max_entries_per_wing
         return {
             "wing": wing,
@@ -2002,6 +2009,8 @@ class DxrkMemory:
             "pinned": pinned,
             "superseded": superseded,
             "forgotten": forgotten,
+            "quarantined": quarantined,
+            "needs_rehash": needs_rehash,
             "truncated": truncated,
         }
 
@@ -2018,7 +2027,18 @@ class DxrkMemory:
             w = m.get("wing")
             if not isinstance(w, str) or not w:
                 continue
-            entry = per_wing.setdefault(w, {"wing": w, "count": 0, "pinned": 0, "superseded": 0, "forgotten": 0})
+            entry = per_wing.setdefault(
+                w,
+                {
+                    "wing": w,
+                    "count": 0,
+                    "pinned": 0,
+                    "superseded": 0,
+                    "forgotten": 0,
+                    "quarantined": 0,
+                    "needs_rehash": 0,
+                },
+            )
             entry["count"] = int(cast(Any, entry["count"])) + 1
             if m.get("pinned"):
                 entry["pinned"] = int(cast(Any, entry["pinned"])) + 1
@@ -2026,6 +2046,10 @@ class DxrkMemory:
                 entry["superseded"] = int(cast(Any, entry["superseded"])) + 1
             if m.get("forgotten"):
                 entry["forgotten"] = int(cast(Any, entry["forgotten"])) + 1
+            if m.get("quarantined"):
+                entry["quarantined"] = int(cast(Any, entry["quarantined"])) + 1
+            if not (isinstance(m.get("content_sha256"), str) and str(m.get("content_sha256")).strip()):
+                entry["needs_rehash"] = int(cast(Any, entry["needs_rehash"])) + 1
         budget = self._max_entries_per_wing
         for entry in per_wing.values():
             count = int(cast(Any, entry["count"]))
@@ -2034,6 +2058,44 @@ class DxrkMemory:
             entry["over"] = budget > 0 and count > budget
             entry["unbounded"] = budget <= 0
         return per_wing
+
+    def status(self) -> dict[str, object]:
+        """Palace-level spine status: integrity root, quarantine, rehash debt.
+
+        - ``merkle_root``: sha256 over sorted non-empty ``content_sha256``
+          (``""`` when nothing carries a checksum yet).
+        - ``quarantine_warning``: True when any drawer is quarantined.
+        - ``checksum_mismatches``: lifetime auto-quarantine events (sidecar).
+        - ``needs_rehash``: rows without a usable checksum.
+        """
+        col = self._collection(create=False)
+        try:
+            got = col.get(include=["metadatas"], limit=STATUS_SCAN_LIMIT)
+        except Exception:
+            got = None
+        metas: list[dict[str, object]] = []
+        quarantined = 0
+        needs_rehash = 0
+        truncated = False
+        if got is not None:
+            truncated = len(got.ids) >= STATUS_SCAN_LIMIT
+            for meta in got.metadatas:
+                m = meta if isinstance(meta, dict) else {}
+                metas.append(m)
+                if m.get("quarantined"):
+                    quarantined += 1
+                if not (isinstance(m.get("content_sha256"), str) and str(m.get("content_sha256")).strip()):
+                    needs_rehash += 1
+        return {
+            "palace_path": self.palace_path,
+            "count": len(metas),
+            "quarantined": quarantined,
+            "quarantine_warning": quarantined > 0,
+            "checksum_mismatches": self.spine_counters().get("checksum_mismatches", 0),
+            "needs_rehash": needs_rehash,
+            "merkle_root": merkle_root(metas),
+            "truncated": truncated,
+        }
 
     def timeline(
         self,
@@ -2068,6 +2130,9 @@ class DxrkMemory:
         if got is not None:
             for rid, doc, meta in zip(got.ids, got.documents, got.metadatas):
                 m = meta if isinstance(meta, dict) else {}
+                # Quarantined drawers never surface in the timeline.
+                if m.get("quarantined"):
+                    continue
                 w = str(m.get("wing") or "")
                 if wing is not None and w != wing:
                     continue

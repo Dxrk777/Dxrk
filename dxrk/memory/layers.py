@@ -7,11 +7,10 @@ import os
 import pathlib
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, cast
 
 from .backend.base import BaseCollection
 from .palace import Palace, _is_dead_meta
-from .scoring import rank_score
+from .scoring import score_meta
 
 # Limits
 MAX_SCAN = 2000
@@ -165,21 +164,9 @@ class Layer1:
             if _is_dead_meta(meta):
                 continue
             doc = doc or ""
-            imp = 3.0
-            for key in ("importance", "emotional_weight", "weight"):
-                val = meta.get(key)
-                if val is not None:
-                    try:
-                        imp = float(val)  # type: ignore[arg-type]
-                    except (ValueError, TypeError):
-                        pass
-                    break
-            try:
-                acc_raw = meta.get("access_count", 0)
-                accesses = int(cast(Any, acc_raw)) if acc_raw is not None else 0
-            except (TypeError, ValueError):
-                accesses = 0
-            score = rank_score(imp, accesses, meta.get("filed_at"), meta.get("accessed_at"))
+            # RDU rank: one formula everywhere (sqlite fusion, hybrid
+            # rerank, Layer1). Missing importance defaults to 1.0.
+            score = score_meta(meta, default_importance=1.0)
             scored.append((score, meta, doc))
         scored.sort(key=lambda x: x[0], reverse=True)
         if effective_wing and not scored:
