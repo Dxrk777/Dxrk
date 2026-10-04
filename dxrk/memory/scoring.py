@@ -115,6 +115,10 @@ RDU_IMP_SAT = 5.0
 SPINE_S_FALLBACK = 1.0
 _S_FLOOR = 0.05
 
+# Prediction-error coupling (Zou 2025 - vmPFC-FSRS)
+PE_LAMBDA = 0.1  # coupling strength, small for Fase 1
+PE_CLAMP = 0.5  # clamp PE to [-0.5, 0.5]
+
 
 def _clamp_float(value: object, default: float, low: float | None = None, high: float | None = None) -> float:
     try:
@@ -182,6 +186,38 @@ def update_success(stability: object, difficulty: object, rd: object, retrievabi
     growth = math.exp(1.5) * (11.0 - d) * (s**-0.2) * (math.exp(1.0 * (1.0 - r)) - 1.0)
     s_new = min(RDU_S_MAX, max(_S_FLOOR, s * (1.0 + growth)))
     return s_new, max(RDU_RD_MIN, base_rd * 0.9)
+
+
+def apply_success_with_pe(
+    meta: dict[str, object],
+    predicted_r: float,
+    now: datetime | None = None,
+) -> tuple[float, float, float]:
+    """
+    Success outcome with prediction-error coupling (vmPFC-FSRS, Zou 2025).
+
+    PE = outcome - predicted_r
+    S' = S_fsrs * (1 + PE_LAMBDA * PE)  — clamp PE to [-0.5, 0.5]
+
+    Returns: (new_S, new_rd, PE)
+    """
+    m = ensure_spine_defaults(dict(meta)) if isinstance(meta, dict) else ensure_spine_defaults({})
+    stability = _clamp_float(m.get("S"), SPINE_S_FALLBACK, low=_S_FLOOR)
+    difficulty = _clamp_float(m.get("D"), 5.0, low=1.0, high=10.0)
+    rd = _clamp_float(m.get("rd"), RDU_RD_INIT, low=0.0)
+    r = _clamp_float(predicted_r, 1.0, low=0.0, high=1.0)
+
+    # Standard FSRS success update
+    growth = math.exp(1.5) * (11.0 - difficulty) * (stability**-0.2) * (math.exp(1.0 * (1.0 - r)) - 1.0)
+    s_new = min(RDU_S_MAX, max(_S_FLOOR, stability * (1.0 + growth)))
+    rd_new = max(RDU_RD_MIN, rd * 0.9)
+
+    # Prediction error coupling
+    pe = 1.0 - r  # outcome=1 (success) - predicted_r
+    pe = max(-PE_CLAMP, min(PE_CLAMP, pe))
+    s_new = min(RDU_S_MAX, max(_S_FLOOR, s_new * (1.0 + PE_LAMBDA * pe)))
+
+    return s_new, rd_new, pe
 
 
 def update_lapse(
