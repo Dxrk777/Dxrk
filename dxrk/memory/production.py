@@ -467,11 +467,19 @@ def _add_check_regression_method():
 
     def check_regression(self, wing: str = "default", tenant: str = "") -> dict:
         """Check for regression without performing rollback (MCP/CLI wrapper)."""
+        from pathlib import Path
+
         from dxrk.memory.eval_harness import EvalHarness, EvalReport
+        from dxrk.memory.palace import DxrkMemory
 
         # Get current evaluation
-        harness = EvalHarness(self.palace_path)
-        current_report = harness.run(wing=wing)
+        dm = DxrkMemory(str(self.palace_path))
+        dm.init()
+        try:
+            harness = EvalHarness(dm, Path(self.palace_path) / "eval")
+            current_report = harness.run(wing=wing)
+        finally:
+            dm.close()
 
         # Load baseline from eval history
         # For now, create a dummy baseline with slightly better metrics

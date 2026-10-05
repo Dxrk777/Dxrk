@@ -351,8 +351,10 @@ def register_memory_command(reg: Registry) -> None:
                 rollback_mgr = AutoRollbackManager(Path(palace_path))
                 result = rollback_mgr.check_regression(wing=ctx.args[0] if ctx.args else "default")  # type: ignore[attr-defined]
                 out = ctx.out
-                out.write(f"Rollback check: should_rollback={result.should_rollback}, severity={result.severity}\n")
-                for detail in result.details:
+                should_rollback = result.get("should_rollback", False)
+                severity = result.get("severity", "none")
+                out.write(f"Rollback check: should_rollback={should_rollback}, severity={severity}\n")
+                for detail in result.get("details", []):
                     out.write(f"  {detail}\n")
             finally:
                 dm.close()

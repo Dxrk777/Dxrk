@@ -217,11 +217,20 @@ class Registry:
             _safe_write(err, "Ejecuta 'dxrk help' para ver el uso.\n")
             return 1
 
-        name = argv[0]
-        rest = argv[1:]
-        if len(argv) >= 2 and f"{argv[0]} {argv[1]}" in self._commands:
-            name = f"{argv[0]} {argv[1]}"
-            rest = argv[2:]
+        # Find longest matching command name (supports arbitrary subcommand depth)
+        name = ""
+        rest = argv
+        for i in range(len(argv), 0, -1):
+            candidate = " ".join(argv[:i])
+            if candidate in self._commands:
+                name = candidate
+                rest = argv[i:]
+                break
+
+        if not name:
+            _safe_write(err, f"comando desconocido: {argv[0]}\n")
+            _safe_write(err, "Ejecuta 'dxrk help' para ver el uso.\n")
+            return 1
 
         cmd = self._commands.get(name)
         if cmd is None:
