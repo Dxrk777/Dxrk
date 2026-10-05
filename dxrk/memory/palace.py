@@ -26,6 +26,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
+from dxrk.security.enforcement import require_op
+
 from .backend import PalaceRef, SqliteBackend
 from .backend.base import BaseCollection
 from .date_window import filed_at_in_window, parse_date_bound, parse_window
@@ -1206,8 +1208,10 @@ class DxrkMemory:
         max_entries_per_wing: int = DEFAULT_MAX_ENTRIES_PER_WING,
         kg_path: str | None = None,
         auto_kg: bool = True,
+        agent: str = "dxrk",
     ) -> None:
         self.tenant_id: str = _effective_tenant_id(tenant_id)
+        self.agent: str = agent
         resolved = _resolve_tenant_path(tenant_id, palace_path)
         # preserve sentinel memory-only handling without resolve
         if str(resolved) in ("", "memory-only"):
@@ -1362,6 +1366,17 @@ class DxrkMemory:
         col.upsert(documents=[content], ids=[drawer_id], metadatas=[meta])  # type: ignore[arg-type]
         self._enforce_wing_cap(col, wing)
         return drawer_id
+
+    def _require_rbac(self, op: str) -> None:
+        """Require RBAC op for current tenant and user.
+
+        Args:
+            op: Operation name ("mine", "search", "read", "write", "maintain", etc.)
+
+        Raises:
+            PermissionError: If the operation is not allowed for the user's role.
+        """
+        require_op(self.tenant_id or "", self.agent, op)
 
     @staticmethod
     def _mark_superseded(
@@ -2338,6 +2353,9 @@ class DxrkMemory:
           drawers for that source_file and purges closets before re-raising,
           so next mine retries honestly (1654cd2).
         """
+        # RBAC enforcement: require 'mine' op (write access)
+        self._require_rbac("mine")
+
         # Local import to avoid circular
         from .miner import scan_project as _scan_project
 
@@ -2557,6 +2575,9 @@ class DxrkMemory:
         before: str | None = None,
     ) -> dict[str, object]:
         """Search via hybrid_search with optional date window (since/before)."""
+        # RBAC enforcement: require 'search' op (read access)
+        self._require_rbac("search")
+
         from .search import build_where_filter, hybrid_search
 
         where = build_where_filter(wing, room)

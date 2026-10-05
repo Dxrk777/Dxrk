@@ -120,6 +120,15 @@ def register_memory_command(reg: Registry) -> None:
 
     def eval_synthetic_cmd() -> Command:
         def run(ctx: CommandContext) -> int:
+            # RBAC: read op
+            try:
+                from dxrk.security.enforcement import require_op, resolve_user
+
+                require_op(ctx.tenant_id, resolve_user(), "read")
+            except PermissionError as exc:
+                ctx.err.write(f"Error: {exc}\n")
+                return 1
+
             import os
             from pathlib import Path
 
@@ -154,6 +163,15 @@ def register_memory_command(reg: Registry) -> None:
     # Fase 2: Metacognición Avanzada
     def metacog_predict_cmd() -> Command:
         def run(ctx: CommandContext) -> int:
+            # RBAC: read op
+            try:
+                from dxrk.security.enforcement import require_op, resolve_user
+
+                require_op(ctx.tenant_id, resolve_user(), "read")
+            except PermissionError as exc:
+                ctx.err.write(f"Error: {exc}\n")
+                return 1
+
             import os
             from pathlib import Path
 
@@ -186,6 +204,15 @@ def register_memory_command(reg: Registry) -> None:
 
     def metacog_calibrate_cmd() -> Command:
         def run(ctx: CommandContext) -> int:
+            # RBAC: read op
+            try:
+                from dxrk.security.enforcement import require_op, resolve_user
+
+                require_op(ctx.tenant_id, resolve_user(), "read")
+            except PermissionError as exc:
+                ctx.err.write(f"Error: {exc}\n")
+                return 1
+
             import os
             from pathlib import Path
 
@@ -222,6 +249,15 @@ def register_memory_command(reg: Registry) -> None:
     # Fase 2: Multi-Tenant Calibrate
     def calibrate_tenant_cmd() -> Command:
         def run(ctx: CommandContext) -> int:
+            # RBAC: write op (setting calibration params)
+            try:
+                from dxrk.security.enforcement import require_op, resolve_user
+
+                require_op(ctx.tenant_id, resolve_user(), "write")
+            except PermissionError as exc:
+                ctx.err.write(f"Error: {exc}\n")
+                return 1
+
             import os
             from pathlib import Path
 
@@ -261,6 +297,15 @@ def register_memory_command(reg: Registry) -> None:
 
     def calibrate_chain_cmd() -> Command:
         def run(ctx: CommandContext) -> int:
+            # RBAC: read op
+            try:
+                from dxrk.security.enforcement import require_op, resolve_user
+
+                require_op(ctx.tenant_id, resolve_user(), "read")
+            except PermissionError as exc:
+                ctx.err.write(f"Error: {exc}\n")
+                return 1
+
             import os
             from pathlib import Path
 
@@ -289,6 +334,15 @@ def register_memory_command(reg: Registry) -> None:
     # Fase 2: Production Hardening
     def production_circuit_breaker_cmd() -> Command:
         def run(ctx: CommandContext) -> int:
+            # RBAC: read op
+            try:
+                from dxrk.security.enforcement import require_op, resolve_user
+
+                require_op(ctx.tenant_id, resolve_user(), "read")
+            except PermissionError as exc:
+                ctx.err.write(f"Error: {exc}\n")
+                return 1
+
             from dxrk.memory.production import get_circuit_breakers
 
             breakers = get_circuit_breakers()
@@ -307,6 +361,15 @@ def register_memory_command(reg: Registry) -> None:
 
     def production_slo_cmd() -> Command:
         def run(ctx: CommandContext) -> int:
+            # RBAC: read op
+            try:
+                from dxrk.security.enforcement import require_op, resolve_user
+
+                require_op(ctx.tenant_id, resolve_user(), "read")
+            except PermissionError as exc:
+                ctx.err.write(f"Error: {exc}\n")
+                return 1
+
             import os
             from pathlib import Path
 
@@ -338,6 +401,15 @@ def register_memory_command(reg: Registry) -> None:
 
     def production_rollback_cmd() -> Command:
         def run(ctx: CommandContext) -> int:
+            # RBAC: read op
+            try:
+                from dxrk.security.enforcement import require_op, resolve_user
+
+                require_op(ctx.tenant_id, resolve_user(), "read")
+            except PermissionError as exc:
+                ctx.err.write(f"Error: {exc}\n")
+                return 1
+
             import os
             from pathlib import Path
 
@@ -372,6 +444,15 @@ def register_memory_command(reg: Registry) -> None:
     # Fase 2: Judge Externo Continuo
     def judge_status_cmd() -> Command:
         def run(ctx: CommandContext) -> int:
+            # RBAC: read op
+            try:
+                from dxrk.security.enforcement import require_op, resolve_user
+
+                require_op(ctx.tenant_id, resolve_user(), "read")
+            except PermissionError as exc:
+                ctx.err.write(f"Error: {exc}\n")
+                return 1
+
             import os
             from pathlib import Path
 
@@ -398,6 +479,15 @@ def register_memory_command(reg: Registry) -> None:
 
     def judge_run_cmd() -> Command:
         def run(ctx: CommandContext) -> int:
+            # RBAC: read op
+            try:
+                from dxrk.security.enforcement import require_op, resolve_user
+
+                require_op(ctx.tenant_id, resolve_user(), "read")
+            except PermissionError as exc:
+                ctx.err.write(f"Error: {exc}\n")
+                return 1
+
             import os
             from pathlib import Path
 

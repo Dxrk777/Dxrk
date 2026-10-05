@@ -22,10 +22,11 @@ import os
 from dxrk.autonomy.permissions import CapFSRead, CapFSWrite, CapMemoryMaintain, CapSudo
 from dxrk.security.rbac import TenantRoleResolver, get_caps_for_role, has_memory_maintain
 
-VALID_OPS: frozenset[str] = frozenset({"read", "mine", "manage", "maintain", "memory.maintain"})
+VALID_OPS: frozenset[str] = frozenset({"read", "search", "mine", "write", "manage", "maintain", "memory.maintain"})
 
 _OP_CAP: dict[str, str] = {
     "read": CapFSRead,
+    "search": CapFSRead,
     "mine": CapFSWrite,
     "manage": CapSudo,
     "maintain": CapMemoryMaintain,

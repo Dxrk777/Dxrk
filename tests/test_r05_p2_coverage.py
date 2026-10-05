@@ -790,25 +790,29 @@ def test_palace_reap_stale_locks(tmp_path, monkeypatch):
 
 def test_palace_tenant_isolation_mine(tmp_path, monkeypatch):
     from dxrk.memory.palace import DxrkMemory
+    from dxrk.security.rbac import TenantRoleResolver
 
     _iso_home(tmp_path, monkeypatch)
     proj = tmp_path / "proj_iso"
     proj.mkdir()
     (proj / "iso.txt").write_text("isolation test " * 50)
+    # Set up tenant with dev user for mining
+    TenantRoleResolver("tenantA").save({"dev": "dev"}, "dev")
+    TenantRoleResolver("tenantB").save({"dev": "dev"}, "dev")
     # tenant a
-    dm_a = DxrkMemory(tenant_id="tenantA")
+    dm_a = DxrkMemory(tenant_id="tenantA", agent="dev")
     # palace_path should be tenants/tenantA/palace
     assert "tenantA" in dm_a.palace_path or "tenants" in dm_a.palace_path
     dm_a.init()
     dm_a.mine(str(proj), wing="default")
     assert dm_a.count() > 0
     # tenant b should be empty
-    dm_b = DxrkMemory(tenant_id="tenantB")
+    dm_b = DxrkMemory(tenant_id="tenantB", agent="dev")
     dm_b.init()
     assert dm_b.count() == 0
     # explicit palace_path bypasses tenant
     explicit = tmp_path / "explicit_palace"
-    dm_c = DxrkMemory(str(explicit), tenant_id="tenantA")
+    dm_c = DxrkMemory(str(explicit), tenant_id="tenantA", agent="dev")
     dm_c.init()
     assert str(explicit) in dm_c.palace_path
     # ensure lock dir tenant-aware
