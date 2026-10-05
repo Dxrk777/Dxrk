@@ -1422,7 +1422,7 @@ class TestMcpServer:
     def test_tool_registry_19(self):
         from dxrk.memory.mcp_server import TOOLS
 
-        assert len(TOOLS) == 24
+        assert len(TOOLS) == 35
         expected = {
             "dxrk_memory_status",
             "dxrk_memory_search",
@@ -1448,6 +1448,22 @@ class TestMcpServer:
             "dxrk_memory_pin",
             "dxrk_memory_timeline",
             "dxrk_memory_quarantine",
+            # Fase 2: Eval Harness
+            "dxrk_memory_eval_run",
+            "dxrk_memory_eval_synthetic",
+            # Fase 2: Metacognición Avanzada
+            "dxrk_memory_metacog_predict",
+            "dxrk_memory_calibrate_fit",
+            # Fase 2: Multi-Tenant Calibrate
+            "dxrk_memory_calibrate_tenant",
+            "dxrk_memory_calibrate_chain",
+            # Fase 2: Production Hardening
+            "dxrk_memory_circuit_breaker_status",
+            "dxrk_memory_slo_check",
+            "dxrk_memory_rollback_check",
+            # Fase 2: Judge Externo Continuo
+            "dxrk_memory_judge_status",
+            "dxrk_memory_judge_run",
         }
         assert set(TOOLS.keys()) == expected
 
@@ -1463,9 +1479,12 @@ class TestMcpServer:
         from dxrk.memory.mcp_server import _dispatch
 
         resp = _dispatch({"method": "tools/list", "id": 2, "params": {}})
-        assert len(resp["result"]["tools"]) == 24
+        assert len(resp["result"]["tools"]) == 35
         names = {t["name"] for t in resp["result"]["tools"]}
         assert "dxrk_memory_status" in names
+        # Fase 2 tools
+        assert "dxrk_memory_eval_run" in names
+        assert "dxrk_memory_judge_status" in names
 
     def test_ping_and_unknown(self):
         from dxrk.memory.mcp_server import _dispatch

@@ -386,6 +386,137 @@ TOOLS: dict[str, dict[str, Any]] = {
             "required": ["drawer_id"],
         },
     },
+    # Fase 2: Eval Harness
+    "dxrk_memory_eval_run": {
+        "description": "Run evaluation harness on a wing (recall@k, MRR, NDCG, ECE)",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "wing": {"type": "string"},
+                "n_queries": {"type": "integer", "default": 10},
+                "palace": {"type": "string"},
+            },
+            "required": ["wing"],
+        },
+    },
+    "dxrk_memory_eval_synthetic": {
+        "description": "Generate synthetic evaluation queries from palace content",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "wing": {"type": "string"},
+                "n": {"type": "integer", "default": 20},
+                "palace": {"type": "string"},
+            },
+            "required": ["wing"],
+        },
+    },
+    # Fase 2: Metacognición Avanzada
+    "dxrk_memory_metacog_predict": {
+        "description": "Get metacognitive prediction (confidence, difficulty, ECE)",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "wing": {"type": "string"},
+                "palace": {"type": "string"},
+            },
+            "required": ["query", "wing"],
+        },
+    },
+    "dxrk_memory_calibrate_fit": {
+        "description": "Fit temperature scaling or isotonic regression calibration",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "wing": {"type": "string"},
+                "method": {"type": "string", "enum": ["temperature", "isotonic"], "default": "temperature"},
+                "palace": {"type": "string"},
+            },
+            "required": ["wing"],
+        },
+    },
+    # Fase 2: Multi-Tenant Calibrate
+    "dxrk_memory_calibrate_tenant": {
+        "description": "Get or set calibration for a tenant+wing combination",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "tenant": {"type": "string"},
+                "wing": {"type": "string"},
+                "a": {"type": "number"},
+                "b": {"type": "number"},
+                "c": {"type": "number"},
+                "pe_lambda": {"type": "number"},
+                "score": {"type": "number"},
+                "palace": {"type": "string"},
+            },
+            "required": ["tenant", "wing"],
+        },
+    },
+    "dxrk_memory_calibrate_chain": {
+        "description": "Get calibration chain with fallback (tenant+wing → global → default)",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "tenant": {"type": "string"},
+                "wing": {"type": "string"},
+                "palace": {"type": "string"},
+            },
+            "required": ["tenant", "wing"],
+        },
+    },
+    # Fase 2: Production Hardening
+    "dxrk_memory_circuit_breaker_status": {
+        "description": "Get circuit breaker state for external dependencies",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "palace": {"type": "string"},
+            },
+        },
+    },
+    "dxrk_memory_slo_check": {
+        "description": "Check SLO compliance (latency, recall, MRR, ECE)",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "wing": {"type": "string"},
+                "palace": {"type": "string"},
+            },
+            "required": ["wing"],
+        },
+    },
+    "dxrk_memory_rollback_check": {
+        "description": "Check if auto-rollback should trigger (regression detection)",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "wing": {"type": "string"},
+                "palace": {"type": "string"},
+            },
+            "required": ["wing"],
+        },
+    },
+    # Fase 2: Judge Externo Continuo
+    "dxrk_memory_judge_status": {
+        "description": "Get continuous judge status (last run, passes, failures, rollbacks)",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "palace": {"type": "string"},
+            },
+        },
+    },
+    "dxrk_memory_judge_run": {
+        "description": "Run continuous judge verification cycle manually",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "palace": {"type": "string"},
+            },
+        },
+    },
 }
 
 
@@ -729,6 +860,184 @@ def _handle_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
             if not ok:
                 return {"error": f"not found {drawer_id}"}
             return {"drawer_id": drawer_id, "quarantined": True, "palace_path": palace_path}
+
+        # Fase 2: Eval Harness
+        if name == "dxrk_memory_eval_run":
+            from .eval_harness import EvalHarness
+
+            dm = _get_memory(palace_path)
+            harness = EvalHarness(dm, Path(palace_path) / "eval")
+            report = harness.run(wing=str(args["wing"]), n_queries=int(args.get("n_queries", 10)))
+            return {
+                "palace_path": palace_path,
+                "report": {
+                    "wing": report.wing,
+                    "num_queries": report.num_queries,
+                    "recall_at_k": report.recall_at_k,
+                    "mrr": report.mrr,
+                    "ndcg": report.ndcg,
+                    "ece": report.ece,
+                    "latency_p50": report.latency_p50,
+                    "latency_p95": report.latency_p95,
+                    "latency_p99": report.latency_p99,
+                    "evaluated_at": report.evaluated_at,
+                },
+            }
+
+        if name == "dxrk_memory_eval_synthetic":
+            from .eval_harness import generate_synthetic_queries
+
+            dm = _get_memory(palace_path)
+            queries = generate_synthetic_queries(dm, wing=str(args["wing"]), n=int(args.get("n", 20)))
+            return {
+                "palace_path": palace_path,
+                "queries": [
+                    {
+                        "query": q.query,
+                        "expected_drawer_ids": q.expected_drawer_ids,
+                        "wing": q.wing,
+                        "difficulty": q.difficulty,
+                        "tags": q.tags,
+                    }
+                    for q in queries
+                ],
+            }
+
+        # Fase 2: Metacognición Avanzada
+        if name == "dxrk_memory_metacog_predict":
+            from .metacog_v2 import MetacognitionV2
+
+            dm = _get_memory(palace_path)
+            meta = MetacognitionV2(dm)
+            pred = meta.predict(str(args["query"]), wing=str(args["wing"]))
+            return {
+                "palace_path": palace_path,
+                "confidence": pred.confidence,
+                "difficulty": pred.difficulty,
+                "ece": pred.ece,
+            }
+
+        if name == "dxrk_memory_calibrate_fit":
+            from .metacog_v2 import MetacognitionV2
+
+            dm = _get_memory(palace_path)
+            meta = MetacognitionV2(dm)
+            result = meta.fit_calibration(wing=str(args["wing"]), method=str(args.get("method", "temperature")))
+            return {"palace_path": palace_path, "method": args.get("method", "temperature"), "params": result}
+
+        # Fase 2: Multi-Tenant Calibrate
+        if name == "dxrk_memory_calibrate_tenant":
+            from .calibrate_v2 import save_calibration, CalibrationParams
+
+            palace = Path(palace_path)
+            params = CalibrationParams(
+                tenant=str(args["tenant"]),
+                wing=str(args["wing"]),
+                a=float(args.get("a", 1.0)),
+                b=float(args.get("b", 0.0)),
+                c=float(args.get("c", 1.0)),
+                pe_lambda=float(args.get("pe_lambda", 0.0)),
+                score=float(args.get("score", 0.5)),
+            )
+            save_calibration(palace, params)
+            return {
+                "palace_path": palace_path,
+                "saved": True,
+                "params": {
+                    "a": params.a,
+                    "b": params.b,
+                    "c": params.c,
+                    "pe_lambda": params.pe_lambda,
+                    "score": params.score,
+                },
+            }
+
+        if name == "dxrk_memory_calibrate_chain":
+            from .calibrate_v2 import get_calibration_chain
+
+            palace = Path(palace_path)
+            chain = get_calibration_chain(palace, str(args["tenant"]), str(args["wing"]))
+            return {
+                "palace_path": palace_path,
+                "chain": [
+                    {
+                        "tenant": c.tenant,
+                        "wing": c.wing,
+                        "a": c.a,
+                        "b": c.b,
+                        "c": c.c,
+                        "pe_lambda": c.pe_lambda,
+                        "score": c.score,
+                    }
+                    for c in chain
+                ],
+            }
+
+        # Fase 2: Production Hardening
+        if name == "dxrk_memory_circuit_breaker_status":
+            from .production import get_circuit_breakers
+
+            breakers = get_circuit_breakers()
+            return {
+                "palace_path": palace_path,
+                "breakers": {
+                    k: {"state": v.state, "failure_count": v._failure_count, "success_count": v._success_count}
+                    for k, v in breakers.items()
+                },
+            }
+
+        if name == "dxrk_memory_slo_check":
+            from .production import check_slo, SLOConfig
+
+            dm = _get_memory(palace_path)
+            config = SLOConfig.load(Path(palace_path))
+            result = check_slo(dm, wing=str(args["wing"]), config=config)
+            return {"palace_path": palace_path, "compliant": result.compliant, "details": result.details}
+
+        if name == "dxrk_memory_rollback_check":
+            from .production import AutoRollbackManager
+
+            dm = _get_memory(palace_path)
+            rollback_mgr = AutoRollbackManager(Path(palace_path))
+            result = rollback_mgr.check_regression(wing=str(args["wing"]))
+            return {
+                "palace_path": palace_path,
+                "should_rollback": result.should_rollback,
+                "severity": result.severity,
+                "details": result.details,
+            }
+
+        # Fase 2: Judge Externo Continuo
+        if name == "dxrk_memory_judge_status":
+            from .judge_continuous import load_judge_state
+
+            state = load_judge_state(Path(palace_path))
+            return {
+                "palace_path": palace_path,
+                "last_run": state.last_run,
+                "consecutive_passes": state.consecutive_passes,
+                "consecutive_failures": state.consecutive_failures,
+                "rollback_history": state.rollback_history[-10:],
+            }
+
+        if name == "dxrk_memory_judge_run":
+            from .judge_continuous import ContinuousJudge
+            from .eval_harness import EvalHarness
+
+            dm = _get_memory(palace_path)
+            harness = EvalHarness(dm, Path(palace_path) / "eval")
+            judge = ContinuousJudge(Path(palace_path), harness, interval_hours=24)
+            verdict = judge.run_once()
+            return {
+                "palace_path": palace_path,
+                "verdict": {
+                    "passed": verdict.passed,
+                    "regression_detected": verdict.regression_detected,
+                    "severity": verdict.severity,
+                    "details": verdict.details,
+                    "auto_rollback": verdict.auto_rollback,
+                },
+            }
 
         return {"error": f"unknown tool {name}"}
     except Exception as e:
