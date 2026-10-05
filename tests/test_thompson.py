@@ -4,12 +4,12 @@
 from __future__ import annotations
 
 from dxrk.memory.thompson import (
+    ThompsonConfig,
+    select_evaluation_candidates,
     thompson_sample,
     thompson_select,
     thompson_select_drawers,
-    select_evaluation_candidates,
     update_beta_prior,
-    ThompsonConfig,
 )
 
 

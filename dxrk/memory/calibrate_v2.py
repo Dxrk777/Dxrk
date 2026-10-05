@@ -4,17 +4,14 @@
 from __future__ import annotations
 
 import json
-import math
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Callable, Optional
 
-from .qieo import QIEOConfig, qieo_optimize
-from .thompson import select_evaluation_candidates, ThompsonConfig
-from .scoring import r_fsrs
 from .migrate import ensure_spine_defaults
-
+from .qieo import QIEOConfig, qieo_optimize
+from .scoring import r_fsrs
+from .thompson import select_evaluation_candidates
 
 CALIBRATION_DIR = ".calibration"
 CALIBRATION_FILE = "{tenant}_{wing}.json"
@@ -129,7 +126,7 @@ def evaluate_recall_at_k(
 
     for q_drawer in queries:
         q_id = q_drawer["id"]
-        q_meta = q_drawer.get("metadata", {})
+        q_drawer.get("metadata", {})
         q_doc = q_drawer.get("document", "")
         if not q_doc:
             continue
@@ -163,8 +160,8 @@ def calibrate_wing(
     palace,
     wing: str,
     tenant: str = "",
-    qieo_config: Optional[QIEOConfig] = None,
-    thompson_config: Optional[object] = None,
+    qieo_config: QIEOConfig | None = None,
+    thompson_config: object | None = None,
     objective_k: int = 10,
     objective_samples: int = 30,
 ) -> CalibrationParams:

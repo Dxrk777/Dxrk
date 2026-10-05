@@ -6,15 +6,14 @@ from __future__ import annotations
 from pathlib import Path
 
 from dxrk.memory.metacog import (
+    CONFIDENCE_HISTORY_CAP,
     MetacogState,
-    compute_ece,
-    record_judgment,
     adjusted_confidence,
+    compute_ece,
     get_bias_category,
     load_metacog_state,
+    record_judgment,
     save_metacog_state,
-    DEFAULT_BINS,
-    CONFIDENCE_HISTORY_CAP,
 )
 
 
@@ -53,7 +52,6 @@ class TestMetacognitiveMonitor:
         """Bias uses exponential moving average."""
         state = MetacogState()
         state = record_judgment(state, predicted=0.9, actual=0.5)  # error = 0.4
-        bias1 = state.bias_direction
         state = record_judgment(state, predicted=0.9, actual=0.5)  # another 0.4
         bias2 = state.bias_direction
         # Should be less than 0.4 (EMA with alpha=0.05)

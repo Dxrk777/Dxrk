@@ -3,24 +3,23 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from dxrk.memory.neuromod import (
-    NeuromodState,
-    reward,
-    alert,
-    consolidate,
-    encode_mode,
-    decay_all,
-    stress_mode,
-    load_neuromod_state,
-    save_neuromod_state,
-    effective_learning_rate,
-    NEUROMOD_DECAY,
-    REWARD_MAGNITUDE,
     ALERT_MAGNITUDE,
     MAX_LEVEL,
+    NEUROMOD_DECAY,
+    REWARD_MAGNITUDE,
+    NeuromodState,
+    alert,
+    consolidate,
+    decay_all,
+    effective_learning_rate,
+    encode_mode,
+    load_neuromod_state,
+    reward,
+    save_neuromod_state,
+    stress_mode,
 )
 
 

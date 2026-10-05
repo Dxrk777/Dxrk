@@ -10,19 +10,17 @@ from unittest.mock import Mock
 from dxrk.memory.sleep import (
     SleepCandidate,
     SleepState,
-    select_sleep_candidates,
+    age_days,
     consolidate_candidate,
-    reorganize_candidate,
+    is_protected,
     jaccard_similarity,
     load_sleep_state,
-    save_sleep_state,
-    sleep_cycle,
-    is_protected,
-    age_days,
-    _now_iso,
     reconsolidate_labile,
+    reorganize_candidate,
+    save_sleep_state,
+    select_sleep_candidates,
+    sleep_cycle,
 )
-from dxrk.memory.migrate import ensure_spine_defaults
 
 
 def make_drawer(did: str, wing: str = "w", room: str = "r", **kwargs):

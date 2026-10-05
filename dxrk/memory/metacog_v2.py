@@ -7,12 +7,9 @@ import bisect
 import json
 import math
 from collections import defaultdict
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional
-
-from .migrate import ensure_spine_defaults
 
 
 @dataclass(frozen=True)
@@ -22,8 +19,8 @@ class MetacogState:
     calibration_error: float = 0.0  # ECE actual
     bias_direction: float = 0.0  # >0 overconfident, <0 underconfident
     temperature: float = 1.0  # temperature scaling factor
-    isotonic_map: Optional[dict[str, float]] = None  # {bin_center: calibrated_prob}
-    confidence_bins: dict[int, dict] = field(default_factory=dict)  # bin -> {count, correct, conf_sum}
+    isotonic_map: dict[str, float] | None = None  # {bin_center: calibrated_prob}
+    confidence_bins: dict[str, dict] = field(default_factory=dict)  # bin -> {count, correct, conf_sum}
     bias_history: list[float] = field(default_factory=list)
     introspection_log: list[dict] = field(default_factory=list)
     n_judgments: int = 0
@@ -39,12 +36,12 @@ MIN_JUDGMENTS_FOR_ECE = 30
 MAX_INTROSPECTION_LOG = 1000
 
 
-def _now_iso() -> str:
-    return datetime.now(UTC).isoformat()
-
-
 def clamp(x: float, lo: float = 0.0, hi: float = 1.0) -> float:
     return max(lo, min(hi, x))
+
+
+def _now_iso() -> str:
+    return datetime.now(UTC).isoformat()
 
 
 def load_metacog_state(palace_path: Path) -> MetacogState:
@@ -89,7 +86,7 @@ def save_metacog_state(palace_path: Path, state: MetacogState) -> None:
     path.chmod(0o600)
 
 
-def compute_ece_from_bins(bins: dict[int, dict], total: int) -> float:
+def compute_ece_from_bins(bins: dict[str, dict], total: int) -> float:
     """Expected Calibration Error from bin statistics."""
     ece = 0.0
     for bin_idx, stats in bins.items():
@@ -133,7 +130,7 @@ def record_judgment(
     state: MetacogState,
     predicted: float,
     actual: float,
-    context: Optional[dict] = None,
+    context: dict | None = None,
 ) -> MetacogState:
     """
     Record a judgment (prediction vs outcome) and update metacognitive state.
@@ -196,10 +193,6 @@ def record_judgment(
     )
 
 
-def _now_iso() -> str:
-    return datetime.now(UTC).isoformat()
-
-
 def temperature_scaling(predicted: float, temperature: float) -> float:
     """Apply temperature scaling to confidence.
 
@@ -259,7 +252,7 @@ def fit_isotonic(introspection: list[dict], n_bins: int = 10) -> dict[str, float
         return {}
 
     # Bin predictions
-    bin_data = defaultdict(lambda: {"preds": [], "actuals": []})
+    bin_data: dict[float, dict[str, list[float]]] = defaultdict(lambda: {"preds": [], "actuals": []})
     for entry in introspection:
         p = entry.get("predicted", 0.5)
         y = entry.get("actual", 0)
@@ -441,3 +434,66 @@ def get_metacog_summary(state: MetacogState) -> dict:
             "history_len": len(state.bias_history),
         },
     }
+
+
+@dataclass(frozen=True)
+class MetacognitionPrediction:
+    """Result of metacognitive prediction."""
+
+    confidence: float
+    difficulty: float
+    ece: float
+    calibrated_confidence: float | None = None
+    bias_info: dict | None = None
+
+
+from dxrk.memory.palace import DxrkMemory
+
+
+class MetacognitionV2:
+    """Wrapper class for metacognitive operations (MCP/CLI compatible)."""
+
+    def __init__(self, palace: DxrkMemory):
+        self.palace = palace
+        from pathlib import Path
+
+        self._palace_path = Path(palace._path) if hasattr(palace, "_path") else Path(".")
+        self._state = load_metacog_state(self._palace_path)
+
+    def predict(self, query: str, wing: str = "default") -> MetacognitionPrediction:
+        """Get metacognitive prediction for a query."""
+        # Use palace search to estimate difficulty
+        results = self.palace.search(query, wing=wing, n_results=5)
+        hits_raw = results.get("results", []) if isinstance(results, dict) else []
+        hits: list = hits_raw if isinstance(hits_raw, list) else []
+
+        # Estimate difficulty from result count and scores
+        difficulty = 1.0 - min(len(hits) / 10.0, 1.0)
+
+        # Get calibrated confidence
+        raw_confidence = 0.5 + (1.0 - difficulty) * 0.5  # heuristic
+        calibrated = calibrate_confidence(self._state, raw_confidence, method="auto")
+
+        # Get bias info
+        bias_info = detect_bias(self._state)
+
+        return MetacognitionPrediction(
+            confidence=calibrated,
+            difficulty=difficulty,
+            ece=self._state.calibration_error,
+            calibrated_confidence=calibrated,
+            bias_info=bias_info,
+        )
+
+    def fit_calibration(self, wing: str = "default", method: str = "temperature") -> dict:
+        """Fit calibration and return parameters."""
+        # Run full calibration
+        new_state = run_calibration(self._palace_path)
+        self._state = new_state
+        return {
+            "temperature": new_state.temperature,
+            "has_isotonic": new_state.isotonic_map is not None,
+            "ece": new_state.calibration_error,
+            "bias": new_state.bias_direction,
+            "n_judgments": new_state.n_judgments,
+        }

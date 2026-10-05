@@ -3,18 +3,16 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from dxrk.memory.stress import (
+    STRESS_ACTIVATION_THRESHOLD,
+    STRESS_DEACTIVATION_THRESHOLD,
     StressState,
     compute_system_stress,
-    should_activate_defenses,
     get_defense_params,
     load_stress_state,
     save_stress_state,
-    STRESS_ACTIVATION_THRESHOLD,
-    STRESS_DEACTIVATION_THRESHOLD,
 )
 
 
@@ -88,7 +86,7 @@ class TestStress:
         state = StressState(level=0.7, defenses_active=False)
         save_stress_state(tmp_path, state)
         # Next computation should activate
-        new_state = StressState(level=0.7, defenses_active=False, last_computed="")
+        StressState(level=0.7, defenses_active=False, last_computed="")
         # Simulate hysteresis logic
         assert 0.7 > STRESS_ACTIVATION_THRESHOLD
 

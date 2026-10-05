@@ -6,26 +6,23 @@ from __future__ import annotations
 import json
 import threading
 import time
-from collections import deque
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Callable, Optional
 
+from .calibrate_v2 import get_calibration_chain
 from .eval_harness import EvalHarness, EvalReport
-from .calibrate_v2 import load_calibration, save_calibration, get_calibration_chain, merge_calibrations
-
 
 JUDGE_SIDECAR = ".judge_state.json"
 JUDGE_HISTORY_MAX = 1000
 
 
-@dataclass(frozen=True)
+@dataclass
 class JudgeState:
     """Persistent judge state."""
 
     last_run: str = ""
-    last_baseline: Optional[dict] = None
+    last_baseline: dict | None = None
     rollback_history: list[dict] = field(default_factory=list)
     consecutive_passes: int = 0
     consecutive_failures: int = 0
@@ -40,7 +37,7 @@ class Verdict:
     severity: str  # "none" | "warning" | "critical"
     details: list[str]
     current_report: dict
-    baseline_report: Optional[dict]
+    baseline_report: dict | None
     auto_rollback: bool = False
 
 
@@ -48,11 +45,11 @@ def _now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
 
-def _judge_path(palace_path: Path) -> Path:
-    return palace_path / JUDGE_SIDECAR
+def _judge_path(palace_path: str | Path) -> Path:
+    return Path(palace_path) / JUDGE_SIDECAR
 
 
-def load_judge_state(palace_path: Path) -> JudgeState:
+def load_judge_state(palace_path: str | Path) -> JudgeState:
     """Load judge state from sidecar."""
     path = _judge_path(palace_path)
     if not path.exists():
@@ -70,7 +67,7 @@ def load_judge_state(palace_path: Path) -> JudgeState:
         return JudgeState()
 
 
-def save_judge_state(palace_path: Path, state: JudgeState) -> None:
+def save_judge_state(palace_path: str | Path, state: JudgeState) -> None:
     """Save judge state to sidecar."""
     path = _judge_path(palace_path)
     data = {
@@ -84,24 +81,24 @@ def save_judge_state(palace_path: Path, state: JudgeState) -> None:
     path.chmod(0o600)
 
 
-def load_baseline_report(palace_path: Path, wing: str) -> Optional[dict]:
+def load_baseline_report(palace_path: str | Path, wing: str) -> dict | None:
     """Load baseline evaluation report for a wing."""
-    from .eval_harness import EvalHarness
     from dxrk.memory.palace import DxrkMemory
+
+    from .eval_harness import EvalHarness
 
     dm = DxrkMemory(str(palace_path))
     try:
         dm.init()
-        harness = EvalHarness(dm, dm._path / "eval")
+        harness = EvalHarness(dm, Path(dm.palace_path) / "eval")
         report = harness.run(wing=wing)
         return asdict(report)
     finally:
         dm.close()
 
 
-def save_baseline_report(palace_path: Path, wing: str, report: dict) -> None:
+def save_baseline_report(palace_path: str | Path, wing: str, report: dict) -> None:
     """Save baseline report for a wing."""
-    from .eval_harness import EvalHarness
 
     # Reports are saved by EvalHarness.run()
     pass
@@ -113,12 +110,12 @@ class ContinuousJudge:
     def __init__(
         self,
         palace_path: Path,
-        eval_harness: "EvalHarness",
+        eval_harness: EvalHarness,
         interval_hours: int = 24,
-        regression_thresholds: Optional[dict] = None,
+        regression_thresholds: dict | None = None,
         auto_rollback: bool = True,
     ):
-        self.palace_path = palace_path
+        self.palace_path = str(palace_path)
         self.eval_harness = eval_harness
         self.interval_seconds = interval_hours * 3600
         self.auto_rollback = auto_rollback
@@ -128,9 +125,9 @@ class ContinuousJudge:
             "ece_increase": 0.05,  # 0.05 ECE increase
         }
         self._running = False
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self._lock = threading.Lock()
-        self._last_verdict: Optional[Verdict] = None
+        self._last_verdict: Verdict | None = None
 
     def start(self) -> None:
         """Start the continuous judge loop."""
@@ -165,13 +162,13 @@ class ContinuousJudge:
 
     def _run_verification_cycle(self) -> Verdict:
         """Run a single verification cycle."""
-        wings = []
+        wings: list[str] = []
         # Get all wings from eval harness
-        for wing in self.eval_harness.eval_dir.glob("*.jsonl"):
-            wings.append(wing.stem)
+        for wing_path in self.eval_harness.eval_dir.glob("*.jsonl"):
+            wings.append(wing_path.stem)
 
         for wing in wings:
-            verdict = self._verify_wing(wing)
+            verdict = self._verify_wing(str(wing))
             self._last_verdict = verdict
 
             # Update judge state
@@ -217,7 +214,9 @@ class ContinuousJudge:
 
             if baseline_report is None:
                 # First run: save as baseline, pass
-                save_baseline_report(Path(self.palace_path), wing, self.eval_harness.run(wing))
+                from dataclasses import asdict
+
+                save_baseline_report(Path(self.palace_path), wing, asdict(self.eval_harness.run(wing)))
                 return Verdict(
                     passed=True,
                     regression_detected=False,
@@ -234,8 +233,9 @@ class ContinuousJudge:
 
             # Auto-rollback if regression detected and auto_rollback enabled
             if verdict.regression_detected and self.auto_rollback and verdict.severity == "critical":
-                from .calibrate_v2 import calibrate_wing, load_calibration, save_calibration
                 from dxrk.memory.palace import DxrkMemory
+
+                from .calibrate_v2 import save_calibration
 
                 dm = DxrkMemory(str(self.palace_path))
                 try:
@@ -266,7 +266,7 @@ class ContinuousJudge:
         finally:
             dm.close()
 
-    def _compare_reports(self, current: "EvalReport", baseline: "EvalReport", wing: str) -> Verdict:
+    def _compare_reports(self, current: EvalReport, baseline: EvalReport, wing: str) -> Verdict:
         """Compare current report against baseline."""
         severity = "none"
         details = []
@@ -339,7 +339,3 @@ class ContinuousJudge:
     def run_once(self) -> Verdict:
         """Run a single verification cycle (for manual trigger)."""
         return self._run_verification_cycle()
-
-
-def _now_iso() -> str:
-    return datetime.now(UTC).isoformat()

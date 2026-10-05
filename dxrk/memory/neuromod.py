@@ -4,9 +4,9 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, asdict, replace
+from dataclasses import asdict, dataclass, replace
+from datetime import UTC, datetime
 from pathlib import Path
-from datetime import datetime, timezone
 
 
 @dataclass(frozen=True)
@@ -34,7 +34,7 @@ ENCODE_ACH_MAX = 0.8
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def clamp(x: float, lo: float = 0.0, hi: float = 1.0) -> float:

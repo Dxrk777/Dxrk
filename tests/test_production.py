@@ -4,25 +4,18 @@
 from __future__ import annotations
 
 import time
-from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import Mock
 
 from dxrk.memory.production import (
-    SLOConfig,
+    AutoRollbackManager,
+    CircuitBreaker,
     HealthMetrics,
-    SLOStatus,
+    SLOConfig,
+    _now_iso,
+    check_slo_compliance,
     load_slo_config,
     save_slo_config,
-    load_production_state,
-    save_production_state,
-    collect_health_metrics,
-    check_slo_compliance,
-    CircuitBreaker,
-    CircuitBreakerOpenError,
-    AutoRollbackManager,
-    _now_iso,
-    run_production_health_check,
 )
 
 
@@ -229,8 +222,6 @@ class TestCircuitBreaker:
 class TestAutoRollbackManager:
     def test_detects_recall_regression(self) -> None:
         """Detects recall@10 regression > 5%."""
-        from dxrk.memory.production import AutoRollbackManager
-        from dxrk.memory.eval_harness import EvalReport
 
         manager = AutoRollbackManager(Path("/tmp"))
 
@@ -250,7 +241,6 @@ class TestAutoRollbackManager:
 
     def test_detects_mrr_regression(self) -> None:
         """Detects MRR regression > 10%."""
-        from dxrk.memory.production import AutoRollbackManager
 
         manager = AutoRollbackManager(Path("/tmp"))
 
@@ -270,7 +260,6 @@ class TestAutoRollbackManager:
 
     def test_detects_ece_increase(self) -> None:
         """Detects ECE increase > 0.05."""
-        from dxrk.memory.production import AutoRollbackManager
 
         manager = AutoRollbackManager(Path("/tmp"))
 
@@ -290,7 +279,6 @@ class TestAutoRollbackManager:
 
     def test_no_regression_when_within_bounds(self) -> None:
         """No regression detected when metrics within bounds."""
-        from dxrk.memory.production import AutoRollbackManager
 
         manager = AutoRollbackManager(Path("/tmp"))
 
@@ -309,7 +297,6 @@ class TestAutoRollbackManager:
 
     def test_logs_regression(self, tmp_path: Path) -> None:
         """Logs regression events."""
-        from dxrk.memory.production import AutoRollbackManager
 
         manager = AutoRollbackManager(Path("/tmp"))
 

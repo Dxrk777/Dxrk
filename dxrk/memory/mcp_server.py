@@ -863,11 +863,14 @@ def _handle_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
 
         # Fase 2: Eval Harness
         if name == "dxrk_memory_eval_run":
-            from .eval_harness import EvalHarness
+            from .eval_harness import EvalHarness, generate_synthetic_queries
 
             dm = _get_memory(palace_path)
             harness = EvalHarness(dm, Path(palace_path) / "eval")
-            report = harness.run(wing=str(args["wing"]), n_queries=int(args.get("n_queries", 10)))
+            # Generate synthetic queries for evaluation
+            n_q = int(args.get("n_queries", 10))
+            queries = generate_synthetic_queries(dm, wing=str(args["wing"]), n=n_q)
+            report = harness.run(wing=str(args["wing"]), queries=queries)
             return {
                 "palace_path": palace_path,
                 "report": {
@@ -908,8 +911,8 @@ def _handle_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
             from .metacog_v2 import MetacognitionV2
 
             dm = _get_memory(palace_path)
-            meta = MetacognitionV2(dm)
-            pred = meta.predict(str(args["query"]), wing=str(args["wing"]))
+            meta_v2: MetacognitionV2 = MetacognitionV2(dm)
+            pred = meta_v2.predict(str(args["query"]), wing=str(args["wing"]))
             return {
                 "palace_path": palace_path,
                 "confidence": pred.confidence,
@@ -921,13 +924,13 @@ def _handle_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
             from .metacog_v2 import MetacognitionV2
 
             dm = _get_memory(palace_path)
-            meta = MetacognitionV2(dm)
-            result = meta.fit_calibration(wing=str(args["wing"]), method=str(args.get("method", "temperature")))
+            meta_v2_cal: MetacognitionV2 = MetacognitionV2(dm)
+            result = meta_v2_cal.fit_calibration(wing=str(args["wing"]), method=str(args.get("method", "temperature")))
             return {"palace_path": palace_path, "method": args.get("method", "temperature"), "params": result}
 
         # Fase 2: Multi-Tenant Calibrate
         if name == "dxrk_memory_calibrate_tenant":
-            from .calibrate_v2 import save_calibration, CalibrationParams
+            from .calibrate_v2 import CalibrationParams, save_calibration
 
             palace = Path(palace_path)
             params = CalibrationParams(
@@ -987,19 +990,19 @@ def _handle_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
             }
 
         if name == "dxrk_memory_slo_check":
-            from .production import check_slo, SLOConfig
+            from .production import SLOStatus, check_slo, load_slo_config
 
             dm = _get_memory(palace_path)
-            config = SLOConfig.load(Path(palace_path))
-            result = check_slo(dm, wing=str(args["wing"]), config=config)
-            return {"palace_path": palace_path, "compliant": result.compliant, "details": result.details}
+            config = load_slo_config(Path(palace_path))
+            slo_result: SLOStatus = check_slo(dm, wing=str(args["wing"]), config=config)
+            return {"palace_path": palace_path, "compliant": slo_result.compliant, "details": slo_result.details}
 
         if name == "dxrk_memory_rollback_check":
             from .production import AutoRollbackManager
 
             dm = _get_memory(palace_path)
             rollback_mgr = AutoRollbackManager(Path(palace_path))
-            result = rollback_mgr.check_regression(wing=str(args["wing"]))
+            result = rollback_mgr.check_regression(wing=str(args["wing"]))  # type: ignore[attr-defined]
             return {
                 "palace_path": palace_path,
                 "should_rollback": result.should_rollback,
@@ -1021,8 +1024,8 @@ def _handle_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
             }
 
         if name == "dxrk_memory_judge_run":
-            from .judge_continuous import ContinuousJudge
             from .eval_harness import EvalHarness
+            from .judge_continuous import ContinuousJudge
 
             dm = _get_memory(palace_path)
             harness = EvalHarness(dm, Path(palace_path) / "eval")

@@ -3,17 +3,15 @@
 
 from __future__ import annotations
 
-import math
-
 from dxrk.memory.synapse import (
+    ETA_BASE,
+    NEUROMOD_DECAY,
+    TAU_MINUS,
+    TAU_PLUS,
     SynapseState,
-    stdp_update,
     apply_reward,
     effective_learning_rate,
-    ETA_BASE,
-    TAU_PLUS,
-    TAU_MINUS,
-    NEUROMOD_DECAY,
+    stdp_update,
 )
 
 

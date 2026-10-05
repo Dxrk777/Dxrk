@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from dxrk.memory.scoring import apply_success_with_pe, PE_LAMBDA, PE_CLAMP
+from dxrk.memory.scoring import PE_CLAMP, apply_success_with_pe
 
 
 class TestPredictionError:

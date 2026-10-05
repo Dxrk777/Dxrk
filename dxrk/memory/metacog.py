@@ -5,9 +5,9 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
+from datetime import UTC
 from pathlib import Path
-from typing import Optional
 
 # Expected Calibration Error bins
 DEFAULT_BINS = 10
@@ -26,9 +26,9 @@ class MetacogState:
 
 
 def _now_iso() -> str:
-    from datetime import datetime, timezone
+    from datetime import datetime
 
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def clamp(x: float, lo: float = 0.0, hi: float = 1.0) -> float:

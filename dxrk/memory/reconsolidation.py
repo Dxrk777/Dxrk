@@ -4,10 +4,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from datetime import datetime, timedelta, timezone
-from typing import Optional
+from datetime import UTC, datetime, timedelta
 
-from dxrk.memory.scoring import update_success, update_lapse
+from dxrk.memory.scoring import update_lapse, update_success
 
 
 @dataclass(frozen=True)
@@ -23,14 +22,14 @@ LABILE_WINDOW_HOURS = 6
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _parse_iso(ts: str) -> datetime:
     """Parse ISO timestamp to aware UTC."""
     dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     return dt
 
 
@@ -38,12 +37,12 @@ def is_labile(state: ReconsolidationState) -> bool:
     """Check if drawer is in labile window."""
     if not state.labile_until:
         return False
-    return datetime.now(timezone.utc) < _parse_iso(state.labile_until)
+    return datetime.now(UTC) < _parse_iso(state.labile_until)
 
 
 def mark_labile(state: ReconsolidationState) -> ReconsolidationState:
     """Mark drawer as labile for LABILE_WINDOW_HOURS (called on recall)."""
-    labile_until = datetime.now(timezone.utc) + timedelta(hours=LABILE_WINDOW_HOURS)
+    labile_until = datetime.now(UTC) + timedelta(hours=LABILE_WINDOW_HOURS)
     return replace(state, labile_until=labile_until.isoformat())
 
 
@@ -65,7 +64,7 @@ def reconsolidate(
 
     Returns: (new_state, new_S, new_D, new_rd)
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     if not state.labile_until:
         # Not in labile state, nothing to do
@@ -111,7 +110,7 @@ def reconsolidate_with_fsrs(
 
     Uses the existing update_success/update_lapse from scoring.py.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     if not state.labile_until:
         return state, stability, difficulty, rd
@@ -144,5 +143,5 @@ def get_labile_remaining(state: ReconsolidationState) -> float:
     if not state.labile_until:
         return -1.0
     labile_until = _parse_iso(state.labile_until)
-    delta = labile_until - datetime.now(timezone.utc)
+    delta = labile_until - datetime.now(UTC)
     return delta.total_seconds() / 3600.0

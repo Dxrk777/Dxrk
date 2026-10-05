@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, replace
+from datetime import UTC
 
 
 @dataclass(frozen=True)
@@ -74,9 +75,9 @@ def stdp_update(
 
 
 def _now_iso() -> str:
-    from datetime import datetime, timezone
+    from datetime import datetime
 
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def apply_reward(state: SynapseState, magnitude: float = 0.3) -> SynapseState:

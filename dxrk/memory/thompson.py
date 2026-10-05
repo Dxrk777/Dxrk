@@ -3,10 +3,8 @@
 
 from __future__ import annotations
 
-import math
 import random
 from dataclasses import dataclass
-from typing import Callable
 
 
 @dataclass(frozen=True)
@@ -134,7 +132,7 @@ def select_evaluation_candidates(
         if meta.get("quarantined") or meta.get("pinned"):
             continue
 
-        visits = meta.get("access_count_total", meta.get("access_count", 0))
+        meta.get("access_count_total", meta.get("access_count", 0))
         hits = meta.get("irt_hits", 0)
         misses = meta.get("irt_misses", 0)
 

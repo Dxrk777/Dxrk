@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import random
 
-from dxrk.memory.qieo import Qubit, qieo_optimize, QIEOConfig
+from dxrk.memory.qieo import QIEOConfig, Qubit, qieo_optimize
 
 
 class TestQIEO:

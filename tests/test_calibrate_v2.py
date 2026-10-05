@@ -3,21 +3,19 @@
 
 from __future__ import annotations
 
-import json
-from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import Mock
 
 from dxrk.memory.calibrate_v2 import (
+    CALIBRATION_DIR,
+    DEFAULT_PARAMS,
     CalibrationParams,
-    load_calibration,
-    save_calibration,
+    get_calibration_chain,
     get_calibration_params,
     list_calibrated_wings,
-    get_calibration_chain,
+    load_calibration,
     merge_calibrations,
-    DEFAULT_PARAMS,
-    CALIBRATION_DIR,
+    save_calibration,
 )
 from dxrk.memory.qieo import QIEOConfig
 
@@ -248,7 +246,7 @@ class TestCalibrateIntegration:
         palace.iter_drawers.return_value = drawers
         palace._path = str(tmp_path)
 
-        qieo_config = QIEOConfig(pop_size=10, n_iter=5)
+        QIEOConfig(pop_size=10, n_iter=5)
 
         # Use a simple ThompsonConfig-like object
         class ThompsonConfig:
@@ -256,7 +254,7 @@ class TestCalibrateIntegration:
             beta_prior = 1.0
             exploration_bonus = 0.5
 
-        thompson_config = ThompsonConfig()
+        ThompsonConfig()
 
         result = calibrate_wing(
             palace, "test", qieo_config=QIEOConfig(pop_size=10, n_iter=5), thompson_config=ThompsonConfig()

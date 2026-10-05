@@ -1,14 +1,30 @@
 # SPDX-License-Identifier: MIT
-"""Bayesian Confidence Propagation (McGaugh 2004)."""
+"""Bayesian Confidence Propagation (McGaugh 2004) — no palace dependency."""
 
 from __future__ import annotations
 
-from collections import defaultdict
 from dataclasses import dataclass
-from typing import Optional
+from typing import Protocol
 
-from dxrk.memory.palace import DxrkMemory
-from dxrk.memory.scoring import r_fsrs
+
+class DrawerLike(Protocol):
+    """Minimal drawer protocol for confidence propagation."""
+
+    id: str
+    metadata: dict
+    quarantined: bool
+
+
+class DrawerIterator(Protocol):
+    """Protocol for iterating drawers."""
+
+    def __call__(self) -> list[DrawerLike]: ...
+
+
+class DrawerGetter(Protocol):
+    """Protocol for getting a single drawer by ID."""
+
+    def __call__(self, drawer_id: str) -> DrawerLike | None: ...
 
 
 @dataclass(frozen=True)
@@ -21,7 +37,8 @@ class ConfidencePropagation:
 
 
 def find_related_drawers(
-    palace: DxrkMemory,
+    get_drawer: DrawerGetter,
+    iter_drawers: DrawerIterator,
     drawer_id: str,
     max_related: int = 10,
     min_similarity: float = 0.3,
@@ -32,22 +49,28 @@ def find_related_drawers(
     Returns: list of (drawer_id, similarity) sorted by similarity desc.
     """
     # Get the source drawer to find its wing/room
-    source = palace.get_drawer(drawer_id)
-    if not source or not source.get("metadata"):
+    source = get_drawer(drawer_id)
+    if not source:
         return []
 
-    wing = source.get("metadata", {}).get("wing", "")
-    room = source.get("metadata", {}).get("room", "")
+    def _get(d, key, default=None):
+        if hasattr(d, key):
+            return getattr(d, key)
+        return d.get(key, default)
+
+    source_meta = _get(source, "metadata", {})
+    wing = source_meta.get("wing", "")
+    room = source_meta.get("room", "")
 
     # Find drawers in same wing/room (structural similarity)
     related = []
-    for other in palace.iter_drawers():
-        if other["id"] == drawer_id:
+    for other in iter_drawers():
+        if _get(other, "id") == drawer_id:
             continue
-        if other.get("quarantined"):
+        if _get(other, "quarantined"):
             continue
 
-        other_meta = other.get("metadata", {})
+        other_meta = _get(other, "metadata", {})
         # Wing match
         sim = 0.0
         if other_meta.get("wing") == wing:
@@ -55,11 +78,10 @@ def find_related_drawers(
         if other_meta.get("room") == room:
             sim += 0.3
 
-        # Embedding similarity if available
-        # Note: would need access to embeddings; simplified here
+        # Embedding similarity if available (would need embeddings access)
 
         if sim >= min_similarity:
-            related.append((other["id"], sim))
+            related.append((_get(other, "id"), sim))
 
     # Sort by similarity desc, take top
     related.sort(key=lambda x: -x[1])
@@ -67,7 +89,8 @@ def find_related_drawers(
 
 
 def propagate_confidence(
-    palace: DxrkMemory,
+    get_drawer: DrawerGetter,
+    iter_drawers: DrawerIterator,
     drawer_id: str,
     base_confidence: float,
     max_depth: int = 2,
@@ -81,7 +104,8 @@ def propagate_confidence(
     confidence(d) = base_conf(d) * Π(1 + sim * related_conf * decay) for depth levels
 
     Args:
-        palace: DxrkMemory instance
+        get_drawer: callable(drawer_id) -> drawer or None
+        iter_drawers: callable() -> list of drawers
         drawer_id: starting drawer
         base_confidence: confidence of source drawer
         max_depth: max propagation depth
@@ -108,7 +132,7 @@ def propagate_confidence(
             continue
 
         # Find related drawers
-        related = find_related_drawers(palace, current_id, min_similarity=min_similarity)
+        related = find_related_drawers(get_drawer, iter_drawers, current_id, min_similarity=min_similarity)
         related_count += len(related)
 
         for rel_id, sim in related:
@@ -133,14 +157,18 @@ def propagate_confidence(
     )
 
 
-def adjusted_uncertainty(rd: float, propagated_confidence: float) -> float:
+def adjusted_uncertainty(rd: float, t_days: float, confidence: float) -> float:
     """
-    Adjust uncertainty (rd) based on propagated confidence.
+    Adjust uncertainty (rd) based on time and propagated confidence.
 
     Higher confidence → lower uncertainty (more certain).
-    rd_effective = rd * (1 - confidence)
+    Time drift: rd_eff = min(350, sqrt(rd^2 + 4*t))
+    Then: rd_effective = rd_eff * (1 - confidence)
     """
-    return rd * (1.0 - propagated_confidence)
+    # Time drift
+    rd_eff = min(350.0, (rd * rd + 4.0 * t_days) ** 0.5)
+    # Confidence adjustment
+    return rd_eff * (1.0 - confidence)
 
 
 def confidence_from_retrievability(meta: dict) -> float:

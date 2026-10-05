@@ -6,9 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Optional
 
-from .migrate import ensure_spine_defaults
 from .scoring import r_fsrs
 
 
@@ -132,7 +130,7 @@ def classify_reason(pe_avg: float, staleness: float, contradiction: int) -> str:
     return "near_dup"
 
 
-def age_days(filed_at: Optional[str]) -> float:
+def age_days(filed_at: str | None) -> float:
     """Days since filed_at."""
     if not filed_at:
         return 0.0
@@ -169,7 +167,7 @@ def consolidate_candidate(palace, candidate: SleepCandidate) -> dict:
         return {"status": "deferred_rem"}
 
     # Update stability with PE coupling
-    from .scoring import update_success, update_lapse
+    from .scoring import update_lapse, update_success
 
     # Simulate a "success" replay with predicted_r from retrievability
     predicted_r = r_fsrs(age_days(meta.get("accessed_at") or meta.get("filed_at")), meta.get("S", 1.0))

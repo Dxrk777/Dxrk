@@ -4,11 +4,10 @@
 from __future__ import annotations
 
 from dxrk.memory.triplecopy import (
-    TripleCopy,
     create_triple_copy,
-    triple_copy_retrievability,
     effective_retrievability,
     get_copy_ages,
+    triple_copy_retrievability,
 )
 
 # FSRS-4.5 constants (inline to avoid import issues)

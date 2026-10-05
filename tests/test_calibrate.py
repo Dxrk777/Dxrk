@@ -7,12 +7,12 @@ from pathlib import Path
 from unittest.mock import Mock
 
 from dxrk.memory.calibrate import (
+    DEFAULT_PARAMS,
     CalibrationParams,
-    load_calibration,
-    save_calibration,
     get_calibration_params,
     list_calibrated_wings,
-    DEFAULT_PARAMS,
+    load_calibration,
+    save_calibration,
 )
 from dxrk.memory.qieo import QIEOConfig
 from dxrk.memory.thompson import ThompsonConfig

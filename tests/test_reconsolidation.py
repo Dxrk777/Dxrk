@@ -3,16 +3,15 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from dxrk.memory.reconsolidation import (
     ReconsolidationState,
+    get_labile_remaining,
     is_labile,
     mark_labile,
     reconsolidate,
     reconsolidate_with_fsrs,
-    get_labile_remaining,
-    LABILE_WINDOW_HOURS,
 )
 
 
@@ -24,7 +23,7 @@ class TestReconsolidationEngine:
         assert new_state.labile_until != ""
         # Should be approximately 6 hours from now
         labile_until = datetime.fromisoformat(new_state.labile_until.replace("Z", "+00:00"))
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         diff_hours = (labile_until - now).total_seconds() / 3600.0
         assert 5.9 < diff_hours < 6.1
 
@@ -43,7 +42,7 @@ class TestReconsolidationEngine:
         """Drawer not labile after window expires."""
         state = ReconsolidationState()
         # Set to 7 hours ago
-        past = datetime.now(timezone.utc) - timedelta(hours=7)
+        past = datetime.now(UTC) - timedelta(hours=7)
         state = ReconsolidationState(labile_until=past.isoformat())
         assert is_labile(state) is False
 
@@ -75,7 +74,7 @@ class TestReconsolidationEngine:
         """Expired window without reconsolidation decays stability."""
         state = ReconsolidationState()
         # Set to 7 hours ago (expired)
-        past = datetime.now(timezone.utc) - timedelta(hours=7)
+        past = datetime.now(UTC) - timedelta(hours=7)
         state = ReconsolidationState(labile_until=past.isoformat())
         new_state, s, d, rd = reconsolidate(state, stability=10.0, difficulty=5.0, rd=100.0, outcome=0.8)
         assert s < 10.0  # decayed

@@ -3,26 +3,24 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+import uuid
 from pathlib import Path
 from unittest.mock import Mock
-import uuid
 
 from dxrk.memory.eval_harness import (
+    EvalHarness,
     EvalQuery,
     EvalResult,
-    EvalReport,
-    load_eval_dataset,
-    save_eval_dataset,
-    generate_synthetic_queries,
-    recall_at_k,
-    mrr_score,
-    ndcg_score,
-    evaluate_query,
-    evaluate_dataset,
     aggregate_results,
     compute_ece,
-    EvalHarness,
+    evaluate_dataset,
+    evaluate_query,
+    generate_synthetic_queries,
+    load_eval_dataset,
+    mrr_score,
+    ndcg_score,
+    recall_at_k,
+    save_eval_dataset,
 )
 
 
@@ -229,8 +227,9 @@ class TestEvalIntegration:
 
     def test_eval_harness_run(self, tmp_path: Path) -> None:
         """Full harness run with mock palace."""
-        from dxrk.memory.palace import DxrkMemory
         import uuid
+
+        from dxrk.memory.palace import DxrkMemory
 
         dm = DxrkMemory(str(tmp_path / "palace"))
         dm.init()
@@ -252,8 +251,9 @@ class TestEvalIntegration:
 
     def test_eval_harness_synthetic(self, tmp_path: Path) -> None:
         """Harness with synthetic queries."""
-        from dxrk.memory.palace import DxrkMemory
         import uuid
+
+        from dxrk.memory.palace import DxrkMemory
 
         dm = DxrkMemory(str(tmp_path / "palace"))
         dm.init()

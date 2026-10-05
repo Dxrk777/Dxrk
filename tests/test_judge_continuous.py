@@ -3,20 +3,16 @@
 
 from __future__ import annotations
 
-import time
-from datetime import UTC, datetime
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 from dxrk.memory.judge_continuous import (
     ContinuousJudge,
     JudgeState,
     Verdict,
+    _judge_path,
     load_judge_state,
     save_judge_state,
-    load_baseline_report,
-    _now_iso,
-    _judge_path,
 )
 
 
@@ -87,9 +83,8 @@ class TestVerdict:
 class TestContinuousJudge:
     def test_judge_state_persist(self, tmp_path: Path) -> None:
         """Judge state persists correctly."""
-        from dxrk.memory.palace import DxrkMemory
         from dxrk.memory.eval_harness import EvalHarness
-        from dxrk.memory.judge_continuous import ContinuousJudge
+        from dxrk.memory.palace import DxrkMemory
 
         dm = DxrkMemory(str(tmp_path / "palace"))
         dm.init()
@@ -111,9 +106,8 @@ class TestContinuousJudge:
 
     def test_judge_runs_cycle(self, tmp_path: Path) -> None:
         """Judge runs a verification cycle."""
-        from dxrk.memory.palace import DxrkMemory
         from dxrk.memory.eval_harness import EvalHarness
-        from dxrk.memory.judge_continuous import ContinuousJudge
+        from dxrk.memory.palace import DxrkMemory
 
         dm = DxrkMemory(str(tmp_path / "palace"))
         dm.init()
@@ -132,9 +126,8 @@ class TestContinuousJudge:
 
     def test_judge_status(self, tmp_path: Path) -> None:
         """Judge status includes all relevant info."""
-        from dxrk.memory.palace import DxrkMemory
         from dxrk.memory.eval_harness import EvalHarness
-        from dxrk.memory.judge_continuous import ContinuousJudge
+        from dxrk.memory.palace import DxrkMemory
 
         dm = DxrkMemory(str(tmp_path / "palace"))
         dm.init()
@@ -161,12 +154,11 @@ class TestContinuousJudge:
 class TestJudgeRegressionDetection:
     def test_detects_critical_recall_regression(self, tmp_path: Path) -> None:
         """Detects critical recall regression via _compare_reports."""
-        from dxrk.memory.judge_continuous import ContinuousJudge, Verdict
-        from dxrk.memory.eval_harness import EvalReport
-        from dxrk.memory.judge_continuous import ContinuousJudge
-
         # Create a judge with mock harness
         from unittest.mock import Mock
+
+        from dxrk.memory.eval_harness import EvalReport
+        from dxrk.memory.judge_continuous import ContinuousJudge
 
         mock_harness = Mock()
 
@@ -209,10 +201,9 @@ class TestJudgeRegressionDetection:
 class TestAutoRollback:
     def test_auto_rollback_on_critical(self, tmp_path: Path) -> None:
         """Auto-rollback triggers on critical regression."""
-        from dxrk.memory.judge_continuous import ContinuousJudge
+        from dxrk.memory.calibrate_v2 import CalibrationParams, save_calibration
         from dxrk.memory.eval_harness import EvalHarness
         from dxrk.memory.palace import DxrkMemory
-        from dxrk.memory.calibrate_v2 import load_calibration, save_calibration, CalibrationParams
 
         dm = DxrkMemory(str(tmp_path / "palace"))
         dm.init()
@@ -227,11 +218,11 @@ class TestAutoRollback:
                 CalibrationParams(tenant="", wing="w", a=1.5, b=0.2, c=1.0, pe_lambda=0.1, score=0.8),
             )
 
-            harness = EvalHarness(dm, tmp_path / "eval")
-            judge = ContinuousJudge(tmp_path / "palace", Mock(), interval_hours=1, auto_rollback=True)
+            EvalHarness(dm, tmp_path / "eval")
+            ContinuousJudge(tmp_path / "palace", Mock(), interval_hours=1, auto_rollback=True)
 
             # Manually trigger rollback logic
-            from dxrk.memory.calibrate_v2 import get_calibration_chain, merge_calibrations
+            from dxrk.memory.calibrate_v2 import get_calibration_chain
 
             chain = get_calibration_chain(tmp_path / "palace", "", "w")
             assert len(chain) >= 1
