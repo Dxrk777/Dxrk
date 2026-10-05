@@ -177,11 +177,12 @@ def hybrid_search(
 
     # extract first query outer list
     try:
+        ids = drawer_results.ids[0] if drawer_results.ids else []
         docs = drawer_results.documents[0] if drawer_results.documents else []
         metas = drawer_results.metadatas[0] if drawer_results.metadatas else []
         dists = drawer_results.distances[0] if drawer_results.distances else []
     except (IndexError, AttributeError):
-        docs, metas, dists = [], [], []
+        ids, docs, metas, dists = [], [], [], []
 
     # closet boost lookup
     boost_by_source: dict[str, tuple[int, float, str]] = {}
@@ -211,7 +212,8 @@ def hybrid_search(
             pass
 
     scored: list[dict[str, object]] = []
-    for doc, meta, dist in zip(docs, metas, dists):
+    for i, (doc, meta, dist) in enumerate(zip(docs, metas, dists)):
+        drawer_id = ids[i] if i < len(ids) else ""
         meta = meta or {}
         if not isinstance(meta, dict):
             meta = {}
@@ -240,6 +242,7 @@ def hybrid_search(
         eff = max(0.0, min(2.0, dist_f - boost))
         scored.append(
             {
+                "id": drawer_id,
                 "text": doc_str,
                 "wing": str(meta.get("wing", "unknown")),
                 "room": str(meta.get("room", "unknown")),
