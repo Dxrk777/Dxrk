@@ -12,7 +12,7 @@ import asyncio
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import ClassVar, Literal
+from typing import Any, ClassVar, Literal
 
 from textual import events
 from textual.app import ComposeResult
@@ -58,13 +58,16 @@ def _get_tenant_details(tenant_id: str) -> TenantInfo:
     is_current = tenant_id == getattr(get_ctx(), "tenant_id", "")
 
     # Get role
+    role: Literal["admin", "dev", "readonly"] = "readonly"
     try:
         from dxrk.security.rbac import TenantRoleResolver
 
         resolver = TenantRoleResolver(tenant_id)
-        role = resolver.resolve("")
+        resolved = resolver.resolve("")
+        if resolved in ("admin", "dev", "readonly"):
+            role = resolved  # type: ignore[assignment]
     except Exception:
-        role = "readonly"
+        pass
 
     # Get path
     try:
@@ -655,7 +658,7 @@ class TenantSwitcherScreen(ModalScreen[None]):
     def on_mount(self) -> None:
         self._load_tenants()
         try:
-            self._refresh_timer = self.set_interval(30, self._auto_refresh)
+            self._refresh_timer = self.set_interval(30, self._auto_refresh_tenants)
         except Exception:
             self._refresh_timer = None
         self.call_later(self._focus_list)
@@ -680,8 +683,8 @@ class TenantSwitcherScreen(ModalScreen[None]):
     def _load_tenants(self) -> None:
         """Load tenants (ids) plus a details cache for rich cards."""
         tenants = _get_tenants()
-        self._tenants: list[str] = list(tenants)
-        self._details: dict[str, dict] = {}
+        self._tenants = list(tenants)
+        self._details = {}
         for tid in tenants:
             try:
                 info = _get_tenant_details(tid)
@@ -698,9 +701,10 @@ class TenantSwitcherScreen(ModalScreen[None]):
 
         self._filter_tenants()
 
-    def _details_for(self, tenant_id: str) -> dict:
+    def _details_for(self, tenant_id: str) -> dict[str, Any]:
         """Return cached details, fetching on demand."""
-        details = getattr(self, "_details", {}).get(tenant_id)
+        cache: dict[str, dict[str, Any]] = getattr(self, "_details", {})
+        details: dict[str, Any] | None = cache.get(tenant_id)
         if details is not None:
             return details
         try:
@@ -736,7 +740,7 @@ class TenantSwitcherScreen(ModalScreen[None]):
 
     def _apply_filter(self) -> None:
         if not self.search_query:
-            self._filtered: list[str] = self._tenants[:]
+            self._filtered = self._tenants[:]
         else:
             query = self.search_query.lower()
             matches: list[str] = []
@@ -890,7 +894,7 @@ class TenantSwitcherScreen(ModalScreen[None]):
         except (NoMatches, Exception):
             pass
 
-    def _auto_refresh(self) -> None:
+    def _auto_refresh_tenants(self) -> None:
         self._load_tenants()
 
     def action_refresh(self) -> None:
@@ -901,8 +905,7 @@ class TenantSwitcherScreen(ModalScreen[None]):
         try:
             inp = self.query_one("#search-input", Input)
             inp.focus()
-            inp.select_all()
-        except NoMatches:
+        except (NoMatches, Exception):
             pass
 
     def action_cursor_up(self) -> None:
@@ -945,17 +948,20 @@ class TenantSwitcherScreen(ModalScreen[None]):
 
     def _do_switch_sync(self, tid: str) -> None:
         """Perform the tenant switch synchronously."""
+        _tenant_root: Any
         try:
-            from dxrk.tenant.migration import tenant_root
+            from dxrk.tenant.migration import tenant_root as _imported_root
+
+            _tenant_root = _imported_root
         except Exception:
-            tenant_root = None
+            _tenant_root = None
 
         ctx = get_ctx()
         ctx.tenant_id = tid
 
-        if tenant_root is not None:
+        if _tenant_root is not None:
             try:
-                p = tenant_root(tid)
+                p = _tenant_root(tid)
                 ctx.tenant_path = str(p)
             except Exception:
                 ctx.tenant_path = tid
@@ -1015,12 +1021,15 @@ class TenantSwitcherScreen(ModalScreen[None]):
             return
 
         # Validate
+        _validate_id: Any
         try:
-            from dxrk.security.jwt import validate_id
-        except Exception:
-            validate_id = None
+            from dxrk.security.jwt import validate_id as _imported_validate
 
-        if validate_id is not None and not validate_id(tid):
+            _validate_id = _imported_validate
+        except Exception:
+            _validate_id = None
+
+        if _validate_id is not None and not _validate_id(tid):
             inp.value = ""
             inp.placeholder = f"id no válido {tid!r} — usa [a-zA-Z0-9_-] 1..256"
             return
@@ -1067,11 +1076,13 @@ class TenantSwitcherScreen(ModalScreen[None]):
             self.action_toggle_panel()
 
     def on_focus(self, event: events.Focus) -> None:
-        if self.show_help and event.widget.id in ("search-input", "tenant-create-input"):
+        widget = getattr(event, "widget", None)
+        widget_id = getattr(widget, "id", None)
+        if self.show_help and widget_id in ("search-input", "tenant-create-input"):
             self.show_help = False
             try:
                 self.query_one("#shortcut-help", ShortcutHelp).add_class("hidden")
-            except NoMatches:
+            except (NoMatches, Exception):
                 pass
 
     def action_back(self) -> None:
