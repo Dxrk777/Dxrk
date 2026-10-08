@@ -1,0 +1,1730 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Dxrk — local-first configurator for AI coding-agent ecosystems (14 agents, memory, SDD, MCP)">
+      
+      
+      
+        <link rel="canonical" href="https://dxrk777.github.io/Dxrk/1.4/memory/">
+      
+      
+        <link rel="prev" href="../architecture/">
+      
+      
+        <link rel="next" href="../enterprise/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/dxrk-icon.jpg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>DxrkMemory 2.0 - Dxrk</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  
+<meta property="og:type" content="website" />
+<meta property="og:title" content="DxrkMemory 2.0 - Dxrk" />
+<meta property="og:description" content="Dxrk — local-first configurator for AI coding-agent ecosystems (14 agents, memory, SDD, MCP)" />
+<meta property="og:image" content="https://dxrk777.github.io/Dxrk/1.4/assets/images/social/memory.png" />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:url" content="https://dxrk777.github.io/Dxrk/1.4/memory/" />
+<meta property="twitter:card" content="summary_large_image" />
+<meta property="twitter:title" content="DxrkMemory 2.0 - Dxrk" />
+<meta property="twitter:description" content="Dxrk — local-first configurator for AI coding-agent ecosystems (14 agents, memory, SDD, MCP)" />
+<meta property="twitter:image" content="https://dxrk777.github.io/Dxrk/1.4/assets/images/social/memory.png" />
+</head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="purple">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#neurociencia-computacional-fase-1-arquitectura-inspirada-en-zenbrain" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Dxrk" class="md-header__button md-logo" aria-label="Dxrk" data-md-component="logo">
+      
+  <img src="../assets/dxrk-icon.jpg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Dxrk
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              DxrkMemory 2.0
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Dxrk777/Dxrk" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Dxrk" class="md-nav__button md-logo" aria-label="Dxrk" data-md-component="logo">
+      
+  <img src="../assets/dxrk-icon.jpg" alt="logo">
+
+    </a>
+    Dxrk
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Dxrk777/Dxrk" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inicio
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uso
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial (10 min)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../demo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Demo (60 s)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparativa
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../intended-usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uso previsto
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agentes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Componentes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arquitectura
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DxrkMemory 2.0
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DxrkMemory 2.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#neurociencia-computacional-fase-1-arquitectura-inspirada-en-zenbrain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Neurociencia Computacional Fase 1 — arquitectura inspirada en ZenBrain
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Neurociencia Computacional Fase 1 — arquitectura inspirada en ZenBrain">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11-nuevos-modulos-dxrkmemory" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11 nuevos módulos (dxrk/memory/)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#nuevas-claves-en-metadata-del-drawer-schema_version3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Nuevas claves en metadata del drawer (schema_version=3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sidecars-nuevos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sidecars nuevos
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#flujo-integrado" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flujo integrado
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cooperative-masking-zenbrain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cooperative Masking (ZenBrain)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tests-nuevos-fase-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tests nuevos (Fase 1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cli-fase-1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI Fase 1
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mcp-tools-fase-1-requieren-cap-memorymaintain" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MCP Tools Fase 1 (requieren cap memory.maintain)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#riesgos-mitigados" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Riesgos mitigados
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#-" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ---
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fase-2-eval-metacognicion-multi-tenant-produccion-y-judge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fase 2 — Eval, Metacognición, Multi-tenant, Producción y Judge
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Fase 2 — Eval, Metacognición, Multi-tenant, Producción y Judge">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#modulos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Módulos
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cli-fase-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI Fase 2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mcp-tools-fase-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MCP Tools Fase 2
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tests-fase-2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tests Fase 2
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../enterprise/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Enterprise
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tenants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rbac/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RBAC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migración a multi-tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sesiones
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../migration-0.5-to-1.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migración 0.5 → 1.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuración
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/ADR-002-memory-separation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-002 Separación Memoria
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/ADR-003-hybrid-vs-stdlib/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-003 Hybrid vs Stdlib
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/ADR-004-config-unify/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-004 Unificación Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MIGRATION_3.3.5_3.7.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migración 3.3.5 → 3.7.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dx/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DX Top 1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../platforms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plataformas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v1.3.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release v1.3.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<p>Verificación y plan de migración completos en <a href="../adr/ADR-002-memory-separation/">ADR-002</a> — ningún <code>from dxrk.memory</code> en <code>rag</code>, ningún <code>from dxrk.rag</code> en <code>memory</code> salvo <code>Protocol</code> <code>rag: object</code>.</p>
+<hr />
+<h2 id="neurociencia-computacional-fase-1-arquitectura-inspirada-en-zenbrain">Neurociencia Computacional Fase 1 — arquitectura inspirada en ZenBrain</h2>
+<p>Fase 1 implementa una arquitectura de memoria basada en neurociencia computacional real
+(papers arXiv 2024-2025: ZenBrain, Two-Factor Synaptic, vmPFC-FSRS, Sleep, Reconsolidation,
+Metacognition, QIEO, Thompson Sampling, Stress/Cooperative Masking).</p>
+<h3 id="11-nuevos-modulos-dxrkmemory">11 nuevos módulos (<code>dxrk/memory/</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Módulo</th>
+<th>Responsabilidad</th>
+<th>Paper base</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>17</td>
+<td><code>synapse.py</code></td>
+<td>Two-Factor STDP con neuromodulación (LTP/LTD + DA)</td>
+<td>Iatropoulos 2025, Zenke 2017</td>
+</tr>
+<tr>
+<td>18</td>
+<td><code>neuromod.py</code></td>
+<td>4 canales DA/NE/5HT/ACh + sidecar <code>.neuromod_state.json</code></td>
+<td>Dayan &amp; Huys 2009</td>
+</tr>
+<tr>
+<td>19</td>
+<td><code>triplecopy.py</code></td>
+<td>3 copias con decaimiento divergente (fast/medium/deep)</td>
+<td>Schapiro 2017, Kumaran 2016</td>
+</tr>
+<tr>
+<td>20</td>
+<td><code>reconsolidation.py</code></td>
+<td>Ventana lábil 6h al recall (fortalece/debilita/decay)</td>
+<td>Nader 2000, Nader &amp; Hardt 2009</td>
+</tr>
+<tr>
+<td>21</td>
+<td><code>metacog.py</code></td>
+<td>ECE + corrección sesgo confianza (Fleming &amp; Dolan 2012)</td>
+<td>Fleming &amp; Dolan 2012</td>
+</tr>
+<tr>
+<td>22</td>
+<td><code>scoring.py</code> (ext)</td>
+<td>Prediction-Error coupling vmPFC-FSRS (Zou 2025)</td>
+<td>Zou 2025</td>
+</tr>
+<tr>
+<td>23</td>
+<td><code>confidence.py</code></td>
+<td>Propagación bayesiana confianza (McGaugh 2004)</td>
+<td>McGaugh 2004</td>
+</tr>
+<tr>
+<td>24</td>
+<td><code>stress.py</code></td>
+<td>Detección estrés + cooperative masking (ZenBrain)</td>
+<td>ZenBrain 2604.23878</td>
+</tr>
+<tr>
+<td>25</td>
+<td><code>sleep.py</code></td>
+<td>Sim-Selection sleep (NREM/REM, Lee &amp; Jung 2025)</td>
+<td>Lee &amp; Jung 2025</td>
+</tr>
+<tr>
+<td>26</td>
+<td><code>qieo.py</code></td>
+<td>Quantum-Inspired Evolutionary Optimization</td>
+<td>QIEO 2609.30938</td>
+</tr>
+<tr>
+<td>27</td>
+<td><code>thompson.py</code></td>
+<td>Thompson Sampling active learning (ALMAB-DC)</td>
+<td>ALMAB-DC 2603.21180</td>
+</tr>
+<tr>
+<td>28</td>
+<td><code>calibrate.py</code></td>
+<td>Integración QIEO + Thompson para calibrar FSRS por wing</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h3 id="nuevas-claves-en-metadata-del-drawer-schema_version3">Nuevas claves en metadata del drawer (schema_version=3)</h3>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+    <span class="c1"># ... Fase 0 keys (S, D, rd, score_ledger, etc.)</span>
+    <span class="s2">&quot;S_fast&quot;</span><span class="p">:</span> <span class="mf">2.5</span><span class="p">,</span>           <span class="c1"># S/4 — copia rápida</span>
+    <span class="s2">&quot;S_deep&quot;</span><span class="p">:</span> <span class="mf">40.0</span><span class="p">,</span>          <span class="c1"># S*4 — copia profunda</span>
+    <span class="s2">&quot;synapse_weight&quot;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>   <span class="c1"># peso sináptico [0,1]</span>
+    <span class="s2">&quot;labile_until&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>      <span class="c1"># ISO — ventana lábil 6h</span>
+    <span class="s2">&quot;confidence&quot;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>       <span class="c1"># confianza propagada</span>
+<span class="p">}</span>
+</code></pre></div>
+<h3 id="sidecars-nuevos">Sidecars nuevos</h3>
+<ul>
+<li><code>.neuromod_state.json</code> — estado global DA/NE/5HT/ACh</li>
+<li><code>.sleep_state.json</code> — estado sleep engine</li>
+<li><code>.stress_state.json</code> — nivel estrés + <code>defenses_active</code></li>
+<li><code>.calibration/{wing}.json</code> — parámetros FSRS calibrados por wing</li>
+</ul>
+<h3 id="flujo-integrado">Flujo integrado</h3>
+<div class="highlight"><pre><span></span><code>USUARIO ACCEDE (get_drawer):
+  1. RDU scoring (Fase 0)
+  2. mark_labile(drawer)              ← Reconsolidation
+  3. encode_mode(neuromod)            ← ACh up
+  4. stdp_update(pre, post, dt)       ← Two-Factor
+  5. TripleCopy update (S_fast/S_deep)← 3 copias
+  6. confidence = propagate()          ← Bayesian
+  7. return drawer + adjusted_conf
+
+JUEZ EXTERNO (judge.verify_change):
+  1. Eval harness recall@k
+  2. reward(neuromod) si mejora        ← DA
+  3. alert(neuromod) si regresa        ← NE
+  4. record_judgment(metacog)          ← ECE
+
+SLEEP CONSOLIDATION (sleep.cycle):
+  1. stress = compute_system_stress()  ← Cooperative masking
+  2. consolidate_mode(neuromod)        ← 5HT up, ACh down
+  3. candidates = select_sleep()       ← Sim-Selection por PE
+  4. NREM: consolidate 70% (replay + PE)
+  5. REM: reorganize 30% (merge near-dups)
+  6. reconsolidate(labile drawers)     ← 6h window
+
+CALIBRACIÓN (calibrate.wing):
+  1. candidates = thompson_select()    ← Active learning
+  2. replay outcomes para candidatos
+  3. qieo_optimize(recall@k)           ← QIEO
+  4. Persistir params en .calibration/
+  5. metacog.update_calibration()
+</code></pre></div>
+<h3 id="cooperative-masking-zenbrain">Cooperative Masking (ZenBrain)</h3>
+<p>Mecanismos neuro se activan <strong>solo bajo estrés</strong> (densidad + 1/S + quarantine rate &gt; 0.6):
+- TripleCopy completo (S_deep protege esquema)
+- Reconsolidation window 2h (consolidar rápido)
+- Sleep threshold bajo (consolidar más)
+- NE baseline elevada</p>
+<h3 id="tests-nuevos-fase-1">Tests nuevos (Fase 1)</h3>
+<table>
+<thead>
+<tr>
+<th>Suite</th>
+<th>Tests</th>
+<th>Cobertura</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>test_synapse.py</code></td>
+<td>12</td>
+<td>STDP LTP/LTD, neuromod, clamping</td>
+</tr>
+<tr>
+<td><code>test_neuromod.py</code></td>
+<td>12</td>
+<td>4 canales, persist 0o600, learning rate</td>
+</tr>
+<tr>
+<td><code>test_triplecopy.py</code></td>
+<td>10</td>
+<td>3 copias, max retrievability, cola pesada</td>
+</tr>
+<tr>
+<td><code>test_reconsolidation.py</code></td>
+<td>10</td>
+<td>labile 6h, fortalece/debilita, decay</td>
+</tr>
+<tr>
+<td><code>test_metacog.py</code></td>
+<td>10</td>
+<td>ECE, bias tracking, confidence adj</td>
+</tr>
+<tr>
+<td><code>test_scoring_pe.py</code></td>
+<td>8</td>
+<td>PE clamp, modulación S, RD shrink</td>
+</tr>
+<tr>
+<td><code>test_confidence.py</code></td>
+<td>10</td>
+<td>propagación BFS, uncertainty adj</td>
+</tr>
+<tr>
+<td><code>test_stress.py</code></td>
+<td>12</td>
+<td>densidad, hystereses 0.6/0.4, defenses</td>
+</tr>
+<tr>
+<td><code>test_sleep.py</code></td>
+<td>18</td>
+<td>NREM/REM, Sim-Selection, merge, cycle</td>
+</tr>
+<tr>
+<td><code>test_qieo.py</code></td>
+<td>9</td>
+<td>qubit rotate, optimiza 1-2 params, bounds</td>
+</tr>
+<tr>
+<td><code>test_thompson.py</code></td>
+<td>10</td>
+<td>Beta sample, select n, explore/exploit</td>
+</tr>
+<tr>
+<td><code>test_calibrate.py</code></td>
+<td>10</td>
+<td>save/load, integrate QIEO+Thompson</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Total Fase 1:</strong> ~140 tests nuevos, todos verdes.</p>
+<h3 id="cli-fase-1">CLI Fase 1</h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># Calibración</span>
+dxrk<span class="w"> </span>memory<span class="w"> </span>calibrate<span class="w"> </span>--wing<span class="w"> </span>dxrk<span class="w"> </span>--samples<span class="w"> </span><span class="m">30</span><span class="w"> </span>--iter<span class="w"> </span><span class="m">50</span>
+
+<span class="c1"># Sleep consolidation</span>
+dxrk<span class="w"> </span>memory<span class="w"> </span>sleep<span class="w"> </span>--once<span class="w"> </span>--limit<span class="w"> </span><span class="m">50</span>
+dxrk<span class="w"> </span>memory<span class="w"> </span>sleep<span class="w"> </span>--daemon<span class="w"> </span>--interval<span class="w"> </span><span class="m">3600</span>
+
+<span class="c1"># Stress &amp; defenses</span>
+dxrk<span class="w"> </span>memory<span class="w"> </span>stress<span class="w"> </span>--check
+dxrk<span class="w"> </span>memory<span class="w"> </span>stress<span class="w"> </span>--defenses-status
+
+<span class="c1"># QIEO standalone</span>
+dxrk<span class="w"> </span>memory<span class="w"> </span>qieo<span class="w"> </span>--objective<span class="w"> </span>recall<span class="w"> </span>--bounds<span class="w"> </span><span class="s2">&quot;0.5,3.0 0.05,0.5 0.5,2.0 0.0,0.5&quot;</span>
+
+<span class="c1"># Ver estado</span>
+dxrk<span class="w"> </span>memory<span class="w"> </span>status<span class="w"> </span>--wing<span class="w"> </span>dxrk
+</code></pre></div>
+<h3 id="mcp-tools-fase-1-requieren-cap-memorymaintain">MCP Tools Fase 1 (requieren cap <code>memory.maintain</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Tipo</th>
+<th>Input</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dxrk_memory_calibrate</code></td>
+<td>write</td>
+<td><code>wing</code>, <code>samples</code>, <code>iter</code></td>
+</tr>
+<tr>
+<td><code>dxrk_memory_sleep</code></td>
+<td>write</td>
+<td><code>once</code>/<code>daemon</code>, <code>limit</code></td>
+</tr>
+<tr>
+<td><code>dxrk_memory_stress</code></td>
+<td>read</td>
+<td><code>wing</code></td>
+</tr>
+<tr>
+<td><code>dxrk_memory_calibration_get</code></td>
+<td>read</td>
+<td><code>wing</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="riesgos-mitigados">Riesgos mitigados</h3>
+<table>
+<thead>
+<tr>
+<th>Riesgo</th>
+<th>Mitigación</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>QIEO no converge</td>
+<td>Fallback random search si no mejora en 20 iter</td>
+</tr>
+<tr>
+<td>TripleCopy duplica metadata</td>
+<td>S_fast/S_deep lazy compute desde S</td>
+</tr>
+<tr>
+<td>Reconsolidation decay no deseado</td>
+<td>Solo decay si labile &gt; 6h SIN reconsolidación</td>
+</tr>
+<tr>
+<td>Stress false positives</td>
+<td>Histeresis 0.6/0.4</td>
+</tr>
+<tr>
+<td>PE amplifica ruido</td>
+<td>λ=0.1 pequeño, clamp PE [-0.5, 0.5]</td>
+</tr>
+<tr>
+<td>Metacog ECE con pocos datos</td>
+<td>ECE solo con n&gt;30, sino prior</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><strong>Verificación Fase 1 completa:</strong></p>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_synapse.py<span class="w"> </span>tests/test_neuromod.py<span class="w"> </span>tests/test_triplecopy.py<span class="w"> </span><span class="se">\</span>
+<span class="w">            </span>tests/test_reconsolidation.py<span class="w"> </span>tests/test_metacog.py<span class="w"> </span>tests/test_scoring_pe.py<span class="w"> </span><span class="se">\</span>
+<span class="w">            </span>tests/test_confidence.py<span class="w"> </span>tests/test_stress.py<span class="w"> </span>tests/test_sleep.py<span class="w"> </span><span class="se">\</span>
+<span class="w">            </span>tests/test_qieo.py<span class="w"> </span>tests/test_thompson.py<span class="w"> </span>tests/test_calibrate.py<span class="w"> </span>-v
+<span class="c1"># 140 tests passed</span>
+</code></pre></div>
+<h2 id="-">---</h2>
+<h1 id="fase-2-eval-metacognicion-multi-tenant-produccion-y-judge">Fase 2 — Eval, Metacognición, Multi-tenant, Producción y Judge</h1>
+<p>Segunda oleada de módulos (<code>eval_harness</code>, <code>metacog_v2</code>, <code>calibrate_v2</code>,
+<code>production</code>, <code>judge_continuous</code>), más integración MCP (11 tools) y CLI
+(13 subcomandos). Todo stdlib-only, con RBAC por op.</p>
+<h2 id="modulos">Módulos</h2>
+<table>
+<thead>
+<tr>
+<th>Módulo</th>
+<th>Qué hace</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>eval_harness.py</code></td>
+<td>recall@k, MRR, NDCG, ECE + queries sintéticas para bootstrap</td>
+</tr>
+<tr>
+<td><code>metacog_v2.py</code></td>
+<td>temperature scaling, isotonic regression, bias detection; wrapper <code>MetacognitionV2</code> (<code>predict</code> / <code>fit_calibration</code>)</td>
+</tr>
+<tr>
+<td><code>calibrate_v2.py</code></td>
+<td>calibración por tenant+wing con fallback (tenant+wing → global → default)</td>
+</tr>
+<tr>
+<td><code>production.py</code></td>
+<td>SLO monitoring, circuit breaker, <code>AutoRollbackManager.check_regression</code> (método real, sin monkey-patch)</td>
+</tr>
+<tr>
+<td><code>judge_continuous.py</code></td>
+<td>verificación continua 24h con auto-rollback ante regresión crítica</td>
+</tr>
+</tbody>
+</table>
+<h2 id="cli-fase-2">CLI Fase 2</h2>
+<div class="highlight"><pre><span></span><code><span class="c1"># Eval harness</span>
+dxrk<span class="w"> </span>memory<span class="w"> </span><span class="nb">eval</span><span class="w"> </span>run<span class="w"> </span>w<span class="w"> </span>-n<span class="w"> </span><span class="m">5</span>
+dxrk<span class="w"> </span>memory<span class="w"> </span><span class="nb">eval</span><span class="w"> </span>synthetic<span class="w"> </span>w<span class="w"> </span>-n<span class="w"> </span><span class="m">10</span>
+
+<span class="c1"># Metacognición</span>
+dxrk<span class="w"> </span>memory<span class="w"> </span>metacog<span class="w"> </span>predict<span class="w"> </span><span class="s2">&quot;test query&quot;</span><span class="w"> </span>w
+dxrk<span class="w"> </span>memory<span class="w"> </span>metacog<span class="w"> </span>calibrate<span class="w"> </span>w<span class="w"> </span>-m<span class="w"> </span>temperature
+
+<span class="c1"># Calibración multi-tenant</span>
+dxrk<span class="w"> </span>memory<span class="w"> </span>calibrate<span class="w"> </span>tenant<span class="w"> </span>t1<span class="w"> </span>w<span class="w"> </span>-a<span class="w"> </span><span class="m">1</span>.5<span class="w"> </span>-b<span class="w"> </span><span class="m">0</span>.1<span class="w"> </span>-c<span class="w"> </span><span class="m">1</span>.0
+dxrk<span class="w"> </span>memory<span class="w"> </span>calibrate<span class="w"> </span>chain<span class="w"> </span>t1<span class="w"> </span>w
+
+<span class="c1"># Producción</span>
+dxrk<span class="w"> </span>memory<span class="w"> </span>production<span class="w"> </span>circuit-breaker
+dxrk<span class="w"> </span>memory<span class="w"> </span>production<span class="w"> </span>slo<span class="w"> </span>w
+dxrk<span class="w"> </span>memory<span class="w"> </span>production<span class="w"> </span>rollback<span class="w"> </span>w
+
+<span class="c1"># Judge continuo</span>
+dxrk<span class="w"> </span>memory<span class="w"> </span>judge<span class="w"> </span>status
+dxrk<span class="w"> </span>memory<span class="w"> </span>judge<span class="w"> </span>run
+</code></pre></div>
+<h2 id="mcp-tools-fase-2">MCP Tools Fase 2</h2>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Tipo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dxrk_memory_eval_run</code>, <code>dxrk_memory_eval_synthetic</code></td>
+<td>eval</td>
+</tr>
+<tr>
+<td><code>dxrk_memory_metacog_predict</code>, <code>dxrk_memory_calibrate_fit</code></td>
+<td>metacognición</td>
+</tr>
+<tr>
+<td><code>dxrk_memory_calibrate_tenant</code>, <code>dxrk_memory_calibrate_chain</code></td>
+<td>multi-tenant</td>
+</tr>
+<tr>
+<td><code>dxrk_memory_circuit_breaker_status</code>, <code>dxrk_memory_slo_check</code>, <code>dxrk_memory_rollback_check</code></td>
+<td>producción</td>
+</tr>
+<tr>
+<td><code>dxrk_memory_judge_status</code>, <code>dxrk_memory_judge_run</code></td>
+<td>judge continuo</td>
+</tr>
+</tbody>
+</table>
+<h2 id="tests-fase-2">Tests Fase 2</h2>
+<p><strong>107 tests nuevos</strong> (<code>test_eval_harness</code> 22, <code>test_metacog_v2</code> 39,
+<code>test_calibrate_v2</code> 19, <code>test_production</code> 16, <code>test_judge_continuous</code> 11),
+suite total <strong>5128 passed, 1 skipped</strong>, coverage <strong>≥85%</strong>, <code>mypy</code> 0 errores
+en 361 archivos, <code>ruff</code> limpio.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../architecture/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Arquitectura">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Arquitectura
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../enterprise/" class="md-footer__link md-footer__link--next" aria-label="Next: Enterprise">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Enterprise
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.top", "navigation.footer", "content.code.copy", "toc.integrate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
