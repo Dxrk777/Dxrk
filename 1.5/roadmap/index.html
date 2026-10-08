@@ -2245,7 +2245,7 @@ abajo con las líneas correspondientes marcadas.</p>
 <li>[x] <code>dxrk/enterprise/</code> 24 archivos (company, orchestrator, workforce, 7 departments, 8 skills) + <code>CLI enterprise</code> — <code>tests/test_enterprise.py</code> 102 tests</li>
 <li>[x] <code>docs/enterprise.md</code> + nav mkdocs — <code>mkdocs build</code> 0 warnings</li>
 <li>[x] Supply chain: <code>.github/workflows/scorecard.yml</code> + pin SHA en 6 workflows + permisos por job — Scorecard <strong>7.0</strong> (Token-Permissions 10, Pinned-Dependencies 10)</li>
-<li>[x] <code>pyproject.toml</code> <code>1.1.0</code> + <code>git tag v1.1.0</code> pusheado → <code>publish.yml</code> OIDC <strong>bloqueado</strong>: PyPI responde <code>invalid-publisher</code> (falta registrar Trusted Publisher en pypi.org proyecto dxrk: owner Dxrk777, repo Dxrk, workflow publish.yml, environment pypi) — acción lado usuario, luego <code>gh run rerun</code> sin nuevo tag</li>
+<li>[ ] ~~<code>pyproject.toml</code> <code>1.1.0</code> + <code>git tag v1.1.0</code> pusheado → <code>publish.yml</code> OIDC <strong>bloqueado</strong>: PyPI responde <code>invalid-publisher</code>~~ — <strong>obsoleto: nunca existió tag v1.1.0 y <code>publish.yml</code> vigente distribuye vía git + GitHub Releases (sin PyPI por decisión explícita del workflow). Sin acción requerida.</strong></li>
 <li>[x] Gates: 4592 passed 1 skipped, cov 85.44% ≥80, <code>ruff</code> 0, <code>mypy</code> 284 files 0</li>
 </ul>
 <hr />
