@@ -683,8 +683,6 @@ def test_unified_runtime_overrides_win(tmp_path, monkeypatch):
 
 def test_unified_precedence_matrix_settings_vs_config(tmp_path, monkeypatch):
     """Settings layers (project > tenant > file) beat config YAML layers."""
-    import warnings
-
     monkeypatch.delenv("DXRK_TENANT", raising=False)
     monkeypatch.delenv("DXRK_UI_THEME", raising=False)
     from dxrk.config.config import ConfigManager, WithGlobalPath, WithProjectPath, WithTenantPath, WithUserPath
@@ -716,10 +714,8 @@ def test_unified_precedence_matrix_settings_vs_config(tmp_path, monkeypatch):
     # overrides win over everything
     uni.override("k", "flag")
     assert uni.get_raw("k") == "flag"
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", DeprecationWarning)
-        uni.SetRaw("k2", "v2")
-        assert uni.GetRaw("k2") == "v2"
+    uni.set_raw("k2", "v2")
+    assert uni.get_raw("k2") == "v2"
 
 
 def test_unified_camelcase_aliases_deprecated():
