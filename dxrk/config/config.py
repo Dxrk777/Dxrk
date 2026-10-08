@@ -278,6 +278,9 @@ class ConfigManager:
         self._user_path: str = DEFAULT_USER_PATH
         self._project_path: str = DEFAULT_PROJECT_PATH
         self._tenant_path: str = ""
+        # Schemaless `settings.*` section (ADR-004): flat keys migrated
+        # from settings.json live here; never part of the typed object.
+        self._extra_settings: dict[str, Any] = {}
         self._env_prefix: str = DEFAULT_ENV_PREFIX
         if options:
             for opt in options:
@@ -303,6 +306,7 @@ class ConfigManager:
         """
         with self._mu:
             self._config = default_hierarchical_config()
+            self._extra_settings = {}
             self._load_file(self._global_path)
             self._load_file(self._user_path)
             tenant_path = self._tenant_path or _tenant_config_path()
@@ -410,6 +414,10 @@ class ConfigManager:
         if isinstance(advanced, dict):
             if advanced.get("log_level"):
                 cfg.advanced.log_level = str(advanced["log_level"])
+        # Schemaless settings section (ADR-004): merged, never validated.
+        settings = overlay.get("settings")
+        if isinstance(settings, dict):
+            self._extra_settings.update(settings)
 
     def _load_from_env(self) -> None:
         prefix = self._env_prefix + "_"
@@ -501,6 +509,10 @@ class ConfigManager:
             parts = path.split(".")
             if len(parts) < 2:
                 return None
+            if parts[0] == "settings":
+                if len(parts) != 2:
+                    return None
+                return self._extra_settings.get(parts[1])
             data = _config_to_dict(self._config)
             node: Any = data
             for part in parts:
@@ -510,7 +522,14 @@ class ConfigManager:
             return node
 
     def Set(self, path: str, value: Any) -> None:
-        """Sets a value at a dot-notation path and notifies watchers."""
+        """Sets a value at a dot-notation path and notifies watchers.
+
+        Note: the schemaless ``settings`` section is read-only here by
+        design — ``ConfigSettingsStore`` without prefix relies on
+        ``ValueError`` to fall back to free-form keys, and allowing writes
+        would make ``Get``/``List`` incoherent. Flat keys reach YAML via
+        ``config migrate`` (``dxrk.config.migration``).
+        """
         with self._mu:
             parts = path.split(".")
             if len(parts) < 2:
@@ -535,6 +554,8 @@ class ConfigManager:
         with self._mu:
             path = self._user_path
             data = _config_to_dict(self._config)
+            if self._extra_settings:
+                data["settings"] = dict(self._extra_settings)
         save_json_atomic(path, data)
 
     def Reset(self, path: str) -> None:
