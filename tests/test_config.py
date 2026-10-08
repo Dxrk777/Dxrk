@@ -149,13 +149,7 @@ def test_config_manager_env_overrides(monkeypatch):
 
 
 def test_config_manager_save(tmp_path):
-    mgr = ConfigManager(
-        [
-            __import__("dxrk.config", fromlist=["WithUserPath"]).WithUserPath(
-                str(tmp_path / "c.json")
-            )
-        ]
-    )
+    mgr = ConfigManager([__import__("dxrk.config", fromlist=["WithUserPath"]).WithUserPath(str(tmp_path / "c.json"))])
     mgr.Set("model.provider", "openai")
     mgr.Save()
     saved = json.loads((tmp_path / "c.json").read_text())
@@ -178,9 +172,7 @@ def test_config_manager_load_from_viper():
 
 def test_load_viper_file(tmp_path):
     path = tmp_path / "viper.yaml"
-    path.write_text(
-        "model:\n  provider: ollama\n  temperature: 0.3\napi:\n  base_url: http://localhost:11434\n"
-    )
+    path.write_text("model:\n  provider: ollama\n  temperature: 0.3\napi:\n  base_url: http://localhost:11434\n")
     cfg = LoadViper(str(path))
     assert cfg.model.provider == "ollama"
     assert cfg.model.temperature == 0.3
@@ -247,9 +239,7 @@ def test_settings_export_import():
 
 
 def _change(key, value, ts, operation="set"):
-    return SettingChange(
-        key=key, value=value, timestamp=ts, device_id="dev", operation=operation
-    )
+    return SettingChange(key=key, value=value, timestamp=ts, device_id="dev", operation=operation)
 
 
 def test_sync_resolve_last_write_wins():
@@ -342,9 +332,7 @@ def test_sync_apply_conflict_marker_skipped():
     changes = [
         _change("__conflict__k", "local", datetime(2025, 1, 1, tzinfo=UTC)),
         _change("k", "remote", datetime(2025, 1, 2, tzinfo=UTC)),
-        _change(
-            "del", None, datetime(2025, 1, 3, tzinfo=UTC), operation="delete"
-        ),
+        _change("del", None, datetime(2025, 1, 3, tzinfo=UTC), operation="delete"),
     ]
     store.Set("del", "old")
     s._apply_changes(changes)
@@ -368,9 +356,7 @@ def test_model_validator_messages():
     assert paths["model.provider"].severity == "error"
     assert "must not be empty" in paths["model.provider"].message
     assert paths["model.model_name"].severity == "error"
-    assert (
-        paths["model.max_tokens"].message == "max_tokens must be non-negative, got -5"
-    )
+    assert paths["model.max_tokens"].message == "max_tokens must be non-negative, got -5"
     assert paths["model.temperature"].message == "temperature must be 0.0-2.0, got 3.00"
     assert paths["model.top_p"].message == "top_p must be 0.0-1.0, got 1.50"
 
@@ -573,7 +559,10 @@ def test_section_fields_introspected_match_dataclasses():
     from dxrk.config.config import HierarchicalConfig
     from dxrk.config.unified import _SECTION_FIELDS
 
-    expected = {s.name: [f.name for f in _dc_fields(getattr(HierarchicalConfig(), s.name))] for s in _dc_fields(HierarchicalConfig)}
+    expected = {
+        s.name: [f.name for f in _dc_fields(getattr(HierarchicalConfig(), s.name))]
+        for s in _dc_fields(HierarchicalConfig)
+    }
     assert _SECTION_FIELDS == expected
     assert set(_SECTION_FIELDS) == {"model", "api", "auth", "session", "tools", "ui", "advanced"}
 
@@ -754,7 +743,6 @@ def test_unified_camelcase_aliases_deprecated():
 def _run_config_cli(argv, tmp_path, monkeypatch, tenant=""):
     """Runs dxrk config subcommands with isolated HOME+cwd."""
     import io
-    import os
 
     from dxrk.commands import register_all
 
@@ -795,9 +783,7 @@ def test_config_get_missing_value(tmp_path, monkeypatch):
 
 
 def test_config_set_persists_and_get_reads_back(tmp_path, monkeypatch):
-    code, out, err, home, proj = _run_config_cli(
-        ["config", "set", "ui.theme", "cli-dark"], tmp_path, monkeypatch
-    )
+    code, out, err, home, proj = _run_config_cli(["config", "set", "ui.theme", "cli-dark"], tmp_path, monkeypatch)
     assert code == 0
     code, out, err, home, proj = _run_config_cli(["config", "get", "ui.theme"], tmp_path, monkeypatch)
     assert code == 0
