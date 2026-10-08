@@ -45,3 +45,11 @@ El smoke GA (v1.0.0) confirmó que el sistema **funciona**; esto es deuda de dis
 - v2.0 requiere comando `dxrk config migrate` (idempotente, dry-run, backup) siguiendo el patrón de `tenant migrate`.
 - Tests: matriz de precedencia 9 niveles (una por nivel) + roundtrip YAML→objeto→YAML.
 - `docs/config.md` documenta el estado v1.x (escalera, archivos, env vars) y apunta a este ADR para v2.0.
+
+## Progreso 2026-10-08
+
+- Punto 4 (duplicación `_SECTION_FIELDS`) **resuelto**: `unified.py` genera
+  el mapa por introspección de los dataclasses de `config.py`; test
+  `test_section_fields_introspected_match_dataclasses` lo fija.
+- Pendiente v2.0 (sin cambios): persistencia única YAML, `config migrate`,
+  deprecación CamelCase, rutas tenant-aware en `config.yaml`.
