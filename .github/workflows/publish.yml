@@ -30,12 +30,13 @@ jobs:
       - name: Build package (smoke)
         run: uv build
 
+      # Prepend-only: never regenerate the whole file (hand-maintained
+      # history predates full conventional-commit coverage and a full
+      # regen truncates it — see v1.4.0 restore commit).
       - name: Generate changelog
         uses: orhun/git-cliff-action@a9a95522b26fe6403f7bb24031f21fb573d0f5ff # v4
         with:
-          args: -v
-        env:
-          OUTPUT: CHANGELOG.md
+          args: --unreleased --tag ${{ github.ref_name }} --prepend CHANGELOG.md
 
       - name: Commit changelog
         run: |
