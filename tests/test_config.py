@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import json
 import os
+import stat
+import sys
 import threading
 from datetime import UTC, datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -848,7 +850,8 @@ def test_config_set_tenant_writes_tenant_yaml(tmp_path, monkeypatch):
     assert code == 0
     target = home / ".dxrk" / "tenants" / "acme" / "config.yaml"
     assert target.exists()
-    assert stat.S_IMODE(target.stat().st_mode) == 0o600
+    if sys.platform != "win32":  # POSIX-only file permissions
+        assert stat.S_IMODE(target.stat().st_mode) == 0o600
     out, err = io.StringIO(), io.StringIO()
     code = reg.execute(["config", "get", "ui.theme"], out=out, err=err, cwd=str(proj))
     assert code == 0
