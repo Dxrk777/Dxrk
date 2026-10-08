@@ -349,7 +349,7 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 - [x] `dxrk/enterprise/` 24 archivos (company, orchestrator, workforce, 7 departments, 8 skills) + `CLI enterprise` — `tests/test_enterprise.py` 102 tests
 - [x] `docs/enterprise.md` + nav mkdocs — `mkdocs build` 0 warnings
 - [x] Supply chain: `.github/workflows/scorecard.yml` + pin SHA en 6 workflows + permisos por job — Scorecard **7.0** (Token-Permissions 10, Pinned-Dependencies 10)
-- [x] `pyproject.toml` `1.1.0` + `git tag v1.1.0` pusheado → `publish.yml` OIDC **bloqueado**: PyPI responde `invalid-publisher` (falta registrar Trusted Publisher en pypi.org proyecto dxrk: owner Dxrk777, repo Dxrk, workflow publish.yml, environment pypi) — acción lado usuario, luego `gh run rerun` sin nuevo tag
+- [ ] ~~`pyproject.toml` `1.1.0` + `git tag v1.1.0` pusheado → `publish.yml` OIDC **bloqueado**: PyPI responde `invalid-publisher`~~ — **obsoleto: nunca existió tag v1.1.0 y `publish.yml` vigente distribuye vía git + GitHub Releases (sin PyPI por decisión explícita del workflow). Sin acción requerida.**
 - [x] Gates: 4592 passed 1 skipped, cov 85.44% ≥80, `ruff` 0, `mypy` 284 files 0
 
 ---
