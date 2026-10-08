@@ -44,7 +44,7 @@ nav:
   - DX Top 1: dx.md
   - Plataformas: platforms.md
   - Roadmap: roadmap.md
-  - Release v1.3.0 (draft): releases/v1.3.0.md
+  - Release v1.3.0: releases/v1.3.0.md
   - API Reference: api.md
 
 markdown_extensions:

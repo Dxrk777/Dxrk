@@ -159,3 +159,62 @@ uv run pytest tests/test_synapse.py tests/test_neuromod.py tests/test_triplecopy
 ```
 
 ---
+---
+
+# Fase 2 — Eval, Metacognición, Multi-tenant, Producción y Judge
+
+Segunda oleada de módulos (`eval_harness`, `metacog_v2`, `calibrate_v2`,
+`production`, `judge_continuous`), más integración MCP (11 tools) y CLI
+(13 subcomandos). Todo stdlib-only, con RBAC por op.
+
+## Módulos
+
+| Módulo | Qué hace |
+|--------|----------|
+| `eval_harness.py` | recall@k, MRR, NDCG, ECE + queries sintéticas para bootstrap |
+| `metacog_v2.py` | temperature scaling, isotonic regression, bias detection; wrapper `MetacognitionV2` (`predict` / `fit_calibration`) |
+| `calibrate_v2.py` | calibración por tenant+wing con fallback (tenant+wing → global → default) |
+| `production.py` | SLO monitoring, circuit breaker, `AutoRollbackManager.check_regression` (método real, sin monkey-patch) |
+| `judge_continuous.py` | verificación continua 24h con auto-rollback ante regresión crítica |
+
+## CLI Fase 2
+
+```bash
+# Eval harness
+dxrk memory eval run w -n 5
+dxrk memory eval synthetic w -n 10
+
+# Metacognición
+dxrk memory metacog predict "test query" w
+dxrk memory metacog calibrate w -m temperature
+
+# Calibración multi-tenant
+dxrk memory calibrate tenant t1 w -a 1.5 -b 0.1 -c 1.0
+dxrk memory calibrate chain t1 w
+
+# Producción
+dxrk memory production circuit-breaker
+dxrk memory production slo w
+dxrk memory production rollback w
+
+# Judge continuo
+dxrk memory judge status
+dxrk memory judge run
+```
+
+## MCP Tools Fase 2
+
+| Tool | Tipo |
+|------|------|
+| `dxrk_memory_eval_run`, `dxrk_memory_eval_synthetic` | eval |
+| `dxrk_memory_metacog_predict`, `dxrk_memory_calibrate_fit` | metacognición |
+| `dxrk_memory_calibrate_tenant`, `dxrk_memory_calibrate_chain` | multi-tenant |
+| `dxrk_memory_circuit_breaker_status`, `dxrk_memory_slo_check`, `dxrk_memory_rollback_check` | producción |
+| `dxrk_memory_judge_status`, `dxrk_memory_judge_run` | judge continuo |
+
+## Tests Fase 2
+
+**107 tests nuevos** (`test_eval_harness` 22, `test_metacog_v2` 39,
+`test_calibrate_v2` 19, `test_production` 16, `test_judge_continuous` 11),
+suite total **5128 passed, 1 skipped**, coverage **≥85%**, `mypy` 0 errores
+en 361 archivos, `ruff` limpio.
