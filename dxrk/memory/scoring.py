@@ -19,7 +19,9 @@ import math
 from datetime import UTC, datetime
 from typing import Any, cast
 
+from .confidence import adjusted_uncertainty
 from .migrate import ensure_spine_defaults
+from .triplecopy import create_triple_copy, triple_copy_retrievability
 
 # Half-life for filed_at decay: ~6 months. Matches the sqlite backend's
 # pre-existing recency prior (exp decay, half-life ~125-180d) so the fused
@@ -115,6 +117,10 @@ RDU_IMP_SAT = 5.0
 SPINE_S_FALLBACK = 1.0
 _S_FLOOR = 0.05
 
+# Prediction-error coupling (Zou 2025 - vmPFC-FSRS)
+PE_LAMBDA = 0.1  # coupling strength, small for Fase 1
+PE_CLAMP = 0.5  # clamp PE to [-0.5, 0.5]
+
 
 def _clamp_float(value: object, default: float, low: float | None = None, high: float | None = None) -> float:
     try:
@@ -184,6 +190,38 @@ def update_success(stability: object, difficulty: object, rd: object, retrievabi
     return s_new, max(RDU_RD_MIN, base_rd * 0.9)
 
 
+def apply_success_with_pe(
+    meta: dict[str, object],
+    predicted_r: float,
+    now: datetime | None = None,
+) -> tuple[float, float, float]:
+    """
+    Success outcome with prediction-error coupling (vmPFC-FSRS, Zou 2025).
+
+    PE = outcome - predicted_r
+    S' = S_fsrs * (1 + PE_LAMBDA * PE)  — clamp PE to [-0.5, 0.5]
+
+    Returns: (new_S, new_rd, PE)
+    """
+    m = ensure_spine_defaults(dict(meta)) if isinstance(meta, dict) else ensure_spine_defaults({})
+    stability = _clamp_float(m.get("S"), SPINE_S_FALLBACK, low=_S_FLOOR)
+    difficulty = _clamp_float(m.get("D"), 5.0, low=1.0, high=10.0)
+    rd = _clamp_float(m.get("rd"), RDU_RD_INIT, low=0.0)
+    r = _clamp_float(predicted_r, 1.0, low=0.0, high=1.0)
+
+    # Standard FSRS success update
+    growth = math.exp(1.5) * (11.0 - difficulty) * (stability**-0.2) * (math.exp(1.0 * (1.0 - r)) - 1.0)
+    s_new = min(RDU_S_MAX, max(_S_FLOOR, stability * (1.0 + growth)))
+    rd_new = max(RDU_RD_MIN, rd * 0.9)
+
+    # Prediction error coupling
+    pe = 1.0 - r  # outcome=1 (success) - predicted_r
+    pe = max(-PE_CLAMP, min(PE_CLAMP, pe))
+    s_new = min(RDU_S_MAX, max(_S_FLOOR, s_new * (1.0 + PE_LAMBDA * pe)))
+
+    return s_new, rd_new, pe
+
+
 def update_lapse(
     stability: object, difficulty: object, rd: object, retrievability: object
 ) -> tuple[float, float, float]:
@@ -220,19 +258,19 @@ def score_meta(
     default_importance: float = 1.0,
     now: datetime | None = None,
 ) -> float:
-    """Rank a drawer metadata dict with the RDU model (Fase 0).
+    """Rank a drawer metadata dict with the enhanced RDU model (Fase 1).
 
-    ``rank = R_fsrs(t, S) * freq(n) + 0.05 * (rd_eff / 350) + tiebreak`` with
+    ``rank = R_triple(t, S) * freq(n) + 0.05 * (rd_eff / 350) + 0.15 * (synapse_w - 0.5) + tiebreak`` with
 
-    - ``R_fsrs(t, S) = (1 + (19/81) * t / S) ** -0.5`` (S in days),
+    - ``R_triple(t, S) = max(R_fast, R_medium, R_deep)`` — TripleCopy retrievability
+      (Schapiro 2017, Kumaran 2016): three copies with divergent decay.
     - ``t`` = days since last access (``accessed_at`` else ``filed_at``),
     - ``freq(n) = 0.7 + 0.3 * log1p(n) / log1p(20)``,
       ``n = access_count_total``,
-    - ``rd_eff`` = inactivity-drifted rating deviation
-      (``min(350, sqrt(rd^2 + 4*t))``, applied on read, never persisted),
+    - ``rd_eff`` = confidence-adjusted uncertainty (``min(350, sqrt(rd^2 + 4*t)) * (1 - confidence)``),
+    - ``synapse_w`` = synaptic weight from Two-Factor STDP (0..1, centered at 0.5),
     - ``tiebreak = 0.01 * clamp(importance / 5)`` — a deliberately tiny
-      static prior so Phase 2 invariants survive (highest importance wins
-      near-ties in wing-cap eviction and Layer1); dynamics come from RDU.
+      static prior so Phase 2 invariants survive.
 
     Spine keys are read through :func:`migrate.ensure_spine_defaults` on a
     copy, so legacy rows score with their migrated priors without mutating
@@ -253,8 +291,19 @@ def score_meta(
     if current.tzinfo is None:
         current = current.replace(tzinfo=UTC)
     t_days = _days_since_access(m, current)
-    retrievability = r_fsrs(t_days, stability)
-    rd_eff = effective_rd(rd, t_days)
+
+    # TripleCopy retrievability (replaces single r_fsrs)
+    tc = create_triple_copy(stability)
+    retrievability = triple_copy_retrievability(tc, t_days)
+
+    # Confidence-adjusted uncertainty
+    confidence = _clamp_float(m.get("confidence", 0.5), 0.5, low=0.0, high=1.0)
+    rd_eff = adjusted_uncertainty(rd, t_days, confidence)
+
+    # Synapse weight boost (0..1, centered at 0.5)
+    synapse_weight = _clamp_float(m.get("synapse_weight", 0.5), 0.5, low=0.0, high=1.0)
+    synapse_boost = 0.15 * (synapse_weight - 0.5)
+
     imp: object = default_importance
     for key in ("importance", "emotional_weight", "weight"):
         val = m.get(key)
@@ -266,4 +315,4 @@ def score_meta(
     except (TypeError, ValueError):
         imp_f = default_importance if isinstance(default_importance, (int, float)) else 1.0
     tiebreak = RDU_TIEBREAK_W * min(1.0, max(0.0, imp_f / RDU_IMP_SAT))
-    return retrievability * frequency_factor(n) + RDU_RD_BOOST_W * (rd_eff / RDU_RD_INIT) + tiebreak
+    return retrievability * frequency_factor(n) + RDU_RD_BOOST_W * (rd_eff / RDU_RD_INIT) + synapse_boost + tiebreak

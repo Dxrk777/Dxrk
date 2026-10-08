@@ -109,7 +109,7 @@ class TestRequireOpLocalMode:
         assert require_op("acme", "   ", "manage") == ""
 
     def test_valid_ops_constant(self) -> None:
-        assert VALID_OPS == frozenset({"read", "mine", "manage", "maintain", "memory.maintain"})
+        assert VALID_OPS == frozenset({"read", "search", "mine", "write", "manage", "maintain", "memory.maintain"})
 
 
 class TestRequireOpUsers:
@@ -139,8 +139,9 @@ class TestRequireOpUsers:
 
     def test_invalid_op_raises(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         _iso_home(tmp_path, monkeypatch)
+        # "write" is now a valid op, test bogus op instead
         with pytest.raises(ValueError):
-            require_op("acme", "alice", "write")
+            require_op("acme", "alice", "bogus")
         with pytest.raises(ValueError):
             require_op("", "", "bogus")
 

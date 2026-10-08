@@ -9,6 +9,7 @@ from pathlib import Path
 
 from dxrk.security.enforcement import require_op, resolve_user
 from dxrk.security.jwt import validate_id
+from dxrk.security.rbac import VALID_ROLES, TenantRoleResolver
 from dxrk.tenant.migration import ensure_tenant, is_migrated, migrate_legacy_to_default, tenant_root
 
 from .registry import Command, CommandContext, Flag, Registry
@@ -218,6 +219,86 @@ def register_tenant_command(reg: Registry) -> None:
             ctx.out.write(f"  copiado: {c}\n")
         return 0
 
+    # RBAC Role commands
+    def role_list_run(ctx: CommandContext) -> int:
+        try:
+            require_op(_effective_tenant(ctx), resolve_user(), "manage")
+        except PermissionError as exc:
+            ctx.err.write(f"Error: {exc}\n")
+            return 1
+
+        tid = _effective_tenant(ctx)
+        resolver = TenantRoleResolver(tid)
+        data = resolver.load()
+        users = data.get("users", {})
+        default_role = data.get("default_role", "readonly")
+        ctx.out.write(f"Tenant: {_effective_tenant(ctx)} (default: {default_role})\n")
+        if not users:
+            ctx.out.write("  (sin asignaciones de usuario)\n")
+        else:
+            for user, role in sorted(users.items()):
+                ctx.out.write(f"  {user}: {role}\n")
+        return 0
+
+    def role_set_run(ctx: CommandContext) -> int:
+        try:
+            require_op(_effective_tenant(ctx), resolve_user(), "manage")
+        except PermissionError as exc:
+            ctx.err.write(f"Error: {exc}\n")
+            return 1
+
+        tid = _effective_tenant(ctx)
+        if len(ctx.args) < 2:
+            ctx.err.write("Error: usa 'dxrk tenant role set <user> <role>'\n")
+            return 1
+        user = ctx.args[0]
+        role = ctx.args[1]
+        if role not in VALID_ROLES:
+            ctx.err.write(f"Error: rol inválido {role!r}. Válidos: {', '.join(VALID_ROLES)}\n")
+            return 1
+        resolver = TenantRoleResolver(tid)
+        try:
+            resolver.set_user_role(user, role)
+        except ValueError as exc:
+            ctx.err.write(f"Error: {exc}\n")
+            return 1
+        ctx.out.write(f"Usuario {user} -> rol {role} en tenant {_effective_tenant(ctx)}\n")
+        return 0
+
+    def role_default_run(ctx: CommandContext) -> int:
+        try:
+            require_op(_effective_tenant(ctx), resolve_user(), "manage")
+        except PermissionError as exc:
+            ctx.err.write(f"Error: {exc}\n")
+            return 1
+
+        tid = _effective_tenant(ctx)
+        if not ctx.args:
+            ctx.err.write("Error: usa 'dxrk tenant role default <role>'\n")
+            return 1
+        role = ctx.args[0]
+        if role not in VALID_ROLES:
+            ctx.err.write(f"Error: rol inválido {role!r}. Válidos: {', '.join(VALID_ROLES)}\n")
+            return 1
+        resolver = TenantRoleResolver(tid)
+        data = resolver.load()
+        users = data.get("users", {})
+        try:
+            resolver.save(users, role)
+        except ValueError as exc:
+            ctx.err.write(f"Error: {exc}\n")
+            return 1
+        ctx.out.write(f"Rol por defecto del tenant {tid} -> {role}\n")
+        return 0
+
+    def role_show_run(ctx: CommandContext) -> int:
+
+        tid = _effective_tenant(ctx)
+        resolver = TenantRoleResolver(tid)
+        role = resolver.resolve(ctx.args[0] if ctx.args else resolve_user())
+        ctx.out.write(f"{role}\n")
+        return 0
+
     parent_cmd = Command(name="tenant", short="Gestionar tenants", run=parent_run)
     list_cmd = Command(name="tenant list", short="Listar tenants", run=list_run)
     create_cmd = Command(
@@ -246,6 +327,23 @@ def register_tenant_command(reg: Registry) -> None:
     whoami_cmd = Command(name="tenant whoami", short="Mostrar el id de tenant", run=whoami_run)
     migrate_cmd = Command(name="tenant migrate", short="Migrar datos heredados", run=migrate_run)
 
+    # RBAC subcommands
+    role_parent_cmd = Command(
+        name="tenant role",
+        short="Gestionar roles RBAC",
+        run=lambda ctx: ctx.err.write("Error: usa 'dxrk tenant role list|set|default|show'\n") or 1,
+    )
+    role_list_cmd = Command(name="tenant role list", short="Listar roles de usuarios", run=role_list_run)
+    role_set_cmd = Command(
+        name="tenant role set", short="Asignar rol a usuario", min_args=2, max_args=2, run=role_set_run
+    )
+    role_default_cmd = Command(
+        name="tenant role default", short="Cambiar rol por defecto", min_args=1, max_args=1, run=role_default_run
+    )
+    role_show_cmd = Command(
+        name="tenant role show", short="Mostrar rol de usuario", min_args=0, max_args=1, run=role_show_run
+    )
+
     reg.add_command(parent_cmd)
     reg.add_command(list_cmd)
     reg.add_command(create_cmd)
@@ -254,3 +352,8 @@ def register_tenant_command(reg: Registry) -> None:
     reg.add_command(delete_cmd)
     reg.add_command(whoami_cmd)
     reg.add_command(migrate_cmd)
+    reg.add_command(role_parent_cmd)
+    reg.add_command(role_list_cmd)
+    reg.add_command(role_set_cmd)
+    reg.add_command(role_default_cmd)
+    reg.add_command(role_show_cmd)

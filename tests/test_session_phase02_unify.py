@@ -13,6 +13,7 @@ import io
 import json
 import os
 import stat
+import sys
 
 import pytest
 
@@ -189,6 +190,7 @@ def test_delete_missing_raises_and_shim_false(sdir):
 # ─── canonical writer: 0600, quarantine, lazy read of old files ──────────
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX-only file permissions")
 def test_save_applies_owner_only_permissions(sdir):
     s = _mk()
     assert save_session(s) is True

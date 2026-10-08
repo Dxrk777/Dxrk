@@ -38,8 +38,9 @@ def _cmd_mine(args: list[str]) -> int:
 
         # R12: mine mutates palace state -> readonly denied (RBAC_DENIED).
         # require_op valida el tenant antes de que tenant_root lo use.
-        require_op(os.environ.get("DXRK_TENANT", ""), resolve_user(), "mine")
-        dm = DxrkMemory(_palace_dir_for_cli())
+        user = resolve_user()
+        require_op(os.environ.get("DXRK_TENANT", ""), user, "mine")
+        dm = DxrkMemory(_palace_dir_for_cli(), agent=user)
         dm.init()
         result = dm.mine(ns.path, wing=ns.wing, room=ns.room or "general", dry_run=ns.dry_run)
         print(f"mine: {result}", file=sys.stderr)

@@ -58,6 +58,7 @@ class TestLayer1Rdu:
 class TestHybridRankNudge:
     def _stub(self, docs: list[str], metas: list[dict], dists: list[float]):  # type: ignore[no-untyped-def]
         return SimpleNamespace(
+            ids=[["a", "b"]],
             documents=[docs],
             metadatas=[metas],
             distances=[dists],

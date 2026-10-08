@@ -67,6 +67,32 @@ Archivo JSON por tenant (ver `TenantRoleResolver`):
   `build_permission_store_for_role` (produce un `PermissionStore` funcional
   coherente con el rol).
 
+## CLI de roles
+
+```bash
+# Listar asignaciones del tenant activo (requiere cap `manage`)
+dxrk tenant role list
+
+# Asignar rol a un usuario (requiere `manage`)
+dxrk tenant role set alice admin
+dxrk tenant role set bob dev
+
+# Cambiar el rol por defecto para usuarios sin asignación
+dxrk tenant role default dev
+
+# Ver tu rol efectivo (o el de otro usuario)
+dxrk tenant role show
+dxrk tenant role show alice
+```
+
+- `set` / `default` validan contra `admin|dev|readonly` y persisten en
+  `~/.dxrk/tenants/{id}/roles.json` (`0o600`).
+- Los comandos de escritura de `dxrk memory` (Fase 2: `eval`, `metacog`,
+  `calibrate`, `production`, `judge`) exigen el op RBAC correspondiente
+  vía `require_op(ctx.tenant_id, user, op)`; un `readonly` recibe
+  `RBAC_DENIED` en `mine`/`calibrate tenant` pero puede leer
+  (`search`, `eval synthetic`, `calibrate chain`, `judge status`).
+
 ## JWT
 
 - Claim `tid` (fallback `tenant_id`); sin tenant → `None`.

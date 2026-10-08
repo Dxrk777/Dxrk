@@ -15,6 +15,7 @@ import json
 import os
 import sqlite3
 import stat
+import sys
 
 import pytest
 
@@ -245,6 +246,7 @@ def test_sqlite_uses_wal_mode(sqlstore, tmp_path):  # type: ignore[no-untyped-de
     assert str(mode).lower() == "wal"
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX-only file permissions")
 def test_sqlite_db_owner_only_permissions(sqlstore, tmp_path):  # type: ignore[no-untyped-def]
     db = os.path.join(str(tmp_path / "sq"), "sessions.db")
     assert stat.S_IMODE(os.stat(db).st_mode) == 0o600
