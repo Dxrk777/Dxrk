@@ -207,21 +207,33 @@ class ConfigSettingsStore(SettingsStore):
         return self._priority
 
 
+def _deprecated_alias(old: str, new: str) -> None:
+    """Emit a v2.0-planning deprecation warning for a CamelCase alias (ADR-004)."""
+    import warnings
+
+    warnings.warn(
+        f"{old} is deprecated, use {new} instead (CamelCase aliases are removed no earlier than v3.0)",
+        DeprecationWarning,
+        stacklevel=3,
+    )
+
+
 class UnifiedConfig:
     """Facade unifying :class:`ConfigManager` (typed, hierarchical) and
     :class:`SettingsManager` (flat, pluggable stores).
 
     Final priority (highest to lowest):
 
-    1. CLI flags (runtime overrides)
+    1. Runtime overrides (:meth:`override`, e.g. CLI flags)
     2. Env vars ``DXRK_*`` (via ConfigManager)
     3. Settings project (``.dxrk/settings.json``, priority 200)
     4. Settings tenant (``ConfigSettingsStore``, priority 150)
     5. Settings file (``~/.dxrk/settings.json``, priority 100)
     6. Config project (``.dxrk/config.yaml``)
-    7. Config user (``~/.dxrk/config.yaml``)
-    8. Config global (``/etc/dxrk/config.yaml``)
-    9. Built-in defaults (``HierarchicalConfig``)
+    7. Config tenant (``~/.dxrk/tenants/<tid>/config.yaml``, ADR-004)
+    8. Config user (``~/.dxrk/config.yaml``)
+    9. Config global (``/etc/dxrk/config.yaml``)
+    10. Built-in defaults (``HierarchicalConfig``)
 
     ``load()`` calls ``config.Load()`` then ``settings.Load()`` in that
     order so that settings can override config where needed. ``save()``
@@ -241,13 +253,27 @@ class UnifiedConfig:
             # wrapping the same config instance for reuse.
             tenant_store = ConfigSettingsStore(self.config, priority=150)
             self.settings = SettingsManager([ProjectSettingsStore(), tenant_store, FileSettingsStore()])
+        # Level-1 runtime overrides (e.g. CLI flags): win over everything.
+        self._overrides: dict[str, Any] = {}
+
+    def override(self, key: str, value: Any) -> None:
+        """Sets a level-1 runtime override (highest precedence, in-memory only)."""
+        self._overrides[key] = value
+
+    def clear_overrides(self) -> None:
+        """Clears all level-1 runtime overrides."""
+        self._overrides.clear()
 
     def get_typed(self, path: str) -> Any | None:
         """Returns a typed hierarchical value via ``ConfigManager.Get``."""
+        if path in self._overrides:
+            return self._overrides[path]
         return self.config.Get(path)
 
     def get_raw(self, key: str) -> Any:
         """Returns a flat setting via ``SettingsManager.Get`` (raises ``KeyError`` if missing)."""
+        if key in self._overrides:
+            return self._overrides[key]
         return self.settings.Get(key)
 
     def set_typed(self, path: str, value: Any) -> None:
@@ -272,24 +298,33 @@ class UnifiedConfig:
         """Validates the hierarchical config and returns any errors."""
         return self.config.Validate()
 
-    # Compatibility aliases (CamelCase) for existing call sites if needed
+    # Compatibility aliases (CamelCase) for existing call sites if needed.
+    # Deprecated since v2.0-planning (ADR-004): prefer snake_case; these
+    # shims keep working and are removed no earlier than v3.0.
     def Load(self) -> None:  # noqa: N802
+        _deprecated_alias("Load", "load")
         self.load()
 
     def Save(self) -> None:  # noqa: N802
+        _deprecated_alias("Save", "save")
         self.save()
 
     def Validate(self) -> list[ConfigError]:  # noqa: N802
+        _deprecated_alias("Validate", "validate")
         return self.validate()
 
     def GetTyped(self, path: str) -> Any | None:  # noqa: N802
+        _deprecated_alias("GetTyped", "get_typed")
         return self.get_typed(path)
 
     def GetRaw(self, key: str) -> Any:  # noqa: N802
+        _deprecated_alias("GetRaw", "get_raw")
         return self.get_raw(key)
 
     def SetTyped(self, path: str, value: Any) -> None:  # noqa: N802
+        _deprecated_alias("SetTyped", "set_typed")
         self.set_typed(path, value)
 
     def SetRaw(self, key: str, value: Any) -> None:  # noqa: N802
+        _deprecated_alias("SetRaw", "set_raw")
         self.set_raw(key, value)

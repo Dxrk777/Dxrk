@@ -224,6 +224,7 @@ class _Option:
     global_path: str | None = None
     user_path: str | None = None
     project_path: str | None = None
+    tenant_path: str | None = None
     env_prefix: str | None = None
 
 
@@ -239,8 +240,31 @@ def WithProjectPath(path: str) -> _Option:
     return _Option(project_path=path)
 
 
+def WithTenantPath(path: str) -> _Option:
+    return _Option(tenant_path=path)
+
+
 def WithEnvPrefix(prefix: str) -> _Option:
     return _Option(env_prefix=prefix)
+
+
+def _tenant_config_path() -> str:
+    """Resolve the tenant config.yaml path from ``DXRK_TENANT`` (ADR-004).
+
+    Returns ``""`` when no tenant is active. Resolved at call time so
+    tests isolating ``HOME``/env via monkeypatch behave correctly.
+    """
+    import os
+
+    tid = (os.environ.get("DXRK_TENANT", "") or "").strip()
+    if not tid:
+        return ""
+    try:
+        from dxrk.tenant.migration import tenant_root
+
+        return str(tenant_root(tid) / "config.yaml")
+    except Exception:
+        return ""
 
 
 class ConfigManager:
@@ -253,6 +277,7 @@ class ConfigManager:
         self._global_path: str = DEFAULT_GLOBAL_PATH
         self._user_path: str = DEFAULT_USER_PATH
         self._project_path: str = DEFAULT_PROJECT_PATH
+        self._tenant_path: str = ""
         self._env_prefix: str = DEFAULT_ENV_PREFIX
         if options:
             for opt in options:
@@ -262,16 +287,27 @@ class ConfigManager:
                     self._user_path = opt.user_path
                 if opt.project_path is not None:
                     self._project_path = opt.project_path
+                if opt.tenant_path is not None:
+                    self._tenant_path = opt.tenant_path
                 if opt.env_prefix is not None:
                     self._env_prefix = opt.env_prefix
         self._watchers: dict[str, list[Watcher]] = {}
 
     def Load(self) -> None:
-        """Loads configuration from file sources and environment variables."""
+        """Loads configuration from file sources and environment variables.
+
+        Precedence (later wins): global → user → tenant → project → env.
+        The tenant layer (ADR-004) resolves from the explicit option or,
+        when empty, from ``DXRK_TENANT`` as
+        ``~/.dxrk/tenants/<tid>/config.yaml``. Missing files are skipped.
+        """
         with self._mu:
             self._config = default_hierarchical_config()
             self._load_file(self._global_path)
             self._load_file(self._user_path)
+            tenant_path = self._tenant_path or _tenant_config_path()
+            if tenant_path:
+                self._load_file(tenant_path)
             self._load_file(self._project_path)
             self._load_from_env()
 
