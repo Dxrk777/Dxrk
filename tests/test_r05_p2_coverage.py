@@ -918,8 +918,11 @@ def test_tenant_switcher_cursor_bounds(tmp_path, monkeypatch):
     from dxrk.tui.screens.tenant_switcher import TenantSwitcherScreen
 
     monkeypatch.setattr(ts_mod.TenantSwitcherScreen, "watch_cursor", lambda self, old, new: None)
+    monkeypatch.setattr(TenantSwitcherScreen, "watch_cursor", lambda self, old, new: None)
+    monkeypatch.setattr(TenantSwitcherScreen, "_focus_current_card", lambda self: None)
     screen = TenantSwitcherScreen()
     screen._tenants = ["a", "b", "c"]
+    screen._filtered = ["a", "b", "c"]
     screen.cursor = 0
     screen.action_cursor_up()
     assert screen.cursor == 0
@@ -933,8 +936,10 @@ def test_tenant_switcher_cursor_bounds(tmp_path, monkeypatch):
     assert screen.cursor == 1
     # out of bounds switch should not crash
     screen._tenants = []
+    screen._filtered = []
     screen.action_switch()
     screen._tenants = ["x"]
+    screen._filtered = ["x"]
     screen.cursor = 5
     screen.action_switch()
     screen.cursor = -1
@@ -952,6 +957,9 @@ def test_tenant_switcher_do_switch_updates_env_and_active(tmp_path, monkeypatch)
         def push_screen(self, name):
             self.pushed = name
 
+        def notify(self, *a, **k):
+            pass
+
     dummy = DummyApp()
     monkeypatch.setattr(ts_mod.TenantSwitcherScreen, "watch_cursor", lambda self, old, new: None)
     monkeypatch.setattr(ts_mod.TenantSwitcherScreen, "app", property(lambda self: dummy))
@@ -959,10 +967,20 @@ def test_tenant_switcher_do_switch_updates_env_and_active(tmp_path, monkeypatch)
     set_ctx(TUIContext(tenant_id="old", tenant_path="", role="readonly"))
     screen = TenantSwitcherScreen()
 
-    # also need query_one to not crash; patch it to raise
-    monkeypatch.setattr(screen, "query_one", lambda *a, **k: (_ for _ in ()).throw(Exception("no badge")))
+    # also need query_one to not crash; patch it to return mock badge for badge query
+    def mock_query_one(*a, **k):
+        if a and "tenant-badge" in str(a[0]):
+
+            class FakeBadge:
+                def update(self, _):
+                    pass
+
+            return FakeBadge()
+        raise Exception("not mocked")
+
+    monkeypatch.setattr(screen, "query_one", mock_query_one)
     # call _do_switch
-    screen._do_switch("acme")
+    screen._do_switch_sync("acme")
     ctx = get_ctx()
     assert ctx.tenant_id == "acme"
     assert "acme" in ctx.tenant_path
@@ -973,7 +991,7 @@ def test_tenant_switcher_do_switch_updates_env_and_active(tmp_path, monkeypatch)
     # switch again with missing tenant_root? simulate error via monkeypatch
     monkeypatch.setattr("dxrk.tenant.migration.tenant_root", lambda tid: (_ for _ in ()).throw(OSError("boom")))
     # should still set tenant_path to tid fallback
-    screen._do_switch("acme")
+    screen._do_switch_sync("acme")
     assert get_ctx().tenant_path == "acme"
 
 
@@ -1006,17 +1024,28 @@ def test_tenant_switcher_action_create_flow(tmp_path, monkeypatch):
 
     # case empty -> focus
     fake = FakeInput("")
+    fake_btn = FakeInput("")
     monkeypatch.setattr(
         screen,
         "query_one",
-        lambda *a, **k: fake if "tenant-create-input" in str(a) else (_ for _ in ()).throw(Exception()),
+        lambda *a, **k: (
+            fake
+            if "tenant-create-input" in str(a)
+            else (fake_btn if "create-btn" in str(a) else (_ for _ in ()).throw(Exception()))
+        ),
     )
     screen.action_create()
     assert hasattr(fake, "focused")
 
     # invalid id
     fake2 = FakeInput("bad/id")
-    monkeypatch.setattr(screen, "query_one", lambda *a, **k: fake2)
+    monkeypatch.setattr(
+        screen,
+        "query_one",
+        lambda *a, **k: (
+            fake2 if "tenant-create-input" in str(a) or "create-btn" in str(a) else (_ for _ in ()).throw(Exception())
+        ),
+    )
     screen.action_create()
     assert fake2.value == ""
     assert "id no válido" in fake2.placeholder
@@ -1028,14 +1057,13 @@ def test_tenant_switcher_action_create_flow(tmp_path, monkeypatch):
         screen,
         "query_one",
         lambda *a, **k: (
-            fake3
-            if "input" in str(a).lower() or "tenant-create-input" in str(a)
-            else (_ for _ in ()).throw(Exception())
+            fake3 if "tenant-create-input" in str(a) or "create-btn" in str(a) else (_ for _ in ()).throw(Exception())
         ),
     )
-    # Also need to mock app push and _do_switch and _render_list
+    # Also need to mock app push and _do_switch_sync and _render_list
     monkeypatch.setattr(screen, "_render_list", lambda: None)
-    monkeypatch.setattr(screen, "_do_switch", lambda tid: setattr(screen, "_switched", tid))
+    monkeypatch.setattr(screen, "_do_switch_sync", lambda tid: setattr(screen, "_switched", tid))
+    monkeypatch.setattr(screen, "notify", lambda *a, **k: None)
     # also need to isolate _get_tenants vs ensure_tenant
     screen.action_create()
     assert getattr(screen, "_switched", None) == "newtenant"
@@ -1051,12 +1079,13 @@ def test_tenant_switcher_action_create_flow(tmp_path, monkeypatch):
     monkeypatch.setattr(Widget, "_render", lambda self: "dummy_visual")  # type: ignore[attr-defined]
     screen2 = TenantSwitcherScreen()
     screen2._tenants = []
-    # query_one will raise -> fallback
+    screen2._filtered = []
+    # query_one will raise -> fallback, returns 0 rendered
     monkeypatch.setattr(screen2, "query_one", lambda *a, **k: (_ for _ in ()).throw(Exception("no scroll")))
 
     # should not crash
     res = screen2._render_list()
-    assert res is not None
+    assert res == 0
     # also test non-empty path: need VerticalScroll mock
     from unittest.mock import MagicMock
 
@@ -1065,10 +1094,11 @@ def test_tenant_switcher_action_create_flow(tmp_path, monkeypatch):
     mock_scroll.mount = MagicMock()
     monkeypatch.setattr(screen2, "query_one", lambda *a, **k: mock_scroll)
     screen2._tenants = ["alpha"]
+    screen2._filtered = ["alpha"]
     # need get_ctx returns tenant
     from dxrk.tui.context import TUIContext, set_ctx
 
     set_ctx(TUIContext(tenant_id="alpha", role="readonly"))
     res2 = screen2._render_list()
-    assert res2 is not None
+    assert res2 == 1
     assert mock_scroll.mount.called
