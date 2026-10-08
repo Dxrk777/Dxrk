@@ -1042,3 +1042,44 @@ def test_migrate_preserves_existing_yaml_and_backs_up(tmp_path, monkeypatch):
     doc = yaml.safe_load((home / ".dxrk" / "config.yaml").read_text(encoding="utf-8"))
     assert doc["ui"]["theme"] == "user"  # untouched
     assert doc["settings"] == {"keep": True, "theme": "dark"}  # merged
+
+
+def test_config_set_unknown_tenant_rejected(tmp_path, monkeypatch):
+    import io
+
+    from dxrk.commands import register_all
+
+    home = tmp_path / "home"
+    home.mkdir(parents=True, exist_ok=True)
+    proj = tmp_path / "proj"
+    proj.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("DXRK_TENANT", "noexiste")
+    monkeypatch.delenv("DXRK_USER", raising=False)
+    monkeypatch.chdir(proj)
+    reg = register_all()
+    out, err = io.StringIO(), io.StringIO()
+    code = reg.execute(["config", "set", "ui.theme", "x"], out=out, err=err, cwd=str(proj))
+    assert code == 1
+    assert "no encontrado" in err.getvalue()
+    assert not (home / ".dxrk" / "tenants" / "noexiste").exists()
+
+
+def test_config_migrate_unknown_tenant_rejected(tmp_path, monkeypatch):
+    import io
+
+    from dxrk.commands import register_all
+
+    home = tmp_path / "home"
+    home.mkdir(parents=True, exist_ok=True)
+    proj = tmp_path / "proj"
+    proj.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("DXRK_TENANT", "noexiste")
+    monkeypatch.delenv("DXRK_USER", raising=False)
+    monkeypatch.chdir(proj)
+    reg = register_all()
+    out, err = io.StringIO(), io.StringIO()
+    code = reg.execute(["config", "migrate"], out=out, err=err, cwd=str(proj))
+    assert code == 1
+    assert "no encontrado" in err.getvalue()

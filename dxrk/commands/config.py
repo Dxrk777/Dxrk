@@ -143,6 +143,9 @@ def _config_set_cmd() -> Command:
             return 1
         tid = ctx.tenant_id.strip()
         if tid:
+            if not _tenant_exists(tid):
+                ctx.err.write(f"Error: tenant {tid!r} no encontrado (usa 'dxrk tenant create')\n")
+                return 1
             _save_tenant_snapshot(tid, uni)
             ctx.out.write(f"{path} actualizado en tenant {tid}\n")
         else:
@@ -157,6 +160,16 @@ def _config_set_cmd() -> Command:
         max_args=2,
         run=run,
     )
+
+
+def _tenant_exists(tenant_id: str) -> bool:
+    """True when the tenant directory already exists (never creates it)."""
+    try:
+        from dxrk.tenant.migration import tenant_root
+
+        return tenant_root(tenant_id).is_dir()
+    except Exception:
+        return False
 
 
 def _save_tenant_snapshot(tenant_id: str, uni) -> None:  # type: ignore[no-untyped-def]
@@ -228,6 +241,10 @@ def _config_migrate_cmd() -> Command:
             return 1
         from dxrk.config.migration import migrate_settings_to_yaml
 
+        tid = ctx.tenant_id.strip()
+        if tid and not _tenant_exists(tid):
+            ctx.err.write(f"Error: tenant {tid!r} no encontrado (usa 'dxrk tenant create')\n")
+            return 1
         dry = ctx.flag_bool("dry-run", False)
         result = migrate_settings_to_yaml(dry_run=dry, tenant=ctx.tenant_id)
         out = ctx.out
