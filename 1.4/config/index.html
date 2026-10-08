@@ -798,6 +798,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#cli-unificada-dxrk-config-getsetlayers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI unificada (dxrk config get/set/layers)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1160,6 +1171,22 @@
 <li><strong>Proyecto &gt; usuario</strong>: lo que pongas en <code>.dxrk/</code> del repo gana sobre tu <code>~/.dxrk/</code>.</li>
 <li>El tenant afecta a la capa 4 (settings) y a la capa 7 (<code>config.yaml</code> por tenant). Los aliases <code>CamelCase</code> de <code>UnifiedConfig</code> están deprecados (aviso <code>DeprecationWarning</code>, se remueven no antes de v3.0) — ver <a href="../adr/ADR-004-config-unify/">ADR-004</a>.</li>
 </ol>
+<h2 id="cli-unificada-dxrk-config-getsetlayers">CLI unificada (<code>dxrk config get/set/layers</code>)</h2>
+<p>Lee y escribe a través de <code>UnifiedConfig</code> (todas las rutas se resuelven a
+call-time, tenant-aware vía <code>--tenant</code>/<code>DXRK_TENANT</code>):</p>
+<div class="highlight"><pre><span></span><code>dxrk<span class="w"> </span>config<span class="w"> </span>get<span class="w"> </span>ui.theme
+dxrk<span class="w"> </span>config<span class="w"> </span>layers<span class="w"> </span>ui.theme<span class="w">     </span><span class="c1"># muestra cada capa y cuál gana</span>
+dxrk<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>ui.theme<span class="w"> </span>dark
+dxrk<span class="w"> </span>--tenant<span class="w"> </span>acme<span class="w"> </span>config<span class="w"> </span><span class="nb">set</span><span class="w"> </span>ui.theme<span class="w"> </span>acme-dark<span class="w">   </span><span class="c1"># persiste en el tenant</span>
+</code></pre></div>
+<ul>
+<li><code>get</code>/<code>layers</code> requieren op <code>read</code>; <code>set</code> requiere op <code>write</code>
+  (<code>readonly</code> recibe <code>RBAC_DENIED</code> en <code>set</code>).</li>
+<li><code>set</code> persiste la vista fusionada (en usuario o tenant); las capas
+  inferiores siguen aplicando por debajo.</li>
+<li>Valores con formato JSON (<code>50</code>, <code>true</code>, <code>"texto"</code>) se tipan; el resto
+  queda como string.</li>
+</ul>
 
 
 
