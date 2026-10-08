@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import json
 import os
-import stat
 import sys
 import threading
 from datetime import UTC, datetime
