@@ -2115,4 +2115,5 @@ async def test_welcome_badge_refreshes_after_tenant_switch(
         await pilot.press("enter")
         await pilot.pause()
         badge = app.screen.query_one("#tenant-badge", Static)
-        assert "acme" in str(badge.renderable)
+        badge_text = getattr(badge, "content", getattr(badge, "renderable", ""))
+        assert "acme" in str(badge_text)
