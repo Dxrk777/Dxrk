@@ -901,6 +901,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#progreso-2026-10-08-v20-parcial-no-rompible" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Progreso 2026-10-08 (v2.0 parcial, no rompible)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1170,6 +1181,22 @@
   <code>test_section_fields_introspected_match_dataclasses</code> lo fija.</li>
 <li>Pendiente v2.0 (sin cambios): persistencia única YAML, <code>config migrate</code>,
   deprecación CamelCase, rutas tenant-aware en <code>config.yaml</code>.</li>
+</ul>
+<h2 id="progreso-2026-10-08-v20-parcial-no-rompible">Progreso 2026-10-08 (v2.0 parcial, no rompible)</h2>
+<ul>
+<li>✅ Punto 4 (duplicación <code>_SECTION_FIELDS</code>): introspección (mergeado).</li>
+<li>✅ Punto 3 parcial: <code>config.yaml</code> tenant-aware
+  (<code>~/.dxrk/tenants/&lt;tid&gt;/config.yaml</code> entre proyecto y usuario, vía
+  <code>WithTenantPath</code> o <code>DXRK_TENANT</code>).</li>
+<li>✅ Punto 1 parcial: <code>UnifiedConfig.override()</code> implementa el nivel 1
+  (runtime overrides); matriz de precedencia testeada (10 niveles).</li>
+<li>✅ Punto 4b: aliases <code>CamelCase</code> de <code>UnifiedConfig</code> emiten
+  <code>DeprecationWarning</code> (remoción no antes de v3.0).</li>
+<li>⏳ Pendiente (requiere decisión de formato con impacto en usuarios):
+  persistencia única YAML + comando <code>config migrate</code> + <code>settings.json</code>
+  legacy read-only. No se implementó porque ningún código productivo lee
+  <code>UnifiedConfig</code>/<code>SettingsManager</code> hoy (solo tests); migrar sería teatro.
+  Re-evaluar cuando el CLI <code>dxrk config</code> adopte la fachada.</li>
 </ul>
 
 

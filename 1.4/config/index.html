@@ -1082,13 +1082,13 @@
 <tbody>
 <tr>
 <td>1</td>
-<td>Flags CLI</td>
-<td><code>--model</code>, <code>--tenant</code>, etc. (solo runtime, no persisten)</td>
+<td>Overrides runtime</td>
+<td><code>UnifiedConfig.override()</code> (p. ej. flags CLI; solo runtime, no persisten)</td>
 </tr>
 <tr>
 <td>2</td>
 <td>Variables de entorno</td>
-<td><code>DXRK_*</code> (p. ej. <code>DXRK_TENANT</code>, <code>DXRK_MODEL</code>)</td>
+<td><code>DXRK_*</code> (p. ej. <code>DXRK_TENANT</code>, <code>DXRK_UI_THEME</code>)</td>
 </tr>
 <tr>
 <td>3</td>
@@ -1112,16 +1112,21 @@
 </tr>
 <tr>
 <td>7</td>
+<td>Config de tenant</td>
+<td><code>~/.dxrk/tenants/&lt;tid&gt;/config.yaml</code> (vía <code>DXRK_TENANT</code> o <code>WithTenantPath</code>)</td>
+</tr>
+<tr>
+<td>8</td>
 <td>Config de usuario</td>
 <td><code>~/.dxrk/config.yaml</code></td>
 </tr>
 <tr>
-<td>8</td>
+<td>9</td>
 <td>Config global</td>
 <td><code>/etc/dxrk/config.yaml</code></td>
 </tr>
 <tr>
-<td>9</td>
+<td>10</td>
 <td>Defaults internos</td>
 <td><code>HierarchicalConfig</code> en <code>dxrk/config/config.py</code></td>
 </tr>
@@ -1153,7 +1158,7 @@
 <li><strong>Secretos nunca en YAML/JSON</strong> — usa variables de entorno o el vault por tenant (<code>DXRK_VAULT_KEY</code>).</li>
 <li><strong><code>config.yaml</code> admite comentarios</strong>; <code>settings.json</code> no — prefiere YAML para lo que edites a mano.</li>
 <li><strong>Proyecto &gt; usuario</strong>: lo que pongas en <code>.dxrk/</code> del repo gana sobre tu <code>~/.dxrk/</code>.</li>
-<li>El tenant solo afecta hoy a la capa 4 (settings); <code>config.yaml</code> aún no es tenant-aware — es parte del plan v2.0 (<a href="../adr/ADR-004-config-unify/">ADR-004</a>).</li>
+<li>El tenant afecta a la capa 4 (settings) y a la capa 7 (<code>config.yaml</code> por tenant). Los aliases <code>CamelCase</code> de <code>UnifiedConfig</code> están deprecados (aviso <code>DeprecationWarning</code>, se remueven no antes de v3.0) — ver <a href="../adr/ADR-004-config-unify/">ADR-004</a>.</li>
 </ol>
 
 
