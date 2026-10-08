@@ -8,7 +8,6 @@ smooth focus animations, context-aware badges, and buttery-smooth UX.
 
 from __future__ import annotations
 
-import asyncio
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -939,12 +938,6 @@ class TenantSwitcherScreen(ModalScreen[None]):
         selected = self._filtered[self.cursor]
         tid = selected["id"] if isinstance(selected, dict) else selected
         self._do_switch_sync(tid)
-
-    async def _do_switch(self, tid: str) -> None:
-        """Perform the tenant switch with smooth transition."""
-        self._do_switch_sync(tid)
-        await asyncio.sleep(0.15)
-        self.app.push_screen("welcome")
 
     def _do_switch_sync(self, tid: str) -> None:
         """Perform the tenant switch synchronously."""
