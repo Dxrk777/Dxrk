@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [1.5.0](https://github.com/Dxrk777/Dxrk/releases/tag/v1.5.0) - 2026-10-08
 
+### Features
+
+- **config:** R14 — tenant `config.yaml` layer, `UnifiedConfig.override()`
+  (level 1), `dxrk config get/set/layers/migrate`, `settings.*`
+  schemaless round-trip, `config migrate` idempotente con dry-run y backups
+- **tui:** TenantSwitcher moderno (búsqueda en vivo, preview, badges de rol,
+  bindings con prioridad)
+
+### Bug Fixes
+
+- **ci:** RBAC trusted-mode vía `DXRK_USER`; tests `0o600` POSIX-only
+  (Windows verde); compatibilidad Textual 8 (`Static.content`)
+- **tui:** CSS válido para Textual 1.0/8.x (sin keyframes ni
+  pseudo-clases no soportadas); preview sin markup inválido
+
+### Chores
+
+- **deps:** batch dependabot (fire, mkdocstrings, pytest-cov, mypy 2.x,
+  pytest 9.x, pyyaml, beautifulsoup4, textual 8.x, CI actions) + urllib3 2.8.0
+- **release:** Bump version to 1.5.0
+
 ## [Unreleased]
 
 ### Features
