@@ -28,6 +28,7 @@ _OP_CAP: dict[str, str] = {
     "read": CapFSRead,
     "search": CapFSRead,
     "mine": CapFSWrite,
+    "write": CapFSWrite,
     "manage": CapSudo,
     "maintain": CapMemoryMaintain,
     "memory.maintain": CapMemoryMaintain,

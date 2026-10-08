@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import threading
 from datetime import UTC, datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -149,13 +150,7 @@ def test_config_manager_env_overrides(monkeypatch):
 
 
 def test_config_manager_save(tmp_path):
-    mgr = ConfigManager(
-        [
-            __import__("dxrk.config", fromlist=["WithUserPath"]).WithUserPath(
-                str(tmp_path / "c.json")
-            )
-        ]
-    )
+    mgr = ConfigManager([__import__("dxrk.config", fromlist=["WithUserPath"]).WithUserPath(str(tmp_path / "c.json"))])
     mgr.Set("model.provider", "openai")
     mgr.Save()
     saved = json.loads((tmp_path / "c.json").read_text())
@@ -178,9 +173,7 @@ def test_config_manager_load_from_viper():
 
 def test_load_viper_file(tmp_path):
     path = tmp_path / "viper.yaml"
-    path.write_text(
-        "model:\n  provider: ollama\n  temperature: 0.3\napi:\n  base_url: http://localhost:11434\n"
-    )
+    path.write_text("model:\n  provider: ollama\n  temperature: 0.3\napi:\n  base_url: http://localhost:11434\n")
     cfg = LoadViper(str(path))
     assert cfg.model.provider == "ollama"
     assert cfg.model.temperature == 0.3
@@ -247,9 +240,7 @@ def test_settings_export_import():
 
 
 def _change(key, value, ts, operation="set"):
-    return SettingChange(
-        key=key, value=value, timestamp=ts, device_id="dev", operation=operation
-    )
+    return SettingChange(key=key, value=value, timestamp=ts, device_id="dev", operation=operation)
 
 
 def test_sync_resolve_last_write_wins():
@@ -342,9 +333,7 @@ def test_sync_apply_conflict_marker_skipped():
     changes = [
         _change("__conflict__k", "local", datetime(2025, 1, 1, tzinfo=UTC)),
         _change("k", "remote", datetime(2025, 1, 2, tzinfo=UTC)),
-        _change(
-            "del", None, datetime(2025, 1, 3, tzinfo=UTC), operation="delete"
-        ),
+        _change("del", None, datetime(2025, 1, 3, tzinfo=UTC), operation="delete"),
     ]
     store.Set("del", "old")
     s._apply_changes(changes)
@@ -368,9 +357,7 @@ def test_model_validator_messages():
     assert paths["model.provider"].severity == "error"
     assert "must not be empty" in paths["model.provider"].message
     assert paths["model.model_name"].severity == "error"
-    assert (
-        paths["model.max_tokens"].message == "max_tokens must be non-negative, got -5"
-    )
+    assert paths["model.max_tokens"].message == "max_tokens must be non-negative, got -5"
     assert paths["model.temperature"].message == "temperature must be 0.0-2.0, got 3.00"
     assert paths["model.top_p"].message == "top_p must be 0.0-1.0, got 1.50"
 
@@ -573,7 +560,10 @@ def test_section_fields_introspected_match_dataclasses():
     from dxrk.config.config import HierarchicalConfig
     from dxrk.config.unified import _SECTION_FIELDS
 
-    expected = {s.name: [f.name for f in _dc_fields(getattr(HierarchicalConfig(), s.name))] for s in _dc_fields(HierarchicalConfig)}
+    expected = {
+        s.name: [f.name for f in _dc_fields(getattr(HierarchicalConfig(), s.name))]
+        for s in _dc_fields(HierarchicalConfig)
+    }
     assert _SECTION_FIELDS == expected
     assert set(_SECTION_FIELDS) == {"model", "api", "auth", "session", "tools", "ui", "advanced"}
 
@@ -749,3 +739,148 @@ def test_unified_camelcase_aliases_deprecated():
         uni.Save()
         assert isinstance(uni.Validate(), list)
     assert any(issubclass(w.category, DeprecationWarning) for w in caught)
+
+
+def _run_config_cli(argv, tmp_path, monkeypatch, tenant=""):
+    """Runs dxrk config subcommands with isolated HOME+cwd."""
+    import io
+
+    from dxrk.commands import register_all
+
+    home = tmp_path / "home"
+    home.mkdir(parents=True, exist_ok=True)
+    proj = tmp_path / "proj"
+    proj.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.delenv("DXRK_TENANT", raising=False)
+    monkeypatch.delenv("DXRK_USER", raising=False)
+    monkeypatch.delenv("DXRK_UI_THEME", raising=False)
+    if tenant:
+        monkeypatch.setenv("DXRK_TENANT", tenant)
+    monkeypatch.chdir(proj)
+    reg = register_all()
+    out, err = io.StringIO(), io.StringIO()
+    code = reg.execute(argv, out=out, err=err, cwd=str(proj))
+    return code, out.getvalue(), err.getvalue(), home, proj
+
+
+def test_config_get_reads_user_yaml(tmp_path, monkeypatch):
+    import yaml
+
+    code, out, err, home, proj = _run_config_cli(["config", "get", "ui.theme"], tmp_path, monkeypatch)
+    assert code == 0  # defaults resolve even with no files
+    user_cfg = home / ".dxrk" / "config.yaml"
+    user_cfg.parent.mkdir(parents=True, exist_ok=True)
+    user_cfg.write_text(yaml.safe_dump({"ui": {"theme": "user-theme"}}), encoding="utf-8")
+    code, out, err, home, proj = _run_config_cli(["config", "get", "ui.theme"], tmp_path, monkeypatch)
+    assert code == 0
+    assert "user-theme" in out
+
+
+def test_config_get_missing_value(tmp_path, monkeypatch):
+    code, out, err, home, proj = _run_config_cli(["config", "get", "ui.nonexistent"], tmp_path, monkeypatch)
+    assert code == 0
+    assert "sin valor" in out
+
+
+def test_config_set_persists_and_get_reads_back(tmp_path, monkeypatch):
+    code, out, err, home, proj = _run_config_cli(["config", "set", "ui.theme", "cli-dark"], tmp_path, monkeypatch)
+    assert code == 0
+    code, out, err, home, proj = _run_config_cli(["config", "get", "ui.theme"], tmp_path, monkeypatch)
+    assert code == 0
+    assert "cli-dark" in out
+
+
+def test_config_set_invalid_path_rejected(tmp_path, monkeypatch):
+    code, out, err, home, proj = _run_config_cli(["config", "set", "nope", "x"], tmp_path, monkeypatch)
+    assert code == 1
+
+
+def test_config_layers_marks_winner(tmp_path, monkeypatch):
+    import yaml
+
+    home = tmp_path / "home"
+    home.mkdir(parents=True, exist_ok=True)
+    proj = tmp_path / "proj"
+    proj.mkdir(parents=True, exist_ok=True)
+    (home / ".dxrk").mkdir(parents=True, exist_ok=True)
+    (home / ".dxrk" / "config.yaml").write_text(yaml.safe_dump({"ui": {"theme": "user"}}), encoding="utf-8")
+    (proj / ".dxrk").mkdir(parents=True, exist_ok=True)
+    (proj / ".dxrk" / "config.yaml").write_text(yaml.safe_dump({"ui": {"theme": "project"}}), encoding="utf-8")
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.delenv("DXRK_TENANT", raising=False)
+    monkeypatch.delenv("DXRK_USER", raising=False)
+    monkeypatch.delenv("DXRK_UI_THEME", raising=False)
+    monkeypatch.chdir(proj)
+    import io
+
+    from dxrk.commands import register_all
+
+    reg = register_all()
+    out, err = io.StringIO(), io.StringIO()
+    code = reg.execute(["config", "layers", "ui.theme"], out=out, err=err, cwd=str(proj))
+    assert code == 0
+    text = out.getvalue()
+    assert "ui.theme = 'project'" in text
+    assert "gana" in text
+
+
+def test_config_set_tenant_writes_tenant_yaml(tmp_path, monkeypatch):
+    from dxrk.tenant.migration import ensure_tenant
+
+    home = tmp_path / "home"
+    home.mkdir(parents=True, exist_ok=True)
+    proj = tmp_path / "proj"
+    proj.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("DXRK_TENANT", "acme")
+    monkeypatch.delenv("DXRK_USER", raising=False)
+    monkeypatch.delenv("DXRK_UI_THEME", raising=False)
+    monkeypatch.chdir(proj)
+    ensure_tenant("acme")
+    import io
+    import stat
+
+    from dxrk.commands import register_all
+
+    reg = register_all()
+    out, err = io.StringIO(), io.StringIO()
+    code = reg.execute(["config", "set", "ui.theme", "acme-theme"], out=out, err=err, cwd=str(proj))
+    assert code == 0
+    target = home / ".dxrk" / "tenants" / "acme" / "config.yaml"
+    assert target.exists()
+    if sys.platform != "win32":  # POSIX-only file permissions
+        assert stat.S_IMODE(target.stat().st_mode) == 0o600
+    out, err = io.StringIO(), io.StringIO()
+    code = reg.execute(["config", "get", "ui.theme"], out=out, err=err, cwd=str(proj))
+    assert code == 0
+    assert "acme-theme" in out.getvalue()
+
+
+def test_config_set_denied_for_readonly(tmp_path, monkeypatch):
+    from dxrk.security.rbac import TenantRoleResolver
+    from dxrk.tenant.migration import ensure_tenant
+
+    home = tmp_path / "home"
+    home.mkdir(parents=True, exist_ok=True)
+    proj = tmp_path / "proj"
+    proj.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("DXRK_TENANT", "acme")
+    monkeypatch.setenv("DXRK_USER", "ro")
+    monkeypatch.delenv("DXRK_UI_THEME", raising=False)
+    monkeypatch.chdir(proj)
+    ensure_tenant("acme")
+    TenantRoleResolver("acme").save({"ro": "readonly"}, "readonly")
+    import io
+
+    from dxrk.commands import register_all
+
+    reg = register_all()
+    out, err = io.StringIO(), io.StringIO()
+    code = reg.execute(["config", "set", "ui.theme", "x"], out=out, err=err, cwd=str(proj))
+    assert code == 1
+    assert "RBAC_DENIED" in err.getvalue()
+    out, err = io.StringIO(), io.StringIO()
+    code = reg.execute(["config", "get", "ui.theme"], out=out, err=err, cwd=str(proj))
+    assert code == 0
