@@ -564,3 +564,27 @@ class _FakeSyncServer:
                 self.wfile.write(body)
 
         return Handler
+
+
+def test_section_fields_introspected_match_dataclasses():
+    """ADR-004: _SECTION_FIELDS derives from HierarchicalConfig (no curated copy)."""
+    from dataclasses import fields as _dc_fields
+
+    from dxrk.config.config import HierarchicalConfig
+    from dxrk.config.unified import _SECTION_FIELDS
+
+    expected = {s.name: [f.name for f in _dc_fields(getattr(HierarchicalConfig(), s.name))] for s in _dc_fields(HierarchicalConfig)}
+    assert _SECTION_FIELDS == expected
+    assert set(_SECTION_FIELDS) == {"model", "api", "auth", "session", "tools", "ui", "advanced"}
+
+
+def test_config_settings_store_list_flattens_section():
+    """ConfigSettingsStore.List flattens a known section via introspected fields."""
+    from dxrk.config.config import ConfigManager
+    from dxrk.config.unified import ConfigSettingsStore
+
+    mgr = ConfigManager()
+    store = ConfigSettingsStore(mgr, prefix="ui")
+    listed = store.List()
+    assert listed["theme"] == mgr.Get("ui.theme")
+    assert set(listed) >= {"theme", "font_size"}
