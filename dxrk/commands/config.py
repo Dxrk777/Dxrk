@@ -10,7 +10,7 @@ from typing import Any
 from dxrk.config import Config, Default, Load, Save
 from dxrk.security.enforcement import require_op, resolve_user
 
-from .registry import Command, CommandContext, Registry
+from .registry import Command, CommandContext, Flag, Registry
 
 
 def user_config_path() -> str:
@@ -61,6 +61,7 @@ def register_config_command(reg: Registry) -> None:
     reg.add_command(_config_get_cmd())
     reg.add_command(_config_set_cmd())
     reg.add_command(_config_layers_cmd())
+    reg.add_command(_config_migrate_cmd())
 
 
 def _unified_config(tenant_id: str = ""):  # type: ignore[no-untyped-def]
@@ -132,6 +133,9 @@ def _config_set_cmd() -> Command:
             return 1
         uni = _unified_config(ctx.tenant_id)
         path, raw = ctx.args[0], ctx.args[1]
+        if path.split(".")[0] == "settings":
+            ctx.err.write("Error: la sección settings.* es de solo lectura; usa 'dxrk config migrate'\n")
+            return 1
         try:
             uni.set_typed(path, _parse_cli_value(raw))
         except ValueError as exc:
@@ -211,6 +215,31 @@ def _config_layers_cmd() -> Command:
         short="Mostrar qué capa gana para una ruta (p. ej. ui.theme)",
         min_args=1,
         max_args=1,
+        run=run,
+    )
+
+
+def _config_migrate_cmd() -> Command:
+    def run(ctx: CommandContext) -> int:
+        try:
+            require_op(ctx.tenant_id, resolve_user(), "write")
+        except PermissionError as exc:
+            ctx.err.write(f"Error: {exc}\n")
+            return 1
+        from dxrk.config.migration import migrate_settings_to_yaml
+
+        dry = ctx.flag_bool("dry-run", False)
+        result = migrate_settings_to_yaml(dry_run=dry, tenant=ctx.tenant_id)
+        out = ctx.out
+        out.write(f"{len(result['copied'])} clave(s) migradas, {len(result['skipped'])} omitidas\n")
+        for c in result["copied"]:
+            out.write(f"  migrada: {c}\n")
+        return 0
+
+    return Command(
+        name="config migrate",
+        short="Migrar settings.json a la sección settings de config.yaml (idempotente)",
+        flags={"dry-run": Flag("dry-run", is_bool=True, help="Mostrar el plan sin escribir")},
         run=run,
     )
 

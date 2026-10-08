@@ -884,3 +884,165 @@ def test_config_set_denied_for_readonly(tmp_path, monkeypatch):
     out, err = io.StringIO(), io.StringIO()
     code = reg.execute(["config", "get", "ui.theme"], out=out, err=err, cwd=str(proj))
     assert code == 0
+
+
+def test_config_settings_section_roundtrip(tmp_path):
+    """Schemaless settings.* survives Load/Save/Get; Set stays rejected (ADR-004)."""
+    import pytest
+
+    from dxrk.config.config import ConfigManager, WithGlobalPath, WithProjectPath, WithTenantPath, WithUserPath
+
+    missing = str(tmp_path / "missing.yaml")
+    target = tmp_path / "user.yaml"
+    target.write_text("settings:\n  theme: dark\n", encoding="utf-8")
+    mgr = ConfigManager(
+        [WithGlobalPath(missing), WithUserPath(str(target)), WithTenantPath(missing), WithProjectPath(missing)]
+    )
+    mgr.Load()
+    assert mgr.Get("settings.theme") == "dark"
+    # Set is read-only by design (keeps ConfigSettingsStore fallback coherent)
+    with pytest.raises(ValueError):
+        mgr.Set("settings.theme", "light")
+    mgr.Save()
+    mgr2 = ConfigManager(
+        [WithGlobalPath(missing), WithUserPath(str(target)), WithTenantPath(missing), WithProjectPath(missing)]
+    )
+    mgr2.Load()
+    assert mgr2.Get("settings.theme") == "dark"
+    # unknown paths still rejected / empty
+    assert mgr2.Get("settings") is None
+    assert mgr2.Get("nope") is None
+
+
+def test_config_settings_section_merge_layers(tmp_path, monkeypatch):
+    """settings.* merges across user/project layers; project wins."""
+    import yaml
+
+    from dxrk.config.config import ConfigManager, WithGlobalPath, WithProjectPath, WithTenantPath, WithUserPath
+
+    monkeypatch.delenv("DXRK_TENANT", raising=False)
+    (tmp_path / "user.yaml").write_text(yaml.safe_dump({"settings": {"a": 1, "b": 1}}), encoding="utf-8")
+    (tmp_path / "project.yaml").write_text(yaml.safe_dump({"settings": {"b": 2}}), encoding="utf-8")
+    missing = str(tmp_path / "missing.yaml")
+    mgr = ConfigManager(
+        [
+            WithGlobalPath(missing),
+            WithUserPath(str(tmp_path / "user.yaml")),
+            WithTenantPath(missing),
+            WithProjectPath(str(tmp_path / "project.yaml")),
+        ]
+    )
+    mgr.Load()
+    assert mgr.Get("settings.a") == 1
+    assert mgr.Get("settings.b") == 2
+
+
+def _iso_cfg_home(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    home.mkdir(parents=True, exist_ok=True)
+    proj = tmp_path / "proj"
+    proj.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.delenv("DXRK_TENANT", raising=False)
+    monkeypatch.delenv("DXRK_USER", raising=False)
+    monkeypatch.chdir(proj)
+    return home, proj
+
+
+def test_migrate_moves_keys_and_is_idempotent(tmp_path, monkeypatch):
+    import json
+
+    from dxrk.config.migration import migrate_settings_to_yaml
+
+    home, proj = _iso_cfg_home(tmp_path, monkeypatch)
+    (home / ".dxrk").mkdir(parents=True, exist_ok=True)
+    (home / ".dxrk" / "settings.json").write_text(json.dumps({"theme": "dark", "k": 1}), encoding="utf-8")
+    (proj / ".dxrk").mkdir(parents=True, exist_ok=True)
+    (proj / ".dxrk" / "settings.json").write_text(json.dumps({"theme": "proj"}), encoding="utf-8")
+
+    res = migrate_settings_to_yaml(dry_run=False)
+    assert len(res["copied"]) == 3  # user theme/k + project theme
+    # values land in YAML settings sections
+    import yaml
+
+    user_doc = yaml.safe_load((home / ".dxrk" / "config.yaml").read_text(encoding="utf-8"))
+    assert user_doc["settings"]["theme"] == "dark"
+    assert user_doc["settings"]["k"] == 1
+    # second run: everything skipped (idempotent)
+    res2 = migrate_settings_to_yaml(dry_run=False)
+    assert res2["copied"] == []
+    assert any("already present" in s for s in res2["skipped"])
+
+
+def test_migrate_dry_run_writes_nothing(tmp_path, monkeypatch):
+    import json
+
+    from dxrk.config.migration import migrate_settings_to_yaml
+
+    home, proj = _iso_cfg_home(tmp_path, monkeypatch)
+    (home / ".dxrk").mkdir(parents=True, exist_ok=True)
+    (home / ".dxrk" / "settings.json").write_text(json.dumps({"theme": "dark"}), encoding="utf-8")
+    res = migrate_settings_to_yaml(dry_run=True)
+    assert len(res["copied"]) == 1
+    assert not (home / ".dxrk" / "config.yaml").exists()
+
+
+def test_migrate_tenant_scope(tmp_path, monkeypatch):
+    import json
+
+    import yaml
+
+    from dxrk.config.migration import migrate_settings_to_yaml
+    from dxrk.tenant.migration import ensure_tenant
+
+    home, proj = _iso_cfg_home(tmp_path, monkeypatch)
+    (home / ".dxrk").mkdir(parents=True, exist_ok=True)
+    (home / ".dxrk" / "settings.json").write_text(json.dumps({"theme": "dark"}), encoding="utf-8")
+    ensure_tenant("acme")
+    res = migrate_settings_to_yaml(dry_run=False, tenant="acme")
+    tenant_doc = yaml.safe_load((home / ".dxrk" / "tenants" / "acme" / "config.yaml").read_text(encoding="utf-8"))
+    assert tenant_doc["settings"]["theme"] == "dark"
+    assert any(s.startswith("tenant:") for s in res["copied"])
+
+
+def test_config_migrate_cli(tmp_path, monkeypatch):
+    import io
+    import json
+
+    from dxrk.commands import register_all
+
+    home, proj = _iso_cfg_home(tmp_path, monkeypatch)
+    (home / ".dxrk").mkdir(parents=True, exist_ok=True)
+    (home / ".dxrk" / "settings.json").write_text(json.dumps({"theme": "dark"}), encoding="utf-8")
+    reg = register_all()
+    out, err = io.StringIO(), io.StringIO()
+    code = reg.execute(["config", "migrate"], out=out, err=err, cwd=str(proj))
+    assert code == 0
+    assert "migradas" in out.getvalue()
+    # get reads migrated value through the ladder
+    out, err = io.StringIO(), io.StringIO()
+    code = reg.execute(["config", "get", "settings.theme"], out=out, err=err, cwd=str(proj))
+    assert code == 0
+    assert "dark" in out.getvalue()
+
+
+def test_migrate_preserves_existing_yaml_and_backs_up(tmp_path, monkeypatch):
+    import json
+
+    import yaml
+
+    from dxrk.config.migration import migrate_settings_to_yaml
+
+    home, proj = _iso_cfg_home(tmp_path, monkeypatch)
+    (home / ".dxrk").mkdir(parents=True, exist_ok=True)
+    (home / ".dxrk" / "settings.json").write_text(json.dumps({"theme": "dark"}), encoding="utf-8")
+    existing = {"ui": {"theme": "user"}, "settings": {"keep": True}}
+    (home / ".dxrk" / "config.yaml").write_text(yaml.safe_dump(existing), encoding="utf-8")
+    res = migrate_settings_to_yaml(dry_run=False)
+    assert len(res["copied"]) == 1
+    bak = home / ".dxrk" / "config.yaml.bak"
+    assert bak.exists()
+    assert yaml.safe_load(bak.read_text(encoding="utf-8")) == existing
+    doc = yaml.safe_load((home / ".dxrk" / "config.yaml").read_text(encoding="utf-8"))
+    assert doc["ui"]["theme"] == "user"  # untouched
+    assert doc["settings"] == {"keep": True, "theme": "dark"}  # merged

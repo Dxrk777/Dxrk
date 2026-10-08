@@ -69,3 +69,15 @@ El smoke GA (v1.0.0) confirmó que el sistema **funciona**; esto es deuda de dis
   legacy read-only. No se implementó porque ningún código productivo lee
   `UnifiedConfig`/`SettingsManager` hoy (solo tests); migrar sería teatro.
   Re-evaluar cuando el CLI `dxrk config` adopte la fachada.
+
+## Progreso 2026-10-08 (II) — migrate implementado
+
+- `ConfigManager` soporta sección schemaless `settings.*` (merge/load/save/
+  get/set round-trip; el objeto tipado no cambia).
+- Nuevo `dxrk config migrate [--dry-run]` (op `write`): mueve claves planas
+  de `settings.json` (usuario + proyecto, más pool al tenant si hay tenant
+  activo) a la sección `settings:` de los `config.yaml`, con backup `.bak`,
+  idempotente y con reporte moved/copied/skipped estilo `tenant migrate`.
+- Con esto, la unificación queda completa salvo la deprecación total de
+  `settings.json` como escritura (pendiente de adopción del CLI `set_raw`;
+  `settings.json` sigue legible).

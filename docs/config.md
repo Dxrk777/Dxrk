@@ -66,6 +66,25 @@ dxrk --tenant acme config set ui.theme acme-dark   # persiste en el tenant
 - `get`/`layers` requieren op `read`; `set` requiere op `write`
   (`readonly` recibe `RBAC_DENIED` en `set`).
 - `set` persiste la vista fusionada (en usuario o tenant); las capas
-  inferiores siguen aplicando por debajo.
+  inferiores siguen aplicando por debajo. La sección `settings.*` es de
+  solo lectura en `set` (para no romper el fallback de claves libres);
+  esas claves llegan a YAML vía `migrate`.
 - Valores con formato JSON (`50`, `true`, `"texto"`) se tipan; el resto
   queda como string.
+
+## Migración `settings.json` → `config.yaml`
+
+```bash
+dxrk config migrate --dry-run   # plan sin escribir
+dxrk config migrate              # mueve claves planas a la sección settings:
+                                 #   ~/.dxrk/settings.json → ~/.dxrk/config.yaml
+                                 #   .dxrk/settings.json   → .dxrk/config.yaml
+dxrk --tenant acme config migrate  # además las siembra en el tenant
+```
+
+- Idempotente: las claves ya presentes se omiten; segunda corrida no escribe.
+- Cada YAML reescrito conserva backup `.bak` (solo primera vez).
+- Nota: el volcado YAML no preserva comentarios del archivo previo
+  (limitación de PyYAML); el `.bak` permite recuperarlos.
+- Las claves migradas se leen como `settings.<clave>` en toda la escalera
+  (incluida la capa 7 de tenant).
