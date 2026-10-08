@@ -338,8 +338,14 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 
 #### v1.1.0 Done (Cortex + Autonomous + Enterprise) — release menor
 
-- [x] `dxrk/memory/cortex/` 15 archivos (IQ engine, network effect, collective, dreaming, meta-learning) — `tests/test_cortex.py` 98 tests
-- [x] `dxrk/memory/autonomous/` 8 archivos (7 motores: reader, practice, reflection, imitation, experimentation, synthesis, assessment) — `tests/test_autonomous.py` 41 tests
+> **Corrección 2026-10-08:** esta sección describía un plan que no se
+> materializó como está escrito — nunca se cortó tag `v1.1.0`, y
+> `dxrk/memory/cortex/` + `dxrk/memory/autonomous/` fueron removidos como
+> código muerto en 1.3.0 (ver CHANGELOG). Se conserva el texto original
+> abajo con las líneas correspondientes marcadas.
+
+- [ ] ~~`dxrk/memory/cortex/` 15 archivos (IQ engine, network effect, collective, dreaming, meta-learning) — `tests/test_cortex.py` 98 tests~~ — **no implementado; descartado en 1.3.0**
+- [ ] ~~`dxrk/memory/autonomous/` 8 archivos (7 motores: reader, practice, reflection, imitation, experimentation, synthesis, assessment) — `tests/test_autonomous.py` 41 tests~~ — **no implementado; descartado en 1.3.0**
 - [x] `dxrk/enterprise/` 24 archivos (company, orchestrator, workforce, 7 departments, 8 skills) + `CLI enterprise` — `tests/test_enterprise.py` 102 tests
 - [x] `docs/enterprise.md` + nav mkdocs — `mkdocs build` 0 warnings
 - [x] Supply chain: `.github/workflows/scorecard.yml` + pin SHA en 6 workflows + permisos por job — Scorecard **7.0** (Token-Permissions 10, Pinned-Dependencies 10)
