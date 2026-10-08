@@ -675,6 +675,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#cli-de-roles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI de roles
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#jwt" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1035,14 +1046,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../releases/v1.3.0.md" class="md-nav__link">
+      <a href="../releases/v1.3.0/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Release v1.3.0 (draft)
+    Release v1.3.0
   
 
     
@@ -1178,6 +1189,30 @@ mantenimiento programado requiere
   <code>ensure_default</code>, más <code>load_policy_for_tenant</code> y
   <code>build_permission_store_for_role</code> (produce un <code>PermissionStore</code> funcional
   coherente con el rol).</li>
+</ul>
+<h2 id="cli-de-roles">CLI de roles</h2>
+<div class="highlight"><pre><span></span><code><span class="c1"># Listar asignaciones del tenant activo (requiere cap `manage`)</span>
+dxrk<span class="w"> </span>tenant<span class="w"> </span>role<span class="w"> </span>list
+
+<span class="c1"># Asignar rol a un usuario (requiere `manage`)</span>
+dxrk<span class="w"> </span>tenant<span class="w"> </span>role<span class="w"> </span><span class="nb">set</span><span class="w"> </span>alice<span class="w"> </span>admin
+dxrk<span class="w"> </span>tenant<span class="w"> </span>role<span class="w"> </span><span class="nb">set</span><span class="w"> </span>bob<span class="w"> </span>dev
+
+<span class="c1"># Cambiar el rol por defecto para usuarios sin asignación</span>
+dxrk<span class="w"> </span>tenant<span class="w"> </span>role<span class="w"> </span>default<span class="w"> </span>dev
+
+<span class="c1"># Ver tu rol efectivo (o el de otro usuario)</span>
+dxrk<span class="w"> </span>tenant<span class="w"> </span>role<span class="w"> </span>show
+dxrk<span class="w"> </span>tenant<span class="w"> </span>role<span class="w"> </span>show<span class="w"> </span>alice
+</code></pre></div>
+<ul>
+<li><code>set</code> / <code>default</code> validan contra <code>admin|dev|readonly</code> y persisten en
+  <code>~/.dxrk/tenants/{id}/roles.json</code> (<code>0o600</code>).</li>
+<li>Los comandos de escritura de <code>dxrk memory</code> (Fase 2: <code>eval</code>, <code>metacog</code>,
+  <code>calibrate</code>, <code>production</code>, <code>judge</code>) exigen el op RBAC correspondiente
+  vía <code>require_op(ctx.tenant_id, user, op)</code>; un <code>readonly</code> recibe
+  <code>RBAC_DENIED</code> en <code>mine</code>/<code>calibrate tenant</code> pero puede leer
+  (<code>search</code>, <code>eval synthetic</code>, <code>calibrate chain</code>, <code>judge status</code>).</li>
 </ul>
 <h2 id="jwt">JWT</h2>
 <ul>
