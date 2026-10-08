@@ -3,8 +3,11 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from unittest.mock import Mock
+
+import pytest
 
 from dxrk.memory.calibrate import (
     DEFAULT_PARAMS,
@@ -58,6 +61,7 @@ class TestCalibrate:
         loaded = load_calibration(tmp_path, "test_wing")
         assert loaded.a == DEFAULT_PARAMS.a
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="POSIX-only file permissions")
     def test_save_creates_dir_and_0o600(self, tmp_path: Path) -> None:
         """Save creates .calibration dir and sets 0o600."""
         params = CalibrationParams()

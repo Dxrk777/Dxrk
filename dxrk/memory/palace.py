@@ -1375,8 +1375,15 @@ class DxrkMemory:
 
         Raises:
             PermissionError: If the operation is not allowed for the user's role.
+
+        Note: user identity comes from ``DXRK_USER`` via :func:`resolve_user`
+        (empty = local trusted mode, no enforcement). ``self.agent`` is the
+        machine/agent name, NOT a user identity — using it here would turn
+        every ambient ``DXRK_TENANT`` leak into a denial for legacy callers.
         """
-        require_op(self.tenant_id or "", self.agent, op)
+        from dxrk.security.enforcement import resolve_user
+
+        require_op(self.tenant_id or "", resolve_user(), op)
 
     @staticmethod
     def _mark_superseded(

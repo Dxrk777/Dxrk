@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+
+import pytest
 
 from dxrk.memory.stress import (
     STRESS_ACTIVATION_THRESHOLD,
@@ -143,6 +146,7 @@ class TestStress:
         loaded = load_stress_state(tmp_path)
         assert loaded.level == 0.0
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="POSIX-only file permissions")
     def test_save_creates_0o600(self, tmp_path: Path) -> None:
         """Saved file has 0o600 permissions."""
         state = StressState()
