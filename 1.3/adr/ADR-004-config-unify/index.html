@@ -890,6 +890,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#progreso-2026-10-08" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Progreso 2026-10-08
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1151,6 +1162,14 @@
 <li>v2.0 requiere comando <code>dxrk config migrate</code> (idempotente, dry-run, backup) siguiendo el patrón de <code>tenant migrate</code>.</li>
 <li>Tests: matriz de precedencia 9 niveles (una por nivel) + roundtrip YAML→objeto→YAML.</li>
 <li><code>docs/config.md</code> documenta el estado v1.x (escalera, archivos, env vars) y apunta a este ADR para v2.0.</li>
+</ul>
+<h2 id="progreso-2026-10-08">Progreso 2026-10-08</h2>
+<ul>
+<li>Punto 4 (duplicación <code>_SECTION_FIELDS</code>) <strong>resuelto</strong>: <code>unified.py</code> genera
+  el mapa por introspección de los dataclasses de <code>config.py</code>; test
+  <code>test_section_fields_introspected_match_dataclasses</code> lo fija.</li>
+<li>Pendiente v2.0 (sin cambios): persistencia única YAML, <code>config migrate</code>,
+  deprecación CamelCase, rutas tenant-aware en <code>config.yaml</code>.</li>
 </ul>
 
 
