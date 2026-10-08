@@ -50,3 +50,22 @@ export DXRK_USER=alice    # usuario para enforcement RBAC (ver rbac.md)
 2. **`config.yaml` admite comentarios**; `settings.json` no — prefiere YAML para lo que edites a mano.
 3. **Proyecto > usuario**: lo que pongas en `.dxrk/` del repo gana sobre tu `~/.dxrk/`.
 4. El tenant afecta a la capa 4 (settings) y a la capa 7 (`config.yaml` por tenant). Los aliases `CamelCase` de `UnifiedConfig` están deprecados (aviso `DeprecationWarning`, se remueven no antes de v3.0) — ver [ADR-004](adr/ADR-004-config-unify.md).
+
+## CLI unificada (`dxrk config get/set/layers`)
+
+Lee y escribe a través de `UnifiedConfig` (todas las rutas se resuelven a
+call-time, tenant-aware vía `--tenant`/`DXRK_TENANT`):
+
+```bash
+dxrk config get ui.theme
+dxrk config layers ui.theme     # muestra cada capa y cuál gana
+dxrk config set ui.theme dark
+dxrk --tenant acme config set ui.theme acme-dark   # persiste en el tenant
+```
+
+- `get`/`layers` requieren op `read`; `set` requiere op `write`
+  (`readonly` recibe `RBAC_DENIED` en `set`).
+- `set` persiste la vista fusionada (en usuario o tenant); las capas
+  inferiores siguen aplicando por debajo.
+- Valores con formato JSON (`50`, `true`, `"texto"`) se tipan; el resto
+  queda como string.

@@ -749,3 +749,150 @@ def test_unified_camelcase_aliases_deprecated():
         uni.Save()
         assert isinstance(uni.Validate(), list)
     assert any(issubclass(w.category, DeprecationWarning) for w in caught)
+
+
+def _run_config_cli(argv, tmp_path, monkeypatch, tenant=""):
+    """Runs dxrk config subcommands with isolated HOME+cwd."""
+    import io
+    import os
+
+    from dxrk.commands import register_all
+
+    home = tmp_path / "home"
+    home.mkdir(parents=True, exist_ok=True)
+    proj = tmp_path / "proj"
+    proj.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.delenv("DXRK_TENANT", raising=False)
+    monkeypatch.delenv("DXRK_USER", raising=False)
+    monkeypatch.delenv("DXRK_UI_THEME", raising=False)
+    if tenant:
+        monkeypatch.setenv("DXRK_TENANT", tenant)
+    monkeypatch.chdir(proj)
+    reg = register_all()
+    out, err = io.StringIO(), io.StringIO()
+    code = reg.execute(argv, out=out, err=err, cwd=str(proj))
+    return code, out.getvalue(), err.getvalue(), home, proj
+
+
+def test_config_get_reads_user_yaml(tmp_path, monkeypatch):
+    import yaml
+
+    code, out, err, home, proj = _run_config_cli(["config", "get", "ui.theme"], tmp_path, monkeypatch)
+    assert code == 0  # defaults resolve even with no files
+    user_cfg = home / ".dxrk" / "config.yaml"
+    user_cfg.parent.mkdir(parents=True, exist_ok=True)
+    user_cfg.write_text(yaml.safe_dump({"ui": {"theme": "user-theme"}}), encoding="utf-8")
+    code, out, err, home, proj = _run_config_cli(["config", "get", "ui.theme"], tmp_path, monkeypatch)
+    assert code == 0
+    assert "user-theme" in out
+
+
+def test_config_get_missing_value(tmp_path, monkeypatch):
+    code, out, err, home, proj = _run_config_cli(["config", "get", "ui.nonexistent"], tmp_path, monkeypatch)
+    assert code == 0
+    assert "sin valor" in out
+
+
+def test_config_set_persists_and_get_reads_back(tmp_path, monkeypatch):
+    code, out, err, home, proj = _run_config_cli(
+        ["config", "set", "ui.theme", "cli-dark"], tmp_path, monkeypatch
+    )
+    assert code == 0
+    code, out, err, home, proj = _run_config_cli(["config", "get", "ui.theme"], tmp_path, monkeypatch)
+    assert code == 0
+    assert "cli-dark" in out
+
+
+def test_config_set_invalid_path_rejected(tmp_path, monkeypatch):
+    code, out, err, home, proj = _run_config_cli(["config", "set", "nope", "x"], tmp_path, monkeypatch)
+    assert code == 1
+
+
+def test_config_layers_marks_winner(tmp_path, monkeypatch):
+    import yaml
+
+    home = tmp_path / "home"
+    home.mkdir(parents=True, exist_ok=True)
+    proj = tmp_path / "proj"
+    proj.mkdir(parents=True, exist_ok=True)
+    (home / ".dxrk").mkdir(parents=True, exist_ok=True)
+    (home / ".dxrk" / "config.yaml").write_text(yaml.safe_dump({"ui": {"theme": "user"}}), encoding="utf-8")
+    (proj / ".dxrk").mkdir(parents=True, exist_ok=True)
+    (proj / ".dxrk" / "config.yaml").write_text(yaml.safe_dump({"ui": {"theme": "project"}}), encoding="utf-8")
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.delenv("DXRK_TENANT", raising=False)
+    monkeypatch.delenv("DXRK_USER", raising=False)
+    monkeypatch.delenv("DXRK_UI_THEME", raising=False)
+    monkeypatch.chdir(proj)
+    import io
+
+    from dxrk.commands import register_all
+
+    reg = register_all()
+    out, err = io.StringIO(), io.StringIO()
+    code = reg.execute(["config", "layers", "ui.theme"], out=out, err=err, cwd=str(proj))
+    assert code == 0
+    text = out.getvalue()
+    assert "ui.theme = 'project'" in text
+    assert "gana" in text
+
+
+def test_config_set_tenant_writes_tenant_yaml(tmp_path, monkeypatch):
+    from dxrk.tenant.migration import ensure_tenant
+
+    home = tmp_path / "home"
+    home.mkdir(parents=True, exist_ok=True)
+    proj = tmp_path / "proj"
+    proj.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("DXRK_TENANT", "acme")
+    monkeypatch.delenv("DXRK_USER", raising=False)
+    monkeypatch.delenv("DXRK_UI_THEME", raising=False)
+    monkeypatch.chdir(proj)
+    ensure_tenant("acme")
+    import io
+    import stat
+
+    from dxrk.commands import register_all
+
+    reg = register_all()
+    out, err = io.StringIO(), io.StringIO()
+    code = reg.execute(["config", "set", "ui.theme", "acme-theme"], out=out, err=err, cwd=str(proj))
+    assert code == 0
+    target = home / ".dxrk" / "tenants" / "acme" / "config.yaml"
+    assert target.exists()
+    assert stat.S_IMODE(target.stat().st_mode) == 0o600
+    out, err = io.StringIO(), io.StringIO()
+    code = reg.execute(["config", "get", "ui.theme"], out=out, err=err, cwd=str(proj))
+    assert code == 0
+    assert "acme-theme" in out.getvalue()
+
+
+def test_config_set_denied_for_readonly(tmp_path, monkeypatch):
+    from dxrk.security.rbac import TenantRoleResolver
+    from dxrk.tenant.migration import ensure_tenant
+
+    home = tmp_path / "home"
+    home.mkdir(parents=True, exist_ok=True)
+    proj = tmp_path / "proj"
+    proj.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("DXRK_TENANT", "acme")
+    monkeypatch.setenv("DXRK_USER", "ro")
+    monkeypatch.delenv("DXRK_UI_THEME", raising=False)
+    monkeypatch.chdir(proj)
+    ensure_tenant("acme")
+    TenantRoleResolver("acme").save({"ro": "readonly"}, "readonly")
+    import io
+
+    from dxrk.commands import register_all
+
+    reg = register_all()
+    out, err = io.StringIO(), io.StringIO()
+    code = reg.execute(["config", "set", "ui.theme", "x"], out=out, err=err, cwd=str(proj))
+    assert code == 1
+    assert "RBAC_DENIED" in err.getvalue()
+    out, err = io.StringIO(), io.StringIO()
+    code = reg.execute(["config", "get", "ui.theme"], out=out, err=err, cwd=str(proj))
+    assert code == 0
