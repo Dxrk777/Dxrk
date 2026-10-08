@@ -46,7 +46,7 @@ def _retrievability(t: float, S: float) -> float:
     """FSRS-4.5 retrievability: R(t,S) = (1 + FACTOR * t/S)^DECAY."""
     if S <= 0:
         return 0.0
-    return (1.0 + _FACTOR * t / S) ** _DECAY
+    return float((1.0 + _FACTOR * t / S) ** _DECAY)
 
 
 def update_triple_copy(tc: TripleCopy, outcome: float, t_days: float, S: float) -> TripleCopy:

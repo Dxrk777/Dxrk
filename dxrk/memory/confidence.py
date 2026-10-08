@@ -166,16 +166,16 @@ def adjusted_uncertainty(rd: float, t_days: float, confidence: float) -> float:
     Then: rd_effective = rd_eff * (1 - confidence)
     """
     # Time drift
-    rd_eff = min(350.0, (rd * rd + 4.0 * t_days) ** 0.5)
+    rd_eff = float(min(350.0, (rd * rd + 4.0 * t_days) ** 0.5))
     # Confidence adjustment
-    return rd_eff * (1.0 - confidence)
+    return float(rd_eff * (1.0 - confidence))
 
 
 def confidence_from_retrievability(meta: dict) -> float:
     """Estimate confidence from drawer's retrievability and stability."""
-    S = meta.get("S", 1.0)
-    D = meta.get("D", 5.0)
-    rd = meta.get("rd", 350.0)
+    S = float(meta.get("S", 1.0))
+    D = float(meta.get("D", 5.0))
+    rd = float(meta.get("rd", 350.0))
 
     # Higher stability + lower difficulty + lower rd = higher confidence
     stability_factor = min(1.0, S / 365.0)  # S max 365

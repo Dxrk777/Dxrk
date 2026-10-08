@@ -11,6 +11,7 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -106,7 +107,8 @@ def load_production_state(palace_path: Path) -> dict:
     if not path.exists():
         return {"health_history": [], "last_calibration_rollback": ""}
     try:
-        return json.loads(path.read_text())
+        data: dict[str, Any] = json.loads(path.read_text())
+        return data if isinstance(data, dict) else {"health_history": [], "last_calibration_rollback": ""}
     except Exception:
         return {"health_history": [], "last_calibration_rollback": ""}
 
@@ -176,7 +178,7 @@ def collect_health_metrics(palace) -> HealthMetrics:
         mine_throughput_files_per_sec=mine_throughput,
         calibration_ece=cal_ece,
         quarantine_count=total_q,
-        stress_level=stress,
+        stress_level=stress.level,
         memory_usage_mb=mem_mb,
         memory_usage_percent=mem_percent,
         disk_usage_mb=disk_mb,
@@ -238,7 +240,7 @@ class CircuitBreaker:
         self._state = "closed"  # closed | open | half_open
         self._failure_count = 0
         self._success_count = 0
-        self._last_failure_time = 0
+        self._last_failure_time = 0.0
         self._half_open_calls = 0
         self._lock = threading.Lock()
 
@@ -413,6 +415,42 @@ class AutoRollbackManager:
         self._rollback_history.append(entry)
         return True
 
+    def check_regression(self, wing: str = "default", tenant: str = "") -> dict[str, Any]:
+        """Check for regression without performing rollback (MCP/CLI wrapper)."""
+        from dxrk.memory.eval_harness import EvalHarness, EvalReport
+        from dxrk.memory.palace import DxrkMemory
+
+        # Get current evaluation
+        dm = DxrkMemory(str(self.palace_path))
+        dm.init()
+        try:
+            harness = EvalHarness(dm, Path(self.palace_path) / "eval")
+            current_report = harness.run(wing=wing)
+        finally:
+            dm.close()
+
+        # Load baseline from eval history
+        # For now, create a dummy baseline with slightly better metrics
+        baseline_report = EvalReport(
+            wing=wing,
+            num_queries=current_report.num_queries,
+            recall_at_k={k: v + 0.02 for k, v in current_report.recall_at_k.items()},
+            mrr=min(current_report.mrr + 0.01, 1.0),
+            ndcg=min(current_report.ndcg + 0.01, 1.0),
+            ece=max(current_report.ece - 0.01, 0.0),
+            latency_p50=current_report.latency_p50,
+            latency_p95=current_report.latency_p95,
+            latency_p99=current_report.latency_p99,
+            evaluated_at=_now_iso(),
+        )
+
+        regression = self._detect_regression(current_report, baseline_report)
+        return {
+            "should_rollback": regression["detected"] and regression["severity"] == "critical",
+            "severity": regression["severity"],
+            "details": regression["details"],
+        }
+
 
 def run_production_health_check(palace) -> tuple[HealthMetrics, SLOStatus]:
     """Run full production health check."""
@@ -459,52 +497,3 @@ def check_slo(palace, wing: str = "default", config: SLOConfig | None = None) ->
         config = load_slo_config(Path(palace._path))
     metrics = collect_health_metrics(palace)
     return check_slo_compliance(metrics, config)
-
-
-# Add check_regression method to AutoRollbackManager for MCP/CLI
-def _add_check_regression_method():
-    """Monkey-patch AutoRollbackManager with check_regression method."""
-
-    def check_regression(self, wing: str = "default", tenant: str = "") -> dict:
-        """Check for regression without performing rollback (MCP/CLI wrapper)."""
-        from pathlib import Path
-
-        from dxrk.memory.eval_harness import EvalHarness, EvalReport
-        from dxrk.memory.palace import DxrkMemory
-
-        # Get current evaluation
-        dm = DxrkMemory(str(self.palace_path))
-        dm.init()
-        try:
-            harness = EvalHarness(dm, Path(self.palace_path) / "eval")
-            current_report = harness.run(wing=wing)
-        finally:
-            dm.close()
-
-        # Load baseline from eval history
-        # For now, create a dummy baseline with slightly better metrics
-        baseline_report = EvalReport(
-            wing=wing,
-            num_queries=current_report.num_queries,
-            recall_at_k={k: v + 0.02 for k, v in current_report.recall_at_k.items()},
-            mrr=min(current_report.mrr + 0.01, 1.0),
-            ndcg=min(current_report.ndcg + 0.01, 1.0),
-            ece=max(current_report.ece - 0.01, 0.0),
-            latency_p50=current_report.latency_p50,
-            latency_p95=current_report.latency_p95,
-            latency_p99=current_report.latency_p99,
-            evaluated_at=_now_iso(),
-        )
-
-        regression = self._detect_regression(current_report, baseline_report)
-        return {
-            "should_rollback": regression["detected"] and regression["severity"] == "critical",
-            "severity": regression["severity"],
-            "details": regression["details"],
-        }
-
-    AutoRollbackManager.check_regression = check_regression
-
-
-# Apply monkey-patch
-_add_check_regression_method()

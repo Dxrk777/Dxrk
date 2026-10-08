@@ -9,6 +9,7 @@ import random
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any, cast
 
 from .palace import DxrkMemory
 
@@ -54,7 +55,7 @@ class EvalReport:
 
 def load_eval_dataset(path: Path) -> list[EvalQuery]:
     """Load evaluation queries from JSONL file."""
-    queries = []
+    queries: list[EvalQuery] = []
     if not path.exists():
         return queries
     with path.open() as f:
@@ -100,11 +101,11 @@ def generate_synthetic_queries(palace: DxrkMemory, wing: str, n: int = 50) -> li
     if len(drawers) < 2:
         return []
 
-    queries = []
+    queries: list[EvalQuery] = []
     for _ in range(n):
         target = random.choice(drawers)
-        meta = target.get("metadata", {})
-        doc = target.get("document", "")
+        meta: dict[str, Any] = cast(Any, target.get("metadata", {}) or {})
+        doc = str(target.get("document", ""))
         if not doc:
             continue
 
@@ -117,9 +118,9 @@ def generate_synthetic_queries(palace: DxrkMemory, wing: str, n: int = 50) -> li
         queries.append(
             EvalQuery(
                 query=query,
-                expected_drawer_ids=[target["id"]],
+                expected_drawer_ids=[str(target["id"])],
                 wing=wing,
-                difficulty=meta.get("D", 5.0),
+                difficulty=float(meta.get("D", 5.0)),
                 tags=("synthetic",),
             )
         )
@@ -166,7 +167,9 @@ def evaluate_query(palace: DxrkMemory, query: EvalQuery, k: int = 20) -> EvalRes
     start = datetime.now(UTC)
 
     hits = palace.search(query=query.query, wing=query.wing, n_results=k)
-    retrieved = [h["id"] for h in hits.get("results", [])]
+    results_raw = hits.get("results", [])
+    results_list: list[Any] = results_raw if isinstance(results_raw, list) else []
+    retrieved: list[str] = [str(h["id"]) for h in results_list if isinstance(h, dict) and "id" in h]
 
     latency_ms = (datetime.now(UTC) - start).total_seconds() * 1000
 

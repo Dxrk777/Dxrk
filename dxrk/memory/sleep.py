@@ -60,16 +60,16 @@ def avg_prediction_error(drawer: dict) -> float:
     ledger = drawer.get("metadata", {}).get("score_ledger", [])
     if not ledger:
         return 0.0
-    pes = [entry.get("pe", 0.0) for entry in ledger if "pe" in entry]
+    pes: list[float] = [float(entry.get("pe", 0.0)) for entry in ledger if "pe" in entry]
     if not pes:
         return 0.0
-    return sum(abs(pe) for pe in pes) / len(pes)
+    return float(sum(abs(pe) for pe in pes) / len(pes))
 
 
 def count_supersedes(drawer: dict) -> int:
     """Count superseded relations."""
     # Simple heuristic: superseded count in metadata
-    return drawer.get("metadata", {}).get("superseded_count", 0)
+    return int(drawer.get("metadata", {}).get("superseded_count", 0))
 
 
 def select_sleep_candidates(

@@ -6,6 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any, cast
 
 from dxrk.memory.palace import DxrkMemory
 
@@ -54,8 +55,8 @@ def compute_system_stress(palace: DxrkMemory) -> StressState:
     col = palace._collection(create=False)
     for wing in wings:
         usage = palace.wing_usage(wing)
-        total_drawers += usage.get("count", 0)
-        total_cap += usage.get("budget", 0)
+        total_drawers += int(cast(Any, usage.get("count", 0)))
+        total_cap += int(cast(Any, usage.get("budget", 0)))
         # Query drawers in this wing
         got = col.get(
             where={"wing": {"$in": [wing]}},
@@ -74,7 +75,7 @@ def compute_system_stress(palace: DxrkMemory) -> StressState:
             q_at = meta.get("quarantined_at", "")
             if q_reason and q_at:
                 try:
-                    q_dt = datetime.fromisoformat(q_at.replace("Z", "+00:00"))
+                    q_dt = datetime.fromisoformat(str(q_at).replace("Z", "+00:00"))
                     if q_dt.tzinfo is None:
                         q_dt = q_dt.replace(tzinfo=UTC)
                     if (cutoff - q_dt).days <= QUARANTINE_WINDOW_DAYS:

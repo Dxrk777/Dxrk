@@ -99,7 +99,7 @@ def qieo_optimize(
     # Initialize population of qubits
     population = [[Qubit() for _ in range(n_params)] for _ in range(config.pop_size)]
 
-    best_params = None
+    best_params: list[float] | None = None
     best_fitness = -math.inf
 
     for iteration in range(config.n_iter):
@@ -147,4 +147,6 @@ def qieo_optimize(
                     new_individual.append(new_qubit)
                 population[i] = new_individual
 
+    if best_params is None:
+        best_params = [lo for lo, _ in bounds]
     return best_params, best_fitness

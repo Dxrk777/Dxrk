@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>DXRK.ORG // BEYOND LIMITS — orquestador local-first para agentes IA</title>
+<meta name="description" content="Dxrk: 14 agentes en 1 comando. DxrkMemory 2.0 offline. SDD, MCP, multi-tenant. Sin API keys, sin Docker."/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Pirata+One&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+--void:#0a0a0a; --smoke:#141214; --rust:#1e0808;
+--blood:#8b0000; --blood2:#ff1a1a; --blood-dim:#4a0a0a;
+--bone:#e8e0d0; --dim:#8a8680; --phos:#33ff66;
+--line:#2a1a1a;
+}
+*{box-sizing:border-box}
+html{background:var(--void);scroll-behavior:smooth}
+body{
+margin:0;color:var(--bone);background:var(--void);
+font-family:"JetBrains Mono",monospace;
+overflow-x:hidden;
+}
+body::before{ /* scanlines */
+content:"";position:fixed;inset:0;pointer-events:none;z-index:50;
+background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(0,0,0,.35) 2px 3px);
+mix-blend-mode:multiply;
+}
+body::after{ /* vignette + noise */
+content:"";position:fixed;inset:0;pointer-events:none;z-index:51;
+background:radial-gradient(ellipse at 50% 20%,transparent 40%,rgba(0,0,0,.7) 100%);
+}
+a{color:inherit}
+.topbar{
+position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:16px;
+padding:12px 20px;background:rgba(10,10,10,.86);backdrop-filter:blur(10px);
+border-bottom:1px solid var(--line);
+}
+.logo{font-family:Anton,sans-serif;letter-spacing:.06em;font-size:22px}
+.logo b{color:var(--blood2)}
+.status{font-size:11px;border:1px solid var(--blood);padding:4px 8px;border-radius:99px;color:var(--blood2)}
+.status i{display:inline-block;width:7px;height:7px;background:var(--phos);border-radius:50%;margin-right:6px;box-shadow:0 0 8px var(--phos);animation:blink 1.2s infinite}
+@keyframes blink{50%{opacity:.2}}
+nav{margin-left:auto;display:flex;gap:18px;font-size:12px;color:var(--dim)}
+nav a{text-decoration:none} nav a:hover{color:var(--bone)}
+.cta{border:1px solid var(--blood2);background:linear-gradient(180deg,#2a0505,#0a0a0a);padding:8px 14px;border-radius:2px;text-decoration:none;font-size:12px;box-shadow:0 0 18px rgba(255,26,26,.25)}
+.hero{
+display:grid;grid-template-columns:1.15fr .85fr;gap:24px;
+padding:56px 20px 10px;max-width:1240px;margin:0 auto;align-items:start;
+}
+.kicker{color:var(--blood2);font-size:12px;letter-spacing:.2em}
+h1{
+font-family:Anton,sans-serif;font-size:clamp(64px,11vw,152px);line-height:.9;margin:10px 0 0;
+text-transform:uppercase;letter-spacing:.01em;
+}
+h1 .outline{color:transparent;-webkit-text-stroke:2px var(--bone)}
+h1 .blood{color:var(--blood2);text-shadow:0 0 24px rgba(139,0,0,.9),0 0 60px rgba(255,26,26,.4);position:relative}
+.goth{font-family:"Pirata One",serif;font-size:clamp(28px,4vw,54px);color:var(--bone);margin:6px 0;transform:rotate(-1.5deg)}
+.sub{color:var(--dim);max-width:58ch;font-size:14px;line-height:1.7}
+.badges{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0}
+.badges span{font-size:11px;border:1px dashed #4a2a2a;padding:6px 10px;background:#120a0a}
+.terminal{
+background:#050505;border:1px solid #3a1515;border-top:3px solid var(--blood);
+box-shadow:0 0 0 1px #000,0 20px 80px rgba(139,0,0,.25);
+transform:rotate(.6deg);
+}
+.term-head{display:flex;gap:6px;padding:10px;border-bottom:1px solid var(--line);font-size:11px;color:var(--dim)}
+.dot{width:10px;height:10px;border-radius:50%}
+.term-body{padding:18px;min-height:300px;font-size:13px;line-height:1.7}
+.prompt{color:var(--phos)} .cmd{color:var(--bone)} .ok{color:var(--phos)} .dim{color:var(--dim)}
+.cursor{display:inline-block;width:9px;height:16px;background:var(--blood2);vertical-align:-2px;animation:blink .8s infinite}
+.marquee{border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:28px 0;overflow:hidden;white-space:nowrap;background:#0d0505}
+.marquee div{display:inline-block;padding:12px 0;animation:slide 22s linear infinite;font-family:Anton,sans-serif;letter-spacing:.1em}
+.marquee s{color:var(--blood2);text-decoration:none;margin:0 18px}
+@keyframes slide{to{transform:translateX(-50%)}}
+.wrap{max-width:1240px;margin:0 auto;padding:0 20px}
+.bento{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+.card{border:1px solid var(--line);background:linear-gradient(180deg,#121010,#080808);padding:20px;position:relative;overflow:hidden}
+.card:hover{border-color:var(--blood2)}
+.card h3{font-family:Anton,sans-serif;margin:0 0 8px;font-size:22px;letter-spacing:.04em}
+.card p{margin:0;color:var(--dim);font-size:13px;line-height:1.6}
+.card .num{position:absolute;right:10px;top:6px;font-family:"Pirata One",serif;font-size:44px;color:rgba(139,0,0,.35)}
+.span6{grid-column:span 6}.span4{grid-column:span 4}.span8{grid-column:span 8}.span12{grid-column:span 12}
+@media(max-width:900px){.hero{grid-template-columns:1fr}.span6,.span4,.span8{grid-column:span 12}}
+.drip{height:22px;background:radial-gradient(circle at 10px -6px,transparent 14px,var(--blood) 15px);background-size:28px 22px;opacity:.7;margin:30px 0}
+.install{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:900px){.install{grid-template-columns:1fr}}
+pre{background:#050505;border:1px solid var(--line);padding:16px;overflow:auto;font-size:12.5px}
+button.copy{background:var(--blood);border:0;color:#fff;font:inherit;font-size:12px;padding:10px 14px;cursor:pointer}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{border:1px solid var(--line);padding:10px;text-align:left}
+th{background:#160a0a}
+footer{padding:40px 20px;color:var(--dim);font-size:12px;border-top:1px solid var(--line);margin-top:40px}
+.glitch{position:relative}
+.glitch::after{content:attr(data-t);position:absolute;left:2px;top:0;color:var(--blood2);clip-path:inset(10% 0 60% 0);opacity:.8;animation:gl 2.4s infinite steps(2)}
+@keyframes gl{0%,92%{opacity:0}93%{opacity:.8;transform:translate(-2px,1px)}96%{opacity:0}}
+:focus-visible{outline:2px solid var(--blood2);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="topbar">
+<div class="logo">DXRK<b>.ORG</b></div>
+<div class="status"><i></i>LOCAL-FIRST // OFFLINE // v1.3.0</div>
+<nav><a href="#features">features</a><a href="#memory">memory 2.0</a><a href="#install">install</a><a href="https://github.com/Dxrk777/Dxrk">github ↗</a></nav>
+<a class="cta" href="#install">1-COMMAND INSTALL</a>
+</div>
+
+<header class="hero">
+<div>
+<div class="kicker">ORQUESTADOR LOCAL-FIRST DE ECOSISTEMAS PARA AGENTES IA — 14 AGENTES</div>
+<h1><span class="outline">BEYOND</span><br><span class="blood glitch" data-t="LIMITS">LIMITS</span></h1>
+<div class="goth">dark blood terminal — punk / gótico / cyberpunk</div>
+<p class="sub">En 1 comando instala / configura / sincroniza 14 agentes, memoria persistente, skills, MCP y modelos. Flagship: <b>DxrkMemory 2.0</b> stdlib-only (SQLite FTS5 trigram + BM25 híbrido, offline, sin chromadb/onnx). <span class="dim">mine → search en 30s, sin API keys / sin Docker.</span></p>
+<div class="badges"><span>14 AGENTES / 1 CMD</span><span>MEMORY 2.0 OFFLINE</span><span>35+ MCP</span><span>SDD NATIVO</span><span>2760+ TESTS</span><span>MIT / PY 3.13+</span></div>
+</div>
+<div class="terminal" aria-label="terminal demo">
+<div class="term-head"><span class="dot" style="background:#ff5f57"></span><span class="dot" style="background:#febc2e"></span><span class="dot" style="background:#28c840"></span><span style="margin-left:8px">dxrk — zsh — 80×24</span></div>
+<div class="term-body" id="term"></div>
+</div>
+</header>
+
+<div class="marquee"><div id="mq">LOCAL-FIRST <s>✕</s> SIN API KEYS <s>✕</s> OFFLINE <s>✕</s> 14 AGENTES <s>✕</s> DXRKMEMORY 2.0 <s>✕</s> SDD <s>✕</s> MULTI-TENANT <s>✕</s> BEYOND LIMITS <s>✕</s>&nbsp;</div></div>
+
+<main class="wrap">
+<section id="features">
+<div class="bento">
+<div class="card span8"><div class="num">i</div><h3>14 AGENTES, 1 COMANDO</h3><p>Claude / OpenCode / Gemini / Cursor / Copilot / Codex +8 más vía <b>dxrk-py install --preset full-dxrk</b>. Sync real, no symlinks rotos.</p></div>
+<div class="card span4"><div class="num">ii</div><h3>MEMORY 2.0</h3><p>SQLite FTS5 + BM25 + grafo temporal + AAAK. Wake-up 600-900 tok. 100% offline.</p></div>
+<div class="card span4"><div class="num">iii</div><h3>35+ MCP + SKILLS</h3><p>Curadas, instalables por --component. Config en .mcp.json.</p></div>
+<div class="card span4"><div class="num">iv</div><h3>MODEL SWITCHER</h3><p>Perfiles cheap / balanced / quality en config.yaml + dxrk-py sync.</p></div>
+<div class="card span4"><div class="num">v</div><h3>SDD + GIT</h3><p>/sdd-init, /commit, /branch, /pr, registry + hooks.</p></div>
+<div class="card span12"><div class="num">vi</div><h3>ENTERPRISE LOCAL — MULTI-TENANT + RBAC</h3><p>~/.dxrk/tenants/{id}/ + roles admin/dev/readonly. Sesiones durables, swarm honesto, TUI Textual.</p></div>
+</div>
+</section>
+
+<div class="drip"></div>
+
+<section id="memory">
+<h2 style="font-family:Anton">FLAGSHIP: DXRKMEMORY 2.0</h2>
+<div class="install">
+<pre>$ dxrk-py mine ./mi-proyecto --wing dxrk
+✓ 26462 drawers · FTS5 trigram · WAL
+$ dxrk-py search "auth RBAC tenant" --wing dxrk
+→ 00.94 drawer: tenants/{id}/ + RBAC admin/dev
+→ wake-up 742 tok · offline · sin chromadb/onnx</pre>
+<pre>STACK: dxrk v1.3.0 · MIT · Python ≥3.13
+DEPS: textual httpx PyYAML cryptography bs4 psutil + sqlite3 stdlib
+QA: pytest 2760+ · cov 80% · mypy estricto · ruff 120
+DOCS: mkdocs Material + mkdocstrings · ubuntu/macos/windows</pre>
+</div>
+</section>
+
+<div class="drip"></div>
+
+<section id="install">
+<h2 style="font-family:Anton">INSTALL EN 30 SEGUNDOS</h2>
+<pre id="cmd">uv tool install git+https://github.com/Dxrk777/Dxrk.git
+dxrk-py install --preset full-dxrk
+dxrk-py mine . --wing dxrk</pre>
+<p><button class="copy" onclick="navigator.clipboard.writeText(document.getElementById('cmd').innerText);this.innerText='COPIADO ✓'">COPIAR INSTALL</button></p>
+<h3>DXRK VS MANUAL</h3>
+<table><tr><th></th><th>Dxrk 1 cmd</th><th>Manual</th></tr>
+<tr><td>14 agentes</td><td>✓ sync</td><td>✕ 14 installs</td></tr>
+<tr><td>Memoria</td><td>✓ offline FTS5</td><td>✕ chromadb/onnx</td></tr>
+<tr><td>Modelos</td><td>✓ cheap/balanced/quality</td><td>✕ .env chaos</td></tr>
+<tr><td>Tenants</td><td>✓ RBAC local</td><td>✕ sin aislamiento</td></tr></table>
+</section>
+</main>
+
+<footer>DXRK // BEYOND LIMITS — prototipo site-dxrk.org · dark-blood-terminal fusión (Terminal Noir 1 + Linear bento 2 + Vercel contrast 3) · <a href="https://github.com/Dxrk777/Dxrk">github.com/Dxrk777/Dxrk</a> · MIT</footer>
+
+<script>
+const lines=[
+["$ ","uv tool install git+https://github.com/Dxrk777/Dxrk.git","cmd"],
+["ok ","installed dxrk v1.3.0 · 14 agents · 35+ MCP","ok"],
+["$ ","dxrk-py mine . --wing dxrk","cmd"],
+["ok ","26462 drawers · FTS5 trigram+BM25 · offline","ok"],
+["$ ","dxrk-py search \"RBAC tenant\"","cmd"],
+["→ ","742 tok wake-up · AAAK · sin API keys","dim"],
+];
+const el=document.getElementById('term');let li=0,ci=0,buf="";
+function tick(){
+if(li>=lines.length){el.innerHTML+='<br><span class="prompt">dxrk&gt;</span> <span class="cursor"></span>';return}
+const [pre,txt,cls]=lines[li];
+if(ci<=txt.length){buf=txt.slice(0,ci++);el.innerHTML=el.innerHTML.split('<span class="cursor">')[0]+[...Array(li)].map(()=>'<br>').join('')+'';render();setTimeout(tick,18)}
+else{li++;ci=0;setTimeout(tick,420)}
+function render(){
+let h="";for(let i=0;i<li;i++){h+=`<span class="prompt">${lines[i][0]==='$ '?'$':' '+lines[i][0]}</span> <span class="${lines[i][2]}">${lines[i][1]}</span><br>`}
+h+=`<span class="prompt">${pre}</span> <span class="${cls}">${buf}</span> <span class="cursor"></span>`;el.innerHTML=h;
+}}
+tick();
+// marquee duplicate
+const mq=document.getElementById('mq');mq.innerHTML+=mq.innerHTML;
+</script>
+</body>
+</html>

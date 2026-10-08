@@ -11,7 +11,7 @@ from pathlib import Path
 from .migrate import ensure_spine_defaults
 from .qieo import QIEOConfig, qieo_optimize
 from .scoring import r_fsrs
-from .thompson import select_evaluation_candidates
+from .thompson import ThompsonConfig, select_evaluation_candidates
 
 CALIBRATION_DIR = ".calibration"
 CALIBRATION_FILE = "{tenant}_{wing}.json"
@@ -161,7 +161,7 @@ def calibrate_wing(
     wing: str,
     tenant: str = "",
     qieo_config: QIEOConfig | None = None,
-    thompson_config: object | None = None,
+    thompson_config: ThompsonConfig | None = None,
     objective_k: int = 10,
     objective_samples: int = 30,
 ) -> CalibrationParams:
@@ -188,9 +188,7 @@ def calibrate_wing(
     if qieo_config is None:
         qieo_config = QIEOConfig(pop_size=30, n_iter=50, rotation_delta=0.1)
     if thompson_config is None:
-        thompson_config = type(
-            "ThompsonConfig", (), {"alpha_prior": 1.0, "beta_prior": 1.0, "exploration_bonus": 0.5}
-        )()
+        thompson_config = ThompsonConfig(alpha_prior=1.0, beta_prior=1.0, exploration_bonus=0.5)
 
     # Select evaluation candidates via Thompson Sampling
     candidate_ids = select_evaluation_candidates(palace, n=20, config=thompson_config)

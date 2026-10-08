@@ -1002,12 +1002,12 @@ def _handle_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
 
             dm = _get_memory(palace_path)
             rollback_mgr = AutoRollbackManager(Path(palace_path))
-            result = rollback_mgr.check_regression(wing=str(args["wing"]))  # type: ignore[attr-defined]
+            result = rollback_mgr.check_regression(wing=str(args["wing"]))
             return {
                 "palace_path": palace_path,
-                "should_rollback": result.should_rollback,
-                "severity": result.severity,
-                "details": result.details,
+                "should_rollback": result["should_rollback"],
+                "severity": result["severity"],
+                "details": result["details"],
             }
 
         # Fase 2: Judge Externo Continuo
