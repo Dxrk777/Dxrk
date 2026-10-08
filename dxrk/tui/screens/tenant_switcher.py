@@ -447,9 +447,9 @@ class TenantSwitcherScreen(ModalScreen[None]):
     """Next-gen Tenant Switcher — Premium modal with live preview, animations, and premium UX."""
 
     BINDINGS = [
-        Binding("up,k", "cursor_up", "Arriba", show=False),
-        Binding("down,j", "cursor_down", "Abajo", show=False),
-        Binding("enter", "switch", "Cambiar", show=True, priority=True),
+        Binding("up,k", "cursor_up", "Arriba", show=False, priority=True),
+        Binding("down,j", "cursor_down", "Abajo", show=False, priority=True),
+        Binding("enter", "switch", "Cambiar", show=True),
         Binding("c", "create", "Crear", show=True),
         Binding("escape", "back", "Atrás", show=True),
         Binding("t", "back", "Atrás", show=False),
