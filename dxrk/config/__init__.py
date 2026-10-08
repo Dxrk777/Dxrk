@@ -55,6 +55,7 @@ from .config import (
     WithEnvPrefix,
     WithGlobalPath,
     WithProjectPath,
+    WithTenantPath,
     WithUserPath,
     default_hierarchical_config,
 )
@@ -183,6 +184,7 @@ __all__ = [
     "WithEnvPrefix",
     "WithGlobalPath",
     "WithProjectPath",
+    "WithTenantPath",
     "WithUserPath",
     "default_hierarchical_config",
     "expand_path",

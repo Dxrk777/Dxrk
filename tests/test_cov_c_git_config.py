@@ -928,14 +928,19 @@ def test_cov_unified_facade(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     uni.load()
     uni.save()
     assert isinstance(uni.validate(), list)
-    # CamelCase aliases
-    uni.SetTyped("ui.theme", "dark")
-    assert uni.GetTyped("ui.theme") == "dark"
-    uni.SetRaw("k2", "v2")
-    assert uni.GetRaw("k2") == "v2"
-    uni.Load()
-    uni.Save()
-    assert isinstance(uni.Validate(), list)
+    # CamelCase aliases (deprecated, covered by test_unified_camelcase_aliases_deprecated)
+    with pytest.warns(DeprecationWarning):
+        uni.SetTyped("ui.theme", "dark")
+    assert uni.get_typed("ui.theme") == "dark"
+    with pytest.warns(DeprecationWarning):
+        uni.SetRaw("k2", "v2")
+    assert uni.get_raw("k2") == "v2"
+    with pytest.warns(DeprecationWarning):
+        uni.Load()
+    with pytest.warns(DeprecationWarning):
+        uni.Save()
+    with pytest.warns(DeprecationWarning):
+        assert isinstance(uni.Validate(), list)
 
 
 def test_cov_unified_default_init(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
@@ -943,8 +948,8 @@ def test_cov_unified_default_init(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     (tmp_path / ".dxrk").mkdir(exist_ok=True)
     uni = UnifiedConfig()
     assert uni.get_typed("model.provider") == "claude"
-    uni.SetRaw("dk", "dv")
-    assert uni.GetRaw("dk") == "dv"
+    uni.set_raw("dk", "dv")
+    assert uni.get_raw("dk") == "dv"
     uni.load()
     uni.save()
 
