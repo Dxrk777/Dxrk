@@ -53,3 +53,19 @@ El smoke GA (v1.0.0) confirmó que el sistema **funciona**; esto es deuda de dis
   `test_section_fields_introspected_match_dataclasses` lo fija.
 - Pendiente v2.0 (sin cambios): persistencia única YAML, `config migrate`,
   deprecación CamelCase, rutas tenant-aware en `config.yaml`.
+
+## Progreso 2026-10-08 (v2.0 parcial, no rompible)
+
+- ✅ Punto 4 (duplicación `_SECTION_FIELDS`): introspección (mergeado).
+- ✅ Punto 3 parcial: `config.yaml` tenant-aware
+  (`~/.dxrk/tenants/<tid>/config.yaml` entre proyecto y usuario, vía
+  `WithTenantPath` o `DXRK_TENANT`).
+- ✅ Punto 1 parcial: `UnifiedConfig.override()` implementa el nivel 1
+  (runtime overrides); matriz de precedencia testeada (10 niveles).
+- ✅ Punto 4b: aliases `CamelCase` de `UnifiedConfig` emiten
+  `DeprecationWarning` (remoción no antes de v3.0).
+- ⏳ Pendiente (requiere decisión de formato con impacto en usuarios):
+  persistencia única YAML + comando `config migrate` + `settings.json`
+  legacy read-only. No se implementó porque ningún código productivo lee
+  `UnifiedConfig`/`SettingsManager` hoy (solo tests); migrar sería teatro.
+  Re-evaluar cuando el CLI `dxrk config` adopte la fachada.

@@ -588,3 +588,164 @@ def test_config_settings_store_list_flattens_section():
     listed = store.List()
     assert listed["theme"] == mgr.Get("ui.theme")
     assert set(listed) >= {"theme", "font_size"}
+
+
+def _write_yaml(path, data):
+    import yaml
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(yaml.safe_dump(data), encoding="utf-8")
+
+
+def _isolated_manager(tmp_path, monkeypatch, files):
+    """Build ConfigManager with all file layers pointed at tmp files."""
+    from dxrk.config.config import ConfigManager, WithGlobalPath, WithProjectPath, WithTenantPath, WithUserPath
+
+    paths = {}
+    for layer in ("global", "user", "tenant", "project"):
+        p = tmp_path / f"{layer}.yaml"
+        if layer in files:
+            _write_yaml(p, files[layer])
+        paths[layer] = str(p)
+    mgr = ConfigManager(
+        [
+            WithGlobalPath(paths["global"]),
+            WithUserPath(paths["user"]),
+            WithTenantPath(paths["tenant"]),
+            WithProjectPath(paths["project"]),
+        ]
+    )
+    mgr.Load()
+    return mgr
+
+
+def test_config_manager_layer_order_global_user_tenant_project(tmp_path, monkeypatch):
+    """Later layers win: global < user < tenant < project."""
+    monkeypatch.delenv("DXRK_TENANT", raising=False)
+    monkeypatch.delenv("DXRK_UI_THEME", raising=False)
+    mgr = _isolated_manager(
+        tmp_path,
+        monkeypatch,
+        {
+            "global": {"ui": {"theme": "global"}},
+            "user": {"ui": {"theme": "user"}},
+            "tenant": {"ui": {"theme": "tenant"}},
+            "project": {"ui": {"theme": "project"}},
+        },
+    )
+    assert mgr.Get("ui.theme") == "project"
+
+
+def test_config_manager_tenant_beats_user(tmp_path, monkeypatch):
+    monkeypatch.delenv("DXRK_TENANT", raising=False)
+    monkeypatch.delenv("DXRK_UI_THEME", raising=False)
+    mgr = _isolated_manager(
+        tmp_path, monkeypatch, {"user": {"ui": {"theme": "user"}}, "tenant": {"ui": {"theme": "tenant"}}}
+    )
+    assert mgr.Get("ui.theme") == "tenant"
+
+
+def test_config_manager_tenant_env_fallback(tmp_path, monkeypatch):
+    """DXRK_TENANT resolves ~/.dxrk/tenants/<tid>/config.yaml (HOME isolated)."""
+    home = tmp_path / "home"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("DXRK_TENANT", "acme")
+    monkeypatch.delenv("DXRK_UI_THEME", raising=False)
+    from dxrk.tenant.migration import ensure_tenant
+
+    ensure_tenant("acme")
+    _write_yaml(home / ".dxrk" / "tenants" / "acme" / "config.yaml", {"ui": {"theme": "acme-tenant"}})
+    from dxrk.config.config import ConfigManager, WithGlobalPath, WithProjectPath, WithUserPath
+
+    missing = str(tmp_path / "missing.yaml")
+    mgr = ConfigManager([WithGlobalPath(missing), WithUserPath(missing), WithProjectPath(missing)])
+    mgr.Load()
+    assert mgr.Get("ui.theme") == "acme-tenant"
+
+
+def test_config_manager_env_beats_files(tmp_path, monkeypatch):
+    monkeypatch.delenv("DXRK_TENANT", raising=False)
+    monkeypatch.setenv("DXRK_UI_THEME", "from-env")
+    mgr = _isolated_manager(tmp_path, monkeypatch, {"project": {"ui": {"theme": "project"}}})
+    assert mgr.Get("ui.theme") == "from-env"
+
+
+def test_unified_runtime_overrides_win(tmp_path, monkeypatch):
+    """Level-1 overrides beat env, settings and files."""
+    monkeypatch.delenv("DXRK_TENANT", raising=False)
+    monkeypatch.setenv("DXRK_UI_THEME", "from-env")
+    from dxrk.config.config import ConfigManager, WithGlobalPath, WithProjectPath, WithTenantPath, WithUserPath
+    from dxrk.config.unified import UnifiedConfig
+
+    missing = str(tmp_path / "missing.yaml")
+    mgr = ConfigManager(
+        [WithGlobalPath(missing), WithUserPath(missing), WithTenantPath(missing), WithProjectPath(missing)]
+    )
+    uni = UnifiedConfig(config=mgr)
+    uni.load()
+    assert uni.get_typed("ui.theme") == "from-env"
+    uni.override("ui.theme", "flag-value")
+    assert uni.get_typed("ui.theme") == "flag-value"
+    uni.clear_overrides()
+    assert uni.get_typed("ui.theme") == "from-env"
+
+
+def test_unified_precedence_matrix_settings_vs_config(tmp_path, monkeypatch):
+    """Settings layers (project > tenant > file) beat config YAML layers."""
+    import warnings
+
+    monkeypatch.delenv("DXRK_TENANT", raising=False)
+    monkeypatch.delenv("DXRK_UI_THEME", raising=False)
+    from dxrk.config.config import ConfigManager, WithGlobalPath, WithProjectPath, WithTenantPath, WithUserPath
+    from dxrk.config.settings import FileSettingsStore, MemorySettingsStore, ProjectSettingsStore, SettingsManager
+    from dxrk.config.unified import ConfigSettingsStore, UnifiedConfig
+
+    missing = str(tmp_path / "missing.yaml")
+    _write_yaml(tmp_path / "project.yaml", {"ui": {"theme": "yaml-project"}})
+    mgr = ConfigManager(
+        [
+            WithGlobalPath(missing),
+            WithUserPath(missing),
+            WithTenantPath(missing),
+            WithProjectPath(str(tmp_path / "project.yaml")),
+        ]
+    )
+    file_store = FileSettingsStore(path=str(tmp_path / "user.json"))
+    project_store = ProjectSettingsStore(path=str(tmp_path / "proj.json"))
+    tenant_store = ConfigSettingsStore(mgr, priority=150)
+    settings = SettingsManager([project_store, tenant_store, file_store, MemorySettingsStore(priority=10)])
+    uni = UnifiedConfig(config=mgr, settings=settings)
+    uni.load()
+    # config project yaml visible through tenant store fallback chain
+    assert uni.get_typed("ui.theme") == "yaml-project"
+    # flat settings layers: project > file
+    file_store.Set("k", "file")
+    project_store.Set("k", "project")
+    assert uni.get_raw("k") == "project"
+    # overrides win over everything
+    uni.override("k", "flag")
+    assert uni.get_raw("k") == "flag"
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        uni.SetRaw("k2", "v2")
+        assert uni.GetRaw("k2") == "v2"
+
+
+def test_unified_camelcase_aliases_deprecated():
+    """CamelCase aliases warn but behave identically (ADR-004)."""
+    import warnings
+
+    from dxrk.config.unified import UnifiedConfig
+
+    uni = UnifiedConfig()
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always", DeprecationWarning)
+        uni.SetTyped("ui.theme", "dark")
+        assert uni.GetTyped("ui.theme") == "dark"
+        uni.SetRaw("dk", "dv")
+        assert uni.GetRaw("dk") == "dv"
+        uni.Load()
+        uni.Save()
+        assert isinstance(uni.Validate(), list)
+    assert any(issubclass(w.category, DeprecationWarning) for w in caught)

@@ -65,3 +65,6 @@ entities.json
 site/
 .cache/
 build/
+
+# Local runtime state (never commit)
+.dxrk/

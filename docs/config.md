@@ -4,15 +4,16 @@ Dxrk lee su configuración de varias capas con una **escalera de prioridad** fij
 
 | # | Capa | Origen |
 |---|---|---|
-| 1 | Flags CLI | `--model`, `--tenant`, etc. (solo runtime, no persisten) |
-| 2 | Variables de entorno | `DXRK_*` (p. ej. `DXRK_TENANT`, `DXRK_MODEL`) |
+| 1 | Overrides runtime | `UnifiedConfig.override()` (p. ej. flags CLI; solo runtime, no persisten) |
+| 2 | Variables de entorno | `DXRK_*` (p. ej. `DXRK_TENANT`, `DXRK_UI_THEME`) |
 | 3 | Settings de proyecto | `.dxrk/settings.json` |
 | 4 | Settings de tenant | store tenant (prioridad 150) |
 | 5 | Settings de usuario | `~/.dxrk/settings.json` |
 | 6 | Config de proyecto | `.dxrk/config.yaml` |
-| 7 | Config de usuario | `~/.dxrk/config.yaml` |
-| 8 | Config global | `/etc/dxrk/config.yaml` |
-| 9 | Defaults internos | `HierarchicalConfig` en `dxrk/config/config.py` |
+| 7 | Config de tenant | `~/.dxrk/tenants/<tid>/config.yaml` (vía `DXRK_TENANT` o `WithTenantPath`) |
+| 8 | Config de usuario | `~/.dxrk/config.yaml` |
+| 9 | Config global | `/etc/dxrk/config.yaml` |
+| 10 | Defaults internos | `HierarchicalConfig` en `dxrk/config/config.py` |
 
 ## Dos sistemas, una fachada
 
@@ -48,4 +49,4 @@ export DXRK_USER=alice    # usuario para enforcement RBAC (ver rbac.md)
 1. **Secretos nunca en YAML/JSON** — usa variables de entorno o el vault por tenant (`DXRK_VAULT_KEY`).
 2. **`config.yaml` admite comentarios**; `settings.json` no — prefiere YAML para lo que edites a mano.
 3. **Proyecto > usuario**: lo que pongas en `.dxrk/` del repo gana sobre tu `~/.dxrk/`.
-4. El tenant solo afecta hoy a la capa 4 (settings); `config.yaml` aún no es tenant-aware — es parte del plan v2.0 ([ADR-004](adr/ADR-004-config-unify.md)).
+4. El tenant afecta a la capa 4 (settings) y a la capa 7 (`config.yaml` por tenant). Los aliases `CamelCase` de `UnifiedConfig` están deprecados (aviso `DeprecationWarning`, se remueven no antes de v3.0) — ver [ADR-004](adr/ADR-004-config-unify.md).
