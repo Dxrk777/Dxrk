@@ -2232,9 +2232,16 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 <li>[x] Gates universales §6.1 verdes en <code>main</code> tag <code>v1.0.0</code> (se re-verifican en gates finales)</li>
 </ul>
 <h4 id="v110-done-cortex-autonomous-enterprise-release-menor">v1.1.0 Done (Cortex + Autonomous + Enterprise) — release menor</h4>
+<blockquote>
+<p><strong>Corrección 2026-10-08:</strong> esta sección describía un plan que no se
+materializó como está escrito — nunca se cortó tag <code>v1.1.0</code>, y
+<code>dxrk/memory/cortex/</code> + <code>dxrk/memory/autonomous/</code> fueron removidos como
+código muerto en 1.3.0 (ver CHANGELOG). Se conserva el texto original
+abajo con las líneas correspondientes marcadas.</p>
+</blockquote>
 <ul>
-<li>[x] <code>dxrk/memory/cortex/</code> 15 archivos (IQ engine, network effect, collective, dreaming, meta-learning) — <code>tests/test_cortex.py</code> 98 tests</li>
-<li>[x] <code>dxrk/memory/autonomous/</code> 8 archivos (7 motores: reader, practice, reflection, imitation, experimentation, synthesis, assessment) — <code>tests/test_autonomous.py</code> 41 tests</li>
+<li>[ ] ~~<code>dxrk/memory/cortex/</code> 15 archivos (IQ engine, network effect, collective, dreaming, meta-learning) — <code>tests/test_cortex.py</code> 98 tests~~ — <strong>no implementado; descartado en 1.3.0</strong></li>
+<li>[ ] ~~<code>dxrk/memory/autonomous/</code> 8 archivos (7 motores: reader, practice, reflection, imitation, experimentation, synthesis, assessment) — <code>tests/test_autonomous.py</code> 41 tests~~ — <strong>no implementado; descartado en 1.3.0</strong></li>
 <li>[x] <code>dxrk/enterprise/</code> 24 archivos (company, orchestrator, workforce, 7 departments, 8 skills) + <code>CLI enterprise</code> — <code>tests/test_enterprise.py</code> 102 tests</li>
 <li>[x] <code>docs/enterprise.md</code> + nav mkdocs — <code>mkdocs build</code> 0 warnings</li>
 <li>[x] Supply chain: <code>.github/workflows/scorecard.yml</code> + pin SHA en 6 workflows + permisos por job — Scorecard <strong>7.0</strong> (Token-Permissions 10, Pinned-Dependencies 10)</li>
