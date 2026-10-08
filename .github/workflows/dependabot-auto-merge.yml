@@ -1,0 +1,50 @@
+name: Dependabot auto-merge
+
+on:
+  pull_request_target:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable auto-merge for patch/minor updates with green CI
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -euo pipefail
+          echo "Evaluating: $PR_TITLE"
+          # Compare highest AND lowest versions on each side of "from A to B".
+          # Supports plain versions (4.38.0) and ranges (>=8.0, <5,>=4.12).
+          # Checking both ends catches lower-bound major bumps such as
+          # "<9.0,>=1.0 to >=8.2.8,<9.0". Anything unparseable -> manual.
+          pick_lowest() {
+            grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | sort -t. -k1,1n -k2,2n -k3,3n | head -1
+          }
+          pick_highest() {
+            grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1
+          }
+          major_of() { echo "${1%%.*}"; }
+          from_part="${PR_TITLE%% to *}"
+          to_part="${PR_TITLE##* to }"
+          from_lo="$(echo "$from_part" | pick_lowest || true)"
+          from_hi="$(echo "$from_part" | pick_highest || true)"
+          to_lo="$(echo "$to_part" | pick_lowest || true)"
+          to_hi="$(echo "$to_part" | pick_highest || true)"
+          if [ -z "$from_lo" ] || [ -z "$from_hi" ] || [ -z "$to_lo" ] || [ -z "$to_hi" ]; then
+            echo "Cannot parse versions; leaving for manual review."
+            exit 0
+          fi
+          if [ "$(major_of "$from_lo")" != "$(major_of "$to_lo")" ] || [ "$(major_of "$from_hi")" != "$(major_of "$to_hi")" ]; then
+            echo "Major bump ($from_lo-$from_hi -> $to_lo-$to_hi); leaving for manual review."
+            exit 0
+          fi
+          echo "Patch/minor bump ($from_lo-$from_hi -> $to_lo-$to_hi); enabling squash auto-merge."
+          gh pr merge --auto --squash "$PR_URL"
