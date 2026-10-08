@@ -809,6 +809,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#migracion-settingsjson-configyaml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migración settings.json → config.yaml
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1183,9 +1194,26 @@ dxrk<span class="w"> </span>--tenant<span class="w"> </span>acme<span class="w">
 <li><code>get</code>/<code>layers</code> requieren op <code>read</code>; <code>set</code> requiere op <code>write</code>
   (<code>readonly</code> recibe <code>RBAC_DENIED</code> en <code>set</code>).</li>
 <li><code>set</code> persiste la vista fusionada (en usuario o tenant); las capas
-  inferiores siguen aplicando por debajo.</li>
+  inferiores siguen aplicando por debajo. La sección <code>settings.*</code> es de
+  solo lectura en <code>set</code> (para no romper el fallback de claves libres);
+  esas claves llegan a YAML vía <code>migrate</code>.</li>
 <li>Valores con formato JSON (<code>50</code>, <code>true</code>, <code>"texto"</code>) se tipan; el resto
   queda como string.</li>
+</ul>
+<h2 id="migracion-settingsjson-configyaml">Migración <code>settings.json</code> → <code>config.yaml</code></h2>
+<div class="highlight"><pre><span></span><code>dxrk<span class="w"> </span>config<span class="w"> </span>migrate<span class="w"> </span>--dry-run<span class="w">   </span><span class="c1"># plan sin escribir</span>
+dxrk<span class="w"> </span>config<span class="w"> </span>migrate<span class="w">              </span><span class="c1"># mueve claves planas a la sección settings:</span>
+<span class="w">                                 </span><span class="c1">#   ~/.dxrk/settings.json → ~/.dxrk/config.yaml</span>
+<span class="w">                                 </span><span class="c1">#   .dxrk/settings.json   → .dxrk/config.yaml</span>
+dxrk<span class="w"> </span>--tenant<span class="w"> </span>acme<span class="w"> </span>config<span class="w"> </span>migrate<span class="w">  </span><span class="c1"># además las siembra en el tenant</span>
+</code></pre></div>
+<ul>
+<li>Idempotente: las claves ya presentes se omiten; segunda corrida no escribe.</li>
+<li>Cada YAML reescrito conserva backup <code>.bak</code> (solo primera vez).</li>
+<li>Nota: el volcado YAML no preserva comentarios del archivo previo
+  (limitación de PyYAML); el <code>.bak</code> permite recuperarlos.</li>
+<li>Las claves migradas se leen como <code>settings.&lt;clave&gt;</code> en toda la escalera
+  (incluida la capa 7 de tenant).</li>
 </ul>
 
 

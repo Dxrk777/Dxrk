@@ -912,6 +912,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#progreso-2026-10-08-ii-migrate-implementado" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Progreso 2026-10-08 (II) — migrate implementado
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1197,6 +1208,18 @@
   legacy read-only. No se implementó porque ningún código productivo lee
   <code>UnifiedConfig</code>/<code>SettingsManager</code> hoy (solo tests); migrar sería teatro.
   Re-evaluar cuando el CLI <code>dxrk config</code> adopte la fachada.</li>
+</ul>
+<h2 id="progreso-2026-10-08-ii-migrate-implementado">Progreso 2026-10-08 (II) — migrate implementado</h2>
+<ul>
+<li><code>ConfigManager</code> soporta sección schemaless <code>settings.*</code> (merge/load/save/
+  get/set round-trip; el objeto tipado no cambia).</li>
+<li>Nuevo <code>dxrk config migrate [--dry-run]</code> (op <code>write</code>): mueve claves planas
+  de <code>settings.json</code> (usuario + proyecto, más pool al tenant si hay tenant
+  activo) a la sección <code>settings:</code> de los <code>config.yaml</code>, con backup <code>.bak</code>,
+  idempotente y con reporte moved/copied/skipped estilo <code>tenant migrate</code>.</li>
+<li>Con esto, la unificación queda completa salvo la deprecación total de
+  <code>settings.json</code> como escritura (pendiente de adopción del CLI <code>set_raw</code>;
+  <code>settings.json</code> sigue legible).</li>
 </ul>
 
 
