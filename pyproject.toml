@@ -108,7 +108,7 @@ markers = [
 
 [dependency-groups]
 dev = [
-    "mkdocs-material[imaging]>=9.6,<10",
+    "mkdocs-material[imaging]>=9.7.7,<10",
     "mkdocstrings-python>=2.0.6",
     "mike>=2.0",
     "mypy>=2.3.0",
