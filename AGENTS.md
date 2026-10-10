@@ -11,15 +11,15 @@ Instrucciones para agentes de IA que trabajan en **Dxrk** (configurador/orquesta
 - Typecheck: `uv run mypy dxrk` (excluye `tests/`)
 - Audit de dependencias: `uv audit`
 - Docs: `mkdocs serve` / `mkdocs build` (config `mkdocs.yml`, tema Material + mkdocstrings)
-- Release: tag `v*` desde `main` dispara publish a PyPI + changelog + release (no tocar workflows de release)
+- Release: tag `v*` desde `main` dispara changelog + GitHub release (sin PyPI; distribución vía git, ver `.github/workflows/publish.yml:26-29`) (no tocar workflows de release)
 
 ## Arquitectura
 
-- Paquete raíz `dxrk/`, espejo de `internal/commands/*.go`. Entry point CLI/TUI: `dxrk/__main__.py` (`main()`); console script publicado: `dxrk-py` (no `dxrk`).
+- Paquete raíz `dxrk/` (`dxrk/commands/*.py`, Python). Entry point CLI/TUI: `dxrk/__main__.py` (`main()`); console script publicado: `dxrk-py` (no `dxrk`).
 - **Comandos CLI**: cada módulo en `dxrk/commands/*.py` expone `register_<name>_command(reg: Registry) -> None`; TODOS se registran en `dxrk/commands/__init__.py` (`register_all`). Al crear un comando hay que agregarlo ahí.
 - `dxrk/commands/registry.py` define `Command`, `CommandContext` (out/err como `TextIO`, default `sys.stdout`/`sys.stderr`), `Registry` (`add_command`, `execute(argv, out, err)`), `go_quote`.
 - Submódulos por dominio: `agents/`, `autonomy/`, `cli/`, `commands/`, `components/`, `config/`, `mcp/`, `rag/`, `scholar/`, `security/`, `tui/`, `utils/`.
-- `utils/http/` es paquete (client, pool, transport, retry, context, errors, logging + subpaquetes `proxy/`, `tls/`), no el monolito histórico `utils/http.py`; `utils/image.py` (1157 líneas, ~96%). `utils/` contiene helpers con sus propios tests (`tests/test_utils_*.py`).
+- `utils/http/` es paquete (client, pool, transport, retry, context, errors, logging + subpaquetes `proxy/`, `tls/`), no el monolito histórico `utils/http.py`; `utils/image.py` (148 líneas, facade que re-exporta `image_cache.py`, `image_codec.py`, `image_detect.py`, `image_format.py`, `image_pdf.py`, `image_processor.py`, `image_transform.py`). `utils/` contiene helpers con sus propios tests (`tests/test_utils_*.py`).
 - Config de usuario en `~/.config/dxrk/` (p.ej. `hooks.json`).
 
 ## Tests

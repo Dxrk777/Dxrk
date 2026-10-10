@@ -66,7 +66,7 @@ jobs:
   benchmark:
     name: Benchmarks (non-blocking)
     runs-on: ubuntu-latest
-    # Job no bloqueante: no rompe el gate de CI ni la cobertura 75%
+    # Job no bloqueante: no rompe el gate de CI ni la cobertura 80%
     continue-on-error: true
 
     steps:

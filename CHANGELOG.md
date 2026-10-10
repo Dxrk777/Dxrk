@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Features
 
 - **memory:** Cap `memory.maintain` (denied by default, explicit per-tenant
-  grant) and `dxrk_memory_quarantine` MCP tool (24th tool) gated by it
+  grant) and `dxrk_memory_quarantine` MCP tool (35th tool) gated by it
 - **memory:** `PolicyEngine` with RBAC-gated triggers (`over_budget`,
   `rescore_stale`, `checksum_sweep`, `quarantine_sweep`), 15min throttling
   in `<palace>/.policy_state.json`
