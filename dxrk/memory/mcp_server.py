@@ -2,7 +2,7 @@
 """DxrkMemory MCP server — stdlib-only stdio JSON-RPC 2.0.
 
 Stdlib-only MCP engine backed by SqliteBackend (FTS5 trigram) + KnowledgeGraph.
-Exposes ~23 tools under dxrk_memory_* namespace.
+Exposes 35 tools under dxrk_memory_* namespace.
 
 Transport: newline-delimited JSON (stdio). Handles initialize / tools/list / tools/call
 and notifications. Designed for ``dxrk-mcp --palace <path>`` or env DXRK_MEMORY_PATH.
