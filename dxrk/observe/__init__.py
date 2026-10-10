@@ -5,28 +5,10 @@ import threading
 from contextvars import ContextVar, Token
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from enum import IntEnum
 from typing import Any
 
+from dxrk.log import Level
 from dxrk.strconst import StrError
-
-
-class Level(IntEnum):
-    DEBUG = 0
-    INFO = 1
-    WARN = 2
-    ERROR = 3
-
-    def __str__(self) -> str:
-        if self is Level.DEBUG:
-            return "DEBUG"
-        if self is Level.INFO:
-            return "INFO"
-        if self is Level.WARN:
-            return "WARN"
-        if self is Level.ERROR:
-            return "ERROR"
-        return "UNKNOWN"
 
 
 class Logger:
@@ -70,9 +52,7 @@ class Logger:
             line = f"{timestamp} [{level}] [{self._prefix}] {msg}\n"
             self._output.write(line)
             if level >= Level.ERROR:
-                sys.stderr.write(
-                    f"{datetime.now().strftime('%Y/%m/%d %H:%M:%S')} {msg}\n"
-                )
+                sys.stderr.write(f"{datetime.now().strftime('%Y/%m/%d %H:%M:%S')} {msg}\n")
 
 
 LogFields = dict[str, Any]
@@ -294,9 +274,7 @@ class Tracer:
     def __init__(self, name: str):
         self._name = name
 
-    def start(
-        self, ctx: Any | None, name: str, *attrs: Attribute
-    ) -> tuple[Any | None, Span]:
+    def start(self, ctx: Any | None, name: str, *attrs: Attribute) -> tuple[Any | None, Span]:
         span = Span(name, list(attrs))
         span._token = CURRENT_SPAN.set(span)
         return ctx, span
@@ -317,9 +295,7 @@ def span_add_event(ctx: Any | None, name: str, *attrs: Attribute) -> None:
     span_from_context(ctx).add_event(name, list(attrs))
 
 
-def span_record_duration(
-    ctx: Any | None, name: str, start: datetime, *attrs: Attribute
-) -> None:
+def span_record_duration(ctx: Any | None, name: str, start: datetime, *attrs: Attribute) -> None:
     sp = span_from_context(ctx)
     duration_ms = int((datetime.now() - start) // timedelta(milliseconds=1))
     sp.add_event(name + ".done", list(attrs) + [Attribute("duration_ms", duration_ms)])

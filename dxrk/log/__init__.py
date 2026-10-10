@@ -11,6 +11,24 @@ class Level(IntEnum):
     WARN = 2
     ERROR = 3
 
+    def __str__(self) -> str:
+        if self is Level.DEBUG:
+            return "DEBUG"
+        if self is Level.INFO:
+            return "INFO"
+        if self is Level.WARN:
+            return "WARN"
+        if self is Level.ERROR:
+            return "ERROR"
+        return "UNKNOWN"
+
+    def string(self) -> str:
+        """Return the lowercase level name. Mirrors hooks LogLevel.string()."""
+        names = ("debug", "info", "warn", "error")
+        if int(self) < len(names):
+            return names[int(self)]
+        return "unknown"
+
 
 class Logger(Protocol):
     def debug(self, msg: str, *args: Any) -> None: ...

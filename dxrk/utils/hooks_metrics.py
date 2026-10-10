@@ -7,12 +7,10 @@ import json
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from enum import IntEnum
 from typing import TYPE_CHECKING, Any, TextIO
 
+from dxrk.log import Level as LogLevel
 from dxrk.utils.hooks_model import (
-    _STR_ERROR,
-    _STR_UNKNOWN,
     HookConfig,
     HookEvent,
     HookResult,
@@ -28,22 +26,8 @@ if TYPE_CHECKING:
     from dxrk.utils.hooks_exec import _Context
 
 
-class LogLevel(IntEnum):
-    """Represents the log severity level. Mirrors hooks.LogLevel."""
-
-    DEBUG = 0
-    INFO = 1
-    WARN = 2
-    ERROR = 3
-
-    def string(self) -> str:
-        """Return the level name. Mirrors LogLevel.String()."""
-        names = ("debug", "info", "warn", _STR_ERROR)
-        if int(self) < len(names):
-            return names[int(self)]
-        return _STR_UNKNOWN
-
-
+# LogLevel is an alias of the canonical dxrk.log.Level (same severity
+# scale DEBUG=0..ERROR=3). The lowercase string() and __str__ live there.
 LogLevelDebug = LogLevel.DEBUG
 LogLevelInfo = LogLevel.INFO
 LogLevelWarn = LogLevel.WARN
