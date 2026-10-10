@@ -8,6 +8,7 @@ smooth focus animations, context-aware badges, and buttery-smooth UX.
 
 from __future__ import annotations
 
+import asyncio
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -678,6 +679,13 @@ class TenantSwitcherScreen(ModalScreen[None]):
     def on_unmount(self) -> None:
         if self._refresh_timer:
             self._refresh_timer.stop()
+        if self._debounce_timer is not None:
+            try:
+                self._debounce_timer.stop()
+            except Exception:
+                pass
+            finally:
+                self._debounce_timer = None
 
     def _load_tenants(self) -> None:
         """Load tenants (ids) plus a details cache for rich cards."""
@@ -727,14 +735,27 @@ class TenantSwitcherScreen(ModalScreen[None]):
     def _filter_tenants(self) -> None:
         """Filter tenants based on search query with debounce."""
         try:
-            if self._debounce_timer:
+            if self._debounce_timer is not None:
                 self._debounce_timer.stop()
         except Exception:
             pass
+        finally:
+            self._debounce_timer = None
+
+        # Sin event loop (p.ej. tests sin app montada) set_timer() crearía
+        # la corrutina Timer._run_timer y fallaría en create_task con
+        # "no running event loop", dejando la corrutina sin await
+        # (RuntimeWarning). Evitamos crear el timer y aplicamos directo.
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            self._apply_filter()
+            return
 
         try:
             self._debounce_timer = self.set_timer(0.1, self._apply_filter)
         except RuntimeError:
+            self._debounce_timer = None
             self._apply_filter()
 
     def _apply_filter(self) -> None:
