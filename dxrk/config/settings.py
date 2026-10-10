@@ -121,7 +121,9 @@ class MemorySettingsStore(SettingsStore):
 
 class SettingsManager:
     def __init__(self, stores: list[SettingsStore] | None = None):
-        self._stores: list[SettingsStore] = sorted(stores or [], key=lambda s: s.Priority(), reverse=True)
+        if not stores:
+            raise ValueError("SettingsManager requires at least one source")
+        self._stores: list[SettingsStore] = sorted(stores, key=lambda s: s.Priority(), reverse=True)
 
     def Get(self, key: str) -> Any:
         for store in self._stores:
