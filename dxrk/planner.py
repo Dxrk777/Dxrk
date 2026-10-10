@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 
 from dxrk.models import (
@@ -14,6 +15,8 @@ from dxrk.models import (
     SkillID,
 )
 from dxrk.system import PlatformProfile
+
+_logger = logging.getLogger("dxrk.planner")
 
 
 class Resolver:
@@ -125,8 +128,8 @@ def _init_soft_pairs():
 
 try:
     _init_soft_pairs()
-except Exception:
-    pass
+except Exception as err:
+    _logger.warning("soft ordering pairs init failed: %s", err)
 
 
 def soft_ordering_constraints() -> list[tuple[ComponentID, ComponentID]]:
@@ -218,9 +221,7 @@ class DependencyResolver(Resolver):
             self._expand_dependencies(selected, dependencies)
 
         ordered_components = topological_sort(dependencies)
-        ordered_components = apply_soft_ordering(
-            ordered_components, soft_ordering_constraints()
-        )
+        ordered_components = apply_soft_ordering(ordered_components, soft_ordering_constraints())
 
         for component in ordered_components:
             if component not in selected_set:
@@ -248,9 +249,7 @@ class DependencyResolver(Resolver):
         dependencies[component] = deps
         for dep in deps:
             if not self._graph.has(dep):
-                raise ValueError(
-                    f"component {component!r} depends on unknown dependency {dep!r}"
-                )
+                raise ValueError(f"component {component!r} depends on unknown dependency {dep!r}")
             self._expand_dependencies(dep, dependencies)
 
 
