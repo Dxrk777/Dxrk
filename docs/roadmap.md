@@ -3,6 +3,7 @@
 > **Estado:** v1.0.0 GA Done (salvo R14 diferido a v2.0) · **Fecha:** 2026-09-08 · **Versión:** 1.0.0-done  
 > **Alcance:** Deuda Fase1 + Enterprise multi-tenant Fase2 + DX Top1 Fase4 → GA v1.0.0. **Sin tocar `dxrk/memory/`** salvo via `palace_path` per-tenant (ADR-002).  
 > **Contexto flagship:** DxrkMemory 2.0 cerrado — 14 módulos `dxrk/memory` + `backend/` (6303 LOC stdlib-only `sqlite3` FTS5 trigram→porter→unicode61, WAL `0o600`/`0o750`, 141 tests en `tests/test_memory*.py`, 2760+ totales), ADR-002 (aislamiento Memory/Learner/RAG) y ADR-003 (stdlib-only vs hybrid BM25 0.72 vs HNSW 0.88, 0 vs 420MB, P5 vence). Ver `docs/memory.md:1`, `docs/dx.md:1`, `docs/adr/ADR-002-memory-separation.md:1`, `docs/adr/ADR-003-hybrid-vs-stdlib.md:1`, `docs/MIGRATION_3.3.5_3.7.1.md:1`.  
+> **Nota 2026-10:** sin PyPI por diseño (`.github/workflows/publish.yml:26-29`, commits `a396a00` y `3b1d235`). Las menciones a publish PyPI abajo son históricas del plan 0.2.0 y quedan sustituidas por release vía git + GitHub Releases; no ejecutar publish a PyPI.
 > **Versiones anteriores:** `pyproject.toml:7` `0.1.2` → `0.2.0` (DX + flagship docs) → `0.3.0`/`0.5.0` enterprise beta → `1.0.0` GA multi-tenant. Commits base: `4c4ab3f` flagship 4652 LOC `979` replaces, `bf0d106` coverage 141 + ADR-002 + hooks `stdio`. `git status` clean tras `bf0d106` salvo untracked `docs/dx.md` (535L) + `docs/adr/ADR-003-hybrid-vs-stdlib.md` (76L) — este roadmap los integra.
 
 Este documento es el **plan priorizado con matriz Impacto×Esfuerzo**, roadmap por versión, Gantt, riesgos y Done gates. Ejecuta exactamente lo que quedó pendiente de Fase1 (deuda) + Fase2 (enterprise) + Fase4 (DX) sin reabrir `dxrk/memory/` internamente.
@@ -40,7 +41,7 @@ quadrantChart
     quadrant-4 Fill-ins
     DX hero README: [0.10, 0.95]
     ADR docs hygiene: [0.10, 0.55]
-    PyPI 0.2.0 publish: [0.25, 0.95]
+    Release 0.2.0 vía git: [0.25, 0.95]
     Migration idempotente: [0.25, 0.95]
     Coverage 62→80: [0.25, 0.75]
     Benchmarks reproducibles: [0.25, 0.75]
@@ -61,7 +62,7 @@ quadrantChart
 Impacto 5 ┌─────────────────────┬─────────────────────┐
          │  QUICK WINS         │  MAJOR PROJECTS     │
          │  ★ DX hero 5.00    │  ★ Tenant iso 1.67  │
-         │  ★ PyPI 2.50       │  ★ Vault HKDF 1.67  │
+         │  ★ Release 2.50    │  ★ Vault HKDF 1.67  │
          │  ★ Migration 2.50  │  ★ http split 1.25  │
 Impacto 3 │  ○ Coverage 2.00   │  ○ RBAC 1.33        │
          │  ○ Benchmarks 2.00 │  ○ TUI context 1.33 │
@@ -80,7 +81,7 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 
 | Cuadrante | Criterio | Iniciativas | Acción |
 |-----------|----------|-------------|--------|
-| **Quick Wins** | I≥4, E≤2 | 7 (DX hero, PyPI, Migration, Coverage, Benchmarks, CLI flag, JWT tid) | **v0.2.0 — 2 semanas** |
+| **Quick Wins** | I≥4, E≤2 | 7 (DX hero, Release vía git, Migration, Coverage, Benchmarks, CLI flag, JWT tid) | **v0.2.0 — 2 semanas** |
 | **Major Projects** | I≥3, E≥3 | 6 (http split, config unify, TUI context, tenant isolation, vault, RBAC) + TUI switcher límite | **v0.3.0 + v0.5.0** |
 | **Fill-ins** | I≤3, E≤2 | 1 (ADR docs hygiene I=3 E=1, técnicamente Fill-in/Quick Win borde) | **v0.2.0 bundled** |
 | **Money Pit** | I≤3, E≥3 | 1 (TUI switcher I=3 E=3 — riesgo si se hace sin DI previo) | **posponer hasta v1.0.0 tras TUI DI** |
@@ -93,9 +94,9 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 
 | # | Iniciativa | Descripción 1-línea | Impacto | Esfuerzo | **Prioridad I/E** | Cuadrante | Owner | Dependencias | Estado base |
 |---|------------|---------------------|---------|----------|-------------------|-----------|-------|--------------|-------------|
-| **R01** | **DX hero README** | Badges (tests 2760, coverage 80%, mypy, PyPI), tagline `Memory local-first en 30s`, quickstart `uv tool install dxrk && dxrk init && dxrk query`, demo.gif caption 30s, tabla benchmarks teaser → README 169L→~220L | **5** | **1** | **5.00** | Quick Win | DX | benchmarks stub R04 | `README.md:1` 169L sin hero §2; `docs/dx.md:78` snippet listo |
+| **R01** | **DX hero README** | Badges (tests 2760, coverage 80%, mypy, Release GitHub sin PyPI), tagline `Memory local-first en 30s`, quickstart `uv tool install git+https://github.com/Dxrk777/Dxrk.git && dxrk-py install && dxrk-py query`, demo.gif caption 30s, tabla benchmarks teaser → README 169L→~220L | **5** | **1** | **5.00** | Quick Win | DX | benchmarks stub R04 | `README.md:1` 169L sin hero §2; `docs/dx.md:78` snippet listo |
 | **R02** | **ADR docs hygiene** | `mkdocs.yml:27` nav añadir `adr/ADR-003` + `dx.md`, fix `plugins.mkdocstrings.default →` config válida (sin `default:`), `docs/dx.md` + `docs/roadmap.md` visibles; `uv run mkdocs build` 0 warnings | **3** | **1** | **3.00** | Fill-in/Quick Win | DX | — | `mkdocs.yml:48` warning `Unrecognised configuration name: default`; `build` warns `pages not in nav: dx.md, ADR-003` |
-| **R03** | **PyPI 0.2.0 publish** | `pyproject.toml:7` bump `0.1.2→0.2.0` (minor SemVer), `CHANGELOG.md` cliff `[0.2.0]`, `readme/license/classifiers` check, `uv build` + `twine check` + `uv tool install --from sdist` smoke, `git tag v0.2.0` → `publish.yml` trusted OIDC, verify `pypi.org/project/dxrk/0.2.0/` | **5** | **2** | **2.50** | Quick Win | Release | R01, R02, R05/R06 coverage gate | `pyproject.toml:7` en 0.1.2; `docs/dx.md:274` checklist §5.2 |
+| **R03** | **Release 0.2.0 vía git (sin PyPI)** | `pyproject.toml:7` bump `0.1.2→0.2.0` (minor SemVer), `CHANGELOG.md` cliff `[0.2.0]`, `readme/license/classifiers` check, `uv build` smoke + `uv tool install --from sdist` smoke, `git tag v0.2.0` → `publish.yml` (build smoke + changelog + GitHub release, sin PyPI), verify `github.com/Dxrk777/Dxrk/releases/tag/v0.2.0` | **5** | **2** | **2.50** | Quick Win | Release | R01, R02, R05/R06 coverage gate | `pyproject.toml:7` en 0.1.2; `docs/dx.md:274` checklist §5 (vía git, sin PyPI) |
 | **R04** | **Migration idempotente multi-tenant** | `~/.dxrk/palace/sqlite_palace.db` → `~/.dxrk/tenants/default/sqlite_palace.db` copy-on-first-run idempotente, `~/.dxrk/locks` → `~/.dxrk/tenants/{id}/locks`, `~/.dxrk/knowledge_graph.sqlite3` → per-tenant o shared con `tenant_id` col, rollback si `palace_path` custom | **5** | **2** | **2.50** | Quick Win | Memory/Core | R09 tenant isolation spec | `dxrk/memory/palace.py:40` `~/.dxrk/locks` 900s; `MIGRATION_3.3.5_3.7.1.md:58` locks migration precedente |
 | **R05** | **Coverage 62→80% (non-Windows gate)** | `dxrk/utils/http.py:1` 1945L 62% → 80% `cov-fail-under=80` (non-Windows), branches `httpx.Timeout`/`Headers`, `tests/test_utils_http*.py` +130 tests, `ci.yml:48` gate solo `ubuntu-latest` con `skipif(win32)` | **4** | **2** | **2.00** | Quick Win | Core | R08 http split facilita pero no bloquea | `AGENTS.md` utils/http 1945L 62% min coverage; `ci.yml:36` gate 80% only non-Windows |
 | **R06** | **Benchmarks reproducibles** | `docs/benchmarks.md` + `benchmarks/bench_memory.py --corpus 1k --runs 100` tabla honesta §1 `dx.md:25` (BM25 0.72 vs HNSW 0.88, <50ms cold, 0 vs 420MB, 35 vs 12ms), artefacto `benchmarks/results/{date}_bench.json` versionado, link README hero | **4** | **2** | **2.00** | Quick Win | DX/Memory | — (standalone, referencia ADR-003) | `docs/dx.md:22` tabla lista, pero `docs/benchmarks.md` no existe; `ADR-003:32` métricas base |
@@ -117,7 +118,7 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 
 ### 3.1 v0.2.0 — Quick Wins (2 semanas) — `2026-08-28 → 2026-09-11`
 
-**Objetivo:** cerrar DX Top1 Fase4 + hygiene + gate de calidad → PyPI publish sin deuda visible. **Nada de `dxrk/memory/` internals.**
+**Objetivo:** cerrar DX Top1 Fase4 + hygiene + gate de calidad → release vía git sin deuda visible. **Nada de `dxrk/memory/` internals.**
 
 | Área | Entregables | PRs atómicos (conventional) | Done gate §6 |
 |------|-------------|-----------------------------|--------------|
@@ -125,11 +126,11 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 | **ADR/docs hygiene** | `mkdocs.yml` nav `dx.md` + `adr/ADR-003`, fix `mkdocstrings` (quitar `default:`), `docs/roadmap.md` (este archivo) | `fix(mkdocs): add dx+ADR-003 to nav, fix mkdocstrings config` | `uv run mkdocs build` 0 warnings |
 | **Coverage** | `tests/test_utils_http*.py` +40 tests → `dxrk/utils/http.py` 62%→≥75% (paso intermedio), `ci.yml:48` gate verde non-Windows | `test(coverage): http branches httpx.Timeout/Headers` | `pytest --cov --cov-fail-under=80` OK non-Windows (70→75 stepped) |
 | **Benchmarks** | `docs/benchmarks.md` stub con tabla `dx.md:25` + metodología + `benchmarks/bench_memory.py` skeleton (no full corpus) | `docs(benchmarks): add honest table BM25 vs HNSW stub` | `mkdocs build` + tabla renderiza |
-| **Release** | `pyproject.toml:7` `0.1.2→0.2.0`, `CHANGELOG.md` `[0.2.0] - 2026-09-11` cliff, `uv build` + `twine check` + `uv tool install --from dist/*.tar.gz` smoke, `git tag -a v0.2.0` + push → `publish.yml` live | `chore(release): v0.2.0 DxrkMemory 2.0 + Top1 DX` | `pypi.org/project/dxrk/0.2.0/` live + `dxrk-py --version 0.2.0` |
+| **Release** | `pyproject.toml:7` `0.1.2→0.2.0`, `CHANGELOG.md` `[0.2.0] - 2026-09-11` cliff, `uv build` smoke + `uv tool install --from dist/*.tar.gz` smoke, `git tag -a v0.2.0` + push → `publish.yml` live (build + changelog + GitHub release, sin PyPI) | `chore(release): v0.2.0 DxrkMemory 2.0 + Top1 DX` | `github.com/Dxrk777/Dxrk/releases/tag/v0.2.0` live + `dxrk-py --version 0.2.0` |
 
 **Fuera de scope v0.2.0:** `http split`, `config unify`, `tenant/*` (solo diseño doc en `roadmap.md`), `vector plugin`.
 
-**Hito:** `https://pypi.org/project/dxrk/0.2.0/` + `mkdocs` 0 warnings + README hero merge + tag `v0.2.0`.
+**Hito:** `https://github.com/Dxrk777/Dxrk/releases/tag/v0.2.0` + `mkdocs` 0 warnings + README hero merge + tag `v0.2.0`.
 
 ### 3.2 v0.3.0 — Major Projects part 1: Deuda técnica (4 semanas) — `2026-09-12 → 2026-10-09`
 
@@ -158,7 +159,7 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 
 **Docs beta:** `docs/tenants.md` + `docs/security.md` tenant chapter + `CHANGELOG.md` `[0.5.0-beta]`.
 
-**Hito:** `pip install dxrk==0.5.0b1` + `dxrk --tenant acme init && dxrk --tenant acme query "test"` offline <50ms + `uv run pytest tests/test_tenant*.py -q` 25+ passed + beta tag `v0.5.0-beta`.
+**Hito:** `uv tool install git+https://github.com/Dxrk777/Dxrk.git` + `dxrk-py --tenant acme init && dxrk-py --tenant acme query "test"` offline <50ms + `uv run pytest tests/test_tenant*.py -q` 25+ passed + beta tag `v0.5.0-beta`.
 
 ### 3.4 v1.0.0 — GA Multi-tenant (4 semanas) — `2026-11-21 → 2026-12-18`
 
@@ -172,7 +173,7 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 | **Docs GA** | `docs/tenants.md` GA, `docs/rbac.md`, `docs/migration-0.5-to-1.0.md`, `README.md` sección enterprise (`dxrk --tenant` + RBAC matrix), `mkdocs.yml` `mike` versioning opcional | `site_url` + `social` cards OG | R01 + R02 |
 | **Release GA** | `pyproject.toml` `1.0.0` (`Development Status :: 5 - Production/Stable`), `CHANGELOG.md` `[1.0.0] - 2026-12-18` `compare/v0.5.0...v1.0.0`, `git tag v1.0.0` → `publish.yml` + `gh release` notes, bump `SECURITY.md` `Supported: 1.0.x ✅` | `cliff.toml` `feat/fix/docs…` ya configurado | todos |
 
-**Hito:** `https://pypi.org/project/dxrk/1.0.0/` live + `uv tool install dxrk && dxrk --tenant demo query "GA?"` <50ms + `SECURITY.md` bump + `mkdocs` `mike` deploy `latest` → `1.0`.
+**Hito:** `https://github.com/Dxrk777/Dxrk/releases/tag/v1.0.0` live + `uv tool install git+https://github.com/Dxrk777/Dxrk.git && dxrk-py --tenant demo query "GA?"` <50ms + `SECURITY.md` bump + `mkdocs` `mike` deploy `latest` → `1.0`.
 
 ---
 
@@ -190,7 +191,7 @@ gantt
     ADR docs hygiene (R02)        :done, r02, 2026-08-28, 2d
     Coverage 62→80 (R05)          :active, r05, 2026-08-30, 7d
     Benchmarks stub (R06)         :r06, 2026-09-01, 5d
-    PyPI 0.2.0 publish (R03)      :crit, r03, 2026-09-08, 4d
+    Release 0.2.0 vía git (R03)      :crit, r03, 2026-09-08, 4d
     Milestone v0.2.0 tag          :milestone, m02, 2026-09-11, 0d
 
     section v0.3.0 Deuda
@@ -238,7 +239,7 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 
 | Riesgo | Prob | Impacto | Mitigación |
 |--------|------|---------|------------|
-| PyPI publish falla por `readme`/`classifiers` mal render | M | Alto | `uv build` + `twine check dist/*` local obligatorio antes de tag; checklist `docs/dx.md:282` §5.2 paso 6 |
+| Release vía git falla por changelog/`uv build` smoke roto | M | Alto | `uv build` local obligatorio antes de tag; checklist `docs/dx.md:282` §5.2 paso 6 (vía git, sin PyPI) |
 | `mkdocs build` sigue con warnings tras nav fix | M | Medio | PR `fix(mkdocs)` atómico 5 líneas + `uv run mkdocs build 2>&1 | grep WARNING` en CI; ver `docs/dx.md:508` §11 |
 | Coverage 80% gate rompe en `ubuntu-latest` por http branches | A | Alto | Subir coverage 62→75 en v0.2.0 stepped (`--cov-fail-under=75`), 75→80 en v0.3.0; `ci.yml:36` `skipif(win32)` ya mitiga Windows |
 | README hero claims recall sin disclaimer genera FUD | B | Medio | Mantener tabla honesta `dx.md:25` con disclaimer `LOCOMO-500, corpus 1k–10k, p50` + roadmap vector plugin post-v1.0 `ADR-003:58` |
@@ -269,7 +270,7 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 |--------|------|---------|------------|
 | RBAC matrix 12 combos sin tests → privilege escalation `readonly → mine` | M | Crítico | `tests/test_rbac_matrix.py` 12 combos (`3 roles × 4 ops`) + fuzz `hypothesis` roles; `Palace.mine` check `if role=="readonly": raise PermissionError("RBAC_DENIED")` early |
 | TUI switcher sin DI (R11) → race `STATE.tenant` global entre screens | A si no R11 | Alto | Gate: **R15 bloqueado hasta R11 Done** (ver Gantt crítico `R11→R15`); si R11 falla, ship TUI switcher como `v1.1.0` no GA blocker |
-| `vector plugin` presión “recall -16pp bloquea enterprise” | B | Medio | ADR-003 ya mitiga: `benchmarks.md` reproduce recall 0.72 vs 0.88 + disclaimer + `pool 15×` <8pp loss <10k corpus; vector plugin `dxrk/memory/backend/vector.py` opcional post-v1.0 `pip install dxrk[vector]` — no GA blocker |
+| `vector plugin` presión “recall -16pp bloquea enterprise” | B | Medio | ADR-003 ya mitiga: `benchmarks.md` reproduce recall 0.72 vs 0.88 + disclaimer + `pool 15×` <8pp loss <10k corpus; vector plugin `dxrk/memory/backend/vector.py` extra opcional vía git post-v1.0 — no GA blocker |
 | `1.0.0` stable API promise rompe `HierarchicalConfig` compat | M | Alto | SemVer: `HierarchicalConfig` deprecated en v0.3.0 pero soportado hasta `2.0.0`; `1.0.0` mantiene adapter, removal solo `2.0.0` con ADR |
 | Supply chain `cryptography` CVE post-audit | B | Crítico | `uv audit` en `ci.yml:28` solo `ubuntu-latest` → extender a `uv audit` pre-tag `v1.0.0` local + `pip-audit` + `OSSF Scorecard` 9.2 stdlib-only |
 
@@ -294,7 +295,7 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 
 ### 6.2 DoD por versión (checklist mergeable)
 
-> **Estado 2026-09-08 (v1.0.0 GA live en PyPI):** las versiones intermedias 0.2.0/0.3.0/0.5.0 se colapsaron — el release real fue `0.2.2 → 0.2.3 → 0.2.4 → 1.0.0`. Los boxes `[x]` están verificados en `main`; `R14 config unify` es el único pendiente y queda diferido a v2.0 con ADR.
+> **Estado 2026-09-08 (v1.0.0 GA live en GitHub Releases, sin PyPI):** las versiones intermedias 0.2.0/0.3.0/0.5.0 se colapsaron — el release real fue `0.2.2 → 0.2.3 → 0.2.4 → 1.0.0`. Los boxes `[x]` están verificados en `main`; `R14 config unify` es el único pendiente y queda diferido a v2.0 con ADR.
 
 #### v0.2.0 Done (Quick Wins) — 2 semanas
 
@@ -302,7 +303,7 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 - [x] `mkdocs.yml` nav `dx.md` + `adr/ADR-003` + `roadmap.md` + tenants/rbac/migration/benchmarks — `uv run mkdocs build --strict` 0 warnings
 - [x] Coverage ≥80% (85%+ vía `tests/test_cov_*.py` + suites enterprise) + `dxrk/utils/http/` split a submódulos — `pytest --cov-fail-under=80` verde non-Windows; `ruff` 0, `mypy` 0
 - [x] `docs/benchmarks.md` existe con tabla + metodología + `benchmarks/bench_memory.py` + artefacto `benchmarks/results/`
-- [x] Releases `0.2.2 → 0.2.3 → 0.2.4 → 1.0.0` publicados (proceso `uv build` + smoke + tag + `publish.yml` ejecutado; PyPI `dxrk 1.0.0` live)
+- [x] Releases `0.2.2 → 0.2.3 → 0.2.4 → 1.0.0` publicados (proceso `uv build` + smoke + tag + `publish.yml` ejecutado; GitHub Release `1.0.0` live, sin PyPI)
 - [x] Tags `v0.2.3` + `v0.2.4` + `v1.0.0` pusheados → `publish.yml` verde, `gh release` changelog cliff
 - [x] `CHANGELOG.md` generado por workflow + `SECURITY.md` bump `Supported: 1.0.x ✅, 0.2.x ✅`
 - [x] Gates universales §6.1 todos verdes en `main` tras tag
@@ -333,7 +334,7 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 - [x] Hardening GA: `mypy` 0, `ruff` 0, `pytest --cov-fail-under=80` ✅ (85%+), `trace0` 0, `uv audit` 0, `site/assets/demo_tenant.gif` ✅ (30s, 327KB) + `OSSF Scorecard` **7.0 real** (target ≥8.5 no alcanzado: techo honesto — sin PR-required por decisión usuario, 1 contribuidor, repo <90 días, sin CII/fuzzing; ver §9 nota)
 - [x] Docs GA: `docs/tenants.md` ✅, `docs/rbac.md` ✅, `docs/migration-0.5-to-1.0.md` ✅, `README.md` enterprise ✅, `mike` `latest→1.0` ✅, `social` cards OG ✅ (plugin genera PNGs por página)
 - [x] `pyproject.toml` `1.0.0` `Development Status :: 5 - Production/Stable` + `CHANGELOG.md` cliff + `git tag v1.0.0` → `publish.yml` GA + `gh release` notes + `SECURITY.md` `Supported: 1.0.x ✅, 0.2.x ✅`
-- [x] Manual smoke GA: `uv tool install dxrk --force` (1.0.0 PyPI) + tenant create/whoami/list OK — encontró y arregló 3 bugs reales (search fresco `[]`, contaminación palace por `DEFAULT_PALACE_PATH` import-time, post-filtro frase contigua → token-AND)
+- [x] Manual smoke GA: `uv tool install git+https://github.com/Dxrk777/Dxrk.git --force` (1.0.0 vía git) + tenant create/whoami/list OK — encontró y arregló 3 bugs reales (search fresco `[]`, contaminación palace por `DEFAULT_PALACE_PATH` import-time, post-filtro frase contigua → token-AND)
 - [x] Gates universales §6.1 verdes en `main` tag `v1.0.0` (se re-verifican en gates finales)
 
 #### v1.1.0 Done (Cortex + Autonomous + Enterprise) — release menor
@@ -377,8 +378,8 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 - **Flagship:** [`docs/memory.md`](memory.md) — 13 módulos 4652 LOC (14 con `backend/`, 6303 LOC con `engine.py`/`__main__` per `AGENTS.md` total), FTS5 `trigram`+WAL, Palace locks `~/.dxrk/locks` 900s, BM25 `k1=1.5 b=0.75`, Graph `valid_from/valid_to`, AAAK `compress/decode`, Layers L0-L3 600–900 tok, miner `GitignoreMatcher` + `O_NONBLOCK`/`S_ISREG` `db29959` + `MAX_FILE_SIZE 500MiB`.
 - **Migración:** [`docs/MIGRATION_3.3.5_3.7.1.md`](MIGRATION_3.3.5_3.7.1.md) — delta 388 files 50+ commits `359c579`, 6 parches portados (`1654cd2`/`759b8f1`/`db29959`/`27212e5`/`5036e3c`/SIGTERM), no-portados `HNSW`/`numpy2`/`chroma cache`/`onnx` justificados stdlib-only.
 - **Separación:** [`docs/adr/ADR-002-memory-separation.md`](adr/ADR-002-memory-separation.md) — 3 sistemas aislados `memory` (Palace/WAL) vs `learner` (`.dxrk/memories.json`) vs `rag` (`VectorStore` dict), reglas R1–R6, puentes `hooks export` + `rag enrichment` sin storage coupling.
-- **Stdlib vs Hybrid:** [`docs/adr/ADR-003-hybrid-vs-stdlib.md`](adr/ADR-003-hybrid-vs-stdlib.md) — P5 mandato, benchmarks 0.72 vs 0.88 recall, 0 vs 420MB, stdlib-only vence; `backend/vector.py` plugin opcional post-v1.0 `pip install dxrk[vector]`.
-- **DX plan:** [`docs/dx.md`](dx.md) — 535L Top1 plan, benchmarks tabla §1, hero §2 (badges+30s quickstart), nav fix §3.2/§3.3, community §4, PyPI checklist §5.2, star tactics §6, métricas §7, 30/60/90 days §8.
+- **Stdlib vs Hybrid:** [`docs/adr/ADR-003-hybrid-vs-stdlib.md`](adr/ADR-003-hybrid-vs-stdlib.md) — P5 mandato, benchmarks 0.72 vs 0.88 recall, 0 vs 420MB, stdlib-only vence; `backend/vector.py` plugin extra opcional vía git post-v1.0.
+- **DX plan:** [`docs/dx.md`](dx.md) — 535L Top1 plan, benchmarks tabla §1, hero §2 (badges+30s quickstart), nav fix §3.2/§3.3, community §4, release checklist §5.2 (vía git, sin PyPI), star tactics §6, métricas §7, 30/60/90 days §8.
 - **Config deuda:** `dxrk/config/config.py:91` `HierarchicalConfig` 744L + `dxrk/config/settings.py:??` `SettingsManager` 223L dual, `dxrk/config/load.py:108` vault wiring.
 - **TUI deuda:** `dxrk/tui/shared.py:15` `AppState`/`STATE=AppState()` singleton + `dxrk/tui/app.py:40` 946L `STATE` 18 usos global.
 - **Http deuda:** `dxrk/utils/http.py:1` 1945L 192 defs 62% coverage min, `utils/image.py:1` 1157L 96% contraste.
@@ -407,7 +408,7 @@ grep -rn "engram\|mempal" --include="*.py" | wc -l  # 0
 
 # Release v0.2.0
 grep -rn "0.1.2" --include="*.toml" --include="*.py" --include="*.md" | grep -v ".venv" | grep -v ".git"
-uv build && uv run twine check dist/*
+uv build  # smoke (sin PyPI: no twine check, distribución vía git)
 uv tool install --from dist/dxrk-0.2.0.tar.gz dxrk --force && dxrk-py --help | head
 git cliff --unreleased --tag v0.2.0 --prepend CHANGELOG.md
 git -c user.name='Dxrk System' -c user.email='dxrk@local' commit -m "chore(release): v0.2.0 DxrkMemory 2.0 + Top1 DX"

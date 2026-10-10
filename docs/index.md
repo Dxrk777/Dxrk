@@ -9,13 +9,13 @@
 - 🐍 **Python 3.13+** con TUI moderna basada en [Textual](https://textual.textualize.io/)
 - 🤖 Configura **14 agentes** con un solo comando
 - 🧠 **DxrkMemory 2.0** — memoria local con búsqueda híbrida FTS5 + BM25 y grafo temporal (sin embeddings, offline)
-- 🔄 Conmutador de proveedores y modelos con perfiles `cheap` / `balanced` / `quality`
+- 🔄 Conmutador de proveedores y modelos con asignación por fase vía `dxrk-py model` (`list`/`current`/`set`)
 - 🛠️ Workflows de desarrollo completos (Git, commit, review, PR)
 
 ## Instalación
 
 ```bash
-pip install dxrk
+uv tool install git+https://github.com/Dxrk777/Dxrk.git
 ```
 
 ## Uso rápido

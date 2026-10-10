@@ -1,7 +1,8 @@
 # Dxrk GitHub DX — Plan Top1 post-DxrkMemory 2.0
 
 > **Estado:** Accepted · **Fecha:** 2026-08-28 · **Versión:** 0.2.0-draft  
-> **Alcance:** DX de GitHub (README, docs site, community, PyPI, star growth) **sin tocar `dxrk/memory/`**.  
+> **Alcance:** DX de GitHub (README, docs site, community, distribución vía git + GitHub Releases, star growth) **sin tocar `dxrk/memory/`**.  
+> **Nota 2026-10:** sin PyPI por diseño (ver `.github/workflows/publish.yml:26-29` y commit `3b1d235`). La §5 checklist PyPI abajo es histórica y queda sustituida por release vía git + GitHub Releases; no ejecutar publish a PyPI.
 > **Contexto flagship:** DxrkMemory 2.0 cerrado — 14 módulos stdlib-only (`dxrk/memory` + `backend/`), 141 tests en `tests/test_memory*.py`, 203 py files en repo, CLI dual (`dxrk`/`dxrk-py`) + TUI Textual 22 screens, 42 agentes, 55 entradas `dxrk/`. Fase 2 enterprise multi-tenant diseñada. README 169L, `docs/memory.md` 209L, `MIGRATION_3.3.5_3.7.1` 97L, ADR-002 (separación memoria) y ADR-003 (stdlib-only vs hybrid) existen.
 
 Este documento es el **plan ejecutable** para llevar a Dxrk a **Top1 GitHub DX** en su categoría (AI agent ecosystem / local-first memory). No es roadmap vago: cada sección trae tabla/checklist/snippet reproducible y criterio de done.
@@ -10,8 +11,8 @@ Este documento es el **plan ejecutable** para llevar a Dxrk a **Top1 GitHub DX**
 
 ## 0. Principios DX (por qué este plan gana)
 
-1. **30s to wow:** `uv tool install dxrk && dxrk init && dxrk query "…"` sin `OPENAI_API_KEY`, sin Docker, sin `chromadb`.
-2. **Stdlib-only como feature, no limitación:** `<5s install`, `<50ms cold`, offline-first, `pip install dxrk` sin extras.
+1. **30s to wow:** `uv tool install git+https://github.com/Dxrk777/Dxrk.git && dxrk-py install --agent claude-code && dxrk-py query "…"` sin `OPENAI_API_KEY`, sin Docker, sin `chromadb` (vale para mine/search local; RAG con embeddings OpenAI y scholar requieren red/API key).
+2. **Stdlib-only como feature, no limitación:** `<5s install`, `<50ms cold`, offline-first, instalación vía git sin extras.
 3. **Evidencia > marketing:** benchmarks reproducibles + CI 3 OS + coverage 80% + types `mypy` green.
 4. **Sin gaming:** stars orgánicos vía ejemplos, comparación honesta, docs que responden en 1 click.
 5. **Fidelidad flagship:** todo lo que se promete en README se verifica con `uv run pytest tests/test_memory.py -q` (19 core + 99 coverage = 118 en `test_memory*`, 141 totales con suites relacionadas).
@@ -31,7 +32,7 @@ Este documento es el **plan ejecutable** para llevar a Dxrk a **Top1 GitHub DX**
 | **Latencia `wake_up()` L0+L1 600–900 tok** | **<50 ms cold** (WAL, sin ONNX) | 220 ms (model warmup) | n/a (API call) | n/a |
 | **Cold start import** | **<80 ms** (`import dxrk.memory`) | 620 ms (onnx load) | 0 (sdk) | 480 ms |
 | **Install size** (deps extra) | **0 MB** (stdlib `sqlite3`) | ~180 MB (`chromadb` 120 + `onnx` 60) | 0 MB sdk / cloud cost | ~120 MB (`chromadb`) |
-| **Deps** (`pip install dxrk`) | **0 extra** (`textual`, `httpx`, `PyYAML`, `cryptography`, `bs4` solo en core; memory 0) | 14 (`chromadb`, `openai`, `numpy`, `onnxruntime`) | 5 + cloud account | 9 (`chromadb`, `hnswlib`, `numpy`) |
+| **Deps** (instalación vía git) | **0 extra** (`textual`, `httpx`, `PyYAML`, `cryptography`, `bs4` solo en core; memory 0) | 14 (`chromadb`, `openai`, `numpy`, `onnxruntime`) | 5 + cloud account | 9 (`chromadb`, `hnswlib`, `numpy`) |
 | **Offline** | **Sí 100%** | Parcial (requiere `OPENAI_API_KEY` para embeddings) | No (cloud) | Sí (local) |
 | **Persistencia** | `~/.dxrk/palace/sqlite_palace.db` WAL `0o600` + `~/.dxrk/knowledge_graph.sqlite3` | `~/.mem0/chroma.sqlite3` + json | Cloud PG | `chroma.sqlite3` + HNSW bin |
 | **Multi-tenant** | `palace_path` per tenant `chmod 0o600`, `RLock` + `mine_palace_lock` 900s | `user_id` string, single DB | org/project API key | collection per tenant |
@@ -43,8 +44,8 @@ Este documento es el **plan ejecutable** para llevar a Dxrk a **Top1 GitHub DX**
 
 ### 1.2 Lectura honesta
 
-- **Dónde Dxrk gana:** install <5s, offline, cold <50ms, `pip install dxrk` sin extras, multi-tenant filesystem isolation ya probado (`dxrk/vault/__init__.py:162`, `dxrk/memory/backend/sqlite.py:628`), `grep 0` hygiene.
-- **Dónde pierde hoy:** recall -16pp vs HNSW/dense hasta que exista `dxrk/memory/backend/vector.py` plugin opcional (`pip install dxrk[vector]` post-v1.0). Mitigado con `pool 3×→15×` (5036e3c) + `closet boost 0.40→0.04` — en corpus <10k pierde <8pp.
+- **Dónde Dxrk gana:** install <5s, offline, cold <50ms, instalación vía git sin extras, multi-tenant filesystem isolation ya probado (`dxrk/vault/__init__.py:162`, `dxrk/memory/backend/sqlite.py:628`), `grep 0` hygiene.
+- **Dónde pierde hoy:** recall -16pp vs HNSW/dense hasta que exista `dxrk/memory/backend/vector.py` plugin opcional (extra `dxrk[vector]` opcional vía git post-v1.0). Mitigado con `pool 3×→15×` (5036e3c) + `closet boost 0.40→0.04` — en corpus <10k pierde <8pp.
 - **Zep/mem0:** recall superior, pero requieren cloud/API key/coste, lock-in, y no son `stdlib-only`. Dxrk compite en **local-first** y **DX**, no en SOTA recall cloud.
 
 ### 1.3 Cómo reproducir (obligatorio en `docs/benchmarks.md` futuro)
@@ -74,7 +75,7 @@ OPENAI_API_KEY=sk-... uv run --with mem0ai python benchmarks/bench_memory.py --b
 
 ### 2.1 Gap actual
 
-README actual ya es bueno (Release v0.1.2, License MIT, Python 3.13, Platform, CI, Stars + social-preview.png + demo.gif 44K + tabla "Por qué Dxrk" + 42 agentes + Features flagship). **Falta para Top1:** badges de calidad (tests, coverage 80%, mypy), tagline de 1 línea memorizable, quickstart 30s copy-paste con `uv tool install`, demo sin `pip install dxrk` obsoleto, comparación embed, social proof.
+README actual ya es bueno (Release v0.1.2, License MIT, Python 3.13, Platform, CI, Stars + social-preview.png + demo.gif 44K + tabla "Por qué Dxrk" + 42 agentes + Features flagship). **Falta para Top1:** badges de calidad (tests, coverage 80%, mypy), tagline de 1 línea memorizable, quickstart 30s copy-paste con `uv tool install` vía git (sin PyPI), comparación embed, social proof.
 
 ### 2.2 Hero propuesto (snippet para `README.md:1-60`)
 
@@ -91,19 +92,19 @@ README actual ya es bueno (Release v0.1.2, License MIT, Python 3.13, Platform, C
   <a href="https://codecov.io/gh/Dxrk777/Dxrk"><img alt="Coverage" src="https://img.shields.io/badge/coverage-80%25-brightgreen"></a>
   <a href="https://www.python.org/downloads/"><img alt="Python" src="https://img.shields.io/badge/Python-3.13%2B-3776AB"></a>
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-MIT-green"></a>
-  <a href="https://pypi.org/project/dxrk/"><img alt="PyPI" src="https://img.shields.io/badge/PyPI-v0.2.0-blue"></a>
+  <a href="https://github.com/Dxrk777/Dxrk/releases/latest"><img alt="Release" src="https://img.shields.io/badge/Release-v1.5.0-blue"></a>
   <a href="https://github.com/Dxrk777/Dxrk"><img alt="Stars" src="https://img.shields.io/github/stars/Dxrk777/Dxrk?style=social"></a>
 </p>
 
 <p align="center">
   <img src="docs/assets/demo.gif" alt="Dxrk demo — init + mine + query en 30s" width="780">
-  <br><em>30s: install → mine → query. Sin API keys, sin Docker, offline.</em>
+  <br><em>30s: install → mine → query local (offline, sin API keys ni Docker; RAG OpenAI y scholar requieren red/API key).</em>
 </p>
 
 ## 30s Quickstart
 
 ```bash
-uv tool install dxrk && dxrk init          # 1) instala + detecta 42 agentes
+uv tool install git+https://github.com/Dxrk777/Dxrk.git  # 1) instala + detecta agentes
 dxrk memory mine --wing dxrk --room code   # 2) indexa el repo (800/100 chunk, FTS5 trigram+WAL)
 dxrk query "¿qué arquitectura decidimos para memoria?"  # 3) BM25 + Graph temporal, <50ms cold
 # Python
@@ -116,16 +117,16 @@ pal = Palace("~/.dxrk/palace"); pal.search("hybrid BM25", n_results=5)
 
 ### 2.3 Checklist README hero (done = PR merged)
 
-- [ ] Badges: **Tests** (2760 passed), **Coverage 80%** (shield dinámico Codecov o `coverage 80%` estático hasta integrar), **Python 3.13**, **License MIT**, **PyPI v0.2.0**, **Platform**, **Stars social** (7 badges, 1 línea).
+- [ ] Badges: **Tests** (2760 passed), **Coverage 80%** (shield dinámico Codecov o `coverage 80%` estático hasta integrar), **Python 3.13**, **License MIT**, **Release GitHub (sin PyPI)**, **Platform**, **Stars social** (7 badges, 1 línea).
 - [ ] Tagline 1-línea memorizable bajo H1 (no solo `<strong>Ecosistema…` sino `Memory local-first en 30 segundos…`).
 - [ ] Demo GIF/screenshot placeholder con `docs/assets/demo.gif` (44K ya existe) + caption 30s + `width` fijo para no romper mobile.
-- [ ] Quickstart 30s con `uv tool install dxrk && dxrk init` (no `pip install dxrk` solo) — 3 comandos copy-paste + bloque Python 2 líneas.
+- [ ] Quickstart 30s con `uv tool install git+https://github.com/Dxrk777/Dxrk.git` (sin PyPI; distribución vía git) — 3 comandos copy-paste + bloque Python 2 líneas.
 - [ ] Link directo a benchmarks tabla (§1), `docs/memory.md`, `docs/dx.md`, `MIGRATION_3.3.5_3.7.1.md`.
 - [ ] Tabla "Por qué Dxrk" con columna DxrkMemory vs manual (ya existe, ampliar con `cold <50ms` y `0 MB extra`).
 - [ ] Social proof placeholder (1 testimonio + logos si hay adopters, ver §7).
 - [ ] `README.md` pasa de 169L → ~220L (hero +30L, benchmarks teaser +15L, quickstart +10L).
 
-**No hacer:** badges rotos (verificar URLs), GIF >2MB, `pip install dxrk` sin `uv` alternative, claims de recall sin disclaimer.
+**No hacer:** badges rotos (verificar URLs), GIF >2MB, instalación sin alternativa vía git + `uv`, claims de recall sin disclaimer.
 
 ---
 
@@ -271,7 +272,9 @@ plugins:
 
 ---
 
-## 5. PyPI publishing checklist — `pyproject.toml` 0.1.2 → 0.2.0
+## 5. Release vía git + GitHub Releases (sin PyPI) — checklist histórico
+
+> **Obsoleto como checklist PyPI:** sin PyPI por diseño (`.github/workflows/publish.yml:26-29`, commit `3b1d235`). Se conserva como referencia histórica del plan 0.2.0; el proceso vigente es: tag `v*` → build smoke + changelog cliff + GitHub release, distribución vía git.
 
 ### 5.1 Por qué 0.2.0 (minor, no patch)
 
@@ -304,10 +307,9 @@ uv audit                            # 0 vulns
 uv run mkdocs build                 # 0 warnings, site/ generado
 # opcional: uv run mkdocs serve y verificar /dx/, /memory/, /adr/
 
-# 6) build sdist + wheel
+# 6) build sdist + wheel (smoke local, sin PyPI: sin twine check)
 uv build                            # dist/dxrk-0.2.0.tar.gz + .whl
 tar tzf dist/dxrk-0.2.0.tar.gz | head -n 20
-uv run twine check dist/*           # o uvx twine check dist/*
 
 # 7) test install from sdist (smoke)
 uv tool install --from dist/dxrk-0.2.0.tar.gz dxrk --force 2>&1 | tail
@@ -321,14 +323,14 @@ git commit -m "chore(release): v0.2.0 DxrkMemory 2.0 + Top1 DX"
 git tag -a v0.2.0 -m "v0.2.0 DxrkMemory 2.0 flagship + Top1 DX"
 git push origin main --follow-tags
 
-# 9) verify publish (Trusted Publishing OIDC, sin tokens)
-# .github/workflows/publish.yml usa: uv publish con OIDC (permissions id-token: write, environment pypi).
-# Publisher registrado en PyPI: GitHub Dxrk777/Dxrk, workflow publish.yml, environment pypi.
-# Ver en https://pypi.org/project/dxrk/ que 0.2.0 aparece + readme renderiza + classifiers ok
+# 9) verify release (vía git + GitHub Releases, sin PyPI)
+# .github/workflows/publish.yml vigente: build smoke (uv build) + changelog cliff + gh-release.
+# Sin Trusted Publishing ni environment pypi: no hay publish a PyPI por diseño.
+# Ver en https://github.com/Dxrk777/Dxrk/releases que v0.2.0 aparece con changelog
 
-# 10) post-publish
+# 10) post-release
 gh release view v0.2.0 --web  # verifica auto-changelog + gh-release body
-uv tool install dxrk --force && dxrk-py --version  # debe decir 0.2.0
+uv tool install git+https://github.com/Dxrk777/Dxrk.git --force && dxrk-py --version  # debe decir 0.2.0
 ```
 
 ### 5.3 `pyproject.toml` diff para 0.2.0
@@ -350,14 +352,11 @@ classifiers = [
 # [project.urls] añadir si falta: "Benchmarks" = "https://dxrk777.github.io/Dxrk/benchmarks/"
 ```
 
-### 5.4 Trusted Publishing (recomendado para Top1)
+### 5.4 Distribución vía git (sin PyPI por diseño — no aplicar Trusted Publishing)
 
-Migrar de `secrets.PYPI_API_TOKEN` a **OIDC Trusted Publishing** (sin token en secrets):
+**Obsoleto: no hay publicación a PyPI.** El plan original proponía OIDC Trusted Publishing con publisher `Dxrk777/Dxrk` y environment `pypi`; no se aplica. Vigente: `publish.yml` hace build smoke + changelog + `gh-release`, sin `uv publish` ni OIDC.
 
-- PyPI → `dxrk` → Settings → Publishing → Add GitHub publisher: `owner: Dxrk777`, `repo: Dxrk`, `workflow: publish.yml`, `environment: pypi`.
-- `publish.yml` ya usa `permissions: id-token: write` (ok). Cambiar `UV_PUBLISH_TOKEN` por `id-token` flow (uv 0.8+ soporta `uv publish --trusted-publishing`).
-
-**Criterio done:** `https://pypi.org/project/dxrk/0.2.0/` live, `pip install dxrk==0.2.0` ok, `mkdocs` deploy verde, `git tag v0.2.0` + GitHub Release con changelog.
+**Criterio done:** `https://github.com/Dxrk777/Dxrk/releases/tag/v0.2.0` live, `uv tool install git+https://github.com/Dxrk777/Dxrk.git` ok, `mkdocs` deploy verde, `git tag v0.2.0` + GitHub Release con changelog.
 
 ---
 
@@ -463,7 +462,7 @@ Cada ejemplo con `README` snippet + `uv run python examples/memory-30s.py` en CI
 - [ ] `docs/comparison.md` + `docs/examples/*.md` (4 ejemplos)
 - [ ] Launch HN/Reddit/X + awesome lists PRs
 - [ ] `SECURITY.md` bump `0.2.x` + `CONTRIBUTING.md` sección memory
-- [ ] Trusted Publishing OIDC
+- [ ] ~~Trusted Publishing OIDC~~ (obsoleto: sin PyPI por diseño)
 
 **90 días (v0.5.0):**
 
@@ -527,10 +526,10 @@ uv run mkdocs build  # debe dar 0 warnings tras PR2
 - `mkdocs.yml` — nav actual 12 entradas, fix propuesto §3
 - `pyproject.toml` — 0.1.2 → 0.2.0 checklist §5
 - `.github/workflows/ci.yml` — 3 OS × Python 3.13, ruff+ mypy+ pytest cov 80%
-- `.github/workflows/publish.yml` — tag `v*` → `uv publish` + git-cliff + gh-release
+- `.github/workflows/publish.yml` — tag `v*` → build smoke + git-cliff + gh-release (sin PyPI; distribución vía git)
 - `README.md` — 169L actual, hero propuesto §2 → ~220L
 - `CONTRIBUTING.md` / `CODE_OF_CONDUCT.md` / `SECURITY.md` — community baseline §4
 
 ---
 
-**DXRK // BEYOND LIMITS — Top1 DX no es slogan, es `uv tool install dxrk && dxrk init` en <30s, docs que responden en 1 click, y benchmarks que cualquiera reproduce con `uv run python benchmarks/bench_memory.py`.**
+**DXRK // BEYOND LIMITS — Top1 DX no es slogan, es `uv tool install git+https://github.com/Dxrk777/Dxrk.git` en <30s, docs que responden en 1 click, y benchmarks que cualquiera reproduce con `uv run python benchmarks/bench_memory.py`.**
