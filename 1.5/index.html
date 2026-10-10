@@ -903,6 +903,33 @@
   
   
     <li class="md-nav__item">
+      <a href="adr/ADR-005-migracion-go-python/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-005 Migración Go → Python
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="MIGRATION_3.3.5_3.7.1/" class="md-nav__link">
         
   
@@ -1086,11 +1113,11 @@
 <li>🐍 <strong>Python 3.13+</strong> con TUI moderna basada en <a href="https://textual.textualize.io/">Textual</a></li>
 <li>🤖 Configura <strong>14 agentes</strong> con un solo comando</li>
 <li>🧠 <strong>DxrkMemory 2.0</strong> — memoria local con búsqueda híbrida FTS5 + BM25 y grafo temporal (sin embeddings, offline)</li>
-<li>🔄 Conmutador de proveedores y modelos con perfiles <code>cheap</code> / <code>balanced</code> / <code>quality</code></li>
+<li>🔄 Conmutador de proveedores y modelos con asignación por fase vía <code>dxrk-py model</code> (<code>list</code>/<code>current</code>/<code>set</code>)</li>
 <li>🛠️ Workflows de desarrollo completos (Git, commit, review, PR)</li>
 </ul>
 <h2 id="instalacion">Instalación</h2>
-<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>dxrk
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span>git+https://github.com/Dxrk777/Dxrk.git
 </code></pre></div>
 <h2 id="uso-rapido">Uso rápido</h2>
 <div class="highlight"><pre><span></span><code><span class="c1"># Instala y configura un agente con el preset completo</span>

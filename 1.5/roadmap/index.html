@@ -814,6 +814,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../adr/ADR-005-migracion-go-python/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-005 Migración Go → Python
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../MIGRATION_3.3.5_3.7.1/" class="md-nav__link">
         
   
@@ -1396,6 +1423,7 @@
 <p><strong>Estado:</strong> v1.0.0 GA Done (salvo R14 diferido a v2.0) · <strong>Fecha:</strong> 2026-09-08 · <strong>Versión:</strong> 1.0.0-done<br />
 <strong>Alcance:</strong> Deuda Fase1 + Enterprise multi-tenant Fase2 + DX Top1 Fase4 → GA v1.0.0. <strong>Sin tocar <code>dxrk/memory/</code></strong> salvo via <code>palace_path</code> per-tenant (ADR-002).<br />
 <strong>Contexto flagship:</strong> DxrkMemory 2.0 cerrado — 14 módulos <code>dxrk/memory</code> + <code>backend/</code> (6303 LOC stdlib-only <code>sqlite3</code> FTS5 trigram→porter→unicode61, WAL <code>0o600</code>/<code>0o750</code>, 141 tests en <code>tests/test_memory*.py</code>, 2760+ totales), ADR-002 (aislamiento Memory/Learner/RAG) y ADR-003 (stdlib-only vs hybrid BM25 0.72 vs HNSW 0.88, 0 vs 420MB, P5 vence). Ver <code>docs/memory.md:1</code>, <code>docs/dx.md:1</code>, <code>docs/adr/ADR-002-memory-separation.md:1</code>, <code>docs/adr/ADR-003-hybrid-vs-stdlib.md:1</code>, <code>docs/MIGRATION_3.3.5_3.7.1.md:1</code>.<br />
+<strong>Nota 2026-10:</strong> sin PyPI por diseño (<code>.github/workflows/publish.yml:26-29</code>, commits <code>a396a00</code> y <code>3b1d235</code>). Las menciones a publish PyPI abajo son históricas del plan 0.2.0 y quedan sustituidas por release vía git + GitHub Releases; no ejecutar publish a PyPI.
 <strong>Versiones anteriores:</strong> <code>pyproject.toml:7</code> <code>0.1.2</code> → <code>0.2.0</code> (DX + flagship docs) → <code>0.3.0</code>/<code>0.5.0</code> enterprise beta → <code>1.0.0</code> GA multi-tenant. Commits base: <code>4c4ab3f</code> flagship 4652 LOC <code>979</code> replaces, <code>bf0d106</code> coverage 141 + ADR-002 + hooks <code>stdio</code>. <code>git status</code> clean tras <code>bf0d106</code> salvo untracked <code>docs/dx.md</code> (535L) + <code>docs/adr/ADR-003-hybrid-vs-stdlib.md</code> (76L) — este roadmap los integra.</p>
 </blockquote>
 <p>Este documento es el <strong>plan priorizado con matriz Impacto×Esfuerzo</strong>, roadmap por versión, Gantt, riesgos y Done gates. Ejecuta exactamente lo que quedó pendiente de Fase1 (deuda) + Fase2 (enterprise) + Fase4 (DX) sin reabrir <code>dxrk/memory/</code> internamente.</p>
@@ -1453,7 +1481,7 @@ Esfuerzo: 1=&lt;1 día, 2=2–4 días, 3=1–2 semanas, 4=2–4 semanas, 5=&gt;1
     quadrant-4 Fill-ins
     DX hero README: [0.10, 0.95]
     ADR docs hygiene: [0.10, 0.55]
-    PyPI 0.2.0 publish: [0.25, 0.95]
+    Release 0.2.0 vía git: [0.25, 0.95]
     Migration idempotente: [0.25, 0.95]
     Coverage 62→80: [0.25, 0.75]
     Benchmarks reproducibles: [0.25, 0.75]
@@ -1470,7 +1498,7 @@ Esfuerzo: 1=&lt;1 día, 2=2–4 días, 3=1–2 semanas, 4=2–4 semanas, 5=&gt;1
 <div class="highlight"><pre><span></span><code>Impacto 5 ┌─────────────────────┬─────────────────────┐
          │  QUICK WINS         │  MAJOR PROJECTS     │
          │  ★ DX hero 5.00    │  ★ Tenant iso 1.67  │
-         │  ★ PyPI 2.50       │  ★ Vault HKDF 1.67  │
+         │  ★ Release 2.50    │  ★ Vault HKDF 1.67  │
          │  ★ Migration 2.50  │  ★ http split 1.25  │
 Impacto 3 │  ○ Coverage 2.00   │  ○ RBAC 1.33        │
          │  ○ Benchmarks 2.00 │  ○ TUI context 1.33 │
@@ -1499,7 +1527,7 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 <tr>
 <td><strong>Quick Wins</strong></td>
 <td>I≥4, E≤2</td>
-<td>7 (DX hero, PyPI, Migration, Coverage, Benchmarks, CLI flag, JWT tid)</td>
+<td>7 (DX hero, Release vía git, Migration, Coverage, Benchmarks, CLI flag, JWT tid)</td>
 <td><strong>v0.2.0 — 2 semanas</strong></td>
 </tr>
 <tr>
@@ -1546,7 +1574,7 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 <tr>
 <td><strong>R01</strong></td>
 <td><strong>DX hero README</strong></td>
-<td>Badges (tests 2760, coverage 80%, mypy, PyPI), tagline <code>Memory local-first en 30s</code>, quickstart <code>uv tool install dxrk &amp;&amp; dxrk init &amp;&amp; dxrk query</code>, demo.gif caption 30s, tabla benchmarks teaser → README 169L→~220L</td>
+<td>Badges (tests 2760, coverage 80%, mypy, Release GitHub sin PyPI), tagline <code>Memory local-first en 30s</code>, quickstart <code>uv tool install git+https://github.com/Dxrk777/Dxrk.git &amp;&amp; dxrk-py install &amp;&amp; dxrk-py query</code>, demo.gif caption 30s, tabla benchmarks teaser → README 169L→~220L</td>
 <td><strong>5</strong></td>
 <td><strong>1</strong></td>
 <td><strong>5.00</strong></td>
@@ -1569,15 +1597,15 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 </tr>
 <tr>
 <td><strong>R03</strong></td>
-<td><strong>PyPI 0.2.0 publish</strong></td>
-<td><code>pyproject.toml:7</code> bump <code>0.1.2→0.2.0</code> (minor SemVer), <code>CHANGELOG.md</code> cliff <code>[0.2.0]</code>, <code>readme/license/classifiers</code> check, <code>uv build</code> + <code>twine check</code> + <code>uv tool install --from sdist</code> smoke, <code>git tag v0.2.0</code> → <code>publish.yml</code> trusted OIDC, verify <code>pypi.org/project/dxrk/0.2.0/</code></td>
+<td><strong>Release 0.2.0 vía git (sin PyPI)</strong></td>
+<td><code>pyproject.toml:7</code> bump <code>0.1.2→0.2.0</code> (minor SemVer), <code>CHANGELOG.md</code> cliff <code>[0.2.0]</code>, <code>readme/license/classifiers</code> check, <code>uv build</code> smoke + <code>uv tool install --from sdist</code> smoke, <code>git tag v0.2.0</code> → <code>publish.yml</code> (build smoke + changelog + GitHub release, sin PyPI), verify <code>github.com/Dxrk777/Dxrk/releases/tag/v0.2.0</code></td>
 <td><strong>5</strong></td>
 <td><strong>2</strong></td>
 <td><strong>2.50</strong></td>
 <td>Quick Win</td>
 <td>Release</td>
 <td>R01, R02, R05/R06 coverage gate</td>
-<td><code>pyproject.toml:7</code> en 0.1.2; <code>docs/dx.md:274</code> checklist §5.2</td>
+<td><code>pyproject.toml:7</code> en 0.1.2; <code>docs/dx.md:274</code> checklist §5 (vía git, sin PyPI)</td>
 </tr>
 <tr>
 <td><strong>R04</strong></td>
@@ -1731,7 +1759,7 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 <hr />
 <h2 id="3-roadmap-por-version">3. Roadmap por versión</h2>
 <h3 id="31-v020-quick-wins-2-semanas-2026-08-28-2026-09-11">3.1 v0.2.0 — Quick Wins (2 semanas) — <code>2026-08-28 → 2026-09-11</code></h3>
-<p><strong>Objetivo:</strong> cerrar DX Top1 Fase4 + hygiene + gate de calidad → PyPI publish sin deuda visible. <strong>Nada de <code>dxrk/memory/</code> internals.</strong></p>
+<p><strong>Objetivo:</strong> cerrar DX Top1 Fase4 + hygiene + gate de calidad → release vía git sin deuda visible. <strong>Nada de <code>dxrk/memory/</code> internals.</strong></p>
 <table>
 <thead>
 <tr>
@@ -1768,14 +1796,14 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 </tr>
 <tr>
 <td><strong>Release</strong></td>
-<td><code>pyproject.toml:7</code> <code>0.1.2→0.2.0</code>, <code>CHANGELOG.md</code> <code>[0.2.0] - 2026-09-11</code> cliff, <code>uv build</code> + <code>twine check</code> + <code>uv tool install --from dist/*.tar.gz</code> smoke, <code>git tag -a v0.2.0</code> + push → <code>publish.yml</code> live</td>
+<td><code>pyproject.toml:7</code> <code>0.1.2→0.2.0</code>, <code>CHANGELOG.md</code> <code>[0.2.0] - 2026-09-11</code> cliff, <code>uv build</code> smoke + <code>uv tool install --from dist/*.tar.gz</code> smoke, <code>git tag -a v0.2.0</code> + push → <code>publish.yml</code> live (build + changelog + GitHub release, sin PyPI)</td>
 <td><code>chore(release): v0.2.0 DxrkMemory 2.0 + Top1 DX</code></td>
-<td><code>pypi.org/project/dxrk/0.2.0/</code> live + <code>dxrk-py --version 0.2.0</code></td>
+<td><code>github.com/Dxrk777/Dxrk/releases/tag/v0.2.0</code> live + <code>dxrk-py --version 0.2.0</code></td>
 </tr>
 </tbody>
 </table>
 <p><strong>Fuera de scope v0.2.0:</strong> <code>http split</code>, <code>config unify</code>, <code>tenant/*</code> (solo diseño doc en <code>roadmap.md</code>), <code>vector plugin</code>.</p>
-<p><strong>Hito:</strong> <code>https://pypi.org/project/dxrk/0.2.0/</code> + <code>mkdocs</code> 0 warnings + README hero merge + tag <code>v0.2.0</code>.</p>
+<p><strong>Hito:</strong> <code>https://github.com/Dxrk777/Dxrk/releases/tag/v0.2.0</code> + <code>mkdocs</code> 0 warnings + README hero merge + tag <code>v0.2.0</code>.</p>
 <h3 id="32-v030-major-projects-part-1-deuda-tecnica-4-semanas-2026-09-12-2026-10-09">3.2 v0.3.0 — Major Projects part 1: Deuda técnica (4 semanas) — <code>2026-09-12 → 2026-10-09</code></h3>
 <p><strong>Objetivo:</strong> pagar deuda Fase1 que bloquea escalabilidad y onboarding (http split es #1 dolor mantenimiento, TUI global bloquea tenant, config dual confunde).</p>
 <table>
@@ -1860,7 +1888,7 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 </tbody>
 </table>
 <p><strong>Docs beta:</strong> <code>docs/tenants.md</code> + <code>docs/security.md</code> tenant chapter + <code>CHANGELOG.md</code> <code>[0.5.0-beta]</code>.</p>
-<p><strong>Hito:</strong> <code>pip install dxrk==0.5.0b1</code> + <code>dxrk --tenant acme init &amp;&amp; dxrk --tenant acme query "test"</code> offline &lt;50ms + <code>uv run pytest tests/test_tenant*.py -q</code> 25+ passed + beta tag <code>v0.5.0-beta</code>.</p>
+<p><strong>Hito:</strong> <code>uv tool install git+https://github.com/Dxrk777/Dxrk.git</code> + <code>dxrk-py --tenant acme init &amp;&amp; dxrk-py --tenant acme query "test"</code> offline &lt;50ms + <code>uv run pytest tests/test_tenant*.py -q</code> 25+ passed + beta tag <code>v0.5.0-beta</code>.</p>
 <h3 id="34-v100-ga-multi-tenant-4-semanas-2026-11-21-2026-12-18">3.4 v1.0.0 — GA Multi-tenant (4 semanas) — <code>2026-11-21 → 2026-12-18</code></h3>
 <p><strong>Objetivo:</strong> GA estable con RBAC + TUI switcher + hardening + docs completas → <code>1.0.0</code> SemVer stable API.</p>
 <table>
@@ -1905,7 +1933,7 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 </tr>
 </tbody>
 </table>
-<p><strong>Hito:</strong> <code>https://pypi.org/project/dxrk/1.0.0/</code> live + <code>uv tool install dxrk &amp;&amp; dxrk --tenant demo query "GA?"</code> &lt;50ms + <code>SECURITY.md</code> bump + <code>mkdocs</code> <code>mike</code> deploy <code>latest</code> → <code>1.0</code>.</p>
+<p><strong>Hito:</strong> <code>https://github.com/Dxrk777/Dxrk/releases/tag/v1.0.0</code> live + <code>uv tool install git+https://github.com/Dxrk777/Dxrk.git &amp;&amp; dxrk-py --tenant demo query "GA?"</code> &lt;50ms + <code>SECURITY.md</code> bump + <code>mkdocs</code> <code>mike</code> deploy <code>latest</code> → <code>1.0</code>.</p>
 <hr />
 <h2 id="4-timeline-gantt">4. Timeline — Gantt</h2>
 <h3 id="41-mermaid-gantt-render-en-mkdocs-con-pymdownxsuperfences-mermaid">4.1 Mermaid Gantt (render en <code>mkdocs</code> con <code>pymdownx.superfences</code> mermaid)</h3>
@@ -1918,7 +1946,7 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
     ADR docs hygiene (R02)        :done, r02, 2026-08-28, 2d
     Coverage 62→80 (R05)          :active, r05, 2026-08-30, 7d
     Benchmarks stub (R06)         :r06, 2026-09-01, 5d
-    PyPI 0.2.0 publish (R03)      :crit, r03, 2026-09-08, 4d
+    Release 0.2.0 vía git (R03)      :crit, r03, 2026-09-08, 4d
     Milestone v0.2.0 tag          :milestone, m02, 2026-09-11, 0d
 
     section v0.3.0 Deuda
@@ -1967,10 +1995,10 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 </thead>
 <tbody>
 <tr>
-<td>PyPI publish falla por <code>readme</code>/<code>classifiers</code> mal render</td>
+<td>Release vía git falla por changelog/<code>uv build</code> smoke roto</td>
 <td>M</td>
 <td>Alto</td>
-<td><code>uv build</code> + <code>twine check dist/*</code> local obligatorio antes de tag; checklist <code>docs/dx.md:282</code> §5.2 paso 6</td>
+<td><code>uv build</code> local obligatorio antes de tag; checklist <code>docs/dx.md:282</code> §5.2 paso 6 (vía git, sin PyPI)</td>
 </tr>
 <tr>
 <td><code>mkdocs build</code> sigue con warnings tras nav fix</td>
@@ -2105,7 +2133,7 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 <td><code>vector plugin</code> presión “recall -16pp bloquea enterprise”</td>
 <td>B</td>
 <td>Medio</td>
-<td>ADR-003 ya mitiga: <code>benchmarks.md</code> reproduce recall 0.72 vs 0.88 + disclaimer + <code>pool 15×</code> &lt;8pp loss &lt;10k corpus; vector plugin <code>dxrk/memory/backend/vector.py</code> opcional post-v1.0 <code>pip install dxrk[vector]</code> — no GA blocker</td>
+<td>ADR-003 ya mitiga: <code>benchmarks.md</code> reproduce recall 0.72 vs 0.88 + disclaimer + <code>pool 15×</code> &lt;8pp loss &lt;10k corpus; vector plugin <code>dxrk/memory/backend/vector.py</code> extra opcional vía git post-v1.0 — no GA blocker</td>
 </tr>
 <tr>
 <td><code>1.0.0</code> stable API promise rompe <code>HierarchicalConfig</code> compat</td>
@@ -2189,7 +2217,7 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 </blockquote>
 <h3 id="62-dod-por-version-checklist-mergeable">6.2 DoD por versión (checklist mergeable)</h3>
 <blockquote>
-<p><strong>Estado 2026-09-08 (v1.0.0 GA live en PyPI):</strong> las versiones intermedias 0.2.0/0.3.0/0.5.0 se colapsaron — el release real fue <code>0.2.2 → 0.2.3 → 0.2.4 → 1.0.0</code>. Los boxes <code>[x]</code> están verificados en <code>main</code>; <code>R14 config unify</code> es el único pendiente y queda diferido a v2.0 con ADR.</p>
+<p><strong>Estado 2026-09-08 (v1.0.0 GA live en GitHub Releases, sin PyPI):</strong> las versiones intermedias 0.2.0/0.3.0/0.5.0 se colapsaron — el release real fue <code>0.2.2 → 0.2.3 → 0.2.4 → 1.0.0</code>. Los boxes <code>[x]</code> están verificados en <code>main</code>; <code>R14 config unify</code> es el único pendiente y queda diferido a v2.0 con ADR.</p>
 </blockquote>
 <h4 id="v020-done-quick-wins-2-semanas">v0.2.0 Done (Quick Wins) — 2 semanas</h4>
 <ul>
@@ -2197,7 +2225,7 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 <li>[x] <code>mkdocs.yml</code> nav <code>dx.md</code> + <code>adr/ADR-003</code> + <code>roadmap.md</code> + tenants/rbac/migration/benchmarks — <code>uv run mkdocs build --strict</code> 0 warnings</li>
 <li>[x] Coverage ≥80% (85%+ vía <code>tests/test_cov_*.py</code> + suites enterprise) + <code>dxrk/utils/http/</code> split a submódulos — <code>pytest --cov-fail-under=80</code> verde non-Windows; <code>ruff</code> 0, <code>mypy</code> 0</li>
 <li>[x] <code>docs/benchmarks.md</code> existe con tabla + metodología + <code>benchmarks/bench_memory.py</code> + artefacto <code>benchmarks/results/</code></li>
-<li>[x] Releases <code>0.2.2 → 0.2.3 → 0.2.4 → 1.0.0</code> publicados (proceso <code>uv build</code> + smoke + tag + <code>publish.yml</code> ejecutado; PyPI <code>dxrk 1.0.0</code> live)</li>
+<li>[x] Releases <code>0.2.2 → 0.2.3 → 0.2.4 → 1.0.0</code> publicados (proceso <code>uv build</code> + smoke + tag + <code>publish.yml</code> ejecutado; GitHub Release <code>1.0.0</code> live, sin PyPI)</li>
 <li>[x] Tags <code>v0.2.3</code> + <code>v0.2.4</code> + <code>v1.0.0</code> pusheados → <code>publish.yml</code> verde, <code>gh release</code> changelog cliff</li>
 <li>[x] <code>CHANGELOG.md</code> generado por workflow + <code>SECURITY.md</code> bump <code>Supported: 1.0.x ✅, 0.2.x ✅</code></li>
 <li>[x] Gates universales §6.1 todos verdes en <code>main</code> tras tag</li>
@@ -2228,7 +2256,7 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 <li>[x] Hardening GA: <code>mypy</code> 0, <code>ruff</code> 0, <code>pytest --cov-fail-under=80</code> ✅ (85%+), <code>trace0</code> 0, <code>uv audit</code> 0, <code>site/assets/demo_tenant.gif</code> ✅ (30s, 327KB) + <code>OSSF Scorecard</code> <strong>7.0 real</strong> (target ≥8.5 no alcanzado: techo honesto — sin PR-required por decisión usuario, 1 contribuidor, repo &lt;90 días, sin CII/fuzzing; ver §9 nota)</li>
 <li>[x] Docs GA: <code>docs/tenants.md</code> ✅, <code>docs/rbac.md</code> ✅, <code>docs/migration-0.5-to-1.0.md</code> ✅, <code>README.md</code> enterprise ✅, <code>mike</code> <code>latest→1.0</code> ✅, <code>social</code> cards OG ✅ (plugin genera PNGs por página)</li>
 <li>[x] <code>pyproject.toml</code> <code>1.0.0</code> <code>Development Status :: 5 - Production/Stable</code> + <code>CHANGELOG.md</code> cliff + <code>git tag v1.0.0</code> → <code>publish.yml</code> GA + <code>gh release</code> notes + <code>SECURITY.md</code> <code>Supported: 1.0.x ✅, 0.2.x ✅</code></li>
-<li>[x] Manual smoke GA: <code>uv tool install dxrk --force</code> (1.0.0 PyPI) + tenant create/whoami/list OK — encontró y arregló 3 bugs reales (search fresco <code>[]</code>, contaminación palace por <code>DEFAULT_PALACE_PATH</code> import-time, post-filtro frase contigua → token-AND)</li>
+<li>[x] Manual smoke GA: <code>uv tool install git+https://github.com/Dxrk777/Dxrk.git --force</code> (1.0.0 vía git) + tenant create/whoami/list OK — encontró y arregló 3 bugs reales (search fresco <code>[]</code>, contaminación palace por <code>DEFAULT_PALACE_PATH</code> import-time, post-filtro frase contigua → token-AND)</li>
 <li>[x] Gates universales §6.1 verdes en <code>main</code> tag <code>v1.0.0</code> (se re-verifican en gates finales)</li>
 </ul>
 <h4 id="v110-done-cortex-autonomous-enterprise-release-menor">v1.1.0 Done (Cortex + Autonomous + Enterprise) — release menor</h4>
@@ -2358,8 +2386,8 @@ abajo con las líneas correspondientes marcadas.</p>
 <li><strong>Flagship:</strong> <a href="../memory/"><code>docs/memory.md</code></a> — 13 módulos 4652 LOC (14 con <code>backend/</code>, 6303 LOC con <code>engine.py</code>/<code>__main__</code> per <code>AGENTS.md</code> total), FTS5 <code>trigram</code>+WAL, Palace locks <code>~/.dxrk/locks</code> 900s, BM25 <code>k1=1.5 b=0.75</code>, Graph <code>valid_from/valid_to</code>, AAAK <code>compress/decode</code>, Layers L0-L3 600–900 tok, miner <code>GitignoreMatcher</code> + <code>O_NONBLOCK</code>/<code>S_ISREG</code> <code>db29959</code> + <code>MAX_FILE_SIZE 500MiB</code>.</li>
 <li><strong>Migración:</strong> <a href="../MIGRATION_3.3.5_3.7.1/"><code>docs/MIGRATION_3.3.5_3.7.1.md</code></a> — delta 388 files 50+ commits <code>359c579</code>, 6 parches portados (<code>1654cd2</code>/<code>759b8f1</code>/<code>db29959</code>/<code>27212e5</code>/<code>5036e3c</code>/SIGTERM), no-portados <code>HNSW</code>/<code>numpy2</code>/<code>chroma cache</code>/<code>onnx</code> justificados stdlib-only.</li>
 <li><strong>Separación:</strong> <a href="../adr/ADR-002-memory-separation/"><code>docs/adr/ADR-002-memory-separation.md</code></a> — 3 sistemas aislados <code>memory</code> (Palace/WAL) vs <code>learner</code> (<code>.dxrk/memories.json</code>) vs <code>rag</code> (<code>VectorStore</code> dict), reglas R1–R6, puentes <code>hooks export</code> + <code>rag enrichment</code> sin storage coupling.</li>
-<li><strong>Stdlib vs Hybrid:</strong> <a href="../adr/ADR-003-hybrid-vs-stdlib/"><code>docs/adr/ADR-003-hybrid-vs-stdlib.md</code></a> — P5 mandato, benchmarks 0.72 vs 0.88 recall, 0 vs 420MB, stdlib-only vence; <code>backend/vector.py</code> plugin opcional post-v1.0 <code>pip install dxrk[vector]</code>.</li>
-<li><strong>DX plan:</strong> <a href="../dx/"><code>docs/dx.md</code></a> — 535L Top1 plan, benchmarks tabla §1, hero §2 (badges+30s quickstart), nav fix §3.2/§3.3, community §4, PyPI checklist §5.2, star tactics §6, métricas §7, 30/60/90 days §8.</li>
+<li><strong>Stdlib vs Hybrid:</strong> <a href="../adr/ADR-003-hybrid-vs-stdlib/"><code>docs/adr/ADR-003-hybrid-vs-stdlib.md</code></a> — P5 mandato, benchmarks 0.72 vs 0.88 recall, 0 vs 420MB, stdlib-only vence; <code>backend/vector.py</code> plugin extra opcional vía git post-v1.0.</li>
+<li><strong>DX plan:</strong> <a href="../dx/"><code>docs/dx.md</code></a> — 535L Top1 plan, benchmarks tabla §1, hero §2 (badges+30s quickstart), nav fix §3.2/§3.3, community §4, release checklist §5.2 (vía git, sin PyPI), star tactics §6, métricas §7, 30/60/90 days §8.</li>
 <li><strong>Config deuda:</strong> <code>dxrk/config/config.py:91</code> <code>HierarchicalConfig</code> 744L + <code>dxrk/config/settings.py:??</code> <code>SettingsManager</code> 223L dual, <code>dxrk/config/load.py:108</code> vault wiring.</li>
 <li><strong>TUI deuda:</strong> <code>dxrk/tui/shared.py:15</code> <code>AppState</code>/<code>STATE=AppState()</code> singleton + <code>dxrk/tui/app.py:40</code> 946L <code>STATE</code> 18 usos global.</li>
 <li><strong>Http deuda:</strong> <code>dxrk/utils/http.py:1</code> 1945L 192 defs 62% coverage min, <code>utils/image.py:1</code> 1157L 96% contraste.</li>
@@ -2385,7 +2413,7 @@ grep<span class="w"> </span>-rn<span class="w"> </span><span class="s2">&quot;en
 
 <span class="c1"># Release v0.2.0</span>
 grep<span class="w"> </span>-rn<span class="w"> </span><span class="s2">&quot;0.1.2&quot;</span><span class="w"> </span>--include<span class="o">=</span><span class="s2">&quot;*.toml&quot;</span><span class="w"> </span>--include<span class="o">=</span><span class="s2">&quot;*.py&quot;</span><span class="w"> </span>--include<span class="o">=</span><span class="s2">&quot;*.md&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-v<span class="w"> </span><span class="s2">&quot;.venv&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-v<span class="w"> </span><span class="s2">&quot;.git&quot;</span>
-uv<span class="w"> </span>build<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>uv<span class="w"> </span>run<span class="w"> </span>twine<span class="w"> </span>check<span class="w"> </span>dist/*
+uv<span class="w"> </span>build<span class="w">  </span><span class="c1"># smoke (sin PyPI: no twine check, distribución vía git)</span>
 uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span>--from<span class="w"> </span>dist/dxrk-0.2.0.tar.gz<span class="w"> </span>dxrk<span class="w"> </span>--force<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>dxrk-py<span class="w"> </span>--help<span class="w"> </span><span class="p">|</span><span class="w"> </span>head
 git<span class="w"> </span>cliff<span class="w"> </span>--unreleased<span class="w"> </span>--tag<span class="w"> </span>v0.2.0<span class="w"> </span>--prepend<span class="w"> </span>CHANGELOG.md
 git<span class="w"> </span>-c<span class="w"> </span>user.name<span class="o">=</span><span class="s1">&#39;Dxrk System&#39;</span><span class="w"> </span>-c<span class="w"> </span>user.email<span class="o">=</span><span class="s1">&#39;dxrk@local&#39;</span><span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;chore(release): v0.2.0 DxrkMemory 2.0 + Top1 DX&quot;</span>
