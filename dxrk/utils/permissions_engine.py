@@ -8,14 +8,7 @@ import json
 import re
 import threading
 
-from dxrk.utils.permissions_model import Action as Action
-from dxrk.utils.permissions_model import Condition as Condition
-from dxrk.utils.permissions_model import EvalContext as EvalContext
-from dxrk.utils.permissions_model import Operator as Operator
-from dxrk.utils.permissions_model import ParseOperator as ParseOperator
-from dxrk.utils.permissions_model import Policy as Policy
-from dxrk.utils.permissions_model import Rule as Rule
-from dxrk.utils.permissions_model import Strategy as Strategy
+from dxrk.utils.permissions_model import Action, Condition, EvalContext, Operator, ParseOperator, Policy, Rule, Strategy
 
 # ---- Policy Engine ----
 

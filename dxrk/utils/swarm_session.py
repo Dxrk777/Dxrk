@@ -26,9 +26,7 @@ import sqlite3
 import threading
 from datetime import datetime, timedelta
 
-from dxrk.utils.swarm_model import Task as Task
-from dxrk.utils.swarm_model import TaskResult as TaskResult
-from dxrk.utils.swarm_model import _now as _now
+from dxrk.utils.swarm_model import Task, TaskResult, _now
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS swarm_tasks (

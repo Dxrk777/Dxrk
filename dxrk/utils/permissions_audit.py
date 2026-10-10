@@ -12,15 +12,17 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import TextIO
 
-from dxrk.utils.permissions_classify import RiskLevel as RiskLevel
-from dxrk.utils.permissions_model import _STR_CRITICAL as _STR_CRITICAL
-from dxrk.utils.permissions_model import _STR_MEDIUM as _STR_MEDIUM
-from dxrk.utils.permissions_model import _ZERO_TIME as _ZERO_TIME
-from dxrk.utils.permissions_model import Action as Action
-from dxrk.utils.permissions_model import _go_time_fmt as _go_time_fmt
-from dxrk.utils.permissions_model import _is_zero as _is_zero
-from dxrk.utils.permissions_model import _now as _now
-from dxrk.utils.permissions_model import _rfc3339 as _rfc3339
+from dxrk.utils.permissions_classify import RiskLevel
+from dxrk.utils.permissions_model import (
+    _STR_CRITICAL,
+    _STR_MEDIUM,
+    _ZERO_TIME,
+    Action,
+    _go_time_fmt,
+    _is_zero,
+    _now,
+    _rfc3339,
+)
 
 # ---- Audit Entry / Filter ----
 

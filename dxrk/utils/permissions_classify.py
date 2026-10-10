@@ -8,17 +8,19 @@ import os
 from enum import IntEnum
 from typing import cast
 
-from dxrk.utils.permissions_model import _STR_CRITICAL as _STR_CRITICAL
-from dxrk.utils.permissions_model import _STR_EXECUTE as _STR_EXECUTE
-from dxrk.utils.permissions_model import _STR_FORMAT as _STR_FORMAT
-from dxrk.utils.permissions_model import _STR_LISTFILES as _STR_LISTFILES
-from dxrk.utils.permissions_model import _STR_MEDIUM as _STR_MEDIUM
-from dxrk.utils.permissions_model import _STR_TODOREAD as _STR_TODOREAD
-from dxrk.utils.permissions_model import _STR_UNKNOWN as _STR_UNKNOWN
-from dxrk.utils.permissions_model import _STR_WEBFETCH as _STR_WEBFETCH
-from dxrk.utils.permissions_model import _STR_WEBSEARCH as _STR_WEBSEARCH
-from dxrk.utils.permissions_model import _STR_WRITE as _STR_WRITE
-from dxrk.utils.permissions_model import _anonymous_enum_member as _anonymous_enum_member
+from dxrk.utils.permissions_model import (
+    _STR_CRITICAL,
+    _STR_EXECUTE,
+    _STR_FORMAT,
+    _STR_LISTFILES,
+    _STR_MEDIUM,
+    _STR_TODOREAD,
+    _STR_UNKNOWN,
+    _STR_WEBFETCH,
+    _STR_WEBSEARCH,
+    _STR_WRITE,
+    _anonymous_enum_member,
+)
 
 # ---- Tool Classification ----
 

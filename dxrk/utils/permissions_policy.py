@@ -10,17 +10,19 @@ from dataclasses import dataclass, field
 from enum import IntEnum
 from typing import cast
 
-from dxrk.utils.permissions_engine import NewPolicyEngine as NewPolicyEngine
-from dxrk.utils.permissions_model import _STR_PROJECT as _STR_PROJECT
-from dxrk.utils.permissions_model import _STR_UNKNOWN as _STR_UNKNOWN
-from dxrk.utils.permissions_model import Action as Action
-from dxrk.utils.permissions_model import Condition as Condition
-from dxrk.utils.permissions_model import EvalContext as EvalContext
-from dxrk.utils.permissions_model import Policy as Policy
-from dxrk.utils.permissions_model import Rule as Rule
-from dxrk.utils.permissions_model import Strategy as Strategy
-from dxrk.utils.permissions_model import _anonymous_enum_member as _anonymous_enum_member
-from dxrk.utils.permissions_model import _as_int as _as_int
+from dxrk.utils.permissions_engine import NewPolicyEngine
+from dxrk.utils.permissions_model import (
+    _STR_PROJECT,
+    _STR_UNKNOWN,
+    Action,
+    Condition,
+    EvalContext,
+    Policy,
+    Rule,
+    Strategy,
+    _anonymous_enum_member,
+    _as_int,
+)
 
 # ---- Serialization ----
 

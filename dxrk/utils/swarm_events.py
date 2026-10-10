@@ -7,11 +7,7 @@ import queue
 import threading
 from collections.abc import Callable
 
-from dxrk.utils.swarm_model import EventHandler as EventHandler
-from dxrk.utils.swarm_model import SwarmEvent as SwarmEvent
-from dxrk.utils.swarm_model import SwarmEventType as SwarmEventType
-from dxrk.utils.swarm_model import _Context as _Context
-from dxrk.utils.swarm_model import _with_cancel as _with_cancel
+from dxrk.utils.swarm_model import EventHandler, SwarmEvent, SwarmEventType, _Context, _with_cancel
 
 
 class EventBus:

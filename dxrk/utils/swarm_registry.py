@@ -5,20 +5,22 @@ from __future__ import annotations
 
 import threading
 
-from dxrk.utils.swarm_events import EventBus as EventBus
-from dxrk.utils.swarm_model import Backend as Backend
-from dxrk.utils.swarm_model import BackendCapabilities as BackendCapabilities
-from dxrk.utils.swarm_model import BackendID as BackendID
-from dxrk.utils.swarm_model import BackendStatus as BackendStatus
-from dxrk.utils.swarm_model import DefaultSwarmConfig as DefaultSwarmConfig
-from dxrk.utils.swarm_model import ErrBackendNotFound as ErrBackendNotFound
-from dxrk.utils.swarm_model import GenerateBackendID as GenerateBackendID
-from dxrk.utils.swarm_model import SwarmConfig as SwarmConfig
-from dxrk.utils.swarm_model import SwarmError as SwarmError
-from dxrk.utils.swarm_model import SwarmEvent as SwarmEvent
-from dxrk.utils.swarm_model import SwarmEventType as SwarmEventType
-from dxrk.utils.swarm_model import _Context as _Context
-from dxrk.utils.swarm_model import _now as _now
+from dxrk.utils.swarm_events import EventBus
+from dxrk.utils.swarm_model import (
+    Backend,
+    BackendCapabilities,
+    BackendID,
+    BackendStatus,
+    DefaultSwarmConfig,
+    ErrBackendNotFound,
+    GenerateBackendID,
+    SwarmConfig,
+    SwarmError,
+    SwarmEvent,
+    SwarmEventType,
+    _Context,
+    _now,
+)
 
 
 class BackendRegistry:
