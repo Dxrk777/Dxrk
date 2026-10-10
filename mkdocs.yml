@@ -40,6 +40,7 @@ nav:
   - ADR-002 Separación Memoria: adr/ADR-002-memory-separation.md
   - ADR-003 Hybrid vs Stdlib: adr/ADR-003-hybrid-vs-stdlib.md
   - ADR-004 Unificación Config: adr/ADR-004-config-unify.md
+  - ADR-005 Migración Go → Python: adr/ADR-005-migracion-go-python.md
   - Migración 3.3.5 → 3.7.1: MIGRATION_3.3.5_3.7.1.md
   - DX Top 1: dx.md
   - Plataformas: platforms.md
