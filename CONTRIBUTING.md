@@ -44,7 +44,7 @@ Usá los issue templates: `bug_report` y `feature_request`. Incluí versión (`d
 
 ## Releases
 
-Los releases se disparan con un tag `v*` desde `main` — el pipeline publica a PyPI, genera changelog y crea el release automáticamente. No es necesario (ni recomendable) tocar workflows de release en PRs normales.
+Los releases se disparan con un tag `v*` desde `main` — el pipeline genera changelog y crea el release automáticamente (sin PyPI; distribución vía git). No es necesario (ni recomendable) tocar workflows de release en PRs normales.
 
 ## Código de conducta
 

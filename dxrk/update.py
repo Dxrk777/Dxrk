@@ -436,7 +436,9 @@ def render_cli(results: list[UpdateResult]) -> str:
     lines.append("")
 
     if updates_available > 0 and checks_failed > 0:
-        lines.append(f"{updates_available} actualización(es) disponible(s). {checks_failed} verificación(es) fallida(s).")
+        lines.append(
+            f"{updates_available} actualización(es) disponible(s). {checks_failed} verificación(es) fallida(s)."
+        )
     elif updates_available > 0:
         lines.append(f"{updates_available} actualización(es) disponible(s).")
     elif checks_failed > 0:
@@ -765,7 +767,9 @@ def execute_with_options(
         except (OSError, ValueError) as e:
             if sp:
                 sp.finish(False)
-            backup_warning = f"la copia previa a la actualización falló \u2014 la actualización continuará sin copia: {e}"
+            backup_warning = (
+                f"la copia previa a la actualización falló \u2014 la actualización continuará sin copia: {e}"
+            )
 
     # Build results
     tool_results: list[ToolUpgradeResult] = []
@@ -896,11 +900,13 @@ def _go_install_upgrade(tool: ToolInfo, latest_version: str) -> None:
 
 def _binary_upgrade(r: UpdateResult, profile: PlatformProfile) -> None:
     if r.tool.name == "dxrk":
-        # Dxrk ships via PyPI (uv tool), not as a GitHub release asset.
+        # Dxrk ships via git (uv tool install git+https://github.com/Dxrk777/Dxrk.git), not as a GitHub release asset.
         raise ManualFallbackError("actualiza 'dxrk': ejecuta `uv tool upgrade dxrk`")
     if profile.os == "windows":
         hint = r.update_hint or f"Descarga manualmente desde https://github.com/Dxrk777/{r.tool.repo}/releases"
-        raise ManualFallbackError(f"la actualización de {r.tool.name!r} en Windows requiere actualización manual: {hint}")
+        raise ManualFallbackError(
+            f"la actualización de {r.tool.name!r} en Windows requiere actualización manual: {hint}"
+        )
 
     _download_and_replace(r, profile)
 
@@ -915,7 +921,9 @@ def _download_and_replace(r: UpdateResult, profile: PlatformProfile) -> None:
 def _download(r: UpdateResult, profile: PlatformProfile) -> None:
     if profile.os == "windows":
         hint = r.update_hint or f"Descarga desde https://github.com/Dxrk777/{r.tool.repo}/releases"
-        raise RuntimeError(f"la actualización de {r.tool.name!r} en Windows requiere actualización manual \u2014 {hint}")
+        raise RuntimeError(
+            f"la actualización de {r.tool.name!r} en Windows requiere actualización manual \u2014 {hint}"
+        )
 
     binary_path = _look_path(r.tool.name)
     if not binary_path:
@@ -992,7 +1000,9 @@ def _install_script_url(owner: str, repo: str) -> str:
 def _script_upgrade(r: UpdateResult, profile: PlatformProfile) -> None:
     if profile.os == "windows":
         hint = r.update_hint or f"Descarga manualmente desde https://github.com/{r.tool.owner}/{r.tool.repo}/releases"
-        raise ManualFallbackError(f"la actualización de {r.tool.name!r} en Windows requiere actualización manual: {hint}")
+        raise ManualFallbackError(
+            f"la actualización de {r.tool.name!r} en Windows requiere actualización manual: {hint}"
+        )
 
     url = _install_script_url(r.tool.owner, r.tool.repo)
     req = urllib.request.Request(url)
@@ -1000,7 +1010,9 @@ def _script_upgrade(r: UpdateResult, profile: PlatformProfile) -> None:
         body = resp.read(_max_script_size + 1)
 
     if len(body) > _max_script_size:
-        raise RuntimeError(f"descarga de install.sh: el cuerpo de la respuesta supera el límite de {_max_script_size} bytes")
+        raise RuntimeError(
+            f"descarga de install.sh: el cuerpo de la respuesta supera el límite de {_max_script_size} bytes"
+        )
 
     result = subprocess.run(
         ["bash", "-c", body.decode()],
@@ -1019,7 +1031,9 @@ def _gga_script_upgrade(r: UpdateResult) -> None:
 def _gga_script_upgrade_for_os(r: UpdateResult, os_name: str) -> None:
     if os_name == "win32":
         hint = r.update_hint or f"Descarga manualmente desde https://github.com/{r.tool.owner}/{r.tool.repo}/releases"
-        raise ManualFallbackError(f"la actualización de {r.tool.name!r} en Windows requiere actualización manual: {hint}")
+        raise ManualFallbackError(
+            f"la actualización de {r.tool.name!r} en Windows requiere actualización manual: {hint}"
+        )
 
     tmp_dir = tempfile.mkdtemp(prefix="gentle-ai-gga-")
     try:

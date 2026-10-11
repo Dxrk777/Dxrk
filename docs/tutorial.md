@@ -1,14 +1,14 @@
 # Tutorial: de cero a memoria multi-tenant en 10 minutos
 
-Cada comando de esta guía fue ejecutado tal cual contra Dxrk 1.0.0.
+Cada comando de esta guía fue ejecutado tal cual contra Dxrk 1.5.0.
 Si algo difiere en tu máquina, abre un issue: el tutorial no miente.
 
 ## 0) Instala (1 min)
 
 ```bash
-uv tool install dxrk
-# o: pip install dxrk
-dxrk-py --version   # Dxrk v1.0.0
+uv tool install git+https://github.com/Dxrk777/Dxrk.git
+# o: pip install git+https://github.com/Dxrk777/Dxrk.git
+dxrk-py --version   # Dxrk v1.5.0
 ```
 
 Requisito: Python 3.13+.
