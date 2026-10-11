@@ -1,15 +1,19 @@
 # SPDX-License-Identifier: MIT
-"""TOML upserts and Go-quote helpers for Codex config blocks."""
+"""TOML upserts and string-quoting helpers for Codex config blocks."""
 
 from __future__ import annotations
 
 import json
 
 
-def go_quote(value: str) -> str:
-    # Mirrors strconv.Quote / fmt %q: double-quoted with escaped
-    # backslashes, quotes and control characters.
+def toml_quote(value: str) -> str:
+    # Double-quoted with escaped backslashes, quotes and control
+    # characters (TOML basic-string compatible for these inputs).
     return json.dumps(value, ensure_ascii=True)
+
+
+# Backwards-compatible alias (Go-style name, pre-rename).
+go_quote = toml_quote
 
 
 def upsert_codex_mcp_server_block(content: str, server_name: str, cmd: str, args: list[str]) -> str:
@@ -20,11 +24,11 @@ def upsert_codex_mcp_server_block(content: str, server_name: str, cmd: str, args
 
     args_literal = "[]"
     if len(args) > 0:
-        quoted = [go_quote(a) for a in args]
+        quoted = [toml_quote(a) for a in args]
         args_literal = "[" + ", ".join(quoted) + "]"
 
     section = "[mcp_servers." + server_name + "]"
-    block = section + "\ncommand = " + go_quote(cmd) + "\nargs = " + args_literal
+    block = section + "\ncommand = " + toml_quote(cmd) + "\nargs = " + args_literal
 
     content = content.replace("\r\n", "\n")
     lines = content.split("\n")
@@ -60,7 +64,7 @@ def upsert_codex_dxrk_memory_block(content: str, dxrk_memory_cmd: str = "") -> s
 def upsert_top_level_toml_string(content: str, key: str, value: str) -> str:
     content = content.replace("\r\n", "\n")
     lines = content.split("\n")
-    line_value = key + " = " + go_quote(value)
+    line_value = key + " = " + toml_quote(value)
 
     # Remove all existing occurrences of the key.
     cleaned: list[str] = []

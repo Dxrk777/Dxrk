@@ -7,7 +7,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from dxrk.utils.bashparse_model import ASTNode, Location, NodeType, RedirectOp
-from dxrk.utils.bashparse_quote import _go_quote, _needs_quote, _node_string
+from dxrk.utils.bashparse_quote import _needs_quote, _node_string, _shell_quote
 
 
 @dataclass
@@ -32,7 +32,7 @@ class CommandNode(ASTNode):
         parts.append(self.name)
         for arg in self.args:
             if _needs_quote(arg):
-                parts.append(_go_quote(arg))
+                parts.append(_shell_quote(arg))
             else:
                 parts.append(arg)
         return " ".join(parts)

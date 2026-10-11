@@ -128,6 +128,11 @@ def test_go_quote():
     assert filemerge.go_quote('he said "hi"') == '"he said \\"hi\\""'
 
 
+def test_toml_quote():
+    assert filemerge.toml_quote('he said "hi"') == '"he said \\"hi\\""'
+    assert filemerge.toml_quote is filemerge.go_quote
+
+
 def test_upsert_codex_mcp_server_block():
     out = filemerge.upsert_codex_mcp_server_block("", "", "", [])
     assert "dxrk-memory" in out

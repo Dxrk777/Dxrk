@@ -16,7 +16,7 @@ from dxrk.utils.bashparse_nodes import (
     SequenceNode,
     SubshellNode,
 )
-from dxrk.utils.bashparse_quote import _go_quote
+from dxrk.utils.bashparse_quote import _shell_quote
 
 
 class _Parser:
@@ -40,7 +40,7 @@ class _Parser:
         t = self._peek()
         if t.typ != typ:
             return ParseError(
-                f"expected {int(typ)}, got {int(t.typ)} ({_go_quote(t.val)})",
+                f"expected {int(typ)}, got {int(t.typ)} ({_shell_quote(t.val)})",
                 t.pos,
             )
         self._advance()
@@ -145,7 +145,7 @@ class _Parser:
         # Simple command
         if t.typ != _TokenType.tokWord:
             return None, ParseError(
-                f"unexpected token {int(t.typ)} ({_go_quote(t.val)})",
+                f"unexpected token {int(t.typ)} ({_shell_quote(t.val)})",
                 t.pos,
             )
 
@@ -303,7 +303,7 @@ def Parse(text: str) -> tuple[ASTNode | None, ParseError | None]:
     if parser._peek().typ != _TokenType.tokEOF:
         t = parser._peek()
         return None, ParseError(
-            f"unexpected token {int(t.typ)} ({_go_quote(t.val)})",
+            f"unexpected token {int(t.typ)} ({_shell_quote(t.val)})",
             t.pos,
         )
 

@@ -17,7 +17,7 @@ Fidelity notes (mirrored intentionally, including upstream quirks):
 
 * ``CommandNode.env`` is ordered by insertion in Python; the original iterates a map
   in random order, so ``string()`` may reorder env assignments.
-* ``_go_quote`` writes printable non-ASCII literally; the original ``%q`` escapes
+* ``_shell_quote`` writes printable non-ASCII literally; Go's ``%q`` escapes
   non-printable runes as ``\\uXXXX``.
 * The parser only collects ``VAR=value`` assignments that appear *after*
   the command name; leading assignments stay in ``name`` (e.g.
@@ -69,3 +69,4 @@ from dxrk.utils.bashparse_quote import _SHELL_SPECIALS as _SHELL_SPECIALS
 from dxrk.utils.bashparse_quote import _go_quote as _go_quote
 from dxrk.utils.bashparse_quote import _needs_quote as _needs_quote
 from dxrk.utils.bashparse_quote import _node_string as _node_string
+from dxrk.utils.bashparse_quote import _shell_quote as _shell_quote

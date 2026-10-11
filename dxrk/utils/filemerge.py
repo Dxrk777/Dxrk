@@ -39,6 +39,7 @@ from dxrk.utils.filemerge_markdown import remove_line_start_markers as remove_li
 from dxrk.utils.filemerge_markdown import strip_legacy_atl_block as strip_legacy_atl_block
 from dxrk.utils.filemerge_markdown import strip_legacy_persona_block as strip_legacy_persona_block
 from dxrk.utils.filemerge_toml import go_quote as go_quote
+from dxrk.utils.filemerge_toml import toml_quote as toml_quote
 from dxrk.utils.filemerge_toml import upsert_codex_dxrk_memory_block as upsert_codex_dxrk_memory_block
 from dxrk.utils.filemerge_toml import upsert_codex_mcp_server_block as upsert_codex_mcp_server_block
 from dxrk.utils.filemerge_toml import upsert_top_level_toml_string as upsert_top_level_toml_string

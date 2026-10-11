@@ -13,8 +13,9 @@ def _needs_quote(value: str) -> bool:
     return any(ch in _SHELL_SPECIALS for ch in value)
 
 
-def _go_quote(value: str) -> str:
-    """Quotes token values like fmt %q (strconv.Quote)."""
+def _shell_quote(value: str) -> str:
+    """Quotes a token value with double quotes, escaping backslashes,
+    quotes and control characters."""
     out = ['"']
     for ch in value:
         code = ord(ch)
@@ -41,3 +42,7 @@ def _node_string(node: ASTNode | None) -> str:
     if node is None:
         return "<nil>"
     return node.string()
+
+
+# Backwards-compatible alias (Go-style name, pre-rename).
+_go_quote = _shell_quote
