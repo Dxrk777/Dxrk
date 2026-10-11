@@ -118,7 +118,7 @@ Ver [docs/tenants.md](docs/tenants.md) y [docs/rbac.md](docs/rbac.md).
 - ✅ **Skills curadas** — `dxrk-py install --component skills`
 - ✅ **35+ servidores MCP** — configurables vía `.mcp.json`
 - ✅ **Conmutador de modelos** — `model.provider` en `config.yaml`, `dxrk-py sync` lo propaga
-- ✅ **TUI Textual** — detección de agentes instalados en tiempo real
+- ✅ **TUI Textual** — detección de agentes instalados bajo demanda al abrir la pantalla
 - ✅ **Workflows Git** — conventional commits, PRs con checklist de revisión (`dxrk review`) y keybindings
 
 ## Novedades — próxima v1.5.0 (en `main`, sin publicar)
