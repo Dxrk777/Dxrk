@@ -75,6 +75,7 @@ class TestLogLevel:
         assert hx.LogLevel.LogLevelWarn.String() == "WARN"
         assert hx.LogLevel.LogLevelInfo.String() == "INFO"
         assert hx.LogLevel.LogLevelDebug.String() == "DEBUG"
+        assert str(hx.LogLevel.LogLevelInfo) == "INFO"
 
 
 class TestRetryPolicy:
@@ -156,9 +157,7 @@ class TestClientRequests:
 
     def test_timeout_option_enforced(self, http_server):
         http_server.mode = "slow"
-        client, err = hx.NewHTTPClient(
-            hx.ClientOptions(timeout=timedelta(milliseconds=10))
-        )
+        client, err = hx.NewHTTPClient(hx.ClientOptions(timeout=timedelta(milliseconds=10)))
         assert err is None
         server = f"http://127.0.0.1:{http_server.server_address[1]}/"
         req = hx.httpx.Request("GET", server)

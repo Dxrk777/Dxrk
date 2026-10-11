@@ -46,7 +46,16 @@ _EMAIL_RE = re.compile(rb"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
 
 
 class LogLevel(IntEnum):
-    """Log level."""
+    """Log level.
+
+    NOTE: intentionally separate from ``dxrk.log.Level``. This is a
+    verbosity scale (``LogLevelNone=0`` .. ``LogLevelDebug=4``, higher
+    means more output) ported from the Go http package, while
+    ``dxrk.log.Level`` is a severity scale (``DEBUG=0`` .. ``ERROR=3``,
+    higher means more severe). Merging them would invert comparisons
+    (``level >= LogLevelDebug`` vs ``level >= ERROR``) and break the
+    values pinned in ``tests/test_utils_http.py``.
+    """
 
     LogLevelNone = 0
     LogLevelError = 1
@@ -54,7 +63,7 @@ class LogLevel(IntEnum):
     LogLevelInfo = 3
     LogLevelDebug = 4
 
-    def String(self) -> str:
+    def __str__(self) -> str:
         names = {
             LogLevel.LogLevelNone: "NONE",
             LogLevel.LogLevelError: "ERROR",
@@ -63,6 +72,10 @@ class LogLevel(IntEnum):
             LogLevel.LogLevelDebug: "DEBUG",
         }
         return names.get(self, "UNKNOWN")
+
+    def String(self) -> str:
+        """Backwards-compatible alias for ``str(level)``."""
+        return str(self)
 
 
 class Logger(Protocol):

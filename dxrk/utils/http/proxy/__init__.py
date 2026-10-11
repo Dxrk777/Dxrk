@@ -34,13 +34,17 @@ class ProxyAuth:
     username: str = ""
     password: str = ""
 
-    def String(self) -> str:
+    def __str__(self) -> str:
         """Return "user:pass" (or "user"); "" without a username."""
         if self.username == "":
             return ""
         if self.password == "":
             return self.username
         return self.username + ":" + self.password
+
+    def String(self) -> str:
+        """Backwards-compatible alias for ``str(auth)``."""
+        return str(self)
 
     def Encode(self) -> str:
         """Return "user:pass"; "" without a username."""
@@ -94,12 +98,16 @@ class ProxyConfig:
             return 1080
         return 0
 
-    def String(self) -> str:
+    def __str__(self) -> str:
         """Return the proxy URL; "" if it cannot be serialized."""
         try:
             return self.GetProxyURL() or ""
         except HttpError:
             return ""
+
+    def String(self) -> str:
+        """Backwards-compatible alias for ``str(config)``."""
+        return str(self)
 
     def ShouldBypass(self, host: str) -> bool:
         """Return True if ``host`` should not use the proxy."""

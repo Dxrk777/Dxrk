@@ -23,6 +23,8 @@ def test_proxy_auth_string_encode():
     full = H.ProxyAuth(username="u", password="p")
     assert full.String() == "u:p"
     assert full.Encode() == "u:p"
+    assert str(empty) == ""
+    assert str(full) == "u:p"
 
 
 def test_proxy_config_urls():
@@ -47,6 +49,7 @@ def test_proxy_default_ports():
 def test_proxy_string_empty_on_unsupported():
     cfg = H.ProxyConfig(type="bogus")  # type: ignore[arg-type]
     assert cfg.String() == ""
+    assert str(cfg) == ""
 
 
 def test_bypass_matching():
