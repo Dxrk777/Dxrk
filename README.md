@@ -151,7 +151,7 @@ dxrk/
 
 ```bash
 uv sync --all-extras          # Instala dependencias incl. dev
-uv run pytest                 # 4663 tests
+uv run pytest                 # 5249 tests
 uv run --with mypy mypy dxrk/ # Verificación de tipos
 ```
 
