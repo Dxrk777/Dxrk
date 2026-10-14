@@ -17,28 +17,37 @@ from dxrk.utils.diff_model import DiffType as DiffType
 from dxrk.utils.diff_model import _Op as _Op
 
 
-def ComputeDiff(old_text: str, new_text: str) -> DiffResult:
+def compute_diff(old_text: str, new_text: str) -> DiffResult:
     """Compute a line-level diff between old_text and new_text. Mirrors ComputeDiff."""
     old_lines = _split_lines(old_text)
     new_lines = _split_lines(new_text)
     ops = _lcs_diff(old_lines, new_lines)
     return _build_result(ops, old_lines, new_lines, DefaultContextLines)
 
+# Backwards-compatible alias (Go-style name).
+ComputeDiff = compute_diff
 
-def ComputeWordDiff(old_text: str, new_text: str) -> DiffResult:
+
+def compute_word_diff(old_text: str, new_text: str) -> DiffResult:
     """Compute a word-level diff between old_text and new_text. Mirrors ComputeWordDiff."""
     old_words = _split_words(old_text)
     new_words = _split_words(new_text)
     ops = _lcs_diff(old_words, new_words)
     return _build_result(ops, old_words, new_words, DefaultContextLines)
 
+# Backwards-compatible alias (Go-style name).
+ComputeWordDiff = compute_word_diff
 
-def ComputeCharDiff(old_text: str, new_text: str) -> DiffResult:
+
+def compute_char_diff(old_text: str, new_text: str) -> DiffResult:
     """Compute a character-level diff between old_text and new_text. Mirrors ComputeCharDiff."""
     old_chars = _split_chars(old_text)
     new_chars = _split_chars(new_text)
     ops = _lcs_diff(old_chars, new_chars)
     return _build_result(ops, old_chars, new_chars, DefaultContextLines)
+
+# Backwards-compatible alias (Go-style name).
+ComputeCharDiff = compute_char_diff
 
 
 def _lcs_diff(old_arr: list[str], new_arr: list[str]) -> list[_Op]:

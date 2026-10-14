@@ -22,12 +22,15 @@ class WriteOpts:
     encoding: str = ""
 
 
-def DefaultWriteOpts() -> WriteOpts:
+def default_write_opts() -> WriteOpts:
     """Return sensible defaults. Mirrors fileops.DefaultWriteOpts."""
     return WriteOpts(create_dirs=True, mode=0o644, overwrite=True)
 
+# Backwards-compatible alias (Go-style name).
+DefaultWriteOpts = default_write_opts
 
-def WriteFile(path: str, content: str, opts: WriteOpts) -> FileopsError | None:
+
+def write_file(path: str, content: str, opts: WriteOpts) -> FileopsError | None:
     """Write content to path atomically. Mirrors fileops.WriteFile."""
     err = ValidatePath(path)
     if err is not None:
@@ -48,8 +51,11 @@ def WriteFile(path: str, content: str, opts: WriteOpts) -> FileopsError | None:
                 return FileopsError(f"fileops: backup failed: {err}")
     return WriteAtomic(path, content.encode("utf-8"))
 
+# Backwards-compatible alias (Go-style name).
+WriteFile = write_file
 
-def WriteAtomic(path: str, data: bytes) -> FileopsError | None:
+
+def write_atomic(path: str, data: bytes) -> FileopsError | None:
     """Write to a temp file in the same directory, then rename. Mirrors WriteAtomic."""
     err = ValidatePath(path)
     if err is not None:
@@ -84,8 +90,11 @@ def WriteAtomic(path: str, data: bytes) -> FileopsError | None:
             except OSError:
                 pass
 
+# Backwards-compatible alias (Go-style name).
+WriteAtomic = write_atomic
 
-def BackupFile(path: str) -> tuple[str, FileopsError | None]:
+
+def backup_file(path: str) -> tuple[str, FileopsError | None]:
     """Create a backup of path at path.bak. Mirrors fileops.BackupFile."""
     err = ValidatePath(path)
     if err is not None:
@@ -108,16 +117,22 @@ def BackupFile(path: str) -> tuple[str, FileopsError | None]:
         return "", FileopsError(f"fileops: write backup: {e}")
     return bak, None
 
+# Backwards-compatible alias (Go-style name).
+BackupFile = backup_file
 
-def WriteLines(path: str, lines: list[str], opts: WriteOpts) -> FileopsError | None:
+
+def write_lines(path: str, lines: list[str], opts: WriteOpts) -> FileopsError | None:
     """Write each string as a line (joined by newlines) atomically. Mirrors WriteLines."""
     text = "\n".join(lines)
     if len(lines) > 0:
         text += "\n"
     return WriteFile(path, text, opts)
 
+# Backwards-compatible alias (Go-style name).
+WriteLines = write_lines
 
-def AppendFile(path: str, content: str) -> FileopsError | None:
+
+def append_file(path: str, content: str) -> FileopsError | None:
     """Append content to the file at path, creating it if necessary. Mirrors AppendFile."""
     err = ValidatePath(path)
     if err is not None:
@@ -129,11 +144,17 @@ def AppendFile(path: str, content: str) -> FileopsError | None:
         return FileopsError(str(e))
     return None
 
+# Backwards-compatible alias (Go-style name).
+AppendFile = append_file
 
-def EnsureDir(path: str) -> FileopsError | None:
+
+def ensure_dir(path: str) -> FileopsError | None:
     """Create parent directories for the given file path. Mirrors fileops.EnsureDir."""
     try:
         os.makedirs(os.path.dirname(path), mode=0o755, exist_ok=True)
     except OSError as e:
         return FileopsError(str(e))
     return None
+
+# Backwards-compatible alias (Go-style name).
+EnsureDir = ensure_dir

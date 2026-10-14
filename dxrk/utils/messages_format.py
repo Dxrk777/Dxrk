@@ -21,7 +21,7 @@ class FormatStyle(IntEnum):
     Verbose = 4
 
 
-def FormatMessage(msg: Message, format: FormatStyle) -> str:
+def format_message(msg: Message, format: FormatStyle) -> str:
     """Render a Message according to the given style."""
     if format is FormatStyle.Markdown:
         return _format_markdown(msg)
@@ -32,6 +32,10 @@ def FormatMessage(msg: Message, format: FormatStyle) -> str:
     if format is FormatStyle.Verbose:
         return _format_verbose(msg)
     return _format_plain(msg)
+
+
+# Backwards-compatible alias (Go-style name).
+FormatMessage = format_message
 
 
 def _format_plain(msg: Message) -> str:
@@ -128,12 +132,16 @@ def _format_tool_input(input: dict[str, object]) -> str:
     return "{" + ", ".join(parts) + "}"
 
 
-def FormatToolUse(name: str, input: dict[str, object]) -> str:
+def format_tool_use(name: str, input: dict[str, object]) -> str:
     """Format a tool call for display."""
     return f"→ {name}({_format_tool_input(input)})"
 
 
-def FormatToolResult(result: ToolResultData) -> str:
+# Backwards-compatible alias (Go-style name).
+FormatToolUse = format_tool_use
+
+
+def format_tool_result(result: ToolResultData) -> str:
     """Format a tool result for display."""
     prefix = "✓"
     if result.is_error:
@@ -145,14 +153,22 @@ def FormatToolResult(result: ToolResultData) -> str:
     return f"{prefix} {content}{dur}"
 
 
-def FormatError(err: Exception | None) -> str:
+# Backwards-compatible alias (Go-style name).
+FormatToolResult = format_tool_result
+
+
+def format_error(err: Exception | None) -> str:
     """Format an error message with context."""
     if err is None:
         return ""
     return f"Error: {err}"
 
 
-def FormatProgress(tool: str, elapsed: timedelta) -> str:
+# Backwards-compatible alias (Go-style name).
+FormatError = format_error
+
+
+def format_progress(tool: str, elapsed: timedelta) -> str:
     """Return a progress indicator string."""
     sec = elapsed.total_seconds()
     dots = int(sec) % 4
@@ -160,12 +176,20 @@ def FormatProgress(tool: str, elapsed: timedelta) -> str:
     return f"  {tool}{pending} {_round_ms(elapsed)}"
 
 
-def FormatDiff(before: str, after: str) -> str:
+# Backwards-compatible alias (Go-style name).
+FormatProgress = format_progress
+
+
+def format_diff(before: str, after: str) -> str:
     """Produce a simple before/after comparison."""
     return f"--- before\n{before}\n+++ after\n{after}"
 
 
-def TruncateMiddle(s: str, max_len: int) -> str:
+# Backwards-compatible alias (Go-style name).
+FormatDiff = format_diff
+
+
+def truncate_middle(s: str, max_len: int) -> str:
     """Truncate a string to ``max_len`` characters, ellipsis in the middle."""
     rune_len = len(s)
     if rune_len <= max_len:
@@ -178,27 +202,47 @@ def TruncateMiddle(s: str, max_len: int) -> str:
     return start + "..." + end
 
 
-def WrapCode(code: str, lang: str) -> str:
+# Backwards-compatible alias (Go-style name).
+TruncateMiddle = truncate_middle
+
+
+def wrap_code(code: str, lang: str) -> str:
     """Wrap text in a markdown code block."""
     return f"```{lang}\n{code}\n```"
+
+
+# Backwards-compatible alias (Go-style name).
+WrapCode = wrap_code
 
 
 _ANSI_RE = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]")
 
 
-def StripANSI(s: str) -> str:
+def strip_ansi(s: str) -> str:
     """Remove ANSI escape codes from a string."""
     return _ANSI_RE.sub("", s)
 
 
-def WordCount(s: str) -> int:
+# Backwards-compatible alias (Go-style name).
+StripANSI = strip_ansi
+
+
+def word_count(s: str) -> int:
     """Return the number of words in s."""
     return len(s.split())
 
 
-def CharCount(s: str) -> int:
+# Backwards-compatible alias (Go-style name).
+WordCount = word_count
+
+
+def char_count(s: str) -> int:
     """Return the character count of s."""
     return len(s)
+
+
+# Backwards-compatible alias (Go-style name).
+CharCount = char_count
 
 
 def _trunc_str(s: str, max_len: int) -> str:
@@ -230,8 +274,6 @@ def _format_duration(d: timedelta) -> str:
         parts.append(f"{hours}h")
     if minutes:
         parts.append(f"{minutes}m")
-    if seconds_us == 0 and not parts:
-        return "0s"
     if seconds_us == 0:
         return "".join(parts)
     if seconds_us < 1_000_000:

@@ -45,7 +45,7 @@ class ImageData:
     height: int = 0
 
 
-def DetectEncoding(data: bytes) -> str:
+def detect_encoding(data: bytes) -> str:
     """Inspect a byte slice and return a best-guess encoding label. Mirrors DetectEncoding."""
     if len(data) == 0:
         return "UTF-8"
@@ -73,8 +73,11 @@ def DetectEncoding(data: bytes) -> str:
         return "Latin-1"
     return "Unknown"
 
+# Backwards-compatible alias (Go-style name).
+DetectEncoding = detect_encoding
 
-def IsBinary(path: str) -> tuple[bool, FileopsError | None]:
+
+def is_binary(path: str) -> tuple[bool, FileopsError | None]:
     """Detect whether a file is likely binary by inspecting the first bytes. Mirrors IsBinary."""
     try:
         with open(path, "rb") as f:
@@ -89,8 +92,11 @@ def IsBinary(path: str) -> tuple[bool, FileopsError | None]:
             non_text += 1
     return non_text / max(len(buf), 1) > 0.1, None
 
+# Backwards-compatible alias (Go-style name).
+IsBinary = is_binary
 
-def ReadFile(path: str) -> tuple[FileContent | None, FileopsError | None]:
+
+def read_file(path: str) -> tuple[FileContent | None, FileopsError | None]:
     """Read a file, detect its encoding, and return a FileContent. Mirrors ReadFile."""
     err = ValidatePath(path)
     if err is not None:
@@ -123,8 +129,11 @@ def ReadFile(path: str) -> tuple[FileContent | None, FileopsError | None]:
         None,
     )
 
+# Backwards-compatible alias (Go-style name).
+ReadFile = read_file
 
-def ReadFileLines(path: str, offset: int, limit: int) -> tuple[list[str], int, FileopsError | None]:
+
+def read_file_lines(path: str, offset: int, limit: int) -> tuple[list[str], int, FileopsError | None]:
     """Read a file and return lines[offset:offset+limit] plus the total count. Mirrors ReadFileLines."""
     fc, err = ReadFile(path)
     if err is not None or fc is None:
@@ -140,8 +149,11 @@ def ReadFileLines(path: str, offset: int, limit: int) -> tuple[list[str], int, F
         end = total
     return lines[offset:end], total, None
 
+# Backwards-compatible alias (Go-style name).
+ReadFileLines = read_file_lines
 
-def ReadImage(path: str) -> tuple[ImageData | None, FileopsError | None]:
+
+def read_image(path: str) -> tuple[ImageData | None, FileopsError | None]:
     """Read an image file and return it as base64 data with dimensions. Mirrors ReadImage."""
     err = ValidatePath(path)
     if err is not None:
@@ -173,3 +185,6 @@ def ReadImage(path: str) -> tuple[ImageData | None, FileopsError | None]:
         ),
         None,
     )
+
+# Backwards-compatible alias (Go-style name).
+ReadImage = read_image

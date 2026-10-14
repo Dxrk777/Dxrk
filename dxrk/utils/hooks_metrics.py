@@ -163,17 +163,23 @@ class HookLogger:
         self._closed = False
         self._hooks: list[Any] = []
 
-    def SetLevel(self, level: LogLevel) -> None:
+    def set_level(self, level: LogLevel) -> None:
         """Set the minimum log level. Mirrors hooks.SetLevel."""
         with self._mu:
             self._level = level
 
-    def AddHook(self, fn: Any) -> None:
+    # Backwards-compatible alias (Go-style name).
+    SetLevel = set_level
+
+    def add_hook(self, fn: Any) -> None:
         """Add a callback for log entries. Mirrors hooks.AddHook."""
         with self._mu:
             self._hooks.append(fn)
 
-    def Log(self, entry: HookLogEntry) -> None:
+    # Backwards-compatible alias (Go-style name).
+    AddHook = add_hook
+
+    def log(self, entry: HookLogEntry) -> None:
         """Log a hook execution entry. Mirrors hooks.Log."""
         with self._mu:
             if self._closed:
@@ -189,6 +195,9 @@ class HookLogger:
             self._write_entry(entry)
             for h in self._hooks:
                 h(entry)
+
+    # Backwards-compatible alias (Go-style name).
+    Log = log
 
     def _write_entry(self, entry: HookLogEntry) -> None:
         try:
@@ -233,7 +242,7 @@ class HookLogger:
             hme.last_exec = entry.timestamp
             hme.last_result = entry.result
 
-    def Metrics(self) -> HookMetricsSnapshot:
+    def metrics(self) -> HookMetricsSnapshot:
         """Return a snapshot of current metrics. Mirrors hooks.Metrics."""
         m = self._metrics
         with m._mu:
@@ -267,7 +276,10 @@ class HookLogger:
                 by_hook=by_hook,
             )
 
-    def RecentEntries(self, n: int) -> list[HookLogEntry]:
+    # Backwards-compatible alias (Go-style name).
+    Metrics = metrics
+
+    def recent_entries(self, n: int) -> list[HookLogEntry]:
         """Return the most recent log entries. Mirrors hooks.RecentEntries."""
         with self._mu:
             if n <= 0 or n > len(self._entries):
@@ -275,12 +287,18 @@ class HookLogger:
             start = len(self._entries) - n
             return list(self._entries[start:])
 
-    def Close(self) -> None:
+    # Backwards-compatible alias (Go-style name).
+    RecentEntries = recent_entries
+
+    def close(self) -> None:
         """Close the logger. Mirrors hooks.Close."""
         with self._mu:
             self._closed = True
 
-    def LogHookExecution(
+    # Backwards-compatible alias (Go-style name).
+    Close = close
+
+    def log_hook_execution(
         self,
         ctx: _Context,
         config: HookConfig,
@@ -311,7 +329,13 @@ class HookLogger:
 
         self.Log(entry)
 
+    # Backwards-compatible alias (Go-style name).
+    LogHookExecution = log_hook_execution
 
-def NewHookLogger(output: TextIO | None, level: LogLevel) -> HookLogger:
+
+def new_hook_logger(output: TextIO | None, level: LogLevel) -> HookLogger:
     """Create a new hook logger. Mirrors hooks.NewHookLogger."""
     return HookLogger(output, level)
+
+# Backwards-compatible alias (Go-style name).
+NewHookLogger = new_hook_logger

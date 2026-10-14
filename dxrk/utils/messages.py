@@ -37,6 +37,7 @@ from __future__ import annotations
 
 from dxrk.utils.messages_builder import MessageBuilder as MessageBuilder
 from dxrk.utils.messages_builder import NewMessage as NewMessage
+from dxrk.utils.messages_builder import new_message as new_message
 from dxrk.utils.messages_format import _ANSI_RE as _ANSI_RE
 from dxrk.utils.messages_format import CharCount as CharCount
 from dxrk.utils.messages_format import FormatDiff as FormatDiff
@@ -59,6 +60,17 @@ from dxrk.utils.messages_format import _format_tool_input as _format_tool_input
 from dxrk.utils.messages_format import _format_verbose as _format_verbose
 from dxrk.utils.messages_format import _round_ms as _round_ms
 from dxrk.utils.messages_format import _trunc_str as _trunc_str
+from dxrk.utils.messages_format import char_count as char_count
+from dxrk.utils.messages_format import format_diff as format_diff
+from dxrk.utils.messages_format import format_error as format_error
+from dxrk.utils.messages_format import format_message as format_message
+from dxrk.utils.messages_format import format_progress as format_progress
+from dxrk.utils.messages_format import format_tool_result as format_tool_result
+from dxrk.utils.messages_format import format_tool_use as format_tool_use
+from dxrk.utils.messages_format import strip_ansi as strip_ansi
+from dxrk.utils.messages_format import truncate_middle as truncate_middle
+from dxrk.utils.messages_format import word_count as word_count
+from dxrk.utils.messages_format import wrap_code as wrap_code
 from dxrk.utils.messages_model import _STR_ASSISTANT as _STR_ASSISTANT
 from dxrk.utils.messages_model import _STR_ERROR as _STR_ERROR
 from dxrk.utils.messages_model import _STR_SYSTEM as _STR_SYSTEM
@@ -75,6 +87,8 @@ from dxrk.utils.messages_model import ParseRole as ParseRole
 from dxrk.utils.messages_model import Role as Role
 from dxrk.utils.messages_model import ToolResultData as ToolResultData
 from dxrk.utils.messages_model import ToolUseData as ToolUseData
+from dxrk.utils.messages_model import estimate_tokens as estimate_tokens
+from dxrk.utils.messages_model import parse_role as parse_role
 from dxrk.utils.messages_normalize import CompactContent as CompactContent
 from dxrk.utils.messages_normalize import CountTokens as CountTokens
 from dxrk.utils.messages_normalize import DeduplicateToolResults as DeduplicateToolResults
@@ -84,6 +98,14 @@ from dxrk.utils.messages_normalize import NormalizeMessages as NormalizeMessages
 from dxrk.utils.messages_normalize import StripSystemMessages as StripSystemMessages
 from dxrk.utils.messages_normalize import TruncateByTokens as TruncateByTokens
 from dxrk.utils.messages_normalize import _compact_message_contents as _compact_message_contents
+from dxrk.utils.messages_normalize import compact_content as compact_content
+from dxrk.utils.messages_normalize import count_tokens as count_tokens
+from dxrk.utils.messages_normalize import deduplicate_tool_results as deduplicate_tool_results
+from dxrk.utils.messages_normalize import fix_tool_result_order as fix_tool_result_order
+from dxrk.utils.messages_normalize import merge_consecutive_role as merge_consecutive_role
+from dxrk.utils.messages_normalize import normalize_messages as normalize_messages
+from dxrk.utils.messages_normalize import strip_system_messages as strip_system_messages
+from dxrk.utils.messages_normalize import truncate_by_tokens as truncate_by_tokens
 from dxrk.utils.messages_query import FilterByRegex as FilterByRegex
 from dxrk.utils.messages_query import FilterByRole as FilterByRole
 from dxrk.utils.messages_query import FilterByTime as FilterByTime
@@ -95,6 +117,14 @@ from dxrk.utils.messages_query import SearchMessages as SearchMessages
 from dxrk.utils.messages_query import SearchResult as SearchResult
 from dxrk.utils.messages_query import Stats as Stats
 from dxrk.utils.messages_query import ToolCall as ToolCall
+from dxrk.utils.messages_query import filter_by_regex as filter_by_regex
+from dxrk.utils.messages_query import filter_by_role as filter_by_role
+from dxrk.utils.messages_query import filter_by_time as filter_by_time
+from dxrk.utils.messages_query import filter_by_token_range as filter_by_token_range
+from dxrk.utils.messages_query import filter_by_tool as filter_by_tool
+from dxrk.utils.messages_query import find_tool_calls as find_tool_calls
+from dxrk.utils.messages_query import get_conversation_stats as get_conversation_stats
+from dxrk.utils.messages_query import search_messages as search_messages
 from dxrk.utils.messages_window import CompactStrategy as CompactStrategy
 from dxrk.utils.messages_window import ContextWindow as ContextWindow
 from dxrk.utils.messages_window import MessageScore as MessageScore
@@ -102,3 +132,5 @@ from dxrk.utils.messages_window import NewContextWindow as NewContextWindow
 from dxrk.utils.messages_window import NoMessagesError as NoMessagesError
 from dxrk.utils.messages_window import ScoreMessages as ScoreMessages
 from dxrk.utils.messages_window import WindowFullError as WindowFullError
+from dxrk.utils.messages_window import new_context_window as new_context_window
+from dxrk.utils.messages_window import score_messages as score_messages

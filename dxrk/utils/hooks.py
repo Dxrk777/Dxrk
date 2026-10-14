@@ -37,6 +37,7 @@ from dxrk.utils.hooks_circuit import CircuitClosed as CircuitClosed
 from dxrk.utils.hooks_circuit import CircuitHalfOpen as CircuitHalfOpen
 from dxrk.utils.hooks_circuit import CircuitOpen as CircuitOpen
 from dxrk.utils.hooks_circuit import NewCircuitBreaker as NewCircuitBreaker
+from dxrk.utils.hooks_circuit import new_circuit_breaker as new_circuit_breaker
 from dxrk.utils.hooks_exec import _CTX_CANCELED as _CTX_CANCELED
 from dxrk.utils.hooks_exec import _CTX_DEADLINE as _CTX_DEADLINE
 from dxrk.utils.hooks_exec import HookExecutor as HookExecutor
@@ -52,6 +53,11 @@ from dxrk.utils.hooks_exec import _exec_env as _exec_env
 from dxrk.utils.hooks_exec import _exec_not_found as _exec_not_found
 from dxrk.utils.hooks_exec import _with_cancel as _with_cancel
 from dxrk.utils.hooks_exec import _with_timeout as _with_timeout
+from dxrk.utils.hooks_exec import new_hook_executor as new_hook_executor
+from dxrk.utils.hooks_exec import with_circuit_breaker as with_circuit_breaker
+from dxrk.utils.hooks_exec import with_executor_retries as with_executor_retries
+from dxrk.utils.hooks_exec import with_executor_retry_delay as with_executor_retry_delay
+from dxrk.utils.hooks_exec import with_executor_timeout as with_executor_timeout
 from dxrk.utils.hooks_match import DefaultHookDefaults as DefaultHookDefaults
 from dxrk.utils.hooks_match import HookDefaults as HookDefaults
 from dxrk.utils.hooks_match import HookMatcher as HookMatcher
@@ -60,6 +66,7 @@ from dxrk.utils.hooks_match import _filepath_match as _filepath_match
 from dxrk.utils.hooks_match import _glob_to_regex as _glob_to_regex
 from dxrk.utils.hooks_match import _matches_hook as _matches_hook
 from dxrk.utils.hooks_match import _Watcher as _Watcher
+from dxrk.utils.hooks_match import default_hook_defaults as default_hook_defaults
 from dxrk.utils.hooks_metrics import HookLogEntry as HookLogEntry
 from dxrk.utils.hooks_metrics import HookLogger as HookLogger
 from dxrk.utils.hooks_metrics import HookMetrics as HookMetrics
@@ -76,6 +83,7 @@ from dxrk.utils.hooks_metrics import TypeMetrics as TypeMetrics
 from dxrk.utils.hooks_metrics import TypeMetricsSnapshot as TypeMetricsSnapshot
 from dxrk.utils.hooks_metrics import _DiscardWriter as _DiscardWriter
 from dxrk.utils.hooks_metrics import _entry_dump as _entry_dump
+from dxrk.utils.hooks_metrics import new_hook_logger as new_hook_logger
 from dxrk.utils.hooks_model import _DISCARD as _DISCARD
 from dxrk.utils.hooks_model import _STR_ERROR as _STR_ERROR
 from dxrk.utils.hooks_model import _STR_UNKNOWN as _STR_UNKNOWN
@@ -134,6 +142,14 @@ from dxrk.utils.hooks_model import _raw_load as _raw_load
 from dxrk.utils.hooks_model import _result_dump as _result_dump
 from dxrk.utils.hooks_model import _result_load as _result_load
 from dxrk.utils.hooks_model import _td_ns as _td_ns
+from dxrk.utils.hooks_model import default_config as default_config
+from dxrk.utils.hooks_model import filter_by_type as filter_by_type
+from dxrk.utils.hooks_model import filter_enabled as filter_enabled
+from dxrk.utils.hooks_model import load_config as load_config
+from dxrk.utils.hooks_model import merge_configs as merge_configs
+from dxrk.utils.hooks_model import parse_hook_type as parse_hook_type
+from dxrk.utils.hooks_model import save_config as save_config
+from dxrk.utils.hooks_model import validate_config as validate_config
 from dxrk.utils.hooks_queue import _SENTINEL as _SENTINEL
 from dxrk.utils.hooks_queue import HookQueue as HookQueue
 from dxrk.utils.hooks_queue import HookTask as HookTask
@@ -142,3 +158,7 @@ from dxrk.utils.hooks_queue import QueueStats as QueueStats
 from dxrk.utils.hooks_queue import WithQueueBuffer as WithQueueBuffer
 from dxrk.utils.hooks_queue import WithQueueExecutor as WithQueueExecutor
 from dxrk.utils.hooks_queue import WithQueueWorkers as WithQueueWorkers
+from dxrk.utils.hooks_queue import new_hook_queue as new_hook_queue
+from dxrk.utils.hooks_queue import with_queue_buffer as with_queue_buffer
+from dxrk.utils.hooks_queue import with_queue_executor as with_queue_executor
+from dxrk.utils.hooks_queue import with_queue_workers as with_queue_workers

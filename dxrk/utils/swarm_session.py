@@ -90,7 +90,7 @@ class SwarmTaskStore:
         except OSError:
             pass
 
-    def RecordTask(self, task: Task) -> None:
+    def record_task(self, task: Task) -> None:
         """Upsert a submitted task row (in-flight until a result lands)."""
         with task._mu:
             snapshot = (
@@ -115,7 +115,10 @@ class SwarmTaskStore:
                 snapshot,
             )
 
-    def RecordResult(self, result: TaskResult) -> None:
+    # Backwards-compatible alias (Go-style name).
+    RecordTask = record_task
+
+    def record_result(self, result: TaskResult) -> None:
         """Upsert a completed result row and mark its task completed."""
         duration_s = result.duration / timedelta(seconds=1) if result.duration else 0.0
         with self._mu, self._conn:
@@ -137,7 +140,10 @@ class SwarmTaskStore:
             )
             self._conn.execute("UPDATE swarm_tasks SET completed=1 WHERE task_id=?", (result.task_id,))
 
-    def GetResult(self, task_id: str) -> TaskResult | None:
+    # Backwards-compatible alias (Go-style name).
+    RecordResult = record_result
+
+    def get_result(self, task_id: str) -> TaskResult | None:
         """Return the persisted result for a task, if any."""
         with self._mu:
             row = self._conn.execute(
@@ -156,7 +162,10 @@ class SwarmTaskStore:
             timestamp=_parse_result_timestamp(row[5]),
         )
 
-    def ListSession(self, session_id: str) -> list[TaskResult]:
+    # Backwards-compatible alias (Go-style name).
+    GetResult = get_result
+
+    def list_session(self, session_id: str) -> list[TaskResult]:
         """Return persisted results for a session, ordered by task id."""
         with self._mu:
             rows = self._conn.execute(
@@ -176,7 +185,10 @@ class SwarmTaskStore:
             for r in rows
         ]
 
-    def PendingTasks(self, session_id: str) -> list[str]:
+    # Backwards-compatible alias (Go-style name).
+    ListSession = list_session
+
+    def pending_tasks(self, session_id: str) -> list[str]:
         """Return task ids submitted under a session with no result yet."""
         with self._mu:
             rows = self._conn.execute(
@@ -185,7 +197,10 @@ class SwarmTaskStore:
             ).fetchall()
         return [str(r[0]) for r in rows]
 
-    def SessionSummary(self, session_id: str) -> dict[str, int]:
+    # Backwards-compatible alias (Go-style name).
+    PendingTasks = pending_tasks
+
+    def session_summary(self, session_id: str) -> dict[str, int]:
         """Return submitted/completed/in-flight counts for a session."""
         with self._mu:
             submitted = self._conn.execute(
@@ -198,7 +213,10 @@ class SwarmTaskStore:
         n_done = int(completed[0]) if completed else 0
         return {"submitted": n_sub, "completed": n_done, "in_flight": max(0, n_sub - n_done)}
 
-    def SessionSummaryText(self, session_id: str) -> str:
+    # Backwards-compatible alias (Go-style name).
+    SessionSummary = session_summary
+
+    def session_summary_text(self, session_id: str) -> str:
         """Render one human line describing a session's swarm work."""
         counts = self.SessionSummary(session_id)
         pending = self.PendingTasks(session_id)
@@ -210,7 +228,10 @@ class SwarmTaskStore:
             text += f"; pending: {', '.join(pending)}"
         return text
 
-    def Close(self) -> None:
+    # Backwards-compatible alias (Go-style name).
+    SessionSummaryText = session_summary_text
+
+    def close(self) -> None:
         """Close the store connection."""
         with self._mu:
             try:
@@ -218,7 +239,13 @@ class SwarmTaskStore:
             except sqlite3.Error:
                 pass
 
+    # Backwards-compatible alias (Go-style name).
+    Close = close
 
-def NewSwarmTaskStore(db_path: str = "") -> SwarmTaskStore:
+
+def new_swarm_task_store(db_path: str = "") -> SwarmTaskStore:
     """Create a swarm task store backed by ``db_path``. Mirrors swarm constructors."""
     return SwarmTaskStore(db_path)
+
+# Backwards-compatible alias (Go-style name).
+NewSwarmTaskStore = new_swarm_task_store

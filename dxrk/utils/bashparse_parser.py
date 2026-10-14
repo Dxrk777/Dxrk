@@ -132,8 +132,6 @@ class _Parser:
                     return None, err
                 assert n is not None
                 nodes.append(n)
-                if self._peek().typ == _TokenType.tokSemicolon:
-                    self._advance()
             err = self._expect(_TokenType.tokRBrace)
             if err is not None:
                 return None, err
@@ -278,7 +276,7 @@ def _is_valid_env_key(key: str) -> bool:
     return True
 
 
-def Parse(text: str) -> tuple[ASTNode | None, ParseError | None]:
+def parse(text: str) -> tuple[ASTNode | None, ParseError | None]:
     """Parses a bash command string into an AST.
 
     Handles simple commands with arguments, pipelines (|), logical
@@ -308,3 +306,7 @@ def Parse(text: str) -> tuple[ASTNode | None, ParseError | None]:
         )
 
     return node, None
+
+
+# Backwards-compatible alias (Go-style name).
+Parse = parse

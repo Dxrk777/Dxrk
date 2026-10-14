@@ -34,7 +34,7 @@ class ToolCategory(IntEnum):
     UserInteraction = 3
     Internal = 4
 
-    def String(self) -> str:
+    def to_string(self) -> str:
         if self == ToolCategory.FileSystem:
             return "filesystem"
         if self == ToolCategory.Shell:
@@ -46,6 +46,9 @@ class ToolCategory(IntEnum):
         if self == ToolCategory.Internal:
             return "internal"
         return _STR_UNKNOWN
+
+    # Backwards-compatible alias (Go-style name).
+    String = to_string
 
     @classmethod
     def _missing_(cls, value: object) -> ToolCategory:
@@ -63,7 +66,7 @@ class ResourceType(IntEnum):
     EnvVar = 4
     Config = 5
 
-    def String(self) -> str:
+    def to_string(self) -> str:
         if self == ResourceType.File:
             return "file"
         if self == ResourceType.Directory:
@@ -77,6 +80,9 @@ class ResourceType(IntEnum):
         if self == ResourceType.Config:
             return "config"
         return _STR_UNKNOWN
+
+    # Backwards-compatible alias (Go-style name).
+    String = to_string
 
     @classmethod
     def _missing_(cls, value: object) -> ResourceType:
@@ -92,7 +98,7 @@ class RiskLevel(IntEnum):
     High = 2
     Critical = 3
 
-    def String(self) -> str:
+    def to_string(self) -> str:
         if self == RiskLevel.Low:
             return "low"
         if self == RiskLevel.Medium:
@@ -103,15 +109,22 @@ class RiskLevel(IntEnum):
             return _STR_CRITICAL
         return _STR_UNKNOWN
 
+    # Backwards-compatible alias (Go-style name).
+    String = to_string
+
     @classmethod
     def _missing_(cls, value: object) -> RiskLevel:
         """Support arbitrary integer values, like type conversion."""
         return cast(RiskLevel, _anonymous_enum_member(cls, value))
 
 
-def RequireConfirmation(level: RiskLevel) -> bool:
+def require_confirmation(level: RiskLevel) -> bool:
     """Return true if the risk level warrants user confirmation."""
     return level >= RiskLevel.Medium
+
+
+# Backwards-compatible alias (Go-style name).
+RequireConfirmation = require_confirmation
 
 
 # ---- Classification Maps ----
@@ -193,12 +206,16 @@ DangerousCommandPrefixes: list[str] = [
 # ---- Classification Functions ----
 
 
-def ClassifyTool(toolName: str) -> ToolCategory:
+def classify_tool(toolName: str) -> ToolCategory:
     """Return the category of a tool by name."""
     return tool_categories.get(toolName, ToolCategory.Internal)
 
 
-def ClassifyResource(resource: str) -> ResourceType:
+# Backwards-compatible alias (Go-style name).
+ClassifyTool = classify_tool
+
+
+def classify_resource(resource: str) -> ResourceType:
     """Determine the resource type from a resource string."""
     if resource == "":
         return ResourceType.Command
@@ -227,22 +244,19 @@ def ClassifyResource(resource: str) -> ResourceType:
     return ResourceType.File
 
 
-def AssessRisk(tool: str, resource: str) -> RiskLevel:
+# Backwards-compatible alias (Go-style name).
+ClassifyResource = classify_resource
+
+
+def assess_risk(tool: str, resource: str) -> RiskLevel:
     """Evaluate the combined risk of a tool and resource."""
     base = sensitive_tool_resources.get(tool, RiskLevel.Medium)
 
     if tool == "Bash" or tool == _STR_EXECUTE:
         for prefix in DangerousCommandPrefixes:
             if prefix.lower() in resource.lower():
-                if base < RiskLevel.High:
-                    base = RiskLevel.High
                 pl = prefix.lower()
-                if (
-                    pl.startswith("rm ")
-                    or pl.startswith("sudo")
-                    or pl.startswith("dd ")
-                    or "drop table" in pl
-                ):
+                if pl.startswith("rm ") or pl.startswith("sudo") or pl.startswith("dd ") or "drop table" in pl:
                     return RiskLevel.Critical
 
     if ClassifyResource(resource) == ResourceType.URL and base < RiskLevel.Medium:
@@ -250,18 +264,25 @@ def AssessRisk(tool: str, resource: str) -> RiskLevel:
 
     if tool == _STR_WRITE or tool == "Edit":
         if ".." in resource or resource.startswith("/"):
-            if base < RiskLevel.High:
-                base = RiskLevel.High
+            base = RiskLevel.High
 
     return base
 
 
-def IsReadOnly(tool: str) -> bool:
+# Backwards-compatible alias (Go-style name).
+AssessRisk = assess_risk
+
+
+def is_read_only(tool: str) -> bool:
     """Return true if the tool performs no side effects."""
     return read_only_tools.get(tool, False)
 
 
-def ToolRiskSummary(tool: str, resource: str) -> str:
+# Backwards-compatible alias (Go-style name).
+IsReadOnly = is_read_only
+
+
+def tool_risk_summary(tool: str, resource: str) -> str:
     """Return a human-readable risk summary for a tool+resource pair."""
     level = AssessRisk(tool, resource)
     cat = ClassifyTool(tool)
@@ -275,3 +296,7 @@ def ToolRiskSummary(tool: str, resource: str) -> str:
             "risk=" + level.String(),
         ]
     )
+
+
+# Backwards-compatible alias (Go-style name).
+ToolRiskSummary = tool_risk_summary

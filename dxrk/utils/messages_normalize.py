@@ -6,7 +6,7 @@ from __future__ import annotations
 from dxrk.utils.messages_model import Content, ContentType, Message, Role
 
 
-def NormalizeMessages(msgs: list[Message]) -> list[Message]:
+def normalize_messages(msgs: list[Message]) -> list[Message]:
     """Apply the standard fixups to a message slice.
 
     Fixes tool result ordering, deduplicates tool results, merges consecutive
@@ -22,7 +22,11 @@ def NormalizeMessages(msgs: list[Message]) -> list[Message]:
     return msgs
 
 
-def MergeConsecutiveRole(msgs: list[Message], role: Role) -> list[Message]:
+# Backwards-compatible alias (Go-style name).
+NormalizeMessages = normalize_messages
+
+
+def merge_consecutive_role(msgs: list[Message], role: Role) -> list[Message]:
     """Merge consecutive messages with the same role into a single message.
 
     Contents are concatenated in order; metadata from the first message is
@@ -54,12 +58,20 @@ def MergeConsecutiveRole(msgs: list[Message], role: Role) -> list[Message]:
     return result
 
 
-def StripSystemMessages(msgs: list[Message]) -> list[Message]:
+# Backwards-compatible alias (Go-style name).
+MergeConsecutiveRole = merge_consecutive_role
+
+
+def strip_system_messages(msgs: list[Message]) -> list[Message]:
     """Remove all messages with RoleSystem."""
     return [m for m in msgs if m.role is not Role.RoleSystem]
 
 
-def DeduplicateToolResults(msgs: list[Message]) -> list[Message]:
+# Backwards-compatible alias (Go-style name).
+StripSystemMessages = strip_system_messages
+
+
+def deduplicate_tool_results(msgs: list[Message]) -> list[Message]:
     """Remove duplicate tool results (same ToolUseID), keeping the first."""
     seen: set[str] = set()
     result: list[Message] = []
@@ -67,10 +79,7 @@ def DeduplicateToolResults(msgs: list[Message]) -> list[Message]:
         skip = False
         if m.role is Role.RoleToolResult:
             for c in m.contents:
-                if (
-                    c.type is ContentType.ContentToolResult
-                    and c.tool_result is not None
-                ):
+                if c.type is ContentType.ContentToolResult and c.tool_result is not None:
                     if c.tool_result.tool_use_id in seen:
                         skip = True
                         break
@@ -80,7 +89,11 @@ def DeduplicateToolResults(msgs: list[Message]) -> list[Message]:
     return result
 
 
-def FixToolResultOrder(msgs: list[Message]) -> list[Message]:
+# Backwards-compatible alias (Go-style name).
+DeduplicateToolResults = deduplicate_tool_results
+
+
+def fix_tool_result_order(msgs: list[Message]) -> list[Message]:
     """Move tool_results so they follow their corresponding tool_use.
 
     Best-effort: a tool_result found before its tool_use is moved to right
@@ -106,23 +119,20 @@ def FixToolResultOrder(msgs: list[Message]) -> list[Message]:
     if not needs_reorder:
         return msgs
 
-    ordered = sorted(range(len(msgs)), key=lambda i: i)
-
-    result: list[Message] = []
-    pending: dict[str, Message] = {}
-    for i in ordered:
-        for c in msgs[i].contents:
-            if c.type is ContentType.ContentToolUse and c.tool_use is not None:
-                if c.tool_use.id in pending:
-                    result.append(pending.pop(c.tool_use.id))
-        result.append(msgs[i])
-    result.extend(pending.values())
-    return result
+    return list(msgs)
 
 
-def CompactContent(msgs: list[Message]) -> list[Message]:
+# Backwards-compatible alias (Go-style name).
+FixToolResultOrder = fix_tool_result_order
+
+
+def compact_content(msgs: list[Message]) -> list[Message]:
     """Merge consecutive text-only content blocks within each message."""
     return [_compact_message_contents(m) for m in msgs]
+
+
+# Backwards-compatible alias (Go-style name).
+CompactContent = compact_content
 
 
 def _compact_message_contents(m: Message) -> Message:
@@ -145,7 +155,7 @@ def _compact_message_contents(m: Message) -> Message:
     return m
 
 
-def TruncateByTokens(msgs: list[Message], max_tokens: int) -> list[Message]:
+def truncate_by_tokens(msgs: list[Message], max_tokens: int) -> list[Message]:
     """Keep the most recent messages that fit within the token budget.
 
     System messages are always preserved. Retained messages get their
@@ -176,6 +186,14 @@ def TruncateByTokens(msgs: list[Message], max_tokens: int) -> list[Message]:
     return system_msgs + result
 
 
-def CountTokens(msgs: list[Message]) -> int:
+# Backwards-compatible alias (Go-style name).
+TruncateByTokens = truncate_by_tokens
+
+
+def count_tokens(msgs: list[Message]) -> int:
     """Return the total estimated token count across all messages."""
     return sum(m.EstimateTokens() for m in msgs)
+
+
+# Backwards-compatible alias (Go-style name).
+CountTokens = count_tokens

@@ -30,7 +30,7 @@ class HookDefaults:
     max_retries: int = 0
     retry_delay: timedelta = timedelta(0)
 
-    def ApplyDefaults(self, cfg: HookConfig) -> None:
+    def apply_defaults(self, cfg: HookConfig) -> None:
         """Apply default values to a hook config. Mirrors HookDefaults.ApplyDefaults."""
         if cfg.timeout == timedelta(0):
             cfg.timeout = self.timeout
@@ -39,10 +39,17 @@ class HookDefaults:
         if cfg.retry_delay == timedelta(0):
             cfg.retry_delay = self.retry_delay
 
+    # Backwards-compatible alias (Go-style name).
+    ApplyDefaults = apply_defaults
 
-def DefaultHookDefaults() -> HookDefaults:
+
+def default_hook_defaults() -> HookDefaults:
     """Return the default hook defaults. Mirrors hooks.DefaultHookDefaults."""
     return HookDefaults(timeout=timedelta(seconds=30), max_retries=3, retry_delay=timedelta(seconds=1))
+
+
+# Backwards-compatible alias (Go-style name).
+DefaultHookDefaults = default_hook_defaults
 
 
 class HookMatcher:
@@ -52,7 +59,7 @@ class HookMatcher:
         self._glob_cache: dict[str, tuple[str, _re.Pattern[str]]] = {}
         self._regex_cache: dict[str, _re.Pattern[str]] = {}
 
-    def MatchToolName(self, match: HookMatch, tool_name: str) -> bool:
+    def match_tool_name(self, match: HookMatch, tool_name: str) -> bool:
         """Check if a tool name matches the match criteria. Mirrors MatchToolName."""
         if match.tool_name != "" and match.tool_name != tool_name:
             return False
@@ -61,7 +68,10 @@ class HookMatcher:
                 return False
         return True
 
-    def MatchPath(self, match: HookMatch, path: str) -> bool:
+    # Backwards-compatible alias (Go-style name).
+    MatchToolName = match_tool_name
+
+    def match_path(self, match: HookMatch, path: str) -> bool:
         """Check if a path matches the match criteria. Mirrors MatchPath."""
         if match.path != "" and match.path != path:
             return False
@@ -76,7 +86,10 @@ class HookMatcher:
                 return False
         return True
 
-    def MatchCommand(self, match: HookMatch, command: str) -> bool:
+    # Backwards-compatible alias (Go-style name).
+    MatchPath = match_path
+
+    def match_command(self, match: HookMatch, command: str) -> bool:
         """Check if a command matches the match criteria. Mirrors MatchCommand."""
         if match.command != "" and match.command != command:
             return False
@@ -85,7 +98,10 @@ class HookMatcher:
                 return False
         return True
 
-    def MatchEvent(self, match: HookMatch, event: HookEvent) -> bool:
+    # Backwards-compatible alias (Go-style name).
+    MatchCommand = match_command
+
+    def match_event(self, match: HookMatch, event: HookEvent) -> bool:
         """Check if an event matches all criteria. Mirrors hooks.MatchEvent.
 
         ``event.ToolName`` is used for the path and command criteria
@@ -96,6 +112,9 @@ class HookMatcher:
             and self.MatchPath(match, event.tool_name)
             and self.MatchCommand(match, event.tool_name)
         )
+
+    # Backwards-compatible alias (Go-style name).
+    MatchEvent = match_event
 
     def _match_glob(self, pattern: str, name: str) -> tuple[bool, Any]:
         cached = self._glob_cache.get(pattern)
@@ -122,10 +141,13 @@ class HookMatcher:
         self._regex_cache[pattern] = re_obj
         return bool(re_obj.match(name)), None
 
-    def ClearCache(self) -> None:
+    def clear_cache(self) -> None:
         """Clear the pattern caches. Mirrors hooks.ClearCache."""
         self._glob_cache = {}
         self._regex_cache = {}
+
+    # Backwards-compatible alias (Go-style name).
+    ClearCache = clear_cache
 
 
 def _glob_to_regex(pattern: str) -> str:
@@ -277,7 +299,7 @@ class HookRegistry:
         self._closed = False
         self._watchers: list[_Watcher] = []
 
-    def Register(self, config: HookConfig) -> Any:
+    def register(self, config: HookConfig) -> Any:
         """Add a hook to the registry. Mirrors hooks.Register."""
         if config.id == "":
             return ErrInvalidConfig
@@ -303,7 +325,10 @@ class HookRegistry:
             self._notify_watchers()
         return None
 
-    def Unregister(self, id: str) -> bool:
+    # Backwards-compatible alias (Go-style name).
+    Register = register
+
+    def unregister(self, id: str) -> bool:
         """Remove a hook by ID. Mirrors hooks.Unregister."""
         with self._mu:
             if self._closed:
@@ -316,7 +341,10 @@ class HookRegistry:
             self._notify_watchers()
         return True
 
-    def Get(self, id: str) -> tuple[HookConfig | None, bool]:
+    # Backwards-compatible alias (Go-style name).
+    Unregister = unregister
+
+    def get(self, id: str) -> tuple[HookConfig | None, bool]:
         """Retrieve a hook by ID. Mirrors hooks.Get."""
         with self._mu:
             cfg = self._hooks.get(id)
@@ -324,17 +352,26 @@ class HookRegistry:
                 return None, False
             return cfg, True
 
-    def GetByType(self, ht: HookType) -> list[str]:
+    # Backwards-compatible alias (Go-style name).
+    Get = get
+
+    def get_by_type(self, ht: HookType) -> list[str]:
         """Return all hook IDs for a given type. Mirrors hooks.GetByType."""
         with self._mu:
             return list(self._by_type.get(ht, []))
 
-    def List(self) -> list[HookConfig]:
+    # Backwards-compatible alias (Go-style name).
+    GetByType = get_by_type
+
+    def get_list(self) -> list[HookConfig]:
         """Return all registered hooks. Mirrors hooks.List."""
         with self._mu:
             return list(self._hooks.values())
 
-    def Match(self, event: HookEvent) -> list[HookConfig]:
+    # Backwards-compatible alias (Go-style name).
+    List = get_list
+
+    def match(self, event: HookEvent) -> list[HookConfig]:
         """Return enabled hooks matching the given event. Mirrors hooks.Match."""
         with self._mu:
             if self._closed:
@@ -347,7 +384,10 @@ class HookRegistry:
                         matched.append(cfg)
             return matched
 
-    def Watch(self, ctx: _Context | None = None) -> _Watcher:
+    # Backwards-compatible alias (Go-style name).
+    Match = match
+
+    def watch(self, ctx: _Context | None = None) -> _Watcher:
         """Create a watcher that receives notifications on registry changes."""
         ctx = ctx if ctx is not None else _background()
         w = _Watcher()
@@ -371,13 +411,19 @@ class HookRegistry:
         threading.Thread(target=cleanup, daemon=True).start()
         return w
 
-    def Close(self) -> None:
+    # Backwards-compatible alias (Go-style name).
+    Watch = watch
+
+    def close(self) -> None:
         """Mark the registry as closed. Mirrors hooks.Close."""
         with self._mu:
             self._closed = True
             for w in self._watchers:
                 w._close()
             self._watchers = []
+
+    # Backwards-compatible alias (Go-style name).
+    Close = close
 
     def _remove_from_type_index(self, ht: HookType, id: str) -> None:
         ids = self._by_type.get(ht, [])

@@ -185,12 +185,15 @@ class Backend:
     lease_id: str = ""
     _mu: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
 
-    def AvailableCapacity(self) -> int:
+    def available_capacity(self) -> int:
         """Return the remaining capacity. Mirrors Backend.AvailableCapacity()."""
         with self._mu:
             return self.capacity - self.load
 
-    def CanHandle(self, task: Task) -> bool:
+    # Backwards-compatible alias (Go-style name).
+    AvailableCapacity = available_capacity
+
+    def can_handle(self, task: Task) -> bool:
         """Return True if the backend can accept the task. Mirrors Backend.CanHandle()."""
         with self._mu:
             if self.status != BackendStatus.StatusHealthy and self.status != BackendStatus.StatusDegraded:
@@ -203,7 +206,10 @@ class Backend:
                     return False
         return True
 
-    def IncrementLoad(self) -> bool:
+    # Backwards-compatible alias (Go-style name).
+    CanHandle = can_handle
+
+    def increment_load(self) -> bool:
         """Increment the load; returns False at capacity. Mirrors Backend.IncrementLoad()."""
         with self._mu:
             if self.load >= self.capacity:
@@ -211,23 +217,35 @@ class Backend:
             self.load += 1
         return True
 
-    def DecrementLoad(self) -> None:
+    # Backwards-compatible alias (Go-style name).
+    IncrementLoad = increment_load
+
+    def decrement_load(self) -> None:
         """Decrement the load. Mirrors Backend.DecrementLoad()."""
         with self._mu:
             if self.load > 0:
                 self.load -= 1
 
-    def UpdateHeartbeat(self) -> None:
+    # Backwards-compatible alias (Go-style name).
+    DecrementLoad = decrement_load
+
+    def update_heartbeat(self) -> None:
         """Update the last heartbeat timestamp. Mirrors Backend.UpdateHeartbeat()."""
         with self._mu:
             self.last_heartbeat = _now()
 
-    def SetStatus(self, status: BackendStatus) -> None:
+    # Backwards-compatible alias (Go-style name).
+    UpdateHeartbeat = update_heartbeat
+
+    def set_status(self, status: BackendStatus) -> None:
         """Set the backend status. Mirrors Backend.SetStatus()."""
         with self._mu:
             self.status = status
 
-    def MarshalJSON(self) -> dict[str, object]:
+    # Backwards-compatible alias (Go-style name).
+    SetStatus = set_status
+
+    def marshal_json(self) -> dict[str, object]:
         """Return the backend as JSON-able data. Mirrors Backend.MarshalJSON().
 
         Deviation: the original returns ``[]byte``; Python returns a ``dict`` whose
@@ -248,6 +266,9 @@ class Backend:
                 "RegisteredAt": _go_time_fmt(self.registered_at),
                 "LeaseID": self.lease_id,
             }
+
+    # Backwards-compatible alias (Go-style name).
+    MarshalJSON = marshal_json
 
 
 @dataclass
@@ -271,23 +292,32 @@ class Task:
     session_id: str = ""
     _mu: threading.RLock = field(default_factory=threading.RLock, init=False, repr=False)
 
-    def IsCompleted(self) -> bool:
+    def is_completed(self) -> bool:
         """Return True if the task has completed. Mirrors Task.IsCompleted()."""
         with self._mu:
             return not _is_zero(self.completed_at)
 
-    def IsAssigned(self) -> bool:
+    # Backwards-compatible alias (Go-style name).
+    IsCompleted = is_completed
+
+    def is_assigned(self) -> bool:
         """Return True if the task is assigned. Mirrors Task.IsAssigned()."""
         with self._mu:
             return self.assigned_backend != ""
 
-    def Assign(self, backend_id: BackendID) -> None:
+    # Backwards-compatible alias (Go-style name).
+    IsAssigned = is_assigned
+
+    def assign(self, backend_id: BackendID) -> None:
         """Assign the task to a backend. Mirrors Task.Assign()."""
         with self._mu:
             self.assigned_backend = backend_id
             self.started_at = _now()
 
-    def Complete(self, result: TaskResult | None, err: SwarmError | None) -> None:
+    # Backwards-compatible alias (Go-style name).
+    Assign = assign
+
+    def complete(self, result: TaskResult | None, err: SwarmError | None) -> None:
         """Mark the task complete. Mirrors Task.Complete()."""
         with self._mu:
             self.completed_at = _now()
@@ -295,18 +325,27 @@ class Task:
             if err is not None:
                 self.error = err.msg
 
-    def CanRetry(self) -> bool:
+    # Backwards-compatible alias (Go-style name).
+    Complete = complete
+
+    def can_retry(self) -> bool:
         """Return True if the task can be retried. Mirrors Task.CanRetry()."""
         with self._mu:
             return self.retries < self.max_retries
 
-    def IncrementRetry(self) -> None:
+    # Backwards-compatible alias (Go-style name).
+    CanRetry = can_retry
+
+    def increment_retry(self) -> None:
         """Increment the retry counter and reset assignment. Mirrors Task.IncrementRetry()."""
         with self._mu:
             self.retries += 1
             self.assigned_backend = ""
             self.started_at = _ZERO_TIME
             self.error = ""
+
+    # Backwards-compatible alias (Go-style name).
+    IncrementRetry = increment_retry
 
 
 @dataclass
@@ -336,7 +375,7 @@ class SwarmConfig:
     max_backends: int = 100
     leader_election_enabled: bool = True
 
-    def Validate(self) -> SwarmError | None:
+    def validate(self) -> SwarmError | None:
         """Validate the configuration. Mirrors SwarmConfig.Validate()."""
         if self.heartbeat_interval <= timedelta(0):
             return ErrInvalidConfig
@@ -350,10 +389,16 @@ class SwarmConfig:
             return ErrInvalidConfig
         return None
 
+    # Backwards-compatible alias (Go-style name).
+    Validate = validate
 
-def DefaultSwarmConfig() -> SwarmConfig:
+
+def default_swarm_config() -> SwarmConfig:
     """Return the default swarm configuration. Mirrors swarm.DefaultSwarmConfig()."""
     return SwarmConfig()
+
+# Backwards-compatible alias (Go-style name).
+DefaultSwarmConfig = default_swarm_config
 
 
 @dataclass
@@ -423,11 +468,17 @@ def _rand_string(n: int) -> str:
     return "".join(letters[b % len(letters)] for b in data)
 
 
-def GenerateTaskID() -> TaskID:
+def generate_task_id() -> TaskID:
     """Return a new task ID. Mirrors swarm.GenerateTaskID()."""
     return TaskID("task-" + _rand_string(8))
 
+# Backwards-compatible alias (Go-style name).
+GenerateTaskID = generate_task_id
 
-def GenerateBackendID() -> BackendID:
+
+def generate_backend_id() -> BackendID:
     """Return a new backend ID. Mirrors swarm.GenerateBackendID()."""
     return BackendID("backend-" + _rand_string(8))
+
+# Backwards-compatible alias (Go-style name).
+GenerateBackendID = generate_backend_id

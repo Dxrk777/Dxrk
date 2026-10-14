@@ -25,9 +25,12 @@ class CacheEntry:
     expiry: datetime = _ZERO_TIME
     timestamp: datetime = _ZERO_TIME
 
-    def IsExpired(self) -> bool:
+    def is_expired(self) -> bool:
         """Report whether the entry has expired."""
         return not _is_zero(self.expiry) and _now() > self.expiry
+
+    # Backwards-compatible alias (Go-style name).
+    IsExpired = is_expired
 
 
 class PermissionCache:
@@ -65,7 +68,7 @@ class PermissionCache:
         del self._entries[oldest]
         self._order = self._order[1:]
 
-    def Get(self, key: str) -> tuple[CacheEntry | None, bool]:
+    def get(self, key: str) -> tuple[CacheEntry | None, bool]:
         """Retrieve a cache entry by key. Returns (None, False) if missing or expired."""
         with self._mu:
             entry = self._entries.get(key)
@@ -77,7 +80,10 @@ class PermissionCache:
             self._touch_locked(key)
             return entry, True
 
-    def Set(self, key: str, entry: CacheEntry) -> None:
+    # Backwards-compatible alias (Go-style name).
+    Get = get
+
+    def set(self, key: str, entry: CacheEntry) -> None:
         """Store a cache entry. Evicts the least recently used entry when full."""
         with self._mu:
             existing = self._entries.get(key)
@@ -98,28 +104,43 @@ class PermissionCache:
             self._entries[key] = entry
             self._order.append(key)
 
-    def SetWithTTL(self, key: str, entry: CacheEntry, ttl: timedelta) -> None:
+    # Backwards-compatible alias (Go-style name).
+    Set = set
+
+    def set_with_ttl(self, key: str, entry: CacheEntry, ttl: timedelta) -> None:
         """Store a cache entry with a custom TTL, overriding the default."""
         entry.expiry = _now() + ttl
         self.Set(key, entry)
 
-    def Invalidate(self, key: str) -> None:
+    # Backwards-compatible alias (Go-style name).
+    SetWithTTL = set_with_ttl
+
+    def invalidate(self, key: str) -> None:
         """Remove a single cache entry."""
         with self._mu:
             self._remove_locked(key)
 
-    def InvalidateAll(self) -> None:
+    # Backwards-compatible alias (Go-style name).
+    Invalidate = invalidate
+
+    def invalidate_all(self) -> None:
         """Clear the entire cache."""
         with self._mu:
             self._entries = {}
             self._order = []
 
-    def Size(self) -> int:
+    # Backwards-compatible alias (Go-style name).
+    InvalidateAll = invalidate_all
+
+    def size(self) -> int:
         """Return the number of entries in the cache."""
         with self._mu:
             return len(self._entries)
 
-    def Purge(self) -> int:
+    # Backwards-compatible alias (Go-style name).
+    Size = size
+
+    def purge(self) -> int:
         """Remove all expired entries; return the number removed."""
         with self._mu:
             removed = 0
@@ -134,9 +155,12 @@ class PermissionCache:
             self._order = remaining
             return removed
 
+    # Backwards-compatible alias (Go-style name).
+    Purge = purge
+
     # ---- Disk persistence ----
 
-    def PersistToDisk(self, path: str) -> Exception | None:
+    def persist_to_disk(self, path: str) -> Exception | None:
         """Write the cache to a JSON file."""
         with self._mu:
             snapshot: list[CacheEntry] = []
@@ -162,7 +186,10 @@ class PermissionCache:
             return Exception(f"write cache file {json.dumps(path)}: {ex}")
         return None
 
-    def LoadFromDisk(self, path: str) -> Exception | None:
+    # Backwards-compatible alias (Go-style name).
+    PersistToDisk = persist_to_disk
+
+    def load_from_disk(self, path: str) -> Exception | None:
         """Load a cache from a JSON file."""
         try:
             with open(path, encoding="utf-8") as f:
@@ -199,14 +226,20 @@ class PermissionCache:
                 self._order.append(entry.key)
         return None
 
+    # Backwards-compatible alias (Go-style name).
+    LoadFromDisk = load_from_disk
 
-def NewPermissionCache(ttl: timedelta, max_size: int = 1024) -> PermissionCache:
+
+def new_permission_cache(ttl: timedelta, max_size: int = 1024) -> PermissionCache:
     """Create a cache with the given TTL and max entries. Use ttl=0 for
     session-only entries (no expiry). MaxSize of 0 defaults to 1024."""
     return PermissionCache(ttl, max_size)
 
+# Backwards-compatible alias (Go-style name).
+NewPermissionCache = new_permission_cache
 
-def CacheKey(tool: str, resource: str, extra: str) -> str:
+
+def cache_key(tool: str, resource: str, extra: str) -> str:
     """Build a cache key from tool, resource, and optional context hash."""
     h = hashlib.sha256()
     h.update(tool.encode("utf-8"))
@@ -216,3 +249,6 @@ def CacheKey(tool: str, resource: str, extra: str) -> str:
         h.update(b"\x00")
         h.update(extra.encode("utf-8"))
     return h.digest()[:16].hex()
+
+# Backwards-compatible alias (Go-style name).
+CacheKey = cache_key

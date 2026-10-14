@@ -43,7 +43,7 @@ class EditError(Exception):
         return f"edit op {self.op_index}: {self.message}"
 
 
-def EditFile(path: str, edits: list[EditOp]) -> FileopsError | EditError | None:
+def edit_file(path: str, edits: list[EditOp]) -> FileopsError | EditError | None:
     """Read the file, apply all edits, and write back atomically. Mirrors EditFile."""
     err = ValidatePath(path)
     if err is not None:
@@ -61,8 +61,11 @@ def EditFile(path: str, edits: list[EditOp]) -> FileopsError | EditError | None:
         return apply_err
     return WriteAtomic(path, result.encode("utf-8"))
 
+# Backwards-compatible alias (Go-style name).
+EditFile = edit_file
 
-def ValidateEdits(content: str, edits: list[EditOp]) -> list[EditError]:
+
+def validate_edits(content: str, edits: list[EditOp]) -> list[EditError]:
     """Check that every edit's OldText can be found in content. Mirrors ValidateEdits."""
     errs: list[EditError] = []
     for i, op in enumerate(edits):
@@ -76,8 +79,11 @@ def ValidateEdits(content: str, edits: list[EditOp]) -> list[EditError]:
             )
     return errs
 
+# Backwards-compatible alias (Go-style name).
+ValidateEdits = validate_edits
 
-def ApplyEdits(content: str, edits: list[EditOp]) -> tuple[str, EditError | None]:
+
+def apply_edits(content: str, edits: list[EditOp]) -> tuple[str, EditError | None]:
     """Apply all edits sequentially to content. Mirrors fileops.ApplyEdits."""
     for i, op in enumerate(edits):
         idx = content.find(op.old_text)
@@ -88,8 +94,11 @@ def ApplyEdits(content: str, edits: list[EditOp]) -> tuple[str, EditError | None
         content = content[:idx] + new_text + content[idx + len(op.old_text) :]
     return content, None
 
+# Backwards-compatible alias (Go-style name).
+ApplyEdits = apply_edits
 
-def FindAndReplace(content: str, old: str, new: str) -> tuple[str, int, None]:
+
+def find_and_replace(content: str, old: str, new: str) -> tuple[str, int, None]:
     """Replace the first occurrence of old with new in content. Mirrors FindAndReplace."""
     idx = content.find(old)
     if idx < 0:
@@ -97,16 +106,22 @@ def FindAndReplace(content: str, old: str, new: str) -> tuple[str, int, None]:
     result = content[:idx] + new + content[idx + len(old) :]
     return result, 1, None
 
+# Backwards-compatible alias (Go-style name).
+FindAndReplace = find_and_replace
 
-def FindAndReplaceAll(content: str, old: str, new: str) -> tuple[str, int, None]:
+
+def find_and_replace_all(content: str, old: str, new: str) -> tuple[str, int, None]:
     """Replace every occurrence of old with new in content. Mirrors FindAndReplaceAll."""
     count = content.count(old)
     if count == 0:
         return content, 0, None
     return content.replace(old, new), count, None
 
+# Backwards-compatible alias (Go-style name).
+FindAndReplaceAll = find_and_replace_all
 
-def ApplyRegexEdits(content: str, edits: list[RegexEditOp]) -> tuple[str, int, FileopsError | None]:
+
+def apply_regex_edits(content: str, edits: list[RegexEditOp]) -> tuple[str, int, FileopsError | None]:
     """Apply regex-based edits to content. Mirrors fileops.ApplyRegexEdits."""
     total_replaced = 0
     for i, op in enumerate(edits):
@@ -122,6 +137,9 @@ def ApplyRegexEdits(content: str, edits: list[RegexEditOp]) -> tuple[str, int, F
         total_replaced += len(matches)
         content = re_obj.sub(op.replacement, content)
     return content, total_replaced, None
+
+# Backwards-compatible alias (Go-style name).
+ApplyRegexEdits = apply_regex_edits
 
 
 def _extract_indent(content: str, offset: int) -> str:
@@ -150,7 +168,7 @@ def _preserve_indent(text: str, indent: str) -> str:
     return "\n".join(lines)
 
 
-def EditFileRegex(path: str, edits: list[RegexEditOp]) -> FileopsError | None:
+def edit_file_regex(path: str, edits: list[RegexEditOp]) -> FileopsError | None:
     """Read the file, apply regex edits, and write back atomically. Mirrors EditFileRegex."""
     err = ValidatePath(path)
     if err is not None:
@@ -164,3 +182,6 @@ def EditFileRegex(path: str, edits: list[RegexEditOp]) -> FileopsError | None:
     if err is not None:
         return err
     return WriteAtomic(path, result.encode("utf-8"))
+
+# Backwards-compatible alias (Go-style name).
+EditFileRegex = edit_file_regex

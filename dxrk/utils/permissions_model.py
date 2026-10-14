@@ -47,8 +47,6 @@ def _go_time_fmt(dt: datetime) -> str:
     if micro == 0:
         return base + "Z"
     frac = str(micro).rstrip("0")
-    if not frac:
-        return base + "Z"
     return f"{base}.{frac}Z"
 
 
@@ -100,7 +98,7 @@ class Action(IntEnum):
     Deny = 1
     Ask = 2
 
-    def String(self) -> str:
+    def to_string(self) -> str:
         if self == Action.Allow:
             return "allow"
         if self == Action.Deny:
@@ -109,13 +107,16 @@ class Action(IntEnum):
             return "ask"
         return _STR_UNKNOWN
 
+    # Backwards-compatible alias (Go-style name).
+    String = to_string
+
     @classmethod
     def _missing_(cls, value: object) -> Action:
         """Support arbitrary integer values, like type conversion."""
         return cast(Action, _anonymous_enum_member(cls, value))
 
 
-def ParseAction(s: str) -> tuple[Action, Exception | None]:
+def parse_action(s: str) -> tuple[Action, Exception | None]:
     """Convert a string to an Action. Mirrors permissions.ParseAction."""
     lower = s.lower()
     if lower == "allow":
@@ -125,6 +126,10 @@ def ParseAction(s: str) -> tuple[Action, Exception | None]:
     if lower == "ask":
         return Action.Ask, None
     return Action.Allow, Exception(f"unknown action: {json.dumps(s)}")
+
+
+# Backwards-compatible alias (Go-style name).
+ParseAction = parse_action
 
 
 # ---- Operators ----
@@ -141,7 +146,7 @@ class Operator(IntEnum):
     OpGt = 5
     OpLt = 6
 
-    def String(self) -> str:
+    def to_string(self) -> str:
         if self == Operator.OpEq:
             return "eq"
         if self == Operator.OpNeq:
@@ -158,13 +163,16 @@ class Operator(IntEnum):
             return "lt"
         return _STR_UNKNOWN
 
+    # Backwards-compatible alias (Go-style name).
+    String = to_string
+
     @classmethod
     def _missing_(cls, value: object) -> Operator:
         """Support arbitrary integer values, like type conversion."""
         return cast(Operator, _anonymous_enum_member(cls, value))
 
 
-def ParseOperator(s: str) -> tuple[Operator, Exception | None]:
+def parse_operator(s: str) -> tuple[Operator, Exception | None]:
     """Convert a string to an Operator. Mirrors permissions.ParseOperator."""
     lower = s.lower()
     if lower == "eq":
@@ -184,6 +192,10 @@ def ParseOperator(s: str) -> tuple[Operator, Exception | None]:
     return Operator.OpEq, Exception(f"unknown operator: {json.dumps(s)}")
 
 
+# Backwards-compatible alias (Go-style name).
+ParseOperator = parse_operator
+
+
 # ---- Rule Strategy ----
 
 
@@ -193,12 +205,15 @@ class Strategy(IntEnum):
     FirstMatch = 0
     MostRestrictive = 1
 
-    def String(self) -> str:
+    def to_string(self) -> str:
         if self == Strategy.FirstMatch:
             return "first_match"
         if self == Strategy.MostRestrictive:
             return "most_restrictive"
         return "first_match"
+
+    # Backwards-compatible alias (Go-style name).
+    String = to_string
 
     @classmethod
     def _missing_(cls, value: object) -> Strategy:

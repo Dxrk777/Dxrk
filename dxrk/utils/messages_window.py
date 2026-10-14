@@ -27,7 +27,7 @@ class MessageScore:
     reason: str
 
 
-def ScoreMessages(msgs: list[Message]) -> list[MessageScore]:
+def score_messages(msgs: list[Message]) -> list[MessageScore]:
     """Rank messages by importance for compaction decisions.
 
     Scoring factors: recency (newer = higher), role priority
@@ -76,6 +76,9 @@ def ScoreMessages(msgs: list[Message]) -> list[MessageScore]:
         )
     return scores
 
+# Backwards-compatible alias (Go-style name).
+ScoreMessages = score_messages
+
 
 class WindowFullError(Exception):
     """the context window cannot accept more."""
@@ -95,12 +98,15 @@ class ContextWindow:
     system_prompt: str = ""
     truncated: bool = False
 
-    def SetSystemPrompt(self, prompt: str) -> None:
+    def set_system_prompt(self, prompt: str) -> None:
         """Set the system prompt, counting its tokens toward the budget."""
         self.system_prompt = prompt
         self._recount_tokens()
 
-    def AddMessage(self, msg: Message) -> None:
+    # Backwards-compatible alias (Go-style name).
+    SetSystemPrompt = set_system_prompt
+
+    def add_message(self, msg: Message) -> None:
         """Add a message, auto-dropping older messages on overflow."""
         tokens = msg.EstimateTokens()
         system_tokens = EstimateTokens(self.system_prompt)
@@ -117,6 +123,9 @@ class ContextWindow:
             self._drop_oldest()
             self.truncated = True
 
+    # Backwards-compatible alias (Go-style name).
+    AddMessage = add_message
+
     def _drop_oldest(self) -> None:
         for i, m in enumerate(self.messages):
             if m.role is not Role.RoleSystem:
@@ -127,11 +136,14 @@ class ContextWindow:
             self.token_count -= self.messages[0].EstimateTokens()
             del self.messages[0]
 
-    def GetMessages(self) -> list[Message]:
+    def get_messages(self) -> list[Message]:
         """Return the current window contents (a copy)."""
         return list(self.messages)
 
-    def RemainingTokens(self) -> int:
+    # Backwards-compatible alias (Go-style name).
+    GetMessages = get_messages
+
+    def remaining_tokens(self) -> int:
         """Return how many tokens are left in the budget."""
         system_tokens = EstimateTokens(self.system_prompt)
         remaining = self.max_tokens - self.token_count - system_tokens
@@ -139,13 +151,19 @@ class ContextWindow:
             return 0
         return remaining
 
-    def NeedsCompaction(self) -> bool:
+    # Backwards-compatible alias (Go-style name).
+    RemainingTokens = remaining_tokens
+
+    def needs_compaction(self) -> bool:
         """Return True if the window is above 80% capacity."""
         system_tokens = EstimateTokens(self.system_prompt)
         used = self.token_count + system_tokens
         return float(used) >= float(self.max_tokens) * 0.8
 
-    def Compact(self, strategy: CompactStrategy) -> None:
+    # Backwards-compatible alias (Go-style name).
+    NeedsCompaction = needs_compaction
+
+    def compact(self, strategy: CompactStrategy) -> None:
         """Reduce the window contents using the specified strategy."""
         if len(self.messages) == 0:
             raise NoMessagesError("no messages to compact")
@@ -162,6 +180,9 @@ class ContextWindow:
             raise ValueError(f"unknown compact strategy: {int(strategy)}")
 
         self._recount_tokens()
+
+    # Backwards-compatible alias (Go-style name).
+    Compact = compact
 
     def _compact_oldest(self) -> None:
         system_tokens = EstimateTokens(self.system_prompt)
@@ -221,6 +242,9 @@ class ContextWindow:
             self.token_count += m.EstimateTokens()
 
 
-def NewContextWindow(max_tokens: int) -> ContextWindow:
+def new_context_window(max_tokens: int) -> ContextWindow:
     """Create a window with the given maximum token budget."""
     return ContextWindow(max_tokens=max_tokens)
+
+# Backwards-compatible alias (Go-style name).
+NewContextWindow = new_context_window

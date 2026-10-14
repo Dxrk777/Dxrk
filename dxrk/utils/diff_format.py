@@ -36,10 +36,13 @@ _default_colors = ColorScheme()
 _empty_colors = ColorScheme("", "", "", "", "", "", "")
 
 
-def SetColors(colors: ColorScheme) -> None:
+def set_colors(colors: ColorScheme) -> None:
     """Configure the global color scheme for formatted output."""
     global _default_colors
     _default_colors = colors
+
+# Backwards-compatible alias (Go-style name).
+SetColors = set_colors
 
 
 def _c(code: str, text: str) -> str:
@@ -48,7 +51,7 @@ def _c(code: str, text: str) -> str:
     return f"{code}{text}{_default_colors.reset}"
 
 
-def FormatUnified(result: DiffResult, context_lines: int = DefaultContextLines) -> str:
+def format_unified(result: DiffResult, context_lines: int = DefaultContextLines) -> str:
     """Format a diff as unified output with +/- markers. Mirrors FormatUnified."""
     _ = context_lines  # unused parameter (kept for API parity)
     b: list[str] = []
@@ -78,8 +81,11 @@ def FormatUnified(result: DiffResult, context_lines: int = DefaultContextLines) 
                 b.append(prefix + content)
     return "\n".join(b) + ("\n" if b else "")
 
+# Backwards-compatible alias (Go-style name).
+FormatUnified = format_unified
 
-def FormatContext(result: DiffResult, context_lines: int = DefaultContextLines) -> str:
+
+def format_context(result: DiffResult, context_lines: int = DefaultContextLines) -> str:
     """Format a diff using context notation with ! and - markers. Mirrors FormatContext."""
     _ = context_lines  # unused parameter (kept for API parity)
     b: list[str] = []
@@ -103,8 +109,11 @@ def FormatContext(result: DiffResult, context_lines: int = DefaultContextLines) 
             b.append(prefix + content)
     return "\n".join(b) + ("\n" if b else "")
 
+# Backwards-compatible alias (Go-style name).
+FormatContext = format_context
 
-def FormatSideBySide(
+
+def format_side_by_side(
     result: DiffResult, width: int = 80, context_lines: int = DefaultContextLines
 ) -> str:
     """Format a diff in two columns, old on the left, new on the right. Mirrors FormatSideBySide."""
@@ -139,8 +148,11 @@ def FormatSideBySide(
     b.append("-" * width)
     return "\n".join(b)
 
+# Backwards-compatible alias (Go-style name).
+FormatSideBySide = format_side_by_side
 
-def FormatCompact(result: DiffResult) -> str:
+
+def format_compact(result: DiffResult) -> str:
     """Format a diff as compact one-line change summaries. Mirrors FormatCompact."""
     b: list[str] = []
     for h in result.hunks:
@@ -161,8 +173,11 @@ def FormatCompact(result: DiffResult) -> str:
         b.append(f"{op} {h.old_start}..{h.old_start + h.old_count} +{added} -{removed}")
     return "\n".join(b)
 
+# Backwards-compatible alias (Go-style name).
+FormatCompact = format_compact
 
-def FormatMarkdown(result: DiffResult) -> str:
+
+def format_markdown(result: DiffResult) -> str:
     """Format a diff as a Markdown code block. Mirrors FormatMarkdown."""
     b: list[str] = ["```diff"]
     for h in result.hunks:
@@ -179,6 +194,9 @@ def FormatMarkdown(result: DiffResult) -> str:
     b.append("```")
     return "\n".join(b)
 
+# Backwards-compatible alias (Go-style name).
+FormatMarkdown = format_markdown
+
 
 def _html_escape(s: str) -> str:
     return (
@@ -190,7 +208,7 @@ def _html_escape(s: str) -> str:
     )
 
 
-def FormatHTML(result: DiffResult, title: str = "Diff") -> str:
+def format_html(result: DiffResult, title: str = "Diff") -> str:
     """Format a diff as a standalone HTML document. Mirrors FormatHTML."""
     b: list[str] = [
         "<!DOCTYPE html>",
@@ -224,8 +242,11 @@ def FormatHTML(result: DiffResult, title: str = "Diff") -> str:
     b.append("</pre></body></html>")
     return "\n".join(b)
 
+# Backwards-compatible alias (Go-style name).
+FormatHTML = format_html
 
-def FormatJSON(result: DiffResult) -> str:
+
+def format_json(result: DiffResult) -> str:
     """Serialize a diff to JSON. Mirrors FormatJSON (struct field names)."""
     hunks = []
     for h in result.hunks:
@@ -256,8 +277,11 @@ def FormatJSON(result: DiffResult) -> str:
     }
     return json.dumps({"Hunks": hunks, "Stats": stats})
 
+# Backwards-compatible alias (Go-style name).
+FormatJSON = format_json
 
-def FormatWithLineNumbers(
+
+def format_with_line_numbers(
     result: DiffResult, context_lines: int = DefaultContextLines
 ) -> str:
     """Format a diff with old/new line numbers. Mirrors FormatWithLineNumbers."""
@@ -277,3 +301,6 @@ def FormatWithLineNumbers(
             )
             b.append(f"{old_num:>6} {new_num:>6} {prefix} {content}")
     return "\n".join(b) + ("\n" if b else "")
+
+# Backwards-compatible alias (Go-style name).
+FormatWithLineNumbers = format_with_line_numbers

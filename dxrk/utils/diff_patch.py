@@ -8,6 +8,7 @@ import re
 from dataclasses import dataclass, field
 
 from dxrk.utils.diff_core import ComputeDiff as ComputeDiff
+from dxrk.utils.diff_core import compute_diff as compute_diff
 from dxrk.utils.diff_model import DefaultContextLines as DefaultContextLines
 from dxrk.utils.diff_model import DiffDelete as DiffDelete
 from dxrk.utils.diff_model import DiffEqual as DiffEqual
@@ -52,7 +53,7 @@ class Patch:
     files: list[PatchFile] = field(default_factory=list)
 
 
-def CreatePatch(
+def create_patch(
     old_text: str,
     new_text: str,
     old_path: str = "",
@@ -72,6 +73,9 @@ def CreatePatch(
         is_deleted=old_text != "" and new_text == "",
     )
     return Patch(files=[pf])
+
+# Backwards-compatible alias (Go-style name).
+CreatePatch = create_patch
 
 
 def _strip_git_prefix(path: str) -> str:
@@ -94,7 +98,7 @@ def _parse_hunk_header(header: str) -> DiffHunk:
     return h
 
 
-def ParsePatch(data: str) -> Patch:
+def parse_patch(data: str) -> Patch:
     """Parse unified diff text into a Patch. Mirrors ParsePatch."""
     patch = Patch()
     cur_file: PatchFile | None = None
@@ -138,15 +142,21 @@ def ParsePatch(data: str) -> Patch:
                 new_line += 1
     return patch
 
+# Backwards-compatible alias (Go-style name).
+ParsePatch = parse_patch
 
-def ApplyPatch(patch: Patch, old_text: str) -> str:
+
+def apply_patch(patch: Patch, old_text: str) -> str:
     """Apply a patch to text. Mirrors ApplyPatch."""
     if len(patch.files) == 0:
         raise ErrPatchEmpty
     return _apply_patch_text(patch, old_text)
 
+# Backwards-compatible alias (Go-style name).
+ApplyPatch = apply_patch
 
-def ApplyPatchToFile(patch: Patch, path: str) -> str:
+
+def apply_patch_to_file(patch: Patch, path: str) -> str:
     """Apply a patch to a file on disk, returning the new content. Mirrors ApplyPatchToFile."""
     try:
         with open(path, encoding="utf-8") as f:
@@ -158,14 +168,20 @@ def ApplyPatchToFile(patch: Patch, path: str) -> str:
         f.write(new_text)
     return new_text
 
+# Backwards-compatible alias (Go-style name).
+ApplyPatchToFile = apply_patch_to_file
 
-def RevertPatch(patch: Patch, new_text: str) -> str:
+
+def revert_patch(patch: Patch, new_text: str) -> str:
     """Reverse a patch against the patched text. Mirrors RevertPatch."""
     rev = _reverse_patch(patch)
     return ApplyPatch(rev, new_text)
 
+# Backwards-compatible alias (Go-style name).
+RevertPatch = revert_patch
 
-def RevertPatchToFile(patch: Patch, path: str) -> str:
+
+def revert_patch_to_file(patch: Patch, path: str) -> str:
     """Revert a patch applied to a file, returning the original content. Mirrors RevertPatchToFile."""
     try:
         with open(path, encoding="utf-8") as f:
@@ -177,8 +193,11 @@ def RevertPatchToFile(patch: Patch, path: str) -> str:
         f.write(old_text)
     return old_text
 
+# Backwards-compatible alias (Go-style name).
+RevertPatchToFile = revert_patch_to_file
 
-def MergePatches(a: Patch, b: Patch) -> Patch:
+
+def merge_patches(a: Patch, b: Patch) -> Patch:
     """Merge two patches that do not overlap. Mirrors MergePatches."""
     if len(a.files) != len(b.files):
         raise ErrPatchInvalid
@@ -198,8 +217,11 @@ def MergePatches(a: Patch, b: Patch) -> Patch:
         merged.files.append(pf)
     return merged
 
+# Backwards-compatible alias (Go-style name).
+MergePatches = merge_patches
 
-def ValidatePatch(patch: Patch) -> bool:
+
+def validate_patch(patch: Patch) -> bool:
     """Validate a patch's internal consistency. Mirrors ValidatePatch."""
     for f in patch.files:
         for h in f.hunks:
@@ -222,8 +244,11 @@ def ValidatePatch(patch: Patch) -> bool:
                 return False
     return True
 
+# Backwards-compatible alias (Go-style name).
+ValidatePatch = validate_patch
 
-def PatchOffset(patch: Patch, hunk_index: int, offset: int) -> None:
+
+def patch_offset(patch: Patch, hunk_index: int, offset: int) -> None:
     """Adjust line numbers of a hunk by an offset. Mirrors PatchOffset."""
     if not patch.files or hunk_index < 0 or hunk_index >= len(patch.files[0].hunks):
         raise ErrPatchInvalid
@@ -235,6 +260,9 @@ def PatchOffset(patch: Patch, hunk_index: int, offset: int) -> None:
             l.line_num_old += offset
         if l.line_num_new:
             l.line_num_new += offset
+
+# Backwards-compatible alias (Go-style name).
+PatchOffset = patch_offset
 
 
 def _apply_patch_text(patch: Patch, old_text: str) -> str:
@@ -328,7 +356,7 @@ def _reverse_patch(patch: Patch) -> Patch:
     return rev
 
 
-def FormatPatch(patch: Patch) -> str:
+def format_patch(patch: Patch) -> str:
     """Render a Patch as unified diff text. Mirrors FormatPatch."""
     b: list[str] = []
     for f in patch.files:
@@ -359,3 +387,6 @@ def FormatPatch(patch: Patch) -> str:
                     }[str(l.type)]
                     b.append(prefix + l.content)
     return "\n".join(b) + ("\n" if b else "")
+
+# Backwards-compatible alias (Go-style name).
+FormatPatch = format_patch

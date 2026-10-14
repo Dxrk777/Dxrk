@@ -97,7 +97,7 @@ class TaskScheduler:
             max_workers=config.max_concurrent_tasks, thread_name_prefix="swarm-handler"
         )
 
-    def RegisterHandler(self, handler: TaskPayloadHandler) -> None:
+    def register_handler(self, handler: TaskPayloadHandler) -> None:
         """Register the callable that executes task payloads.
 
         The handler receives the assigned :class:`Task` and returns the
@@ -107,13 +107,19 @@ class TaskScheduler:
         with self._mu:
             self._handler = handler
 
-    def Start(self) -> None:
+    # Backwards-compatible alias (Go-style name).
+    RegisterHandler = register_handler
+
+    def start(self) -> None:
         """Start the scheduler workers and dispatch loop. Mirrors TaskScheduler.Start()."""
         for _ in range(self._config.max_concurrent_tasks):
             self._start_worker()
         thread = threading.Thread(target=self._dispatch_loop, daemon=True)
         self._threads.append(thread)
         thread.start()
+
+    # Backwards-compatible alias (Go-style name).
+    Start = start
 
     def _start_worker(self) -> None:
         w = _Worker(
@@ -153,7 +159,7 @@ class TaskScheduler:
     def _generate_worker_id(self) -> str:
         return "worker-" + _rand_string(8)
 
-    def Stop(self) -> None:
+    def stop(self) -> None:
         """Stop the scheduler. Mirrors TaskScheduler.Stop()."""
         self._cancel()
         for thread in self._threads:
@@ -161,7 +167,10 @@ class TaskScheduler:
         self._threads.clear()
         self._exec.shutdown(wait=True)
 
-    def Submit(self, task: Task) -> SwarmError | None:
+    # Backwards-compatible alias (Go-style name).
+    Stop = stop
+
+    def submit(self, task: Task) -> SwarmError | None:
         """Submit a task to the scheduler queue. Mirrors TaskScheduler.Submit()."""
         ctx_err = self._ctx.err()
         if ctx_err is not None:
@@ -171,6 +180,9 @@ class TaskScheduler:
         except queue.Full:
             return ErrQueueFull
         return None
+
+    # Backwards-compatible alias (Go-style name).
+    Submit = submit
 
     def _dispatch_task(self, task: Task) -> None:
         backends = self._registry.GetHealthy()
@@ -411,11 +423,14 @@ class TaskScheduler:
         task.Complete(result, None)
         return result
 
-    def Results(self) -> queue.Queue[TaskResult]:
+    def results(self) -> queue.Queue[TaskResult]:
         """Return the results channel. Mirrors TaskScheduler.Results()."""
         return self._results
 
-    def Stats(self) -> SchedulerStats:
+    # Backwards-compatible alias (Go-style name).
+    Results = results
+
+    def get_stats(self) -> SchedulerStats:
         """Return scheduler statistics. Mirrors TaskScheduler.Stats()."""
         with self._mu:
             active_workers = 0
@@ -429,9 +444,15 @@ class TaskScheduler:
                 config=self._config,
             )
 
+    # Backwards-compatible alias (Go-style name).
+    Stats = get_stats
 
-def NewTaskScheduler(
+
+def new_task_scheduler(
     registry: BackendRegistry, config: SchedulerConfig, handler: TaskPayloadHandler | None = None
 ) -> TaskScheduler:
     """Create a new task scheduler. Mirrors swarm.NewTaskScheduler()."""
     return TaskScheduler(registry, config, handler=handler)
+
+# Backwards-compatible alias (Go-style name).
+NewTaskScheduler = new_task_scheduler

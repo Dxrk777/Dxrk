@@ -187,7 +187,7 @@ class CompoundNode(ASTNode):
         return "{ " + "; ".join(cmd.string() for cmd in self.body) + " }"
 
 
-def Walk(node: ASTNode | None, fn: Callable[[ASTNode], bool]) -> None:
+def walk(node: ASTNode | None, fn: Callable[[ASTNode], bool]) -> None:
     """Calls fn for every node in the tree rooted at node, depth-first."""
     if node is None:
         return
@@ -196,8 +196,11 @@ def Walk(node: ASTNode | None, fn: Callable[[ASTNode], bool]) -> None:
     for child in node.children():
         Walk(child, fn)
 
+# Backwards-compatible alias (Go-style name).
+Walk = walk
 
-def CollectCommands(node: ASTNode) -> list[CommandNode]:
+
+def collect_commands(node: ASTNode) -> list[CommandNode]:
     """Extracts all CommandNode instances from the tree."""
     cmds: list[CommandNode] = []
 
@@ -208,3 +211,6 @@ def CollectCommands(node: ASTNode) -> list[CommandNode]:
 
     Walk(node, _visit)
     return cmds
+
+# Backwards-compatible alias (Go-style name).
+CollectCommands = collect_commands

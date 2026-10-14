@@ -61,7 +61,7 @@ class HookQueue:
         self._failed = 0
         self._started_at = started_at
 
-    def Start(self) -> None:
+    def start(self) -> None:
         """Launch the worker pool. Mirrors hooks.Start."""
         with self._mu:
             if self._closed:
@@ -71,7 +71,10 @@ class HookQueue:
                 self._worker_threads.append(t)
                 t.start()
 
-    def Stop(self, ctx: _Context | None = None) -> Any:
+    # Backwards-compatible alias (Go-style name).
+    Start = start
+
+    def stop(self, ctx: _Context | None = None) -> Any:
         """Gracefully shut down the queue. Mirrors hooks.Stop."""
         ctx = ctx if ctx is not None else _background()
         with self._mu:
@@ -88,7 +91,10 @@ class HookQueue:
                 return ctx.err()
         return None
 
-    def Submit(self, ctx: _Context, event: HookEvent, config: HookConfig) -> tuple[HookResult, Any]:
+    # Backwards-compatible alias (Go-style name).
+    Stop = stop
+
+    def submit(self, ctx: _Context, event: HookEvent, config: HookConfig) -> tuple[HookResult, Any]:
         """Add a task to the queue and wait for its result. Mirrors hooks.Submit."""
         child_ctx, cancel = _with_cancel(ctx)
         result_ch: queue.Queue = queue.Queue(maxsize=1)
@@ -126,7 +132,10 @@ class HookQueue:
             self._failed += 1
         return result, None
 
-    def SubmitAsync(self, event: HookEvent, config: HookConfig) -> Any:
+    # Backwards-compatible alias (Go-style name).
+    Submit = submit
+
+    def submit_async(self, event: HookEvent, config: HookConfig) -> Any:
         """Add a task without waiting for a result. Mirrors hooks.SubmitAsync."""
         child_ctx, cancel = _with_cancel(_background())
         result_ch: queue.Queue = queue.Queue(maxsize=1)
@@ -147,15 +156,15 @@ class HookQueue:
             return ErrQueueFull
 
         def drain() -> None:
-            try:
-                result_ch.get()
-            except queue.Empty:
-                pass
+            result_ch.get()
 
         threading.Thread(target=drain, daemon=True).start()
         return None
 
-    def Stats(self) -> QueueStats:
+    # Backwards-compatible alias (Go-style name).
+    SubmitAsync = submit_async
+
+    def get_stats(self) -> QueueStats:
         """Return queue statistics. Mirrors hooks.Stats."""
         return QueueStats(
             processed=self._processed,
@@ -166,10 +175,16 @@ class HookQueue:
             uptime=datetime.now() - self._started_at,
         )
 
-    def IsRunning(self) -> bool:
+    # Backwards-compatible alias (Go-style name).
+    Stats = get_stats
+
+    def is_running(self) -> bool:
         """Return True if the queue is running. Mirrors hooks.IsRunning."""
         with self._mu:
             return not self._closed
+
+    # Backwards-compatible alias (Go-style name).
+    IsRunning = is_running
 
     def _worker(self) -> None:
         while True:
@@ -193,7 +208,7 @@ class HookQueue:
                     time.sleep(0.01)
 
 
-def WithQueueWorkers(n: int) -> Any:
+def with_queue_workers(n: int) -> Any:
     """Set the number of worker goroutines. Mirrors hooks.WithQueueWorkers."""
 
     def opt(q: HookQueue) -> None:
@@ -202,7 +217,11 @@ def WithQueueWorkers(n: int) -> Any:
     return opt
 
 
-def WithQueueExecutor(e: HookExecutor) -> Any:
+# Backwards-compatible alias (Go-style name).
+WithQueueWorkers = with_queue_workers
+
+
+def with_queue_executor(e: HookExecutor) -> Any:
     """Set a custom executor. Mirrors hooks.WithQueueExecutor."""
 
     def opt(q: HookQueue) -> None:
@@ -211,7 +230,11 @@ def WithQueueExecutor(e: HookExecutor) -> Any:
     return opt
 
 
-def WithQueueBuffer(n: int) -> Any:
+# Backwards-compatible alias (Go-style name).
+WithQueueExecutor = with_queue_executor
+
+
+def with_queue_buffer(n: int) -> Any:
     """Set the task queue buffer size. Mirrors hooks.WithQueueBuffer."""
 
     def opt(q: HookQueue) -> None:
@@ -221,7 +244,11 @@ def WithQueueBuffer(n: int) -> Any:
     return opt
 
 
-def NewHookQueue(*opts: Any) -> HookQueue:
+# Backwards-compatible alias (Go-style name).
+WithQueueBuffer = with_queue_buffer
+
+
+def new_hook_queue(*opts: Any) -> HookQueue:
     """Create a new hook queue with a worker pool. Mirrors hooks.NewHookQueue."""
     q = HookQueue(
         tasks=queue.Queue(maxsize=100),
@@ -232,3 +259,7 @@ def NewHookQueue(*opts: Any) -> HookQueue:
     for opt in opts:
         opt(q)
     return q
+
+
+# Backwards-compatible alias (Go-style name).
+NewHookQueue = new_hook_queue

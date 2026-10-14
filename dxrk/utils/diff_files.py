@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from enum import IntEnum
 
 from dxrk.utils.diff_core import ComputeDiff as ComputeDiff
+from dxrk.utils.diff_core import compute_diff as compute_diff
 from dxrk.utils.diff_model import DefaultContextLines as DefaultContextLines
 from dxrk.utils.diff_model import DiffHunk as DiffHunk
 from dxrk.utils.diff_model import ErrFileNotFound as ErrFileNotFound
@@ -53,12 +54,15 @@ class FileDiff:
     is_binary: bool = False
 
 
-def CompareFiles(old_path: str, new_path: str) -> FileDiff:
+def compare_files(old_path: str, new_path: str) -> FileDiff:
     """Compare two files on disk. Mirrors CompareFiles."""
     return CompareFilesWithOptions(old_path, new_path)
 
+# Backwards-compatible alias (Go-style name).
+CompareFiles = compare_files
 
-def CompareFilesWithOptions(
+
+def compare_files_with_options(
     old_path: str,
     new_path: str,
     ignore_whitespace: bool = False,
@@ -96,8 +100,11 @@ def CompareFilesWithOptions(
         fd.status = DiffStatusModified
     return fd
 
+# Backwards-compatible alias (Go-style name).
+CompareFilesWithOptions = compare_files_with_options
 
-def CompareDirectories(old_dir: str, new_dir: str) -> list[FileDiff]:
+
+def compare_directories(old_dir: str, new_dir: str) -> list[FileDiff]:
     """Compare two directories recursively. Mirrors CompareDirectories."""
     if not os.path.isdir(old_dir):
         raise ErrNotDirectory
@@ -105,8 +112,11 @@ def CompareDirectories(old_dir: str, new_dir: str) -> list[FileDiff]:
         raise ErrNotDirectory
     return _compare_dirs_recursive(old_dir, new_dir, "")
 
+# Backwards-compatible alias (Go-style name).
+CompareDirectories = compare_directories
 
-def SummarizeDirectory(directory: str) -> dict[str, str]:
+
+def summarize_directory(directory: str) -> dict[str, str]:
     """Return a summary of files in a directory: path -> short hash. Mirrors SummarizeDirectory."""
     result: dict[str, str] = {}
     if not os.path.isdir(directory):
@@ -123,6 +133,9 @@ def SummarizeDirectory(directory: str) -> dict[str, str]:
             rel = os.path.relpath(path, directory)
             result[rel] = _short_hash(data)
     return result
+
+# Backwards-compatible alias (Go-style name).
+SummarizeDirectory = summarize_directory
 
 
 def _short_hash(data: bytes) -> str:

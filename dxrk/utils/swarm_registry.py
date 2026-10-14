@@ -36,7 +36,7 @@ class BackendRegistry:
         self._config = config
         self._events = events
 
-    def Register(
+    def register(
         self, ctx: _Context | None, backend: Backend | None
     ) -> SwarmError | None:
         """Register a backend in the swarm. Mirrors BackendRegistry.Register()."""
@@ -76,7 +76,10 @@ class BackendRegistry:
         )
         return None
 
-    def Unregister(
+    # Backwards-compatible alias (Go-style name).
+    Register = register
+
+    def unregister(
         self, ctx: _Context | None, backend_id: BackendID
     ) -> SwarmError | None:
         """Unregister a backend from the swarm. Mirrors BackendRegistry.Unregister()."""
@@ -94,7 +97,10 @@ class BackendRegistry:
         )
         return None
 
-    def Get(self, backend_id: BackendID) -> tuple[Backend | None, SwarmError | None]:
+    # Backwards-compatible alias (Go-style name).
+    Unregister = unregister
+
+    def get(self, backend_id: BackendID) -> tuple[Backend | None, SwarmError | None]:
         """Return a backend by ID. Mirrors BackendRegistry.Get()."""
         with self._mu:
             backend = self._backends.get(backend_id)
@@ -102,12 +108,18 @@ class BackendRegistry:
                 return None, ErrBackendNotFound
             return backend, None
 
-    def GetAll(self) -> list[Backend]:
+    # Backwards-compatible alias (Go-style name).
+    Get = get
+
+    def get_all(self) -> list[Backend]:
         """Return all registered backends. Mirrors BackendRegistry.GetAll()."""
         with self._mu:
             return list(self._backends.values())
 
-    def GetHealthy(self) -> list[Backend]:
+    # Backwards-compatible alias (Go-style name).
+    GetAll = get_all
+
+    def get_healthy(self) -> list[Backend]:
         """Return backends with healthy or degraded status. Mirrors BackendRegistry.GetHealthy()."""
         with self._mu:
             return [
@@ -117,7 +129,10 @@ class BackendRegistry:
                 or b.status == BackendStatus.StatusDegraded
             ]
 
-    def GetByCapability(self, capability: str, min_amount: int) -> list[Backend]:
+    # Backwards-compatible alias (Go-style name).
+    GetHealthy = get_healthy
+
+    def get_by_capability(self, capability: str, min_amount: int) -> list[Backend]:
         """Return healthy backends offering a capability. Mirrors BackendRegistry.GetByCapability()."""
         with self._mu:
             result = []
@@ -132,7 +147,10 @@ class BackendRegistry:
                     result.append(b)
             return result
 
-    def UpdateHeartbeat(self, backend_id: BackendID) -> SwarmError | None:
+    # Backwards-compatible alias (Go-style name).
+    GetByCapability = get_by_capability
+
+    def update_heartbeat(self, backend_id: BackendID) -> SwarmError | None:
         """Update a backend's heartbeat. Mirrors BackendRegistry.UpdateHeartbeat()."""
         with self._mu:
             backend = self._backends.get(backend_id)
@@ -142,7 +160,10 @@ class BackendRegistry:
         self._emit(SwarmEventType.EventBackendHeartbeat, backend_id, None)
         return None
 
-    def UpdateStatus(
+    # Backwards-compatible alias (Go-style name).
+    UpdateHeartbeat = update_heartbeat
+
+    def update_status(
         self, backend_id: BackendID, status: BackendStatus
     ) -> SwarmError | None:
         """Update a backend's status. Mirrors BackendRegistry.UpdateStatus()."""
@@ -163,7 +184,10 @@ class BackendRegistry:
             )
         return None
 
-    def UpdateCapacity(self, backend_id: BackendID, capacity: int) -> SwarmError | None:
+    # Backwards-compatible alias (Go-style name).
+    UpdateStatus = update_status
+
+    def update_capacity(self, backend_id: BackendID, capacity: int) -> SwarmError | None:
         """Update a backend's capacity. Mirrors BackendRegistry.UpdateCapacity()."""
         if capacity <= 0:
             return SwarmError("capacity must be positive")
@@ -175,7 +199,10 @@ class BackendRegistry:
             backend.capacity = capacity
         return None
 
-    def UpdateCapabilities(
+    # Backwards-compatible alias (Go-style name).
+    UpdateCapacity = update_capacity
+
+    def update_capabilities(
         self, backend_id: BackendID, capabilities: BackendCapabilities
     ) -> SwarmError | None:
         """Update a backend's capabilities. Mirrors BackendRegistry.UpdateCapabilities()."""
@@ -187,12 +214,18 @@ class BackendRegistry:
             backend.capabilities = capabilities
         return None
 
-    def Count(self) -> int:
+    # Backwards-compatible alias (Go-style name).
+    UpdateCapabilities = update_capabilities
+
+    def count(self) -> int:
         """Return the number of registered backends. Mirrors BackendRegistry.Count()."""
         with self._mu:
             return len(self._backends)
 
-    def HealthyCount(self) -> int:
+    # Backwards-compatible alias (Go-style name).
+    Count = count
+
+    def healthy_count(self) -> int:
         """Return the number of healthy backends. Mirrors BackendRegistry.HealthyCount()."""
         with self._mu:
             return sum(
@@ -201,6 +234,9 @@ class BackendRegistry:
                 if b.status == BackendStatus.StatusHealthy
                 or b.status == BackendStatus.StatusDegraded
             )
+
+    # Backwards-compatible alias (Go-style name).
+    HealthyCount = healthy_count
 
     def _emit(
         self,
@@ -219,8 +255,11 @@ class BackendRegistry:
             )
 
 
-def NewBackendRegistry(
+def new_backend_registry(
     config: SwarmConfig | None, events: EventBus | None
 ) -> BackendRegistry:
     """Create a new backend registry. Mirrors swarm.NewBackendRegistry()."""
     return BackendRegistry(config, events)
+
+# Backwards-compatible alias (Go-style name).
+NewBackendRegistry = new_backend_registry

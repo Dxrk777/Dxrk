@@ -63,9 +63,7 @@ class PolicyEngine:
         self._policy = p
         self._compiled: dict[str, re.Pattern[str]] = {}
 
-    def Evaluate(
-        self, ctx: EvalContext
-    ) -> tuple[Action, Rule | None, Exception | None]:
+    def evaluate(self, ctx: EvalContext) -> tuple[Action, Rule | None, Exception | None]:
         """Evaluate all rules against the context."""
         with self._mu:
             matches: list[Rule] = []
@@ -85,6 +83,9 @@ class PolicyEngine:
                     best = m
             return best.action, best, None
 
+    # Backwards-compatible alias (Go-style name).
+    Evaluate = evaluate
+
     def _most_restrictive(self, rules: list[Rule]) -> Action:
         best = Action.Allow
         for r in rules:
@@ -94,12 +95,15 @@ class PolicyEngine:
                 best = Action.Ask
         return best
 
-    def AddRule(self, rule: Rule) -> None:
+    def add_rule(self, rule: Rule) -> None:
         """Append a rule to the policy."""
         with self._mu:
             self._policy.rules.append(rule)
 
-    def RemoveRule(self, rule_id: str) -> bool:
+    # Backwards-compatible alias (Go-style name).
+    AddRule = add_rule
+
+    def remove_rule(self, rule_id: str) -> bool:
         """Remove a rule by ID."""
         with self._mu:
             for i, r in enumerate(self._policy.rules):
@@ -108,18 +112,27 @@ class PolicyEngine:
                     return True
         return False
 
-    def GetRules(self) -> list[Rule]:
+    # Backwards-compatible alias (Go-style name).
+    RemoveRule = remove_rule
+
+    def get_rules(self) -> list[Rule]:
         """Return a copy of all rules."""
         with self._mu:
             return list(self._policy.rules)
 
-    def Merge(self, other: PolicyEngine) -> None:
+    # Backwards-compatible alias (Go-style name).
+    GetRules = get_rules
+
+    def merge(self, other: PolicyEngine) -> None:
         """Combine rules from another engine into this one (no dedup)."""
         other_rules = other.GetRules()
         with self._mu:
             self._policy.rules.extend(other_rules)
 
-    def Validate(self) -> Exception | None:
+    # Backwards-compatible alias (Go-style name).
+    Merge = merge
+
+    def validate(self) -> Exception | None:
         """Check for empty IDs and duplicate rule IDs."""
         with self._mu:
             seen: dict[str, int] = {}
@@ -128,13 +141,14 @@ class PolicyEngine:
                     return Exception(f"rule at index {i} has empty ID")
                 prev = seen.get(r.id)
                 if prev is not None:
-                    return Exception(
-                        f"duplicate rule ID {json.dumps(r.id)} at indices {prev} and {i}"
-                    )
+                    return Exception(f"duplicate rule ID {json.dumps(r.id)} at indices {prev} and {i}")
                 seen[r.id] = i
         return None
 
-    def Policy(self) -> Policy:
+    # Backwards-compatible alias (Go-style name).
+    Validate = validate
+
+    def policy(self) -> Policy:
         """Return a copy of the underlying policy."""
         with self._mu:
             return Policy(
@@ -145,14 +159,15 @@ class PolicyEngine:
                 strategy=self._policy.strategy,
             )
 
+    # Backwards-compatible alias (Go-style name).
+    Policy = policy
+
     # ---- Rule matching ----
 
     def _matches_rule(self, r: Rule, ctx: EvalContext) -> bool:
         if not _match_field(r.subject, ctx.user):
             return False
-        if not _match_field(r.resource, ctx.tool_name) and not _match_field(
-            r.resource, ctx.resource
-        ):
+        if not _match_field(r.resource, ctx.tool_name) and not _match_field(r.resource, ctx.resource):
             return False
         for cond in r.conditions:
             if not self._eval_condition(cond, ctx):
@@ -180,9 +195,7 @@ class PolicyEngine:
             return False
         if op == Operator.OpGt:
             return val > c.value
-        if op == Operator.OpLt:
-            return val < c.value
-        return False
+        return val < c.value
 
     def _eval_regex(self, pattern: str, value: str) -> bool:
         re_pat = self._compiled.get(pattern)
@@ -196,6 +209,10 @@ class PolicyEngine:
         return re_pat.search(value) is not None
 
 
-def NewPolicyEngine(p: Policy) -> PolicyEngine:
+def new_policy_engine(p: Policy) -> PolicyEngine:
     """Create an engine from a policy. Mirrors permissions.NewPolicyEngine."""
     return PolicyEngine(p)
+
+
+# Backwards-compatible alias (Go-style name).
+NewPolicyEngine = new_policy_engine

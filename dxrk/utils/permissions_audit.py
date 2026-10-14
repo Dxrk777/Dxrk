@@ -80,7 +80,7 @@ class AuditLog:
         self._head = 0
         self._full = False
 
-    def Log(self, entry: AuditEntry) -> None:
+    def log(self, entry: AuditEntry) -> None:
         """Append an audit entry to the ring buffer."""
         with self._mu:
             if _is_zero(entry.timestamp):
@@ -90,7 +90,10 @@ class AuditLog:
             if self._head == 0:
                 self._full = True
 
-    def Query(self, filter_: AuditFilter) -> list[AuditEntry]:
+    # Backwards-compatible alias (Go-style name).
+    Log = log
+
+    def query(self, filter_: AuditFilter) -> list[AuditEntry]:
         """Return entries matching the filter, ordered oldest to newest."""
         with self._mu:
             count = self._max_entries if self._full else self._head
@@ -101,6 +104,9 @@ class AuditLog:
                 if self._matches_filter(entry, filter_):
                     result.append(entry)
             return result
+
+    # Backwards-compatible alias (Go-style name).
+    Query = query
 
     def _matches_filter(self, entry: AuditEntry, f: AuditFilter) -> bool:
         if not _is_zero(f.from_) and entry.timestamp < f.from_:
@@ -117,12 +123,15 @@ class AuditLog:
                 return False
         return True
 
-    def Len(self) -> int:
+    def len(self) -> int:
         """Return the number of stored entries."""
         with self._mu:
             if self._full:
                 return self._max_entries
             return self._head
+
+    # Backwards-compatible alias (Go-style name).
+    Len = len
 
     def _ordered_entries(self) -> list[AuditEntry]:
         count = self._max_entries if self._full else self._head
@@ -132,7 +141,7 @@ class AuditLog:
             result.append(self._entries[idx])
         return result
 
-    def ExportJSON(self, w: TextIO) -> Exception | None:
+    def export_json(self, w: TextIO) -> Exception | None:
         """Write all entries as a JSON array to w (trailing newline included)."""
         with self._mu:
             entries = self._ordered_entries()
@@ -156,7 +165,10 @@ class AuditLog:
             return Exception(f"encode audit json: {ex}")
         return None
 
-    def ExportCSV(self, w: TextIO) -> Exception | None:
+    # Backwards-compatible alias (Go-style name).
+    ExportJSON = export_json
+
+    def export_csv(self, w: TextIO) -> Exception | None:
         """Write all entries as CSV to w."""
         with self._mu:
             entries = self._ordered_entries()
@@ -193,10 +205,16 @@ class AuditLog:
             return Exception(f"write csv row: {ex}")
         return None
 
+    # Backwards-compatible alias (Go-style name).
+    ExportCSV = export_csv
 
-def NewAuditLog(max_entries: int) -> AuditLog:
+
+def new_audit_log(max_entries: int) -> AuditLog:
     """Create an audit log with a fixed maximum entry count."""
     return AuditLog(max_entries)
+
+# Backwards-compatible alias (Go-style name).
+NewAuditLog = new_audit_log
 
 
 # ---- Streaming ----
@@ -212,15 +230,21 @@ class AuditStreamer:
         self._dropped = 0
         self._closed = False
 
-    def Channel(self) -> queue.Queue[AuditEntry]:
+    def channel(self) -> queue.Queue[AuditEntry]:
         """Return the queue of streamed entries."""
         return self._ch
 
-    def Dropped(self) -> int:
+    # Backwards-compatible alias (Go-style name).
+    Channel = channel
+
+    def dropped(self) -> int:
         """Return the count of dropped entries (buffer full)."""
         return self._dropped
 
-    def Send(self, entry: AuditEntry) -> None:
+    # Backwards-compatible alias (Go-style name).
+    Dropped = dropped
+
+    def send(self, entry: AuditEntry) -> None:
         """Push an entry to the streamer. Drops if the buffer is full."""
         if self._closed:
             return
@@ -229,14 +253,23 @@ class AuditStreamer:
         except queue.Full:
             self._dropped += 1
 
-    def Close(self) -> None:
+    # Backwards-compatible alias (Go-style name).
+    Send = send
+
+    def close(self) -> None:
         """Mark the streamer closed; later Send calls are no-ops."""
         self._closed = True
 
+    # Backwards-compatible alias (Go-style name).
+    Close = close
 
-def NewAuditStreamer(buf_size: int = 256) -> AuditStreamer:
+
+def new_audit_streamer(buf_size: int = 256) -> AuditStreamer:
     """Create a streamer with a buffered channel."""
     return AuditStreamer(buf_size)
+
+# Backwards-compatible alias (Go-style name).
+NewAuditStreamer = new_audit_streamer
 
 
 class StreamingAuditLog:
@@ -247,31 +280,49 @@ class StreamingAuditLog:
         self._streamers: list[AuditStreamer] = []
         self._mu = threading.Lock()
 
-    def Log(self, entry: AuditEntry) -> None:
+    def log(self, entry: AuditEntry) -> None:
         """Append an entry and broadcast to all streamers."""
         self._log.Log(entry)
         with self._mu:
             for s in self._streamers:
                 s.Send(entry)
 
-    def AddStreamer(self, s: AuditStreamer) -> None:
+    # Backwards-compatible alias (Go-style name).
+    Log = log
+
+    def add_streamer(self, s: AuditStreamer) -> None:
         """Register a streamer for future entries."""
         with self._mu:
             self._streamers.append(s)
 
-    def Query(self, filter_: AuditFilter) -> list[AuditEntry]:
+    # Backwards-compatible alias (Go-style name).
+    AddStreamer = add_streamer
+
+    def query(self, filter_: AuditFilter) -> list[AuditEntry]:
         """Delegate to the underlying audit log."""
         return self._log.Query(filter_)
 
-    def ExportJSON(self, w: TextIO) -> Exception | None:
+    # Backwards-compatible alias (Go-style name).
+    Query = query
+
+    def export_json(self, w: TextIO) -> Exception | None:
         """Delegate to the underlying audit log."""
         return self._log.ExportJSON(w)
 
-    def ExportCSV(self, w: TextIO) -> Exception | None:
+    # Backwards-compatible alias (Go-style name).
+    ExportJSON = export_json
+
+    def export_csv(self, w: TextIO) -> Exception | None:
         """Delegate to the underlying audit log."""
         return self._log.ExportCSV(w)
 
+    # Backwards-compatible alias (Go-style name).
+    ExportCSV = export_csv
 
-def NewStreamingAuditLog(max_entries: int) -> StreamingAuditLog:
+
+def new_streaming_audit_log(max_entries: int) -> StreamingAuditLog:
     """Create a streaming audit log."""
     return StreamingAuditLog(max_entries)
+
+# Backwards-compatible alias (Go-style name).
+NewStreamingAuditLog = new_streaming_audit_log

@@ -56,7 +56,7 @@ class FileCache:
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
 
-    def Get(self, path: str) -> tuple[str, bool]:
+    def get(self, path: str) -> tuple[str, bool]:
         """Return cached content for path if present and not expired. Mirrors Get."""
         with self._mu:
             entry = self._entries.get(path)
@@ -71,7 +71,10 @@ class FileCache:
             self._hits += 1
             return entry.content, True
 
-    def Set(self, path: str, content: str) -> None:
+    # Backwards-compatible alias (Go-style name).
+    Get = get
+
+    def set(self, path: str, content: str) -> None:
         """Cache content for path. Mirrors fileops.FileCache.Set."""
         with self._mu:
             info = None
@@ -101,37 +104,55 @@ class FileCache:
             self._entries[path] = entry
             self._order.append(path)
 
-    def Invalidate(self, path: str) -> None:
+    # Backwards-compatible alias (Go-style name).
+    Set = set
+
+    def invalidate(self, path: str) -> None:
         """Remove a single entry from the cache. Mirrors Invalidate."""
         with self._mu:
             self._remove_locked(path)
 
-    def InvalidateAll(self) -> None:
+    # Backwards-compatible alias (Go-style name).
+    Invalidate = invalidate
+
+    def invalidate_all(self) -> None:
         """Clear the entire cache. Mirrors InvalidateAll."""
         with self._mu:
             self._entries = {}
             self._order = []
 
-    def InvalidatePattern(self, pattern: str) -> None:
+    # Backwards-compatible alias (Go-style name).
+    InvalidateAll = invalidate_all
+
+    def invalidate_pattern(self, pattern: str) -> None:
         """Remove entries whose path base name matches the glob pattern. Mirrors InvalidatePattern."""
         with self._mu:
             matched = [p for p in self._entries if fnmatch.fnmatchcase(os.path.basename(p), pattern)]
             for p in matched:
                 self._remove_locked(p)
 
-    def InvalidatePrefix(self, prefix: str) -> None:
+    # Backwards-compatible alias (Go-style name).
+    InvalidatePattern = invalidate_pattern
+
+    def invalidate_prefix(self, prefix: str) -> None:
         """Remove all entries whose path starts with prefix. Mirrors InvalidatePrefix."""
         with self._mu:
             matched = [p for p in self._entries if p.startswith(prefix)]
             for p in matched:
                 self._remove_locked(p)
 
-    def Watch(self, path: str, callback: Callable[[str], None]) -> None:
+    # Backwards-compatible alias (Go-style name).
+    InvalidatePrefix = invalidate_prefix
+
+    def watch(self, path: str, callback: Callable[[str], None]) -> None:
         """Register a callback that fires when path is detected as modified. Mirrors Watch."""
         with self._mu:
             self._watchers.setdefault(path, []).append(callback)
 
-    def Stats(self) -> CacheStats:
+    # Backwards-compatible alias (Go-style name).
+    Watch = watch
+
+    def get_stats(self) -> CacheStats:
         """Return current cache statistics. Mirrors fileops.Stats."""
         with self._mu:
             total_size = sum(e.size for e in self._entries.values())
@@ -148,11 +169,17 @@ class FileCache:
                 size_bytes=total_size,
             )
 
-    def Close(self) -> None:
+    # Backwards-compatible alias (Go-style name).
+    Stats = get_stats
+
+    def close(self) -> None:
         """Stop the background watcher thread. Mirrors fileops.Close."""
         self._stop.set()
 
-    def GetOrLoad(
+    # Backwards-compatible alias (Go-style name).
+    Close = close
+
+    def get_or_load(
         self, path: str, loader: Callable[[str], str | tuple[str, FileopsError | None]]
     ) -> tuple[str, FileopsError | None]:
         """Return cached content or load it via loader, caching the result. Mirrors GetOrLoad."""
@@ -169,17 +196,26 @@ class FileCache:
         self.Set(path, content)
         return content, None
 
-    def Paths(self) -> list[str]:
+    # Backwards-compatible alias (Go-style name).
+    GetOrLoad = get_or_load
+
+    def paths(self) -> list[str]:
         """Return all currently cached file paths. Mirrors fileops.Paths."""
         with self._mu:
             return list(self._order)
 
-    def Size(self) -> int:
+    # Backwards-compatible alias (Go-style name).
+    Paths = paths
+
+    def size(self) -> int:
         """Return the number of entries in the cache. Mirrors fileops.Size."""
         with self._mu:
             return len(self._entries)
 
-    def Contains(self, path: str) -> bool:
+    # Backwards-compatible alias (Go-style name).
+    Size = size
+
+    def contains(self, path: str) -> bool:
         """Report whether path is currently cached and not expired. Mirrors Contains."""
         with self._mu:
             entry = self._entries.get(path)
@@ -187,9 +223,15 @@ class FileCache:
                 return False
             return datetime.now() <= entry.expiry
 
-    def Keys(self) -> list[str]:
+    # Backwards-compatible alias (Go-style name).
+    Contains = contains
+
+    def keys(self) -> list[str]:
         """Return all cached keys (alias for Paths). Mirrors fileops.Keys."""
         return self.Paths()
+
+    # Backwards-compatible alias (Go-style name).
+    Keys = keys
 
     def _touch_locked(self, path: str) -> None:
         for i, p in enumerate(self._order):
@@ -234,9 +276,12 @@ class FileCache:
                     cb(p)
 
 
-def NewFileCache(max_entries: int, ttl: timedelta | None) -> FileCache:
+def new_file_cache(max_entries: int, ttl: timedelta | None) -> FileCache:
     """Create a cache holding at most max_entries entries for the given TTL. Mirrors NewFileCache."""
     cache = FileCache(max_entries=max_entries, ttl=ttl)
     cache._thread = threading.Thread(target=cache._watch_loop, daemon=True)
     cache._thread.start()
     return cache
+
+# Backwards-compatible alias (Go-style name).
+NewFileCache = new_file_cache

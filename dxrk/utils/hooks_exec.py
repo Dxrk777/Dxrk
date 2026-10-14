@@ -107,7 +107,7 @@ class HookExecutor:
         self._retry_delay = retry_delay
         self._circuit_breaker = circuit_breaker
 
-    def Execute(self, ctx: _Context, config: HookConfig, event: HookEvent) -> HookResult:
+    def execute(self, ctx: _Context, config: HookConfig, event: HookEvent) -> HookResult:
         """Run a hook command with the given context and configuration."""
         start = datetime.now()
         result = HookResult(success=False, duration=timedelta(0))
@@ -140,6 +140,9 @@ class HookExecutor:
         result.error = str(last_err) if last_err is not None else ""
         result.duration = datetime.now() - start
         return result
+
+    # Backwards-compatible alias (Go-style name).
+    Execute = execute
 
     def _execute_once(
         self,
@@ -197,7 +200,7 @@ class HookExecutor:
 HookExecutorOption = Any
 
 
-def WithExecutorTimeout(d: timedelta) -> HookExecutorOption:
+def with_executor_timeout(d: timedelta) -> HookExecutorOption:
     """Set the execution timeout. Mirrors hooks.WithExecutorTimeout."""
 
     def opt(e: HookExecutor) -> None:
@@ -205,8 +208,11 @@ def WithExecutorTimeout(d: timedelta) -> HookExecutorOption:
 
     return opt
 
+# Backwards-compatible alias (Go-style name).
+WithExecutorTimeout = with_executor_timeout
 
-def WithExecutorRetries(n: int) -> HookExecutorOption:
+
+def with_executor_retries(n: int) -> HookExecutorOption:
     """Set the max retries. Mirrors hooks.WithExecutorRetries."""
 
     def opt(e: HookExecutor) -> None:
@@ -214,8 +220,11 @@ def WithExecutorRetries(n: int) -> HookExecutorOption:
 
     return opt
 
+# Backwards-compatible alias (Go-style name).
+WithExecutorRetries = with_executor_retries
 
-def WithExecutorRetryDelay(d: timedelta) -> HookExecutorOption:
+
+def with_executor_retry_delay(d: timedelta) -> HookExecutorOption:
     """Set the retry delay. Mirrors hooks.WithExecutorRetryDelay."""
 
     def opt(e: HookExecutor) -> None:
@@ -223,8 +232,11 @@ def WithExecutorRetryDelay(d: timedelta) -> HookExecutorOption:
 
     return opt
 
+# Backwards-compatible alias (Go-style name).
+WithExecutorRetryDelay = with_executor_retry_delay
 
-def WithCircuitBreaker(cb: CircuitBreaker) -> HookExecutorOption:
+
+def with_circuit_breaker(cb: CircuitBreaker) -> HookExecutorOption:
     """Set a custom circuit breaker. Mirrors hooks.WithCircuitBreaker."""
 
     def opt(e: HookExecutor) -> None:
@@ -232,8 +244,11 @@ def WithCircuitBreaker(cb: CircuitBreaker) -> HookExecutorOption:
 
     return opt
 
+# Backwards-compatible alias (Go-style name).
+WithCircuitBreaker = with_circuit_breaker
 
-def NewHookExecutor(*opts: HookExecutorOption) -> HookExecutor:
+
+def new_hook_executor(*opts: HookExecutorOption) -> HookExecutor:
     """Create a new hook executor. Mirrors hooks.NewHookExecutor."""
     e = HookExecutor(
         timeout=timedelta(seconds=30),
@@ -244,3 +259,6 @@ def NewHookExecutor(*opts: HookExecutorOption) -> HookExecutor:
     for opt in opts:
         opt(e)
     return e
+
+# Backwards-compatible alias (Go-style name).
+NewHookExecutor = new_hook_executor

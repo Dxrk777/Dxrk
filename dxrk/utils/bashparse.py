@@ -62,9 +62,12 @@ from dxrk.utils.bashparse_nodes import RedirectNode as RedirectNode
 from dxrk.utils.bashparse_nodes import SequenceNode as SequenceNode
 from dxrk.utils.bashparse_nodes import SubshellNode as SubshellNode
 from dxrk.utils.bashparse_nodes import Walk as Walk
+from dxrk.utils.bashparse_nodes import collect_commands as collect_commands
+from dxrk.utils.bashparse_nodes import walk as walk
 from dxrk.utils.bashparse_parser import Parse as Parse
 from dxrk.utils.bashparse_parser import _is_valid_env_key as _is_valid_env_key
 from dxrk.utils.bashparse_parser import _Parser as _Parser
+from dxrk.utils.bashparse_parser import parse as parse
 from dxrk.utils.bashparse_quote import _SHELL_SPECIALS as _SHELL_SPECIALS
 from dxrk.utils.bashparse_quote import _go_quote as _go_quote
 from dxrk.utils.bashparse_quote import _needs_quote as _needs_quote

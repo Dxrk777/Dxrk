@@ -123,7 +123,7 @@ class SwarmCoordinator:
 
         self._health.RegisterCallback(self._on_health_change)
 
-    def Start(self) -> None:
+    def start(self) -> None:
         """Start all swarm components. Mirrors SwarmCoordinator.Start()."""
         self._health.Start()
         self._scheduler.Start()
@@ -133,7 +133,10 @@ class SwarmCoordinator:
         self._thread = threading.Thread(target=self._coordinator_loop, daemon=True)
         self._thread.start()
 
-    def Stop(self) -> None:
+    # Backwards-compatible alias (Go-style name).
+    Start = start
+
+    def stop(self) -> None:
         """Stop all swarm components. Mirrors SwarmCoordinator.Stop()."""
         self._cancel()
         thread, self._thread = self._thread, None
@@ -149,6 +152,9 @@ class SwarmCoordinator:
         self._unsubscribes.clear()
         with self._mu:
             self._subscriptions.clear()
+
+    # Backwards-compatible alias (Go-style name).
+    Stop = stop
 
     def _coordinator_loop(self) -> None:
         interval = _td_seconds(self._config.heartbeat_interval)
@@ -261,7 +267,7 @@ class SwarmCoordinator:
             if self._scheduler.Submit(task) is not None:
                 break
 
-    def SubmitTask(self, task: Task) -> SwarmError | None:
+    def submit_task(self, task: Task) -> SwarmError | None:
         """Submit a task to the coordinator's scheduler. Mirrors SwarmCoordinator.SubmitTask()."""
         if task.max_retries <= 0:
             task.max_retries = self._config.max_retries
@@ -274,7 +280,10 @@ class SwarmCoordinator:
                 pass
         return self._scheduler.Submit(task)
 
-    def GetTaskResult(self, ctx: _Context | None, task_id: str) -> tuple[TaskResult | None, SwarmError | None]:
+    # Backwards-compatible alias (Go-style name).
+    SubmitTask = submit_task
+
+    def get_task_result(self, ctx: _Context | None, task_id: str) -> tuple[TaskResult | None, SwarmError | None]:
         """Return the completed result for a task. Mirrors SwarmCoordinator.GetTaskResult().
 
         Drains newly arrived scheduler results first; unknown ids return
@@ -295,23 +304,38 @@ class SwarmCoordinator:
                 return self._results[task_id], None
         return None, ErrTaskNotFound
 
-    def RegisterBackend(self, ctx: _Context | None, b: Backend) -> SwarmError | None:
+    # Backwards-compatible alias (Go-style name).
+    GetTaskResult = get_task_result
+
+    def register_backend(self, ctx: _Context | None, b: Backend) -> SwarmError | None:
         """Register a backend. Mirrors SwarmCoordinator.RegisterBackend()."""
         return self._registry.Register(ctx, b)
 
-    def UnregisterBackend(self, ctx: _Context | None, backend_id: BackendID) -> SwarmError | None:
+    # Backwards-compatible alias (Go-style name).
+    RegisterBackend = register_backend
+
+    def unregister_backend(self, ctx: _Context | None, backend_id: BackendID) -> SwarmError | None:
         """Unregister a backend. Mirrors SwarmCoordinator.UnregisterBackend()."""
         return self._registry.Unregister(ctx, backend_id)
 
-    def GetBackends(self) -> list[Backend]:
+    # Backwards-compatible alias (Go-style name).
+    UnregisterBackend = unregister_backend
+
+    def get_backends(self) -> list[Backend]:
         """Return all registered backends. Mirrors SwarmCoordinator.GetBackends()."""
         return self._registry.GetAll()
 
-    def GetHealthyBackends(self) -> list[Backend]:
+    # Backwards-compatible alias (Go-style name).
+    GetBackends = get_backends
+
+    def get_healthy_backends(self) -> list[Backend]:
         """Return healthy backends. Mirrors SwarmCoordinator.GetHealthyBackends()."""
         return self._registry.GetHealthy()
 
-    def Subscribe(self, event_type: SwarmEventType, handler: EventHandler) -> Callable[[], None]:
+    # Backwards-compatible alias (Go-style name).
+    GetHealthyBackends = get_healthy_backends
+
+    def subscribe(self, event_type: SwarmEventType, handler: EventHandler) -> Callable[[], None]:
         """Subscribe to an event type. Mirrors SwarmCoordinator.Subscribe()."""
         unsub = self._event_bus.Subscribe(event_type, handler)
         with self._mu:
@@ -319,25 +343,37 @@ class SwarmCoordinator:
             self._subscriptions.append((event_type, handler))
         return unsub
 
-    def Unsubscribe(self, event_type: SwarmEventType, handler: EventHandler) -> None:
+    # Backwards-compatible alias (Go-style name).
+    Subscribe = subscribe
+
+    def unsubscribe(self, event_type: SwarmEventType, handler: EventHandler) -> None:
         """Remove a handler subscribed via :meth:`Subscribe`."""
         with self._mu:
             self._subscriptions = [(t, h) for t, h in self._subscriptions if not (t == event_type and h is handler)]
         self._event_bus.Unsubscribe(event_type, handler)
 
-    def IsLeader(self) -> bool:
+    # Backwards-compatible alias (Go-style name).
+    Unsubscribe = unsubscribe
+
+    def is_leader(self) -> bool:
         """Return True if the coordinator is leader. Mirrors SwarmCoordinator.IsLeader()."""
         self._sync_leader()
         with self._mu:
             return self._is_leader
 
-    def LeaderID(self) -> BackendID:
+    # Backwards-compatible alias (Go-style name).
+    IsLeader = is_leader
+
+    def leader_id(self) -> BackendID:
         """Return the coordinator's leader ID. Mirrors SwarmCoordinator.LeaderID()."""
         self._sync_leader()
         with self._mu:
             return self._leader_id
 
-    def SessionSummary(self, session_id: str) -> dict[str, int]:
+    # Backwards-compatible alias (Go-style name).
+    LeaderID = leader_id
+
+    def session_summary(self, session_id: str) -> dict[str, int]:
         """Return submitted/completed/in-flight swarm counts for a session.
 
         Served from the durable :class:`SwarmTaskStore` when configured,
@@ -355,7 +391,10 @@ class SwarmCoordinator:
             "in_flight": max(0, submitted - completed),
         }
 
-    def SessionSummaryText(self, session_id: str) -> str:
+    # Backwards-compatible alias (Go-style name).
+    SessionSummary = session_summary
+
+    def session_summary_text(self, session_id: str) -> str:
         """Render one human line describing a session's swarm work."""
         if self._store is not None:
             return self._store.SessionSummaryText(session_id)
@@ -365,7 +404,10 @@ class SwarmCoordinator:
             f" ({counts['in_flight']} in flight)"
         )
 
-    def Stats(self) -> CoordinatorStats:
+    # Backwards-compatible alias (Go-style name).
+    SessionSummaryText = session_summary_text
+
+    def get_stats(self) -> CoordinatorStats:
         """Return coordinator statistics. Mirrors SwarmCoordinator.Stats()."""
         self._sync_leader()
         with self._mu:
@@ -380,11 +422,17 @@ class SwarmCoordinator:
                 backend_health=health_stats,
             )
 
+    # Backwards-compatible alias (Go-style name).
+    Stats = get_stats
 
-def NewSwarmCoordinator(
+
+def new_swarm_coordinator(
     registry: BackendRegistry,
     config: CoordinatorConfig,
     result_store: SwarmTaskStore | None = None,
 ) -> SwarmCoordinator:
     """Create a new swarm coordinator. Mirrors swarm.NewSwarmCoordinator()."""
     return SwarmCoordinator(registry, config, result_store=result_store)
+
+# Backwards-compatible alias (Go-style name).
+NewSwarmCoordinator = new_swarm_coordinator

@@ -62,7 +62,7 @@ def _hook_type_name(ht: HookType | int) -> str:
     return _STR_UNKNOWN
 
 
-def ParseHookType(s: str) -> tuple[HookType, bool]:
+def parse_hook_type(s: str) -> tuple[HookType, bool]:
     """Parse a hook type name. Mirrors hooks.ParseHookType."""
     if s == "pre_tool_use":
         return PreToolUse, True
@@ -77,3 +77,6 @@ def ParseHookType(s: str) -> tuple[HookType, bool]:
     if s == "subagent_stop":
         return SubagentStop, True
     return HookType.PRE_TOOL_USE, False
+
+# Backwards-compatible alias (Go-style name).
+ParseHookType = parse_hook_type

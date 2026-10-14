@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from enum import IntEnum
 
 from dxrk.utils.diff_core import ComputeDiff as ComputeDiff
+from dxrk.utils.diff_core import compute_diff as compute_diff
 from dxrk.utils.diff_files import FileDiff as FileDiff
 from dxrk.utils.diff_model import DiffModify as DiffModify
 
@@ -74,9 +75,7 @@ class SemanticResult:
     refactors: list[SemanticChange] = field(default_factory=list)
 
 
-def DetectSemanticChanges(
-    old_text: str, new_text: str, path: str = ""
-) -> SemanticResult:
+def detect_semantic_changes(old_text: str, new_text: str, path: str = "") -> SemanticResult:
     """Detect semantic changes between two texts. Mirrors semantic.DetectChanges."""
     result = SemanticResult()
     diff_result = ComputeDiff(old_text, new_text)
@@ -191,7 +190,11 @@ def DetectSemanticChanges(
     return result
 
 
-def DetectSemanticFileDiff(fd: FileDiff) -> SemanticResult:
+# Backwards-compatible alias (Go-style name).
+DetectSemanticChanges = detect_semantic_changes
+
+
+def detect_semantic_file_diff(fd: FileDiff) -> SemanticResult:
     """Detect semantic changes for a FileDiff. Mirrors semantic.DetectFileDiff."""
     path = fd.new_path or fd.old_path
     old_text = ""
@@ -211,7 +214,11 @@ def DetectSemanticFileDiff(fd: FileDiff) -> SemanticResult:
     return DetectSemanticChanges(old_text, new_text, path)
 
 
-def DetectSemanticDirDiff(file_diffs: list[FileDiff]) -> SemanticResult:
+# Backwards-compatible alias (Go-style name).
+DetectSemanticFileDiff = detect_semantic_file_diff
+
+
+def detect_semantic_dir_diff(file_diffs: list[FileDiff]) -> SemanticResult:
     """Aggregate semantic changes across a directory comparison. Mirrors semantic.DetectDirDiff."""
     result = SemanticResult()
     for fd in file_diffs:
@@ -223,6 +230,10 @@ def DetectSemanticDirDiff(file_diffs: list[FileDiff]) -> SemanticResult:
         result.moves.extend(sub.moves)
         result.refactors.extend(sub.refactors)
     return result
+
+
+# Backwards-compatible alias (Go-style name).
+DetectSemanticDirDiff = detect_semantic_dir_diff
 
 
 _FUNC_RE = re.compile(r"^\s*(?:def|class|func|function|async def)\s+([A-Za-z_]\w*)")
@@ -237,9 +248,7 @@ def _extract_symbols(lines: list[str]) -> list[str]:
     return symbols
 
 
-_BLOCK_START = re.compile(
-    r"^\s*(?:def|class|func|function|if|for|while|with|try|except|switch|case)\b"
-)
+_BLOCK_START = re.compile(r"^\s*(?:def|class|func|function|if|for|while|with|try|except|switch|case)\b")
 
 
 def _extract_blocks(lines: list[str]) -> list[str]:
@@ -252,9 +261,8 @@ def _extract_blocks(lines: list[str]) -> list[str]:
             current = [line]
         elif current:
             if line.strip() == "":
-                if current:
-                    blocks.append("\n".join(current))
-                    current = []
+                blocks.append("\n".join(current))
+                current = []
             else:
                 current.append(line)
     if current:
@@ -339,7 +347,7 @@ def _strip_comments(line: str) -> str:
     return _COMMENT_RE.sub("", line) if _COMMENT_RE.match(line) else line
 
 
-def FormatSemanticChanges(result: SemanticResult) -> str:
+def format_semantic_changes(result: SemanticResult) -> str:
     """Format semantic changes as readable text. Mirrors semantic.FormatChanges."""
     b: list[str] = []
     for c in result.changes:
@@ -357,6 +365,10 @@ def FormatSemanticChanges(result: SemanticResult) -> str:
             b.append(f"{c.type}: {c.symbol} ({c.path})")
     b.append(f"total: +{result.total_added} -{result.total_removed}")
     return "\n".join(b)
+
+
+# Backwards-compatible alias (Go-style name).
+FormatSemanticChanges = format_semantic_changes
 
 
 # --- _filepath_match (filepath.Match semantics) ---
@@ -432,6 +444,10 @@ def _match_chunk(pattern: str, name: str) -> bool:
     return ni == m
 
 
-def Match(pattern: str, name: str) -> bool:
+def match(pattern: str, name: str) -> bool:
     """Match a path against a filepath.Match pattern. Mirrors filepath.Match."""
     return _filepath_match(pattern, name)
+
+
+# Backwards-compatible alias (Go-style name).
+Match = match

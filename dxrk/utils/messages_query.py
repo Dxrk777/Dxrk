@@ -48,7 +48,7 @@ class Stats:
     last_message_time: datetime = _ZERO_TIME
     avg_token_per_msg: float = 0.0
 
-    def String(self) -> str:
+    def to_string(self) -> str:
         """Return a human-readable summary of the stats."""
         out = f"Messages: {self.total_messages} | Tokens: {self.total_tokens} | Avg: {self.avg_token_per_msg:.0f}/msg\n"
         for role, count in self.by_role.items():
@@ -61,8 +61,11 @@ class Stats:
             out += f"  Duration: {_format_duration(rounded)}\n"
         return out
 
+    # Backwards-compatible alias (Go-style name).
+    String = to_string
 
-def SearchMessages(msgs: list[Message], query: str) -> list[SearchResult]:
+
+def search_messages(msgs: list[Message], query: str) -> list[SearchResult]:
     """Perform substring search across all message content.
 
     Results are scored by match count and position, with highlighted
@@ -110,12 +113,20 @@ def SearchMessages(msgs: list[Message], query: str) -> list[SearchResult]:
     return results
 
 
-def FilterByRole(msgs: list[Message], role: Role) -> list[Message]:
+# Backwards-compatible alias (Go-style name).
+SearchMessages = search_messages
+
+
+def filter_by_role(msgs: list[Message], role: Role) -> list[Message]:
     """Return messages matching the given role."""
     return [m for m in msgs if m.role is role]
 
 
-def FilterByTime(msgs: list[Message], from_: datetime, to: datetime) -> list[Message]:
+# Backwards-compatible alias (Go-style name).
+FilterByRole = filter_by_role
+
+
+def filter_by_time(msgs: list[Message], from_: datetime, to: datetime) -> list[Message]:
     """Return messages within the given time range (inclusive).
 
     A zero time on either bound leaves it open.
@@ -127,7 +138,11 @@ def FilterByTime(msgs: list[Message], from_: datetime, to: datetime) -> list[Mes
     return result
 
 
-def FilterByTokenRange(msgs: list[Message], min_tokens: int, max_tokens: int) -> list[Message]:
+# Backwards-compatible alias (Go-style name).
+FilterByTime = filter_by_time
+
+
+def filter_by_token_range(msgs: list[Message], min_tokens: int, max_tokens: int) -> list[Message]:
     """Return messages whose estimated token count falls in [min, max].
 
     Use ``min_tokens=0`` or ``max_tokens=-1`` to leave a bound open.
@@ -140,7 +155,11 @@ def FilterByTokenRange(msgs: list[Message], min_tokens: int, max_tokens: int) ->
     return result
 
 
-def FilterByTool(msgs: list[Message], tool_name: str) -> list[Message]:
+# Backwards-compatible alias (Go-style name).
+FilterByTokenRange = filter_by_token_range
+
+
+def filter_by_tool(msgs: list[Message], tool_name: str) -> list[Message]:
     """Return messages containing a tool_use block with the given name.
 
     An empty ``tool_name`` matches any tool use.
@@ -148,7 +167,11 @@ def FilterByTool(msgs: list[Message], tool_name: str) -> list[Message]:
     return [m for m in msgs if m.HasToolUse(tool_name)]
 
 
-def FilterByRegex(msgs: list[Message], pattern: str) -> list[Message]:
+# Backwards-compatible alias (Go-style name).
+FilterByTool = filter_by_tool
+
+
+def filter_by_regex(msgs: list[Message], pattern: str) -> list[Message]:
     """Return messages where any text content matches the regex pattern."""
     try:
         re_compiled = re.compile(pattern)
@@ -157,17 +180,23 @@ def FilterByRegex(msgs: list[Message], pattern: str) -> list[Message]:
     return [m for m in msgs if m.TextContent() != "" and re_compiled.search(m.TextContent())]
 
 
-def FindToolCalls(msgs: list[Message], tool_name: str) -> list[ToolCall]:
+# Backwards-compatible alias (Go-style name).
+FilterByRegex = filter_by_regex
+
+
+def find_tool_calls(msgs: list[Message], tool_name: str) -> list[ToolCall]:
     """Resolve tool_use and tool_result pairs into ToolCall structs.
 
     An empty ``tool_name`` matches all tool calls.
     """
     result_index: dict[str, Message] = {}
+    result_by_id: dict[str, ToolResultData] = {}
     for m in msgs:
         if m.role is Role.RoleToolResult:
             for c in m.contents:
                 if c.type is ContentType.ContentToolResult and c.tool_result is not None:
                     result_index[c.tool_result.tool_use_id] = m
+                    result_by_id[c.tool_result.tool_use_id] = c.tool_result
 
     calls: list[ToolCall] = []
     for m in msgs:
@@ -180,20 +209,17 @@ def FindToolCalls(msgs: list[Message], tool_name: str) -> list[ToolCall]:
                 result_msg = result_index.get(c.tool_use.id)
                 if result_msg is not None:
                     tc.result_msg = result_msg
-                    for rc in result_msg.contents:
-                        if (
-                            rc.type is ContentType.ContentToolResult
-                            and rc.tool_result is not None
-                            and rc.tool_result.tool_use_id == c.tool_use.id
-                        ):
-                            tc.result = rc.tool_result
-                            break
+                    tc.result = result_by_id[c.tool_use.id]
 
                 calls.append(tc)
     return calls
 
 
-def GetConversationStats(msgs: list[Message]) -> Stats:
+# Backwards-compatible alias (Go-style name).
+FindToolCalls = find_tool_calls
+
+
+def get_conversation_stats(msgs: list[Message]) -> Stats:
     """Compute aggregate statistics for a message slice."""
     if len(msgs) == 0:
         return Stats(by_role={})
@@ -231,3 +257,7 @@ def GetConversationStats(msgs: list[Message]) -> Stats:
     stats.avg_token_per_msg = total_tokens / len(msgs)
 
     return stats
+
+
+# Backwards-compatible alias (Go-style name).
+GetConversationStats = get_conversation_stats

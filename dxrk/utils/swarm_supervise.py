@@ -90,12 +90,15 @@ class HealthMonitor:
         self._ping = ping
         self._backend_pings: dict[BackendID, Callable[[Backend], SwarmError | None]] = {}
 
-    def SetPing(self, ping: Callable[[Backend], SwarmError | None] | None) -> None:
+    def set_ping(self, ping: Callable[[Backend], SwarmError | None] | None) -> None:
         """Install (or clear) the global liveness probe."""
         with self._mu:
             self._ping = ping
 
-    def SetBackendPing(self, backend_id: BackendID, ping: Callable[[Backend], SwarmError | None] | None) -> None:
+    # Backwards-compatible alias (Go-style name).
+    SetPing = set_ping
+
+    def set_backend_ping(self, backend_id: BackendID, ping: Callable[[Backend], SwarmError | None] | None) -> None:
         """Install (or clear with None) a per-backend liveness probe."""
         with self._mu:
             if ping is None:
@@ -103,21 +106,33 @@ class HealthMonitor:
             else:
                 self._backend_pings[backend_id] = ping
 
-    def Start(self) -> None:
+    # Backwards-compatible alias (Go-style name).
+    SetBackendPing = set_backend_ping
+
+    def start(self) -> None:
         """Start the monitoring goroutine. Mirrors HealthMonitor.Start()."""
         self._thread = threading.Thread(target=self._monitor_loop, daemon=True)
         self._thread.start()
 
-    def Stop(self) -> None:
+    # Backwards-compatible alias (Go-style name).
+    Start = start
+
+    def stop(self) -> None:
         """Stop the monitoring goroutine. Mirrors HealthMonitor.Stop()."""
         self._cancel()
         if self._thread is not None:
             self._thread.join(timeout=2.0)
 
-    def RegisterCallback(self, cb: HealthCallback) -> None:
+    # Backwards-compatible alias (Go-style name).
+    Stop = stop
+
+    def register_callback(self, cb: HealthCallback) -> None:
         """Register a health-change callback. Mirrors HealthMonitor.RegisterCallback()."""
         with self._mu:
             self._callbacks.append(cb)
+
+    # Backwards-compatible alias (Go-style name).
+    RegisterCallback = register_callback
 
     def _monitor_loop(self) -> None:
         interval = _td_seconds(self._interval)
@@ -196,7 +211,7 @@ class HealthMonitor:
         for cb in list(self._callbacks):
             threading.Thread(target=cb, args=(backend_id, old_status, new_status), daemon=True).start()
 
-    def GetHealth(self, backend_id: BackendID) -> tuple[BackendStatus, datetime, int]:
+    def get_health(self, backend_id: BackendID) -> tuple[BackendStatus, datetime, int]:
         """Return the health state for a backend. Mirrors HealthMonitor.GetHealth()."""
         with self._mu:
             check = self._checks.get(backend_id)
@@ -204,7 +219,10 @@ class HealthMonitor:
                 return BackendStatus.StatusUnknown, _ZERO_TIME, 0
             return check.status, check.last_check, check.consecutive_failures
 
-    def GetAllHealth(self) -> dict[BackendID, BackendHealth]:
+    # Backwards-compatible alias (Go-style name).
+    GetHealth = get_health
+
+    def get_all_health(self) -> dict[BackendID, BackendHealth]:
         """Return health state for all checked backends. Mirrors HealthMonitor.GetAllHealth()."""
         with self._mu:
             return {
@@ -217,7 +235,10 @@ class HealthMonitor:
                 for backend_id, check in self._checks.items()
             }
 
-    def ForceCheck(self, backend_id: BackendID) -> SwarmError | None:
+    # Backwards-compatible alias (Go-style name).
+    GetAllHealth = get_all_health
+
+    def force_check(self, backend_id: BackendID) -> SwarmError | None:
         """Immediately check a backend. Mirrors HealthMonitor.ForceCheck()."""
         for b in self._registry.GetAll():
             if b.id == backend_id:
@@ -225,8 +246,11 @@ class HealthMonitor:
                 return None
         return ErrBackendNotFound
 
+    # Backwards-compatible alias (Go-style name).
+    ForceCheck = force_check
 
-def NewHealthMonitor(
+
+def new_health_monitor(
     registry: BackendRegistry,
     interval: timedelta,
     timeout: timedelta,
@@ -235,6 +259,10 @@ def NewHealthMonitor(
 ) -> HealthMonitor:
     """Create a new health monitor. Mirrors swarm.NewHealthMonitor()."""
     return HealthMonitor(registry, interval, timeout, failure_threshold, ping=ping)
+
+
+# Backwards-compatible alias (Go-style name).
+NewHealthMonitor = new_health_monitor
 
 
 class LeaderElection:
@@ -261,12 +289,15 @@ class LeaderElection:
         self._ctx, self._cancel = _with_cancel()
         self._thread: threading.Thread | None = None
 
-    def Start(self) -> None:
+    def start(self) -> None:
         """Start the election goroutine. Mirrors LeaderElection.Start()."""
         if not self._config.leader_election_enabled:
             return
         self._thread = threading.Thread(target=self._election_loop, daemon=True)
         self._thread.start()
+
+    # Backwards-compatible alias (Go-style name).
+    Start = start
 
     def _election_loop(self) -> None:
         interval = max(0.01, _td_seconds(self._config.lease_duration) / 2)
@@ -287,14 +318,7 @@ class LeaderElection:
                 self._step_down()
                 return
 
-            candidate: Backend | None = None
-            for b in backends:
-                if candidate is None or b.registered_at < candidate.registered_at:
-                    candidate = b
-
-            if candidate is None:
-                self._step_down()
-                return
+            candidate = min(backends, key=lambda b: b.registered_at)
 
             now = _now()
             with self._lease_mu:
@@ -346,7 +370,7 @@ class LeaderElection:
             self._lease_holder = ""
             self._lease_expiry = _ZERO_TIME
 
-    def GetLeader(self) -> tuple[Backend | None, SwarmError | None]:
+    def get_leader(self) -> tuple[Backend | None, SwarmError | None]:
         """Return the current leader. Mirrors LeaderElection.GetLeader()."""
         with self._leader_mu:
             leader = self._current_leader
@@ -354,18 +378,27 @@ class LeaderElection:
             return None, ErrNoLeader
         return leader, None
 
-    def IsLeader(self, backend_id: BackendID) -> bool:
+    # Backwards-compatible alias (Go-style name).
+    GetLeader = get_leader
+
+    def is_leader(self, backend_id: BackendID) -> bool:
         """Return True if the backend is the current leader. Mirrors LeaderElection.IsLeader()."""
         with self._leader_mu:
             leader = self._current_leader
         return leader is not None and leader.id == backend_id
 
-    def GetLeaseInfo(self) -> tuple[BackendID, datetime]:
+    # Backwards-compatible alias (Go-style name).
+    IsLeader = is_leader
+
+    def get_lease_info(self) -> tuple[BackendID, datetime]:
         """Return the lease holder and expiry. Mirrors LeaderElection.GetLeaseInfo()."""
         with self._lease_mu:
             return self._lease_holder, self._lease_expiry
 
-    def RenewLease(self, backend_id: BackendID) -> SwarmError | None:
+    # Backwards-compatible alias (Go-style name).
+    GetLeaseInfo = get_lease_info
+
+    def renew_lease(self, backend_id: BackendID) -> SwarmError | None:
         """Renew the leader lease. Mirrors LeaderElection.RenewLease()."""
         with self._lease_mu:
             if self._lease_holder != backend_id:
@@ -375,24 +408,37 @@ class LeaderElection:
             self._lease_expiry = _now() + self._config.lease_duration
         return None
 
-    def ForceElection(self) -> None:
+    # Backwards-compatible alias (Go-style name).
+    RenewLease = renew_lease
+
+    def force_election(self) -> None:
         """Force an immediate election attempt. Mirrors LeaderElection.ForceElection()."""
         with self._elect_mu:
             self._in_election = False
         self._try_elect()
 
-    def Stop(self) -> None:
+    # Backwards-compatible alias (Go-style name).
+    ForceElection = force_election
+
+    def stop(self) -> None:
         """Stop the election goroutine. Mirrors LeaderElection.Stop()."""
         self._cancel()
         if self._thread is not None:
             self._thread.join(timeout=2.0)
         self._step_down()
 
+    # Backwards-compatible alias (Go-style name).
+    Stop = stop
 
-def NewLeaderElection(
+
+def new_leader_election(
     config: SwarmConfig | None,
     registry: BackendRegistry,
     events: EventBus,
 ) -> LeaderElection:
     """Create a new leader election. Mirrors swarm.NewLeaderElection()."""
     return LeaderElection(config, registry, events)
+
+
+# Backwards-compatible alias (Go-style name).
+NewLeaderElection = new_leader_election

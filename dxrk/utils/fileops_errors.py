@@ -25,7 +25,7 @@ ErrFileTooLarge = FileopsError("fileops: file exceeds read limit")
 ErrInvalidImage = FileopsError("fileops: file is not a valid image")
 
 
-def ValidatePath(path: str) -> FileopsError | None:
+def validate_path(path: str) -> FileopsError | None:
     """Check a file path for traversal attacks and null bytes. Mirrors ValidatePath."""
     if "\x00" in path:
         return ErrNullByte
@@ -34,3 +34,6 @@ def ValidatePath(path: str) -> FileopsError | None:
         if part == "..":
             return ErrPathTraversal
     return None
+
+# Backwards-compatible alias (Go-style name).
+ValidatePath = validate_path

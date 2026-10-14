@@ -28,7 +28,7 @@ class Role(IntEnum):
     RoleToolUse = 3
     RoleToolResult = 4
 
-    def String(self) -> str:
+    def to_string(self) -> str:
         if self is Role.RoleUser:
             return "user"
         if self is Role.RoleAssistant:
@@ -41,12 +41,15 @@ class Role(IntEnum):
             return _STR_TOOL_RESULT
         return _STR_UNKNOWN
 
+    # Backwards-compatible alias (Go-style name).
+    String = to_string
+
     @classmethod
     def _missing_(cls, value: object) -> Role:
         return Role.RoleUser
 
 
-def ParseRole(s: str) -> Role:
+def parse_role(s: str) -> Role:
     """Convert a string to a Role; unknown values default to RoleUser."""
     role = s.lower()
     if role == "user":
@@ -61,6 +64,9 @@ def ParseRole(s: str) -> Role:
         return Role.RoleToolResult
     return Role.RoleUser
 
+# Backwards-compatible alias (Go-style name).
+ParseRole = parse_role
+
 
 class ContentType(IntEnum):
     """the kind of payload in a Content block."""
@@ -70,7 +76,7 @@ class ContentType(IntEnum):
     ContentToolUse = 2
     ContentToolResult = 3
 
-    def String(self) -> str:
+    def to_string(self) -> str:
         if self is ContentType.ContentText:
             return "text"
         if self is ContentType.ContentImage:
@@ -80,6 +86,9 @@ class ContentType(IntEnum):
         if self is ContentType.ContentToolResult:
             return _STR_TOOL_RESULT
         return _STR_UNKNOWN
+
+    # Backwards-compatible alias (Go-style name).
+    String = to_string
 
 
 @dataclass
@@ -134,7 +143,7 @@ class Message:
     stop_reason: str = ""
     metadata: dict[str, object] = field(default_factory=dict)
 
-    def EstimateTokens(self) -> int:
+    def estimate_tokens(self) -> int:
         """Return the token count for this message.
 
         If ``token_count`` is set it is returned directly; otherwise a rough
@@ -160,7 +169,10 @@ class Message:
             return 1
         return total
 
-    def HasToolUse(self, name: str) -> bool:
+    # Backwards-compatible alias (Go-style name).
+    EstimateTokens = estimate_tokens
+
+    def has_tool_use(self, name: str) -> bool:
         """Return True if the message contains a tool_use block with ``name``.
 
         An empty ``name`` matches any tool use.
@@ -171,7 +183,10 @@ class Message:
                     return True
         return False
 
-    def TextContent(self) -> str:
+    # Backwards-compatible alias (Go-style name).
+    HasToolUse = has_tool_use
+
+    def text_content(self) -> str:
         """Return the concatenated text of all text content blocks."""
         parts: list[str] = []
         for c in self.contents:
@@ -179,8 +194,11 @@ class Message:
                 parts.append(c.text)
         return "\n".join(parts)
 
+    # Backwards-compatible alias (Go-style name).
+    TextContent = text_content
 
-def EstimateTokens(s: str) -> int:
+
+def estimate_tokens(s: str) -> int:
     """Return a rough token count for a string: len(s)/4, minimum 1."""
     n = len(s)
     if n == 0:
@@ -189,3 +207,6 @@ def EstimateTokens(s: str) -> int:
     if tokens == 0:
         return 1
     return tokens
+
+# Backwards-compatible alias (Go-style name).
+EstimateTokens = estimate_tokens

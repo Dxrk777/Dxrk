@@ -14,12 +14,15 @@ from dxrk.utils.hooks_model_events import HookConfig, HookConfigFile
 from dxrk.utils.hooks_model_types import HookType, ParseHookType, _hook_type_name
 
 
-def DefaultConfig() -> HookConfigFile:
+def default_config() -> HookConfigFile:
     """Return a default hook configuration. Mirrors hooks.DefaultConfig."""
     return HookConfigFile(version="1.0", hooks=[])
 
+# Backwards-compatible alias (Go-style name).
+DefaultConfig = default_config
 
-def LoadConfig(path: str) -> tuple[HookConfigFile | None, Any]:
+
+def load_config(path: str) -> tuple[HookConfigFile | None, Any]:
     """Load hook configuration from a file. Mirrors hooks.LoadConfig.
 
     A missing file yields the default config; unreadable or unparseable
@@ -50,8 +53,11 @@ def LoadConfig(path: str) -> tuple[HookConfigFile | None, Any]:
             hook.retry_delay = timedelta(seconds=1)
     return cfg, None
 
+# Backwards-compatible alias (Go-style name).
+LoadConfig = load_config
 
-def SaveConfig(path: str, cfg: HookConfigFile) -> Any:
+
+def save_config(path: str, cfg: HookConfigFile) -> Any:
     """Save hook configuration to a file. Mirrors hooks.SaveConfig."""
     try:
         data = json.dumps(_file_dump(cfg), indent=2)
@@ -79,8 +85,11 @@ def SaveConfig(path: str, cfg: HookConfigFile) -> Any:
         return HookError(str(e))
     return None
 
+# Backwards-compatible alias (Go-style name).
+SaveConfig = save_config
 
-def ValidateConfig(cfg: HookConfigFile | None) -> Any:
+
+def validate_config(cfg: HookConfigFile | None) -> Any:
     """Validate a hook configuration. Mirrors hooks.ValidateConfig."""
     if cfg is None:
         return ErrConfigParse
@@ -107,8 +116,11 @@ def ValidateConfig(cfg: HookConfigFile | None) -> Any:
             return ErrConfigParse
     return None
 
+# Backwards-compatible alias (Go-style name).
+ValidateConfig = validate_config
 
-def MergeConfigs(*configs: HookConfigFile | None) -> HookConfigFile:
+
+def merge_configs(*configs: HookConfigFile | None) -> HookConfigFile:
     """Merge multiple hook configurations. Mirrors hooks.MergeConfigs.
 
     The first configuration that defines a hook ID wins.
@@ -124,12 +136,21 @@ def MergeConfigs(*configs: HookConfigFile | None) -> HookConfigFile:
                 ids.add(hook.id)
     return merged
 
+# Backwards-compatible alias (Go-style name).
+MergeConfigs = merge_configs
 
-def FilterByType(cfg: HookConfigFile, ht: HookType) -> list[HookConfig]:
+
+def filter_by_type(cfg: HookConfigFile, ht: HookType) -> list[HookConfig]:
     """Return hooks of a specific type. Mirrors hooks.FilterByType."""
     return [hook for hook in cfg.hooks if hook.type == ht]
 
+# Backwards-compatible alias (Go-style name).
+FilterByType = filter_by_type
 
-def FilterEnabled(cfg: HookConfigFile) -> list[HookConfig]:
+
+def filter_enabled(cfg: HookConfigFile) -> list[HookConfig]:
     """Return only enabled hooks. Mirrors hooks.FilterEnabled."""
     return [hook for hook in cfg.hooks if hook.enabled]
+
+# Backwards-compatible alias (Go-style name).
+FilterEnabled = filter_enabled

@@ -51,13 +51,16 @@ class CircuitBreaker:
         self._success_threshold = success_threshold
         self._timeout = timeout
 
-    def Execute(self, ctx: _Context, fn: Any) -> Any:
+    def execute(self, ctx: _Context, fn: Any) -> Any:
         """Run the given function with circuit breaker protection. Mirrors Execute."""
         if not self._allow_request():
             return ErrCircuitOpen
         err = fn(ctx)
         self._record_result(err)
         return err
+
+    # Backwards-compatible alias (Go-style name).
+    Execute = execute
 
     def _allow_request(self) -> bool:
         with self._mu:
@@ -88,19 +91,28 @@ class CircuitBreaker:
                     self._state = CircuitClosed
                     self._failures = 0
 
-    def State(self) -> CircuitBreakerState:
+    def state(self) -> CircuitBreakerState:
         """Return the current circuit breaker state. Mirrors hooks.State."""
         with self._mu:
             return self._state
 
-    def Reset(self) -> None:
+    # Backwards-compatible alias (Go-style name).
+    State = state
+
+    def reset(self) -> None:
         """Reset the circuit breaker to closed state. Mirrors hooks.Reset."""
         with self._mu:
             self._state = CircuitClosed
             self._failures = 0
             self._successes = 0
 
+    # Backwards-compatible alias (Go-style name).
+    Reset = reset
 
-def NewCircuitBreaker(failure_threshold: int, success_threshold: int, timeout: timedelta) -> CircuitBreaker:
+
+def new_circuit_breaker(failure_threshold: int, success_threshold: int, timeout: timedelta) -> CircuitBreaker:
     """Create a new circuit breaker. Mirrors hooks.NewCircuitBreaker."""
     return CircuitBreaker(failure_threshold, success_threshold, timeout)
+
+# Backwards-compatible alias (Go-style name).
+NewCircuitBreaker = new_circuit_breaker

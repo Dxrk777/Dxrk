@@ -27,6 +27,13 @@ from dxrk.utils.hooks_model_config import LoadConfig as LoadConfig
 from dxrk.utils.hooks_model_config import MergeConfigs as MergeConfigs
 from dxrk.utils.hooks_model_config import SaveConfig as SaveConfig
 from dxrk.utils.hooks_model_config import ValidateConfig as ValidateConfig
+from dxrk.utils.hooks_model_config import default_config as default_config
+from dxrk.utils.hooks_model_config import filter_by_type as filter_by_type
+from dxrk.utils.hooks_model_config import filter_enabled as filter_enabled
+from dxrk.utils.hooks_model_config import load_config as load_config
+from dxrk.utils.hooks_model_config import merge_configs as merge_configs
+from dxrk.utils.hooks_model_config import save_config as save_config
+from dxrk.utils.hooks_model_config import validate_config as validate_config
 from dxrk.utils.hooks_model_errors import ErrCircuitOpen as ErrCircuitOpen
 from dxrk.utils.hooks_model_errors import ErrConfigNotFound as ErrConfigNotFound
 from dxrk.utils.hooks_model_errors import ErrConfigParse as ErrConfigParse
@@ -61,3 +68,4 @@ from dxrk.utils.hooks_model_types import Stop as Stop
 from dxrk.utils.hooks_model_types import SubagentStop as SubagentStop
 from dxrk.utils.hooks_model_types import UserPromptSubmit as UserPromptSubmit
 from dxrk.utils.hooks_model_types import _hook_type_name as _hook_type_name
+from dxrk.utils.hooks_model_types import parse_hook_type as parse_hook_type

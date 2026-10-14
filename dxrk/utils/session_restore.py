@@ -107,15 +107,10 @@ def find_resume_point(s: Session | None, criteria: ResumeCriteria) -> int:
     if max_back <= 0 or max_back > len(s.messages):
         max_back = len(s.messages)
     start = len(s.messages) - max_back
-    if start < 0:
-        start = 0
     if criteria.prefer_after_tool:
         for i in range(len(s.messages) - 1, start - 1, -1):
             if s.messages[i].tool_calls or s.messages[i].role == RoleToolResult:
-                idx = i + 1
-                if idx > len(s.messages):
-                    idx = len(s.messages)
-                return idx
+                return i + 1
     if criteria.max_tokens > 0:
         used = 0
         for i in range(len(s.messages) - 1, start - 1, -1):

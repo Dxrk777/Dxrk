@@ -14,35 +14,56 @@ class MessageBuilder:
     def __init__(self, msg: Message) -> None:
         self.msg = msg
 
-    def WithID(self, id: str) -> MessageBuilder:
+    def with_id(self, id: str) -> MessageBuilder:
         self.msg.id = id
         return self
 
-    def WithTimestamp(self, ts: datetime) -> MessageBuilder:
+    # Backwards-compatible alias (Go-style name).
+    WithID = with_id
+
+    def with_timestamp(self, ts: datetime) -> MessageBuilder:
         self.msg.timestamp = ts
         return self
 
-    def WithModel(self, model: str) -> MessageBuilder:
+    # Backwards-compatible alias (Go-style name).
+    WithTimestamp = with_timestamp
+
+    def with_model(self, model: str) -> MessageBuilder:
         self.msg.model = model
         return self
 
-    def WithTokenCount(self, n: int) -> MessageBuilder:
+    # Backwards-compatible alias (Go-style name).
+    WithModel = with_model
+
+    def with_token_count(self, n: int) -> MessageBuilder:
         self.msg.token_count = n
         return self
 
-    def WithStopReason(self, reason: str) -> MessageBuilder:
+    # Backwards-compatible alias (Go-style name).
+    WithTokenCount = with_token_count
+
+    def with_stop_reason(self, reason: str) -> MessageBuilder:
         self.msg.stop_reason = reason
         return self
 
-    def WithMetadata(self, key: str, value: object) -> MessageBuilder:
+    # Backwards-compatible alias (Go-style name).
+    WithStopReason = with_stop_reason
+
+    def with_metadata(self, key: str, value: object) -> MessageBuilder:
         self.msg.metadata[key] = value
         return self
 
-    def Text(self, text: str) -> MessageBuilder:
+    # Backwards-compatible alias (Go-style name).
+    WithMetadata = with_metadata
+
+    def text(self, text: str) -> MessageBuilder:
         self.msg.contents.append(Content(type=ContentType.ContentText, text=text))
         return self
 
-    def Image(self, media_type: str, data: str) -> MessageBuilder:
+    # Backwards-compatible alias (Go-style name).
+    Text = text
+
+    def image(self, media_type: str, data: str) -> MessageBuilder:
         self.msg.contents.append(
             Content(
                 type=ContentType.ContentImage,
@@ -51,7 +72,10 @@ class MessageBuilder:
         )
         return self
 
-    def ImageURL(self, url: str, media_type: str) -> MessageBuilder:
+    # Backwards-compatible alias (Go-style name).
+    Image = image
+
+    def image_url(self, url: str, media_type: str) -> MessageBuilder:
         self.msg.contents.append(
             Content(
                 type=ContentType.ContentImage,
@@ -60,7 +84,10 @@ class MessageBuilder:
         )
         return self
 
-    def ToolUse(
+    # Backwards-compatible alias (Go-style name).
+    ImageURL = image_url
+
+    def tool_use(
         self, id: str, name: str, input: dict[str, object] | None = None
     ) -> MessageBuilder:
         data = input if input is not None else {}
@@ -72,7 +99,10 @@ class MessageBuilder:
         )
         return self
 
-    def ToolResult(
+    # Backwards-compatible alias (Go-style name).
+    ToolUse = tool_use
+
+    def tool_result(
         self, tool_use_id: str, content: str, is_error: bool
     ) -> MessageBuilder:
         self.msg.contents.append(
@@ -85,11 +115,17 @@ class MessageBuilder:
         )
         return self
 
-    def Build(self) -> Message:
+    # Backwards-compatible alias (Go-style name).
+    ToolResult = tool_result
+
+    def build(self) -> Message:
         return self.msg
 
+    # Backwards-compatible alias (Go-style name).
+    Build = build
 
-def NewMessage(role: Role) -> MessageBuilder:
+
+def new_message(role: Role) -> MessageBuilder:
     """Start building a message with the given role."""
     return MessageBuilder(
         Message(
@@ -99,3 +135,6 @@ def NewMessage(role: Role) -> MessageBuilder:
             metadata={},
         )
     )
+
+# Backwards-compatible alias (Go-style name).
+NewMessage = new_message

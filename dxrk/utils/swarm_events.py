@@ -28,12 +28,15 @@ class EventBus:
         self._closed = False
         self._dropped = 0
 
-    def DroppedCount(self) -> int:
+    def dropped_count(self) -> int:
         """Return the number of events dropped due to a full channel."""
         with self._mu:
             return self._dropped
 
-    def Subscribe(self, event_type: SwarmEventType, handler: EventHandler) -> Callable[[], None]:
+    # Backwards-compatible alias (Go-style name).
+    DroppedCount = dropped_count
+
+    def subscribe(self, event_type: SwarmEventType, handler: EventHandler) -> Callable[[], None]:
         """Subscribe a handler to one event type. Mirrors EventBus.Subscribe().
 
         The returned callable removes exactly this registration (matched by
@@ -52,7 +55,10 @@ class EventBus:
 
             return unsubscribe
 
-    def Unsubscribe(self, event_type: SwarmEventType, handler: EventHandler) -> bool:
+    # Backwards-compatible alias (Go-style name).
+    Subscribe = subscribe
+
+    def unsubscribe(self, event_type: SwarmEventType, handler: EventHandler) -> bool:
         """Remove one registration of ``handler`` for ``event_type``.
 
         Returns True when a registration was removed.
@@ -69,7 +75,10 @@ class EventBus:
                     return True
             return False
 
-    def SubscribeAll(self, handler: EventHandler) -> Callable[[], None]:
+    # Backwards-compatible alias (Go-style name).
+    Unsubscribe = unsubscribe
+
+    def subscribe_all(self, handler: EventHandler) -> Callable[[], None]:
         """Subscribe a handler to every event type, present and future.
 
         The handler is kept in a dedicated catch-all list consulted on
@@ -88,7 +97,10 @@ class EventBus:
 
             return unsubscribe
 
-    def Publish(self, event: SwarmEvent) -> None:
+    # Backwards-compatible alias (Go-style name).
+    SubscribeAll = subscribe_all
+
+    def publish(self, event: SwarmEvent) -> None:
         """Publish an event to the bus. Mirrors EventBus.Publish().
 
         When the bounded channel is full the event is dropped and the
@@ -103,10 +115,16 @@ class EventBus:
             with self._mu:
                 self._dropped += 1
 
-    def Start(self) -> None:
+    # Backwards-compatible alias (Go-style name).
+    Publish = publish
+
+    def start(self) -> None:
         """Start the event processing goroutine. Mirrors EventBus.Start()."""
         self._thread = threading.Thread(target=self._process_events, daemon=True)
         self._thread.start()
+
+    # Backwards-compatible alias (Go-style name).
+    Start = start
 
     def _process_events(self) -> None:
         while True:
@@ -127,7 +145,7 @@ class EventBus:
         for h in catch_all:
             h(event)
 
-    def Stop(self) -> None:
+    def stop(self) -> None:
         """Stop the event bus. Mirrors EventBus.Stop()."""
         with self._mu:
             if self._closed:
@@ -137,12 +155,21 @@ class EventBus:
         if self._thread is not None:
             self._thread.join(timeout=2.0)
 
-    def Len(self) -> int:
+    # Backwards-compatible alias (Go-style name).
+    Stop = stop
+
+    def len(self) -> int:
         """Return the total number of registered handlers. Mirrors EventBus.Len()."""
         with self._mu:
             return sum(len(hs) for hs in self._handlers.values()) + len(self._all_handlers)
 
+    # Backwards-compatible alias (Go-style name).
+    Len = len
 
-def NewEventBus(ctx: _Context | None = None) -> EventBus:
+
+def new_event_bus(ctx: _Context | None = None) -> EventBus:
     """Create a new event bus. Mirrors swarm.NewEventBus()."""
     return EventBus(ctx)
+
+# Backwards-compatible alias (Go-style name).
+NewEventBus = new_event_bus
