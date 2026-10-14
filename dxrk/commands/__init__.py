@@ -9,9 +9,12 @@ from .registry import (
     Flag,
     Registry,
     RunFn,
+    RunFunc,
+    format_duration,
     go_duration,
     go_quote,
     parse_argv,
+    quote_str,
 )
 
 __all__ = [
@@ -19,8 +22,11 @@ __all__ = [
     "CommandContext",
     "Flag",
     "Registry",
+    "RunFunc",
     "RunFn",
+    "format_duration",
     "go_duration",
+    "quote_str",
     "go_quote",
     "parse_argv",
     "register_all",

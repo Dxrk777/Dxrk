@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from .registry import Command, CommandContext, Registry, go_quote
+from .registry import Command, CommandContext, Registry, quote_str
 from .session import (
     SessionError,
     _find_session,
@@ -22,7 +22,7 @@ def register_rewind_command(reg: Registry) -> None:
         try:
             count = int(ctx.args[1])
         except ValueError:
-            ctx.err.write(f"Error: cantidad de mensajes inválida {go_quote(ctx.args[1])}\n")
+            ctx.err.write(f"Error: cantidad de mensajes inválida {quote_str(ctx.args[1])}\n")
             return 1
         if count < 1:
             ctx.err.write("Error: la cantidad de mensajes debe ser >= 1\n")
@@ -39,7 +39,7 @@ def register_rewind_command(reg: Registry) -> None:
 
         s = _find_session(sessions, session_id)
         if s is None:
-            ctx.err.write(f"Error: sesión {go_quote(session_id)} no encontrada\n")
+            ctx.err.write(f"Error: sesión {quote_str(session_id)} no encontrada\n")
             return 1
 
         messages = s.messages
@@ -59,13 +59,12 @@ def register_rewind_command(reg: Registry) -> None:
             return 1
 
         out.write(f"Sesión {s.id[:8]} retrocedida en {len(removed)} mensaje(s) ({len(remaining)} restantes)\n")
-        if removed:
-            out.write("\nMensajes eliminados:\n")
-            for m in removed:
-                content = m.content
-                if len(content) > 80:
-                    content = content[:77] + "..."
-                out.write(f"  [{m.role}] {content}\n")
+        out.write("\nMensajes eliminados:\n")
+        for m in removed:
+            content = m.content
+            if len(content) > 80:
+                content = content[:77] + "..."
+            out.write(f"  [{m.role}] {content}\n")
         return 0
 
     cmd = Command(

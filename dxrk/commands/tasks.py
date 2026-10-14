@@ -13,7 +13,7 @@ from dxrk.task import (
     with_priority,
 )
 
-from .registry import Command, CommandContext, Flag, Registry, go_quote
+from .registry import Command, CommandContext, Flag, Registry, quote_str
 
 _queue = new_queue()
 
@@ -48,7 +48,7 @@ def tasks_add_cmd() -> Command:
         try:
             typ = TaskType(typ_name)
         except ValueError:
-            ctx.err.write(f"Error: tipo de tarea inválido {go_quote(typ_name)}\n")
+            ctx.err.write(f"Error: tipo de tarea inválido {quote_str(typ_name)}\n")
             return 1
         try:
             priority = int(ctx.flag_str("priority", "0"))
@@ -84,7 +84,7 @@ def tasks_delete_cmd() -> Command:
         tasks = _queue.list()
         found = any(t.id == task_id for t in tasks)
         if not found:
-            ctx.err.write(f"Error: tarea {go_quote(ctx.args[0])} no encontrada\n")
+            ctx.err.write(f"Error: tarea {quote_str(ctx.args[0])} no encontrada\n")
             return 1
         _queue.remove(task_id)
         out.write(f"Tarea {task_id} eliminada\n")

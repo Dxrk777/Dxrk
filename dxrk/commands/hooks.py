@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 import os
 
-from .registry import Command, CommandContext, Registry, go_quote
+from .registry import Command, CommandContext, Registry, quote_str
 
 HOOK_EVENTS = (
     "pre-commit",
@@ -81,13 +81,13 @@ def register_hooks_command(reg: Registry) -> None:
         command = ctx.args[2]
 
         if event not in HOOK_EVENTS:
-            ctx.err.write(f"Error: evento inválido {go_quote(event)}\n")
+            ctx.err.write(f"Error: evento inválido {quote_str(event)}\n")
             return 1
 
         hooks = load_hooks()
         for h in hooks:
             if h.get("name") == name:
-                ctx.err.write(f"Error: el hook {go_quote(name)} ya existe\n")
+                ctx.err.write(f"Error: el hook {quote_str(name)} ya existe\n")
                 return 1
 
         hooks.append(
@@ -101,7 +101,7 @@ def register_hooks_command(reg: Registry) -> None:
         if not save_hooks(hooks):
             ctx.err.write("Error: al escribir la configuración de hooks\n")
             return 1
-        out.write(f"Hook {go_quote(name)} agregado ({event})\n")
+        out.write(f"Hook {quote_str(name)} agregado ({event})\n")
         return 0
 
     def remove_run(ctx: CommandContext) -> int:
@@ -110,12 +110,12 @@ def register_hooks_command(reg: Registry) -> None:
         hooks = load_hooks()
         remaining = [h for h in hooks if h.get("name") != name]
         if len(remaining) == len(hooks):
-            ctx.err.write(f"Error: hook {go_quote(name)} no encontrado\n")
+            ctx.err.write(f"Error: hook {quote_str(name)} no encontrado\n")
             return 1
         if not save_hooks(remaining):
             ctx.err.write("Error: al escribir la configuración de hooks\n")
             return 1
-        out.write(f"Hook {go_quote(name)} eliminado\n")
+        out.write(f"Hook {quote_str(name)} eliminado\n")
         return 0
 
     list_cmd = Command(name="hooks list", short="Listar los hooks configurados", run=list_run)

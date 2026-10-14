@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from .registry import Command, CommandContext, Flag, Registry, go_quote
+from .registry import Command, CommandContext, Flag, Registry, quote_str
 from .session import SessionError, _fmt_ts_short, list_session_files
 
 
@@ -53,7 +53,7 @@ def register_resume_command(reg: Registry) -> None:
 
         if found is None:
             ctx.err.write(
-                f"Error: ninguna sesión coincide con {go_quote(query)} — "
+                f"Error: ninguna sesión coincide con {quote_str(query)} — "
                 "usa `dxrk resume` para listar las sesiones recientes\n"
             )
             return 1

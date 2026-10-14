@@ -7,7 +7,7 @@ import os
 
 from dxrk.utils.session import Session
 
-from .registry import Command, CommandContext, Flag, Registry, go_quote
+from .registry import Command, CommandContext, Flag, Registry, quote_str
 from .session import SessionError, _write_private_file, load_session
 
 _EXPORT_FORMATS = ("md", "markdown", "html", "json", "xml")
@@ -67,7 +67,7 @@ def register_export_command(reg: Registry) -> None:
             ext = os.path.splitext(output_path)[1].lstrip(".").lower()
             fmt = ext if ext else "md"
         if fmt not in _EXPORT_FORMATS:
-            ctx.err.write(f"Error: formato no compatible {go_quote(fmt)}\n")
+            ctx.err.write(f"Error: formato no compatible {quote_str(fmt)}\n")
             return 1
 
         body = export_session_body(s, fmt)

@@ -35,7 +35,7 @@ from dxrk.utils.session_storage import (
     open_session_storage,
 )
 
-from .registry import Command, CommandContext, Flag, Registry, go_duration, go_quote
+from .registry import Command, CommandContext, Flag, Registry, format_duration, quote_str
 
 SESSION_DIR_NAME = "sessions"
 QUARANTINE_DIR_NAME = ".quarantine"
@@ -256,7 +256,7 @@ def load_session(session_id: str) -> Session:
     found = _find_session(list_session_files(), session_id)
     if found is not None:
         return found
-    raise SessionError(f"sesión {go_quote(session_id)} no encontrada")
+    raise SessionError(f"sesión {quote_str(session_id)} no encontrada")
 
 
 def save_session_strict(s: Session) -> None:
@@ -281,10 +281,10 @@ def delete_session_strict(s: Session) -> None:
     """Removes a session from the canonical store. Raises SessionError."""
     store = _store()
     if not store.exists(s.id):
-        raise SessionError(f"al eliminar la sesión {go_quote(s.id)}: no existe")
+        raise SessionError(f"al eliminar la sesión {quote_str(s.id)}: no existe")
     store.delete(s.id)
     if store.exists(s.id):
-        raise SessionError(f"al eliminar la sesión {go_quote(s.id)}")
+        raise SessionError(f"al eliminar la sesión {quote_str(s.id)}")
 
 
 def delete_session_file(s: Session) -> bool:
@@ -423,7 +423,7 @@ def session_switch_cmd() -> Command:
             return 1
         found = _find_session(sessions, session_id)
         if found is None:
-            ctx.err.write(f"Error: sesión {go_quote(session_id)} no encontrada\n")
+            ctx.err.write(f"Error: sesión {quote_str(session_id)} no encontrada\n")
             return 1
         found.updated_at = now()
         try:
@@ -455,7 +455,7 @@ def session_delete_cmd() -> Command:
             return 1
         found = _find_session(sessions, session_id)
         if found is None:
-            ctx.err.write(f"Error: sesión {go_quote(session_id)} no encontrada\n")
+            ctx.err.write(f"Error: sesión {quote_str(session_id)} no encontrada\n")
             return 1
         try:
             delete_session_strict(found)
@@ -498,7 +498,7 @@ def session_info_cmd() -> Command:
         out.write(f"Actualizada:        {_fmt_ts(s.updated_at)}\n")
         out.write(f"Mensajes:           {s.message_count}\n")
         out.write(f"Tokens:             {s.token_count}\n")
-        out.write(f"Duración:           {go_duration(duration_secs)}\n")
+        out.write(f"Duración:           {format_duration(duration_secs)}\n")
         if s.tags:
             out.write(f"Etiquetas:          {', '.join(s.tags)}\n")
         if s.summary:

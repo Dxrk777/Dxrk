@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 
 from dxrk.utils.session import now
 
-from .registry import Command, CommandContext, Registry, go_duration
+from .registry import Command, CommandContext, Registry, format_duration
 
 
 @dataclass
@@ -70,7 +70,7 @@ def run_stats(ctx: CommandContext, s: SessionStats) -> int:
     err.write("Estadísticas de la sesión\n")
     err.write("─────────────────────────\n")
     err.write(f"  Inicio:         {started.strftime('%Y-%m-%d %H:%M:%S')}\n")
-    err.write(f"  Duración:       {go_duration(elapsed)}\n")
+    err.write(f"  Duración:       {format_duration(elapsed)}\n")
     err.write(f"  Modelo:         {model_or_none(s.model)}\n")
     err.write(f"  Mensajes:       {s.messages}\n")
     err.write(f"  Llamadas a herramientas: {s.tool_calls}\n")

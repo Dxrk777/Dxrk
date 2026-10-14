@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from .registry import Command, CommandContext, Registry, go_quote
+from .registry import Command, CommandContext, Registry, quote_str
 from .session import SessionError, list_session_files, save_session_strict
 
 
@@ -37,10 +37,10 @@ def register_rename_command(reg: Registry) -> None:
                     ctx.err.write("Error: al guardar la sesión renombrada\n")
                     return 1
 
-                ctx.out.write(f"Sesión {s.id[:8]} renombrada: {go_quote(old_title)} -> {go_quote(new_name)}\n")
+                ctx.out.write(f"Sesión {s.id[:8]} renombrada: {quote_str(old_title)} -> {quote_str(new_name)}\n")
                 return 0
 
-        ctx.err.write(f"Error: sesión {go_quote(session_id)} no encontrada\n")
+        ctx.err.write(f"Error: sesión {quote_str(session_id)} no encontrada\n")
         return 1
 
     cmd = Command(

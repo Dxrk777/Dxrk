@@ -9,17 +9,23 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TextIO
 
-RunFn = Callable[["CommandContext"], int]
+RunFunc = Callable[["CommandContext"], int]
 
-_GO_QUOTE_CHARS = {'"': r"\"", "\\": r"\\", "\n": r"\n", "\t": r"\t", "\r": r"\r"}
+# Backwards-compatible alias (Go-style name, pre-rename).
+RunFn = RunFunc
+
+_QUOTE_CHARS = {'"': r"\"", "\\": r"\\", "\n": r"\n", "\t": r"\t", "\r": r"\r"}
+
+# Backwards-compatible alias (Go-style name, pre-rename).
+_GO_QUOTE_CHARS = _QUOTE_CHARS
 
 
-def go_quote(s: str) -> str:
+def quote_str(s: str) -> str:
     """Formats a string like %q."""
     out = ['"']
     for ch in s:
-        if ch in _GO_QUOTE_CHARS:
-            out.append(_GO_QUOTE_CHARS[ch])
+        if ch in _QUOTE_CHARS:
+            out.append(_QUOTE_CHARS[ch])
         elif ord(ch) < 0x20 or ord(ch) == 0x7F:
             out.append(f"\\u{ord(ch):04x}")
         else:
@@ -28,7 +34,11 @@ def go_quote(s: str) -> str:
     return "".join(out)
 
 
-def go_duration(seconds: float) -> str:
+# Backwards-compatible alias (Go-style name, pre-rename).
+go_quote = quote_str
+
+
+def format_duration(seconds: float) -> str:
     """Formats a duration like time.Duration.String()."""
     secs = int(seconds)
     secs = max(secs, 0)
@@ -40,6 +50,10 @@ def go_duration(seconds: float) -> str:
     if minutes:
         return f"{minutes}m{sec}s"
     return f"{sec}s"
+
+
+# Backwards-compatible alias (Go-style name, pre-rename).
+go_duration = format_duration
 
 
 @dataclass
@@ -86,7 +100,7 @@ class Command:
     min_args: int = 0
     max_args: int | None = None
     flags: dict[str, Flag] = field(default_factory=dict)
-    run: RunFn | None = None
+    run: RunFunc | None = None
 
     def add_flag(self, flag: Flag) -> None:
         self.flags[flag.name] = flag
