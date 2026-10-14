@@ -102,7 +102,7 @@ class TLSConfig:
     root_cas: list[crypto_x509.Certificate] = field(default_factory=list)
     client_cas: list[crypto_x509.Certificate] = field(default_factory=list)
 
-    def LoadCertKeyFromFile(self, cert_file: str, key_file: str) -> None:
+    def load_cert_key_from_file(self, cert_file: str, key_file: str) -> None:
         """Load a certificate/key pair from files (raises on error)."""
         try:
             with open(cert_file, "rb") as f:
@@ -119,7 +119,7 @@ class TLSConfig:
         self.cert_data = cert_data
         self.key_data = key_data
 
-    def LoadCAFromFile(self, ca_file: str) -> None:
+    def load_ca_from_file(self, ca_file: str) -> None:
         """Load CA certificates from a file (raises on error)."""
         try:
             with open(ca_file, "rb") as f:
@@ -129,7 +129,7 @@ class TLSConfig:
         self.ca_file = ca_file
         self.ca_data = ca_data
 
-    def SetCertKeyData(self, cert_data: bytes, key_data: bytes) -> None:
+    def set_cert_key_data(self, cert_data: bytes, key_data: bytes) -> None:
         """Set the certificate/key from raw PEM data (raises on error)."""
         if not cert_data or not key_data:
             raise ErrMissingCertOrKey
@@ -140,7 +140,7 @@ class TLSConfig:
         self.cert_data = cert_data
         self.key_data = key_data
 
-    def SetCAData(self, ca_data: bytes) -> None:
+    def set_ca_data(self, ca_data: bytes) -> None:
         """Set CA certificates from raw PEM data (raises on error)."""
         if not ca_data:
             raise ErrInvalidCA
@@ -148,7 +148,7 @@ class TLSConfig:
             raise ErrInvalidCA
         self.ca_data = ca_data
 
-    def BuildTLSConfig(self) -> ssl.SSLContext:
+    def build_tls_config(self) -> ssl.SSLContext:
         """Build an ``ssl.SSLContext`` from this configuration."""
         ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         ctx.minimum_version = self.min_version
@@ -192,13 +192,13 @@ class TLSConfig:
 
         return ctx
 
-    def BuildClientTLSConfig(self) -> ssl.SSLContext:
+    def build_client_tls_config(self) -> ssl.SSLContext:
         """Build a client TLS config (no client certificate required)."""
-        ctx = self.BuildTLSConfig()
+        ctx = self.build_tls_config()
         ctx.verify_mode = ssl.CERT_NONE if self.insecure_skip_verify else ssl.CERT_REQUIRED
         return ctx
 
-    def BuildServerTLSConfig(self) -> ssl.SSLContext:
+    def build_server_tls_config(self) -> ssl.SSLContext:
         """Build a server TLS config; requires a certificate/key."""
         if not self.cert_data and not self.cert_file:
             raise ErrMissingCertOrKey
@@ -223,33 +223,33 @@ class TLSConfig:
             ctx.load_verify_locations(cadata=data.decode("utf-8", "replace"))
         return ctx
 
-    def WithMutualTLS(self, ca_data: bytes) -> TLSConfig:
+    def with_mutual_tls(self, ca_data: bytes) -> TLSConfig:
         """Require and verify client certificates against ``ca_data``."""
-        self.SetCAData(ca_data)
+        self.set_ca_data(ca_data)
         self.client_auth = ClientAuthType.RequireAndVerifyClientCert
         return self
 
-    def WithInsecureSkipVerify(self, skip: bool) -> TLSConfig:
+    def with_insecure_skip_verify(self, skip: bool) -> TLSConfig:
         """Set whether server certificates are verified."""
         self.insecure_skip_verify = skip
         return self
 
-    def WithServerName(self, name: str) -> TLSConfig:
+    def with_server_name(self, name: str) -> TLSConfig:
         """Set the server name for SNI/hostname verification."""
         self.server_name = name
         return self
 
-    def WithMinVersion(self, version: ssl.TLSVersion) -> TLSConfig:
+    def with_min_version(self, version: ssl.TLSVersion) -> TLSConfig:
         """Set the minimum TLS version."""
         self.min_version = version
         return self
 
-    def WithCipherSuites(self, suites: list[str]) -> TLSConfig:
+    def with_cipher_suites(self, suites: list[str]) -> TLSConfig:
         """Set the cipher suites (informative; see the fidelity notes)."""
         self.cipher_suites = suites
         return self
 
-    def Clone(self) -> TLSConfig:
+    def clone(self) -> TLSConfig:
         """Return a deep copy of this configuration."""
         return TLSConfig(
             cert_file=self.cert_file,
@@ -269,10 +269,29 @@ class TLSConfig:
             client_cas=list(self.client_cas),
         )
 
+    # Backwards-compatible aliases (Go-style names).
+    LoadCertKeyFromFile = load_cert_key_from_file
+    LoadCAFromFile = load_ca_from_file
+    SetCertKeyData = set_cert_key_data
+    SetCAData = set_ca_data
+    BuildTLSConfig = build_tls_config
+    BuildClientTLSConfig = build_client_tls_config
+    BuildServerTLSConfig = build_server_tls_config
+    WithMutualTLS = with_mutual_tls
+    WithInsecureSkipVerify = with_insecure_skip_verify
+    WithServerName = with_server_name
+    WithMinVersion = with_min_version
+    WithCipherSuites = with_cipher_suites
+    Clone = clone
 
-def NewTLSConfig() -> TLSConfig:
+
+def new_tls_config() -> TLSConfig:
     """Return a TLSConfig with the defaults (TLS 1.2+, 9 cipher suites)."""
     return TLSConfig()
+
+
+# Backwards-compatible alias (Go-style name).
+NewTLSConfig = new_tls_config
 
 
 def _pem_decode(data: bytes) -> bytes | None:
@@ -296,7 +315,7 @@ def _pem_decode(data: bytes) -> bytes | None:
         return None
 
 
-def ParseCertificate(pem_data: bytes) -> crypto_x509.Certificate:
+def parse_certificate(pem_data: bytes) -> crypto_x509.Certificate:
     """Parse a PEM certificate (raises on error)."""
     try:
         return crypto_x509.load_pem_x509_certificate(pem_data)
@@ -304,7 +323,11 @@ def ParseCertificate(pem_data: bytes) -> crypto_x509.Certificate:
         raise _wrap(str(ErrInvalidCert), e) from e
 
 
-def ParsePrivateKey(pem_data: bytes) -> object:
+# Backwards-compatible alias (Go-style name).
+ParseCertificate = parse_certificate
+
+
+def parse_private_key(pem_data: bytes) -> object:
     """Parse a PEM private key (PKCS1/PKCS8/EC); raises on error."""
     try:
         return serialization.load_pem_private_key(pem_data, password=None)
@@ -312,12 +335,20 @@ def ParsePrivateKey(pem_data: bytes) -> object:
         raise _wrap(str(ErrInvalidKey), e) from e
 
 
-def CertificateToPEM(cert: crypto_x509.Certificate) -> bytes:
+# Backwards-compatible alias (Go-style name).
+ParsePrivateKey = parse_private_key
+
+
+def certificate_to_pem(cert: crypto_x509.Certificate) -> bytes:
     """Encode a certificate to PEM bytes."""
     return cert.public_bytes(serialization.Encoding.PEM)
 
 
-def PrivateKeyToPEM(key: object) -> bytes:
+# Backwards-compatible alias (Go-style name).
+CertificateToPEM = certificate_to_pem
+
+
+def private_key_to_pem(key: object) -> bytes:
     """Encode an RSA/EC private key to PKCS8 PEM; raises on other key types."""
     if not isinstance(key, (rsa.RSAPrivateKey, ec.EllipticCurvePrivateKey)):
         raise ErrInvalidKey
@@ -328,17 +359,29 @@ def PrivateKeyToPEM(key: object) -> bytes:
     )
 
 
-def LoadSystemCertPool() -> list[dict]:
+# Backwards-compatible alias (Go-style name).
+PrivateKeyToPEM = private_key_to_pem
+
+
+def load_system_cert_pool() -> list[dict]:
     """Return the system CA certs as list of dicts (ssl.get_ca_certs)."""
     ctx = ssl.create_default_context()
     return ctx.get_ca_certs() or []
 
 
-def NewCertPool(
+# Backwards-compatible alias (Go-style name).
+LoadSystemCertPool = load_system_cert_pool
+
+
+def new_cert_pool(
     certs: Iterable[crypto_x509.Certificate] | None = None,
 ) -> list[crypto_x509.Certificate]:
     """Create a certificate pool from the given certificates."""
     return list(certs or [])
+
+
+# Backwards-compatible alias (Go-style name).
+NewCertPool = new_cert_pool
 
 
 __all__ = [
@@ -346,13 +389,20 @@ __all__ = [
     "VERSION_TLS12",
     "VERSION_TLS13",
     "TLSConfig",
+    "new_tls_config",
     "NewTLSConfig",
     "_pem_decode",
+    "parse_certificate",
     "ParseCertificate",
+    "parse_private_key",
     "ParsePrivateKey",
+    "certificate_to_pem",
     "CertificateToPEM",
+    "private_key_to_pem",
     "PrivateKeyToPEM",
+    "load_system_cert_pool",
     "LoadSystemCertPool",
+    "new_cert_pool",
     "NewCertPool",
     "_DEFAULT_CIPHER_SUITES",
     "_DEFAULT_CURVE_PREFERENCES",

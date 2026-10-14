@@ -98,13 +98,10 @@ def encode(vec: list[float]) -> bytes:
 def decode(blob: bytes, dim: int = DIM) -> list[float] | None:
     if not isinstance(blob, (bytes, bytearray, memoryview)):
         return None
-    try:
-        raw = bytes(blob)
-        if len(raw) != dim * 4:
-            return None
-        return list(struct.unpack(f"<{dim}f", raw))
-    except struct.error:
+    raw = bytes(blob)
+    if len(raw) != dim * 4:
         return None
+    return list(struct.unpack(f"<{dim}f", raw))
 
 
 def idf_weights(pool_counts: list[list[float]]) -> list[float]:

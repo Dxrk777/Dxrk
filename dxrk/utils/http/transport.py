@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Protocol, cast
 import httpx
 
 from .errors import ErrNoProxyConfigured, HttpError
-from .proxy import GetProxyFromEnvironment, ProxyConfig
+from .proxy import ProxyConfig, get_proxy_from_environment
 from .tls import TLSConfig
 
 if TYPE_CHECKING:
@@ -26,13 +26,35 @@ class Transport(Protocol):
     def clone(self) -> Transport: ...
 
 
+def _proxy_url_of_impl(pc: ProxyConfig) -> str | None:
+    """Call ``get_proxy_url`` (or legacy ``GetProxyURL``) on a proxy config."""
+    get = getattr(pc, "get_proxy_url", None)
+    if callable(get):
+        return cast("str | None", get())
+    legacy = getattr(pc, "GetProxyURL", None)
+    if callable(legacy):
+        return cast("str | None", legacy())
+    raise AttributeError("proxy config must implement get_proxy_url()")
+
+
+def _build_client_tls_config(tc: TLSConfig) -> ssl.SSLContext:
+    """Call ``build_client_tls_config`` (or legacy ``BuildClientTLSConfig``)."""
+    build = getattr(tc, "build_client_tls_config", None)
+    if callable(build):
+        return cast(ssl.SSLContext, build())
+    legacy = getattr(tc, "BuildClientTLSConfig", None)
+    if callable(legacy):
+        return cast(ssl.SSLContext, legacy())
+    raise AttributeError("TLS config must implement build_client_tls_config()")
+
+
 def _env_proxy_url() -> str | None:
     """Return the environment proxy URL for the transport, or None."""
-    pc = GetProxyFromEnvironment()
+    pc = get_proxy_from_environment()
     if pc is None:
         return None
     try:
-        return pc.GetProxyURL()
+        return _proxy_url_of_impl(pc)
     except HttpError:
         return None
 
@@ -65,7 +87,7 @@ def _transport_from_config(
     proxy: str | None = None
     if proxy_config is not None:
         try:
-            proxy = proxy_config.GetProxyURL()
+            proxy = _proxy_url_of_impl(proxy_config)
         except HttpError:
             proxy = None
     if proxy is None:
@@ -77,7 +99,7 @@ def _transport_from_config(
             verify = False
         elif tls_config.ca_data or tls_config.ca_file or tls_config.cert_data or tls_config.cert_file:
             try:
-                verify = tls_config.BuildClientTLSConfig()
+                verify = _build_client_tls_config(tls_config)
             except HttpError:
                 verify = True
 
@@ -90,7 +112,7 @@ def _proxy_url_of(pc: ProxyConfig | str | None) -> str | None:
     if isinstance(pc, str):
         return pc
     try:
-        return pc.GetProxyURL()
+        return _proxy_url_of_impl(pc)
     except HttpError:
         return None
 
@@ -110,7 +132,7 @@ def _apply_proxy_config_impl(client: HTTPClient, pc: ProxyConfig) -> Exception |
 def _apply_tls_config_impl(client: HTTPClient, tc: TLSConfig) -> Exception | None:
     """Apply a TLS config to the client's transport."""
     try:
-        ctx = tc.BuildClientTLSConfig()
+        ctx = _build_client_tls_config(tc)
     except HttpError as e:
         return e
     client.transport = _make_transport(
@@ -125,10 +147,12 @@ def _apply_tls_config_impl(client: HTTPClient, tc: TLSConfig) -> Exception | Non
 
 __all__ = [
     "Transport",
+    "_build_client_tls_config",
     "_env_proxy_url",
     "_make_transport",
-    "_transport_from_config",
     "_proxy_url_of",
+    "_proxy_url_of_impl",
+    "_transport_from_config",
     "_apply_proxy_config_impl",
     "_apply_tls_config_impl",
 ]

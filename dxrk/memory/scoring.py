@@ -247,8 +247,6 @@ def _days_since_access(meta: dict[str, object], current: datetime) -> float:
     dt = parse_dt(raw)
     if dt is None:
         return 0.0
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=UTC)
     age = (current - dt).total_seconds() / 86400.0
     return max(0.0, age)
 
@@ -281,10 +279,7 @@ def score_meta(
     difficulty = _clamp_float(m.get("D"), 5.0, low=1.0, high=10.0)
     _ = difficulty  # difficulty shapes updates, not the rank itself
     rd = _clamp_float(m.get("rd"), RDU_RD_INIT, low=0.0)
-    try:
-        n = int(cast(Any, m.get("access_count_total", m.get("access_count", 0))))
-    except (TypeError, ValueError):
-        n = 0
+    n = int(cast(Any, m.get("access_count_total", m.get("access_count", 0))))
     if n < 0:
         n = 0
     current = now or datetime.now(UTC)

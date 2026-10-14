@@ -17,13 +17,14 @@ from .context import _CTX_CANCELED, _Context
 from .errors import _TIMEOUT_ERRORS, ErrInvalidProxyURL, HttpError, _wrap
 from .proxy import ProxyConfig
 from .retry import (
-    DefaultRetryPolicy,
     RetryPolicy,
     _is_retryable_error,
+    default_retry_policy,
     defaultExpectContinueTimeout,
     defaultIdleConnTimeout,
     defaultMaxIdleConns,
     defaultTLSHandshakeTimeout,
+    policy_is_retryable,
 )
 from .tls import TLSConfig
 from .transport import (
@@ -95,11 +96,14 @@ class HTTPClient:
         with self.mu:
             return _apply_tls_config_impl(self, tc)
 
-    def Do(self, req: httpx.Request) -> tuple[httpx.Response | None, Exception | None]:
+    def do(self, req: httpx.Request) -> tuple[httpx.Response | None, Exception | None]:
         """Send the request, retrying per the client's policy."""
-        return self.DoWithRetry(req, self.retry_policy)
+        return self.do_with_retry(req, self.retry_policy)
 
-    def DoWithRetry(
+    # Backwards-compatible alias (Go-style name).
+    Do = do
+
+    def do_with_retry(
         self, req: httpx.Request, policy: RetryPolicy | None
     ) -> tuple[httpx.Response | None, Exception | None]:
         """Send the request with the given retry policy (client policy when
@@ -123,7 +127,7 @@ class HTTPClient:
                     return None, err
             else:
                 last_resp = resp
-                if resp is not None and not policy.IsRetryable(resp.status_code):
+                if resp is not None and not policy_is_retryable(policy, resp.status_code):
                     return resp, None
                 # Close intermediate retryable responses, but keep the
                 # last one open so a streamed body stays usable.
@@ -145,6 +149,9 @@ class HTTPClient:
         from .errors import ErrMaxRetriesExceeded
 
         return None, ErrMaxRetriesExceeded
+
+    # Backwards-compatible alias (Go-style name).
+    DoWithRetry = do_with_retry
 
     def _send(self, req: httpx.Request) -> tuple[httpx.Response | None, Exception | None]:
         """Send one request, returning a response or an error.
@@ -168,24 +175,33 @@ class HTTPClient:
             finally:
                 self.client.timeout = previous_timeout
 
-    def DoWithContext(self, ctx: _Context, req: httpx.Request) -> tuple[httpx.Response | None, Exception | None]:
+    def do_with_context(self, ctx: _Context, req: httpx.Request) -> tuple[httpx.Response | None, Exception | None]:
         """Send the request with a context deadline/cancellation."""
         if ctx is not None and ctx.err() is not None:
             return None, HttpError(_CTX_CANCELED)
         req._ctx = ctx  # type: ignore[attr-defined]
-        return self.Do(req)
+        return self.do(req)
 
-    def GetClient(self) -> httpx.Client:
+    # Backwards-compatible alias (Go-style name).
+    DoWithContext = do_with_context
+
+    def get_client(self) -> httpx.Client:
         """Return the underlying httpx client."""
         with self.mu:
             return self.client
 
-    def GetTransport(self) -> httpx.HTTPTransport:
+    # Backwards-compatible alias (Go-style name).
+    GetClient = get_client
+
+    def get_transport(self) -> httpx.HTTPTransport:
         """Return the underlying transport."""
         with self.mu:
             return self.transport
 
-    def SetProxy(self, proxy_url: str) -> None:
+    # Backwards-compatible alias (Go-style name).
+    GetTransport = get_transport
+
+    def set_proxy(self, proxy_url: str) -> None:
         """Set the proxy from a URL string (raises on invalid URLs)."""
         parsed = urlparse(proxy_url)
         if parsed.scheme == "" or parsed.hostname is None:
@@ -194,12 +210,18 @@ class HTTPClient:
             self.transport = _make_transport(proxy=proxy_url)
             self.client._transport = self.transport  # type: ignore[attr-defined]
 
-    def CloseIdleConnections(self) -> None:
+    # Backwards-compatible alias (Go-style name).
+    SetProxy = set_proxy
+
+    def close_idle_connections(self) -> None:
         """Close idle connections held by the transport."""
         with self.mu:
             self.transport.close()
 
-    def Clone(self) -> HTTPClient:
+    # Backwards-compatible alias (Go-style name).
+    CloseIdleConnections = close_idle_connections
+
+    def clone(self) -> HTTPClient:
         """Return a client sharing the retry/proxy/TLS config with a fresh
         transport (independent connection pool) and client."""
         with self.mu:
@@ -220,7 +242,10 @@ class HTTPClient:
                 tls_config=self.tls_config,
             )
 
-    def WithMiddleware(self, middleware: Callable[[httpx.HTTPTransport], httpx.HTTPTransport]) -> HTTPClient:
+    # Backwards-compatible alias (Go-style name).
+    Clone = clone
+
+    def with_middleware(self, middleware: Callable[[httpx.HTTPTransport], httpx.HTTPTransport]) -> HTTPClient:
         """Wrap the transport with middleware (e.g. a logging transport).
 
         The base transport is rebuilt from the current proxy/TLS config
@@ -236,6 +261,9 @@ class HTTPClient:
             self.client._transport = new_transport  # type: ignore[attr-defined]
             return self
 
+    # Backwards-compatible alias (Go-style name).
+    WithMiddleware = with_middleware
+
 
 def _client_timeout(req: httpx.Request, default: float | httpx.Timeout = 30.0) -> httpx.Timeout:
     """Compute the client timeout for a request (ctx deadline wins)."""
@@ -246,7 +274,7 @@ def _client_timeout(req: httpx.Request, default: float | httpx.Timeout = 30.0) -
     return httpx.Timeout(default)
 
 
-def NewHTTPClient(
+def new_http_client(
     opts: ClientOptions | None,
 ) -> tuple[HTTPClient | None, Exception | None]:
     """Create an HTTP client from options (defaults when zero)."""
@@ -269,7 +297,7 @@ def NewHTTPClient(
 
     retry_policy = opts.retry_policy
     if retry_policy is None:
-        retry_policy = DefaultRetryPolicy()
+        retry_policy = default_retry_policy()
 
     limits = httpx.Limits(
         max_connections=opts.max_conns_per_host or None,
@@ -323,10 +351,15 @@ def NewHTTPClient(
     return hc, None
 
 
+# Backwards-compatible alias (Go-style name).
+NewHTTPClient = new_http_client
+
+
 __all__ = [
     "ClientOptions",
     "HTTPClient",
     "_client_timeout",
     "_is_retryable_error",
+    "new_http_client",
     "NewHTTPClient",
 ]

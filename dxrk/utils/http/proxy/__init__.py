@@ -42,15 +42,21 @@ class ProxyAuth:
             return self.username
         return self.username + ":" + self.password
 
-    def String(self) -> str:
+    def to_string(self) -> str:
         """Backwards-compatible alias for ``str(auth)``."""
         return str(self)
 
-    def Encode(self) -> str:
+    # Backwards-compatible alias (Go-style name).
+    String = to_string
+
+    def encode(self) -> str:
         """Return "user:pass"; "" without a username."""
         if self.username == "":
             return ""
         return self.username + ":" + self.password
+
+    # Backwards-compatible alias (Go-style name).
+    Encode = encode
 
 
 @dataclass
@@ -64,7 +70,7 @@ class ProxyConfig:
     bypass: list[str] = field(default_factory=list)
     no_proxy: str = ""
 
-    def GetProxyURL(self) -> str | None:
+    def get_proxy_url(self) -> str | None:
         """Return the proxy URL string, or None on error."""
         if self.type is ProxyType.ProxyTypeHTTP:
             scheme = "http"
@@ -78,15 +84,18 @@ class ProxyConfig:
             raise _wrap(str(ErrUnsupportedProxy), HttpError(str(self.type)))
         if not self.host:
             return None
-        host_port = _join_host_port(self.host, self.ProxyPort())
+        host_port = _join_host_port(self.host, self.proxy_port())
         auth = ""
         if self.auth is not None:
-            auth = self.auth.Encode()
+            auth = self.auth.encode()
             if auth:
                 auth = auth + "@"
         return f"{scheme}://{auth}{host_port}"
 
-    def ProxyPort(self) -> int:
+    # Backwards-compatible alias (Go-style name).
+    GetProxyURL = get_proxy_url
+
+    def proxy_port(self) -> int:
         """Return the effective port (defaults for the type when unset)."""
         if self.port > 0:
             return self.port
@@ -98,18 +107,24 @@ class ProxyConfig:
             return 1080
         return 0
 
+    # Backwards-compatible alias (Go-style name).
+    ProxyPort = proxy_port
+
     def __str__(self) -> str:
         """Return the proxy URL; "" if it cannot be serialized."""
         try:
-            return self.GetProxyURL() or ""
+            return self.get_proxy_url() or ""
         except HttpError:
             return ""
 
-    def String(self) -> str:
+    def to_string(self) -> str:
         """Backwards-compatible alias for ``str(config)``."""
         return str(self)
 
-    def ShouldBypass(self, host: str) -> bool:
+    # Backwards-compatible alias (Go-style name).
+    String = to_string
+
+    def should_bypass(self, host: str) -> bool:
         """Return True if ``host`` should not use the proxy."""
         for bypass in self.bypass:
             if _match_bypass(bypass, host):
@@ -121,16 +136,25 @@ class ProxyConfig:
                     return True
         return False
 
-    def AddBypass(self, pattern: str) -> None:
+    # Backwards-compatible alias (Go-style name).
+    ShouldBypass = should_bypass
+
+    def add_bypass(self, pattern: str) -> None:
         """Add a bypass pattern (ignored when empty)."""
         if pattern != "":
             self.bypass.append(pattern)
 
-    def SetNoProxy(self, no_proxy: str) -> None:
+    # Backwards-compatible alias (Go-style name).
+    AddBypass = add_bypass
+
+    def set_no_proxy(self, no_proxy: str) -> None:
         """Set the no-proxy pattern list."""
         self.no_proxy = no_proxy
 
-    def Clone(self) -> ProxyConfig:
+    # Backwards-compatible alias (Go-style name).
+    SetNoProxy = set_no_proxy
+
+    def clone(self) -> ProxyConfig:
         """Return a deep copy of this configuration."""
         auth = ProxyAuth(self.auth.username, self.auth.password) if self.auth else None
         return ProxyConfig(
@@ -142,8 +166,11 @@ class ProxyConfig:
             no_proxy=self.no_proxy,
         )
 
+    # Backwards-compatible alias (Go-style name).
+    Clone = clone
 
-def NewProxyConfig(proxy_url: str) -> tuple[ProxyConfig | None, Exception | None]:
+
+def new_proxy_config(proxy_url: str) -> tuple[ProxyConfig | None, Exception | None]:
     """Parse a proxy URL into a ProxyConfig )."""
     if proxy_url == "":
         return None, ErrInvalidProxyURL
@@ -178,7 +205,9 @@ def NewProxyConfig(proxy_url: str) -> tuple[ProxyConfig | None, Exception | None
             port = 8080
         elif proxy_type is ProxyType.ProxyTypeHTTPS:
             port = 8443
-        elif proxy_type in (ProxyType.ProxyTypeSOCKS4, ProxyType.ProxyTypeSOCKS5):
+        else:
+            # Solo quedan SOCKS4/SOCKS5: el guard de arriba ya rechazó
+            # cualquier otro esquema, así que el fall-through era inalcanzable.
             port = 1080
 
     auth: ProxyAuth | None = None
@@ -199,19 +228,35 @@ def NewProxyConfig(proxy_url: str) -> tuple[ProxyConfig | None, Exception | None
     )
 
 
-def NewHTTPProxy(host: str, port: int, auth: ProxyAuth | None = None) -> ProxyConfig:
+def new_http_proxy(host: str, port: int, auth: ProxyAuth | None = None) -> ProxyConfig:
     """Create an HTTP proxy config."""
     return ProxyConfig(type=ProxyType.ProxyTypeHTTP, host=host, port=port, auth=auth)
 
 
-def NewHTTPSProxy(host: str, port: int, auth: ProxyAuth | None = None) -> ProxyConfig:
+# Backwards-compatible alias (Go-style name).
+NewProxyConfig = new_proxy_config
+
+
+# Backwards-compatible alias (Go-style name).
+NewHTTPProxy = new_http_proxy
+
+
+def new_https_proxy(host: str, port: int, auth: ProxyAuth | None = None) -> ProxyConfig:
     """Create an HTTPS proxy config."""
     return ProxyConfig(type=ProxyType.ProxyTypeHTTPS, host=host, port=port, auth=auth)
 
 
-def NewSOCKS5Proxy(host: str, port: int, auth: ProxyAuth | None = None) -> ProxyConfig:
+# Backwards-compatible alias (Go-style name).
+NewHTTPSProxy = new_https_proxy
+
+
+def new_socks5_proxy(host: str, port: int, auth: ProxyAuth | None = None) -> ProxyConfig:
     """Create a SOCKS5 proxy config."""
     return ProxyConfig(type=ProxyType.ProxyTypeSOCKS5, host=host, port=port, auth=auth)
+
+
+# Backwards-compatible alias (Go-style name).
+NewSOCKS5Proxy = new_socks5_proxy
 
 
 def _parse_bypass_list(bypass: str) -> list[str]:
@@ -251,7 +296,7 @@ def _join_host_port(host: str, port: int) -> str:
     return f"{host}:{port}"
 
 
-def GetProxyFromEnvironment() -> ProxyConfig | None:
+def get_proxy_from_environment() -> ProxyConfig | None:
     """Return a ProxyConfig from HTTPS_PROXY/HTTP_PROXY (deliberate
     divergence: the original ``getEnv`` returns "" unconditionally, so the original
     function always returns None; Python reads the real environment)."""
@@ -263,24 +308,32 @@ def GetProxyFromEnvironment() -> ProxyConfig | None:
             break
     if proxy_url == "":
         return None
-    config, err = NewProxyConfig(proxy_url)
+    config, err = new_proxy_config(proxy_url)
     if err is not None or config is None:
         return None
     no_proxy = os.environ.get("NO_PROXY", "")
     if no_proxy == "":
         no_proxy = os.environ.get("no_proxy", "")
-    config.SetNoProxy(no_proxy)
+    config.set_no_proxy(no_proxy)
     return config
 
 
-def ParseProxyURL(proxy_url: str) -> tuple[ProxyConfig | None, Exception | None]:
-    """Parse a proxy URL (alias of NewProxyConfig)."""
-    return NewProxyConfig(proxy_url)
+# Backwards-compatible alias (Go-style name).
+GetProxyFromEnvironment = get_proxy_from_environment
 
 
-def MustParseProxyURL(proxy_url: str) -> ProxyConfig:
+def parse_proxy_url(proxy_url: str) -> tuple[ProxyConfig | None, Exception | None]:
+    """Parse a proxy URL (alias of new_proxy_config)."""
+    return new_proxy_config(proxy_url)
+
+
+# Backwards-compatible alias (Go-style name).
+ParseProxyURL = parse_proxy_url
+
+
+def must_parse_proxy_url(proxy_url: str) -> ProxyConfig:
     """Parse a proxy URL; raises (panic equivalent) on error."""
-    config, err = NewProxyConfig(proxy_url)
+    config, err = new_proxy_config(proxy_url)
     if err is not None:
         raise err
     if config is None:
@@ -288,19 +341,30 @@ def MustParseProxyURL(proxy_url: str) -> ProxyConfig:
     return config
 
 
+# Backwards-compatible alias (Go-style name).
+MustParseProxyURL = must_parse_proxy_url
+
+
 __all__ = [
     "ProxyType",
     "ProxyAuth",
     "ProxyConfig",
+    "new_proxy_config",
     "NewProxyConfig",
+    "new_http_proxy",
     "NewHTTPProxy",
+    "new_https_proxy",
     "NewHTTPSProxy",
+    "new_socks5_proxy",
     "NewSOCKS5Proxy",
     "_parse_bypass_list",
     "_match_bypass",
     "_parse_query",
     "_join_host_port",
+    "get_proxy_from_environment",
     "GetProxyFromEnvironment",
+    "parse_proxy_url",
     "ParseProxyURL",
+    "must_parse_proxy_url",
     "MustParseProxyURL",
 ]

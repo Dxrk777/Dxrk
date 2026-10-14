@@ -556,9 +556,8 @@ def _wing_from_transcript_path(transcript_path: str) -> str:
                     if not cwd_norm:
                         continue
                     project = cwd_norm.rsplit("/", 1)[-1]
-                    if project:
-                        slug = project.lower().replace(" ", "_").replace("-", "_")
-                        return f"wing_{slug}"
+                    slug = project.lower().replace(" ", "_").replace("-", "_")
+                    return f"wing_{slug}"
     except OSError:
         pass
     normalized = transcript_path.replace("\\", "/")

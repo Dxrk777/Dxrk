@@ -264,8 +264,6 @@ def fit_isotonic(introspection: list[dict], n_bins: int = 10) -> dict[str, float
     # Compute mean prediction and accuracy per bin
     points = []
     for center, data in bin_data.items():
-        if not data["preds"]:
-            continue
         mean_pred = sum(data["preds"]) / len(data["preds"])
         mean_actual = sum(data["actuals"]) / len(data["actuals"])
         weight = len(data["preds"])
@@ -311,8 +309,6 @@ def apply_isotonic(predicted: float, isotonic_map: dict[str, float]) -> float:
         return predicted
     # Find closest key
     keys = sorted(float(k) for k in isotonic_map.keys())
-    if not keys:
-        return predicted
     idx = bisect.bisect_left(keys, predicted)
     if idx == 0:
         return isotonic_map[str(keys[0])]
@@ -322,8 +318,6 @@ def apply_isotonic(predicted: float, isotonic_map: dict[str, float]) -> float:
     lo, hi = keys[idx - 1], keys[idx]
     lo_val = isotonic_map[str(lo)]
     hi_val = isotonic_map[str(hi)]
-    if hi == lo:
-        return lo_val
     alpha = (predicted - lo) / (hi - lo)
     return clamp(lo_val + alpha * (hi_val - lo_val))
 

@@ -214,10 +214,7 @@ def verify_chain(meta: dict[str, object]) -> tuple[bool, int]:
         return True, -1
     if not isinstance(ledger, list):
         return False, 0
-    try:
-        dropped = _to_int(meta.get("score_ledger_dropped", 0), 0)
-    except (TypeError, ValueError):
-        dropped = 0
+    dropped = _to_int(meta.get("score_ledger_dropped", 0), 0)
     prev = ""
     for i, raw in enumerate(ledger):
         if not isinstance(raw, dict):

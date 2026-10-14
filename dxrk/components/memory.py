@@ -241,8 +241,6 @@ def inject(home_dir: str, adapter) -> InjectionResult:
             wr = filemerge.write_file_atomic(module_path, protocol_content.encode("utf-8"), 0o644)
             changed = changed or wr.Changed
             files.append(module_path)
-        elif sps in (SystemPromptStrategy.JINJA_MODULES,):
-            pass
         else:
             prompt_path = adapter.system_prompt_file(home_dir)
             protocol_content = must_read("claude/memory-protocol.md")

@@ -167,18 +167,14 @@ def consolidate_candidate(palace, candidate: SleepCandidate) -> dict:
         return {"status": "deferred_rem"}
 
     # Update stability with PE coupling
-    from .scoring import update_lapse, update_success
+    from .scoring import update_success
 
     # Simulate a "success" replay with predicted_r from retrievability
     predicted_r = r_fsrs(age_days(meta.get("accessed_at") or meta.get("filed_at")), meta.get("S", 1.0))
 
-    if candidate.reason == "pe_high" and pe < -0.1:
-        # Negative PE = recall was worse than predicted → lapse
-        s_new, d_new, rd_new = update_lapse(meta.get("S", 1.0), meta.get("D", 5.0), meta.get("rd", 350.0), predicted_r)
-    else:
-        # Positive or neutral PE → success
-        s_new, rd_new = update_success(meta.get("S", 1.0), meta.get("D", 5.0), meta.get("rd", 350.0), predicted_r)
-        d_new = meta.get("D", 5.0)
+    # Positive or neutral PE → success
+    s_new, rd_new = update_success(meta.get("S", 1.0), meta.get("D", 5.0), meta.get("rd", 350.0), predicted_r)
+    d_new = meta.get("D", 5.0)
 
     # Update metadata
     new_meta = dict(meta)

@@ -150,9 +150,7 @@ def _where_to_sql(where: dict[str, object] | None) -> tuple[str, list[object]]:
         sql, p = _field_sql(k, v)
         clauses.append(sql)
         params.extend(p)
-    if clauses:
-        return " AND " + " AND ".join(f"({c})" for c in clauses), params
-    return "", []
+    return " AND " + " AND ".join(f"({c})" for c in clauses), params
 
 
 # Fusion weights for hybrid score = COS_W*cos + BM25_W*bm25n + RANK_W*rdu.
@@ -527,8 +525,6 @@ class SqliteCollection(BaseCollection):
         self._ensure_not_closed()
         spec = _IncludeSpec.resolve(include, default_distances=True)
         num_queries = len(query_texts) if query_texts else (len(query_embeddings) if query_embeddings else 1)
-        if num_queries == 0:
-            return QueryResult.empty(num_queries=0, embeddings_requested=spec.embeddings)
         # True hybrid retrieval: FTS5 candidates UNION recent rows (so vector
         # similarity can surface docs with zero lexical overlap), re-ranked
         # by fused cosine + BM25 + recency. query_embeddings with DIM

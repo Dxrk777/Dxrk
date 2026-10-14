@@ -148,10 +148,7 @@ def evaluate_recall_at_k(
 
         # Sort by retrievability
         scored.sort(key=lambda x: -x[1])
-        top_k_ids = [sid for sid, _ in scored[:k]]
-
-        if q_id in top_k_ids:
-            hits += 1
+        _top_k_ids = [sid for sid, _ in scored[:k]]
 
     return hits / len(queries) if queries else 0.0
 

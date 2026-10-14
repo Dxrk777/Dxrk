@@ -35,14 +35,21 @@ class RetryPolicy:
         ]
     )
 
-    def IsRetryable(self, status_code: int) -> bool:
+    def is_retryable(self, status_code: int) -> bool:
         """Return True if the given status code should be retried."""
         return status_code in self.retryable_status_codes
 
+    # Backwards-compatible alias (Go-style name).
+    IsRetryable = is_retryable
 
-def DefaultRetryPolicy() -> RetryPolicy:
+
+def default_retry_policy() -> RetryPolicy:
     """Return the default retry policy (3 retries, 100ms backoff)."""
     return RetryPolicy()
+
+
+# Backwards-compatible alias (Go-style name).
+DefaultRetryPolicy = default_retry_policy
 
 
 def _is_retryable_error(err: Exception) -> bool:
@@ -50,6 +57,17 @@ def _is_retryable_error(err: Exception) -> bool:
     if isinstance(err, _TIMEOUT_ERRORS):
         return True
     return False
+
+
+def policy_is_retryable(policy: RetryPolicy, status_code: int) -> bool:
+    """Call ``is_retryable`` (or legacy ``IsRetryable``) on a retry policy."""
+    is_retryable = getattr(policy, "is_retryable", None)
+    if callable(is_retryable):
+        return bool(is_retryable(status_code))
+    legacy = getattr(policy, "IsRetryable", None)
+    if callable(legacy):
+        return bool(legacy(status_code))
+    raise AttributeError("retry policy must implement is_retryable()")
 
 
 __all__ = [
@@ -61,6 +79,8 @@ __all__ = [
     "defaultMaxRetries",
     "defaultRetryBackoff",
     "RetryPolicy",
+    "default_retry_policy",
     "DefaultRetryPolicy",
     "_is_retryable_error",
+    "policy_is_retryable",
 ]

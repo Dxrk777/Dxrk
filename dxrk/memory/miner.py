@@ -215,8 +215,6 @@ class GitignoreMatcher:
             relative = path.relative_to(self.base_dir).as_posix().strip("/")
         except ValueError:
             return None
-        if not relative:
-            return None
         if is_dir is None:
             is_dir = path.is_dir()
         ignored: bool | None = None
@@ -290,8 +288,6 @@ def is_force_included(path: Path, project_path: Path, include_paths: set[str]) -
     try:
         rel = path.relative_to(project_path).as_posix().strip("/")
     except ValueError:
-        return False
-    if not rel:
         return False
     for inc in include_paths:
         if rel == inc or rel.startswith(f"{inc}/") or inc.startswith(f"{rel}/"):

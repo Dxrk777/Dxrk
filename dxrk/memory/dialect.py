@@ -215,8 +215,7 @@ class Dialect:
             if w[0].isupper() and low in freq:
                 freq[low] += 2
             if "_" in w or "-" in w or any(c.isupper() for c in w[1:]):
-                if low in freq:
-                    freq[low] += 2
+                freq[low] += 2
         ranked = sorted(freq.items(), key=lambda x: -x[1])
         return [w for w, _ in ranked[:max_topics]]
 

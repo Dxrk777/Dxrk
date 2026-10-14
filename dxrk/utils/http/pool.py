@@ -12,7 +12,7 @@ from typing import cast
 import httpx
 
 from .errors import _TIMEOUT_ERRORS, ErrNoProxyConfigured, HttpError
-from .proxy import NewProxyConfig
+from .proxy import new_proxy_config
 from .retry import (
     defaultExpectContinueTimeout,
     defaultIdleConnTimeout,
@@ -21,7 +21,13 @@ from .retry import (
     defaultTLSHandshakeTimeout,
 )
 from .tls import TLSConfig
-from .transport import _env_proxy_url, _make_transport, _proxy_url_of, _transport_from_config
+from .transport import (
+    _build_client_tls_config,
+    _env_proxy_url,
+    _make_transport,
+    _proxy_url_of,
+    _transport_from_config,
+)
 
 
 @dataclass
@@ -56,7 +62,7 @@ class PoolConfig:
     force_http2: bool = True
 
 
-def DefaultPoolConfig() -> PoolConfig:
+def default_pool_config() -> PoolConfig:
     """Return the default pool configuration (defaults)."""
     return PoolConfig(
         max_idle_conns=defaultMaxIdleConns,
@@ -99,12 +105,15 @@ class ConnectionPool:
         self.closed = threading.Event()
         self.mu = threading.RLock()
 
-    def GetTransport(self) -> httpx.HTTPTransport:
+    def get_transport(self) -> httpx.HTTPTransport:
         """Return the pool transport."""
         with self.mu:
             return self.transport
 
-    def SetMaxIdleConns(self, n: int) -> None:
+    # Backwards-compatible alias (Go-style name).
+    GetTransport = get_transport
+
+    def set_max_idle_conns(self, n: int) -> None:
         """Set the maximum idle connections."""
         with self.mu:
             self.max_idle_conns = n
@@ -112,7 +121,10 @@ class ConnectionPool:
             with self.stats_mu:
                 self.stats.max_idle_conns = n
 
-    def SetMaxIdleConnsPerHost(self, n: int) -> None:
+    # Backwards-compatible alias (Go-style name).
+    SetMaxIdleConns = set_max_idle_conns
+
+    def set_max_idle_conns_per_host(self, n: int) -> None:
         """Set the maximum idle connections per host.
 
         Fidelity note: httpcore exposes only a global keepalive limit,
@@ -125,7 +137,10 @@ class ConnectionPool:
             with self.stats_mu:
                 self.stats.max_idle_per_host = n
 
-    def SetMaxConnsPerHost(self, n: int) -> None:
+    # Backwards-compatible alias (Go-style name).
+    SetMaxIdleConnsPerHost = set_max_idle_conns_per_host
+
+    def set_max_conns_per_host(self, n: int) -> None:
         """Set the maximum connections per host."""
         with self.mu:
             self.max_conns_per_host = n
@@ -133,34 +148,52 @@ class ConnectionPool:
             with self.stats_mu:
                 self.stats.max_conns_per_host = n
 
-    def SetIdleConnTimeout(self, d: timedelta) -> None:
+    # Backwards-compatible alias (Go-style name).
+    SetMaxConnsPerHost = set_max_conns_per_host
+
+    def set_idle_conn_timeout(self, d: timedelta) -> None:
         """Set the idle connection timeout."""
         with self.mu:
             self.idle_conn_timeout = d
             with self.stats_mu:
                 self.stats.idle_conn_timeout = d
 
-    def GetMaxIdleConns(self) -> int:
+    # Backwards-compatible alias (Go-style name).
+    SetIdleConnTimeout = set_idle_conn_timeout
+
+    def get_max_idle_conns(self) -> int:
         """Return the maximum idle connections."""
         with self.mu:
             return self.max_idle_conns
 
-    def GetMaxIdleConnsPerHost(self) -> int:
+    # Backwards-compatible alias (Go-style name).
+    GetMaxIdleConns = get_max_idle_conns
+
+    def get_max_idle_conns_per_host(self) -> int:
         """Return the maximum idle connections per host."""
         with self.mu:
             return self.max_idle_per_host
 
-    def GetMaxConnsPerHost(self) -> int:
+    # Backwards-compatible alias (Go-style name).
+    GetMaxIdleConnsPerHost = get_max_idle_conns_per_host
+
+    def get_max_conns_per_host(self) -> int:
         """Return the maximum connections per host."""
         with self.mu:
             return self.max_conns_per_host
 
-    def GetIdleConnTimeout(self) -> timedelta:
+    # Backwards-compatible alias (Go-style name).
+    GetMaxConnsPerHost = get_max_conns_per_host
+
+    def get_idle_conn_timeout(self) -> timedelta:
         """Return the idle connection timeout."""
         with self.mu:
             return self.idle_conn_timeout
 
-    def Stats(self) -> PoolStats:
+    # Backwards-compatible alias (Go-style name).
+    GetIdleConnTimeout = get_idle_conn_timeout
+
+    def get_stats(self) -> PoolStats:
         """Return a snapshot of the pool statistics."""
         with self.stats_mu:
             stats = PoolStats(
@@ -176,22 +209,34 @@ class ConnectionPool:
             )
             return stats
 
-    def CloseIdleConnections(self) -> None:
+    # Backwards-compatible alias (Go-style name).
+    Stats = get_stats
+
+    def close_idle_connections(self) -> None:
         """Close idle connections."""
         with self.mu:
             self.transport.close()
 
-    def Close(self) -> None:
+    # Backwards-compatible alias (Go-style name).
+    CloseIdleConnections = close_idle_connections
+
+    def close(self) -> None:
         """Close the pool (idempotent)."""
         self.closed.set()
         with self.mu:
             self.transport.close()
 
-    def IsClosed(self) -> bool:
+    # Backwards-compatible alias (Go-style name).
+    Close = close
+
+    def is_closed(self) -> bool:
         """Return True if the pool has been closed."""
         return self.closed.is_set()
 
-    def Clone(self) -> ConnectionPool:
+    # Backwards-compatible alias (Go-style name).
+    IsClosed = is_closed
+
+    def clone(self) -> ConnectionPool:
         """Return a pool with a fresh transport and copied settings/stats."""
         with self.mu:
             new_transport = _transport_from_config(
@@ -223,10 +268,13 @@ class ConnectionPool:
                 )
             return new_pool
 
-    def WithTLSClientConfig(self, tls_config: TLSConfig) -> None:
+    # Backwards-compatible alias (Go-style name).
+    Clone = clone
+
+    def with_tls_client_config(self, tls_config: TLSConfig) -> None:
         """Apply a TLS config to the pool transport (raises on error)."""
         try:
-            ctx = tls_config.BuildClientTLSConfig()
+            ctx = _build_client_tls_config(tls_config)
         except HttpError as e:
             raise e
         with self.mu:
@@ -236,21 +284,27 @@ class ConnectionPool:
             )
         old.close()
 
-    def WithProxy(self, proxy_url: str) -> None:
+    # Backwards-compatible alias (Go-style name).
+    WithTLSClientConfig = with_tls_client_config
+
+    def with_proxy(self, proxy_url: str) -> None:
         """Apply a proxy URL to the pool transport (raises on error)."""
-        config, err = NewProxyConfig(proxy_url)
+        config, err = new_proxy_config(proxy_url)
         if err is not None:
             raise err
         if config is None:
             raise ErrNoProxyConfigured
-        url = config.GetProxyURL()
+        url = config.get_proxy_url()
         if url is None:
             raise ErrNoProxyConfigured
         with self.mu:
             old, self.transport = self.transport, _make_transport(proxy=url)
         old.close()
 
-    def Reset(self) -> None:
+    # Backwards-compatible alias (Go-style name).
+    WithProxy = with_proxy
+
+    def reset(self) -> None:
         """Close idle connections and reset the statistics."""
         with self.mu:
             self.transport.close()
@@ -262,11 +316,18 @@ class ConnectionPool:
                     max_conns_per_host=self.max_conns_per_host,
                 )
 
+    # Backwards-compatible alias (Go-style name).
+    Reset = reset
 
-def NewConnectionPool(config: PoolConfig | None) -> ConnectionPool:
+
+# Backwards-compatible alias (Go-style name).
+DefaultPoolConfig = default_pool_config
+
+
+def new_connection_pool(config: PoolConfig | None) -> ConnectionPool:
     """Create a connection pool from a config (defaults when None)."""
     if config is None:
-        config = DefaultPoolConfig()
+        config = default_pool_config()
 
     limits = httpx.Limits(
         max_connections=config.max_conns_per_host or None,
@@ -298,7 +359,7 @@ class PooledClient:
         self.timeout = timeout
         self.mu = threading.RLock()
 
-    def Do(self, req: httpx.Request) -> tuple[httpx.Response | None, Exception | None]:
+    def do(self, req: httpx.Request) -> tuple[httpx.Response | None, Exception | None]:
         """Send the request through the pool transport."""
         ctx = getattr(req, "_ctx", None)
         if ctx is not None and ctx.err() is not None:
@@ -318,22 +379,34 @@ class PooledClient:
             finally:
                 self.client.timeout = previous_timeout
 
-    def DoWithContext(self, ctx, req: httpx.Request) -> tuple[httpx.Response | None, Exception | None]:
+    # Backwards-compatible alias (Go-style name).
+    Do = do
+
+    def do_with_context(self, ctx, req: httpx.Request) -> tuple[httpx.Response | None, Exception | None]:
         """Send the request with a context deadline/cancellation."""
         if ctx is not None and ctx.err() is not None:
             return None, HttpError("context canceled")
         req._ctx = ctx  # type: ignore[attr-defined]
-        return self.Do(req)
+        return self.do(req)
 
-    def GetPool(self) -> ConnectionPool:
+    # Backwards-compatible alias (Go-style name).
+    DoWithContext = do_with_context
+
+    def get_pool(self) -> ConnectionPool:
         """Return the underlying pool."""
         return self.pool
 
-    def GetClient(self) -> httpx.Client:
+    # Backwards-compatible alias (Go-style name).
+    GetPool = get_pool
+
+    def get_client(self) -> httpx.Client:
         """Return the underlying httpx client."""
         return self.client
 
-    def SetTimeout(self, timeout: timedelta) -> None:
+    # Backwards-compatible alias (Go-style name).
+    GetClient = get_client
+
+    def set_timeout(self, timeout: timedelta) -> None:
         """Set the request timeout, preserving connect/pool timeouts."""
         self.timeout = timeout
         prev = self.client.timeout
@@ -346,21 +419,35 @@ class PooledClient:
         else:
             self.client.timeout = httpx.Timeout(timeout.total_seconds())
 
-    def Close(self) -> None:
+    # Backwards-compatible alias (Go-style name).
+    SetTimeout = set_timeout
+
+    def close(self) -> None:
         """Close the underlying pool."""
-        self.pool.Close()
+        self.pool.close()
+
+    # Backwards-compatible alias (Go-style name).
+    Close = close
 
 
-def NewPooledClient(pool: ConnectionPool, timeout: timedelta) -> PooledClient:
+# Backwards-compatible alias (Go-style name).
+NewConnectionPool = new_connection_pool
+
+
+def new_pooled_client(pool: ConnectionPool, timeout: timedelta) -> PooledClient:
     """Create a pooled client (30s timeout when zero)."""
     if timeout.total_seconds() == 0:
         timeout = timedelta(seconds=30)
     client = httpx.Client(
-        transport=pool.GetTransport(),
+        transport=pool.get_transport(),
         timeout=timeout.total_seconds(),
         follow_redirects=False,
     )
     return PooledClient(client=client, pool=pool, timeout=timeout)
+
+
+# Backwards-compatible alias (Go-style name).
+NewPooledClient = new_pooled_client
 
 
 class PoolMonitor:
@@ -382,7 +469,7 @@ class PoolMonitor:
         self.running = False
         self.thread: threading.Thread | None = None
 
-    def Start(self) -> None:
+    def start(self) -> None:
         """Start the monitoring goroutine (daemon thread)."""
         with self.mu:
             if self.running:
@@ -392,7 +479,10 @@ class PoolMonitor:
         self.thread = threading.Thread(target=self._run, daemon=True)
         self.thread.start()
 
-    def Stop(self) -> None:
+    # Backwards-compatible alias (Go-style name).
+    Start = start
+
+    def stop(self) -> None:
         """Stop the monitoring thread, waiting for it to finish."""
         with self.mu:
             if not self.running:
@@ -405,12 +495,15 @@ class PoolMonitor:
         with self.mu:
             self.thread = None
 
+    # Backwards-compatible alias (Go-style name).
+    Stop = stop
+
     def _run(self) -> None:
         while True:
             if self.stop_evt.wait(timeout=self.interval.total_seconds()):
                 return
             try:
-                stats = self.pool.Stats()
+                stats = self.pool.get_stats()
             except Exception:
                 continue
             if self.on_stats is not None:
@@ -419,19 +512,25 @@ class PoolMonitor:
                 except Exception:
                     continue
 
-    def IsRunning(self) -> bool:
+    def is_running(self) -> bool:
         """Return True while the monitor thread is active."""
         with self.mu:
             return self.running
+
+    # Backwards-compatible alias (Go-style name).
+    IsRunning = is_running
 
 
 __all__ = [
     "PoolStats",
     "PoolConfig",
+    "default_pool_config",
     "DefaultPoolConfig",
     "ConnectionPool",
+    "new_connection_pool",
     "NewConnectionPool",
     "PooledClient",
+    "new_pooled_client",
     "NewPooledClient",
     "PoolMonitor",
 ]

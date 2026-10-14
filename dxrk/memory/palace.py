@@ -932,9 +932,6 @@ def _distill_sentences(texts: list[str], max_chars: int, max_sentences: int) -> 
             break
         out.append(sent)
         total += extra
-    if not out:
-        # Tightest bound still keeps the single best sentence (hard-cut).
-        out.append(kept[0][2][:max_chars])
     return " ".join(out)
 
 
@@ -1021,40 +1018,23 @@ def _apply_access(meta: dict[str, object], now_iso: str) -> dict[str, object]:
     never fails because ranking bookkeeping did.
     """
     meta = ensure_spine_defaults(meta)
-    try:
-        stability = float(cast(Any, meta.get("S", SPINE_S_DEFAULT)))
-    except (TypeError, ValueError):
-        stability = SPINE_S_DEFAULT
-    try:
-        difficulty = float(cast(Any, meta.get("D", SPINE_D_DEFAULT)))
-    except (TypeError, ValueError):
-        difficulty = SPINE_D_DEFAULT
-    try:
-        rd = float(cast(Any, meta.get("rd", SPINE_RD_DEFAULT)))
-    except (TypeError, ValueError):
-        rd = SPINE_RD_DEFAULT
+    stability = float(cast(Any, meta.get("S", SPINE_S_DEFAULT)))
+    difficulty = float(cast(Any, meta.get("D", SPINE_D_DEFAULT)))
+    rd = float(cast(Any, meta.get("rd", SPINE_RD_DEFAULT)))
     accessed_dt = _parse_dt(meta.get("accessed_at") or meta.get("filed_at"))
     if accessed_dt is None:
         idle_days = 0.0
     else:
-        if accessed_dt.tzinfo is None:
-            accessed_dt = accessed_dt.replace(tzinfo=UTC)
         idle_days = max(0.0, (datetime.now(UTC) - accessed_dt).total_seconds() / 86400.0)
     s_new, rd_new = update_success(stability, difficulty, rd, r_fsrs(idle_days, stability))
     meta["S"] = s_new
     meta["rd"] = rd_new
-    try:
-        meta["s_updates"] = int(cast(Any, meta.get("s_updates", 0))) + 1
-    except (TypeError, ValueError):
-        meta["s_updates"] = 1
+    meta["s_updates"] = int(cast(Any, meta.get("s_updates", 0))) + 1
     try:
         meta["access_count"] = int(cast(Any, meta.get("access_count", 0))) + 1
     except (TypeError, ValueError):
         meta["access_count"] = 1
-    try:
-        meta["access_count_total"] = int(cast(Any, meta.get("access_count_total", 0))) + 1
-    except (TypeError, ValueError):
-        meta["access_count_total"] = 1
+    meta["access_count_total"] = int(cast(Any, meta.get("access_count_total", 0))) + 1
     meta["accessed_at"] = now_iso
     raw_history = meta.get("access_history") or []
     history = [ts for ts in raw_history if isinstance(ts, str) and ts] if isinstance(raw_history, list) else []
@@ -1073,33 +1053,19 @@ def _lapse_meta_in_place(meta: dict[str, object], reason: str) -> dict[str, obje
     """
     try:
         meta = ensure_spine_defaults(meta)
-        try:
-            stability = float(cast(Any, meta.get("S", SPINE_S_DEFAULT)))
-        except (TypeError, ValueError):
-            stability = SPINE_S_DEFAULT
-        try:
-            difficulty = float(cast(Any, meta.get("D", SPINE_D_DEFAULT)))
-        except (TypeError, ValueError):
-            difficulty = SPINE_D_DEFAULT
-        try:
-            rd = float(cast(Any, meta.get("rd", SPINE_RD_DEFAULT)))
-        except (TypeError, ValueError):
-            rd = SPINE_RD_DEFAULT
+        stability = float(cast(Any, meta.get("S", SPINE_S_DEFAULT)))
+        difficulty = float(cast(Any, meta.get("D", SPINE_D_DEFAULT)))
+        rd = float(cast(Any, meta.get("rd", SPINE_RD_DEFAULT)))
         accessed_dt = _parse_dt(meta.get("accessed_at") or meta.get("filed_at"))
         if accessed_dt is None:
             idle_days = 0.0
         else:
-            if accessed_dt.tzinfo is None:
-                accessed_dt = accessed_dt.replace(tzinfo=UTC)
             idle_days = max(0.0, (datetime.now(UTC) - accessed_dt).total_seconds() / 86400.0)
         s_new, d_new, rd_new = update_lapse(stability, difficulty, rd, r_fsrs(idle_days, stability))
         meta["S"] = s_new
         meta["D"] = d_new
         meta["rd"] = rd_new
-        try:
-            meta["s_updates"] = int(cast(Any, meta.get("s_updates", 0))) + 1
-        except (TypeError, ValueError):
-            meta["s_updates"] = 1
+        meta["s_updates"] = int(cast(Any, meta.get("s_updates", 0))) + 1
         try:
             ledger_append(meta, score=score_meta(meta), S=s_new, D=d_new, reason=reason)
         except Exception:

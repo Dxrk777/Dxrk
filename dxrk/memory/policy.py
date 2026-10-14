@@ -180,8 +180,6 @@ class PolicyEngine:
             filed_dt = parse_dt(meta.get("filed_at"))
             if filed_dt is None:
                 continue
-            if filed_dt.tzinfo is None:
-                filed_dt = filed_dt.replace(tzinfo=UTC)
             if (now - filed_dt).total_seconds() / 86400.0 <= self._stale_days:
                 continue
             ledger = meta.get("score_ledger")
@@ -189,18 +187,10 @@ class PolicyEngine:
             if entries:
                 last_ts = parse_dt(entries[-1].get("ts"))
                 if last_ts is not None:
-                    if last_ts.tzinfo is None:
-                        last_ts = last_ts.replace(tzinfo=UTC)
                     if (now - last_ts).total_seconds() / 86400.0 <= self._stale_days:
                         continue
-            try:
-                s_val = float(cast(Any, meta.get("S", 1.0)))
-            except (TypeError, ValueError):
-                s_val = 1.0
-            try:
-                d_val = float(cast(Any, meta.get("D", 5.0)))
-            except (TypeError, ValueError):
-                d_val = 5.0
+            s_val = float(cast(Any, meta.get("S", 1.0)))
+            d_val = float(cast(Any, meta.get("D", 5.0)))
             try:
                 ledger_append(meta, score=score_meta(meta), S=s_val, D=d_val, reason="rescore_stale")
                 col.update(ids=[rid], metadatas=[meta])
@@ -344,6 +334,4 @@ class PolicyEngine:
         last_ts = parse_dt(last_run.get(name))
         if last_ts is None:
             return True
-        if last_ts.tzinfo is None:
-            last_ts = last_ts.replace(tzinfo=UTC)
         return (now - last_ts).total_seconds() >= self._min_interval

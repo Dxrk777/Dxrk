@@ -53,8 +53,6 @@ def compute_ece(history: list[tuple[float, float]], n_bins: int = DEFAULT_BINS) 
     ece = 0.0
     total = len(history)
     for bin_idx, items in bins.items():
-        if not items:
-            continue
         avg_conf = sum(p for p, _ in items) / len(items)
         avg_acc = sum(a for _, a in items) / len(items)
         ece += (len(items) / total) * abs(avg_conf - avg_acc)

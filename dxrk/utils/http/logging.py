@@ -73,28 +73,48 @@ class LogLevel(IntEnum):
         }
         return names.get(self, "UNKNOWN")
 
-    def String(self) -> str:
+    def to_string(self) -> str:
         """Backwards-compatible alias for ``str(level)``."""
         return str(self)
+
+    # Backwards-compatible alias (Go-style name).
+    String = to_string
 
 
 class Logger(Protocol):
     """the logging backend."""
 
-    def Printf(self, format: str, *args: object) -> None: ...
+    def printf(self, format: str, *args: object) -> None: ...
 
-    def Println(self, *args: object) -> None: ...
+    def println(self, *args: object) -> None: ...
 
 
 class _DefaultLogger:
     """prints to stdout."""
 
-    def Printf(self, format: str, *args: object) -> None:
+    def printf(self, format: str, *args: object) -> None:
         msg = format % args if args else format
         print(msg)
 
-    def Println(self, *args: object) -> None:
+    def println(self, *args: object) -> None:
         print(*args)
+
+    # Backwards-compatible aliases (Go-style names).
+    Printf = printf
+    Println = println
+
+
+def _emit_log(logger: Logger, format: str, *args: object) -> None:
+    """Call ``printf`` (or legacy ``Printf``) on a logger backend."""
+    printf = getattr(logger, "printf", None)
+    if callable(printf):
+        printf(format, *args)
+        return
+    legacy = getattr(logger, "Printf", None)
+    if callable(legacy):
+        legacy(format, *args)
+        return
+    raise AttributeError("logger must implement printf() or Printf()")
 
 
 class SanitizerFunc(Protocol):
@@ -124,9 +144,13 @@ class LoggingConfig:
     custom_sanitizers: list[SanitizerFunc] = field(default_factory=list)
 
 
-def DefaultLoggingConfig() -> LoggingConfig:
+def default_logging_config() -> LoggingConfig:
     """Return the default logging configuration."""
     return LoggingConfig()
+
+
+# Backwards-compatible alias (Go-style name).
+DefaultLoggingConfig = default_logging_config
 
 
 class HTTPLogger:
@@ -134,7 +158,7 @@ class HTTPLogger:
 
     def __init__(self, config: LoggingConfig | None = None) -> None:
         if config is None:
-            config = DefaultLoggingConfig()
+            config = default_logging_config()
         if config.logger is None:
             config.logger = _DefaultLogger()
         if config.max_body_size == 0:
@@ -142,7 +166,7 @@ class HTTPLogger:
         self.config = config
         self.mu = threading.RLock()
 
-    def LogRequest(self, req: httpx.Request) -> None:
+    def log_request(self, req: httpx.Request) -> None:
         """Log an outgoing request."""
         if self.config.level < LogLevel.LogLevelInfo:
             return
@@ -157,9 +181,12 @@ class HTTPLogger:
         if config.log_request_body and req.content:
             self._write_request_body(buf, req, config)
         if config.logger is not None:
-            config.logger.Printf("%s", "".join(buf))
+            _emit_log(config.logger, "%s", "".join(buf))
 
-    def LogResponse(self, resp: httpx.Response, duration: timedelta) -> None:
+    # Backwards-compatible alias (Go-style name).
+    LogRequest = log_request
+
+    def log_response(self, resp: httpx.Response, duration: timedelta) -> None:
         """Log a response with the given duration."""
         if self.config.level < LogLevel.LogLevelInfo:
             return
@@ -174,9 +201,12 @@ class HTTPLogger:
         if config.log_response_body and resp.content:
             self._write_response_body(buf, resp, config)
         if config.logger is not None:
-            config.logger.Printf("%s", "".join(buf))
+            _emit_log(config.logger, "%s", "".join(buf))
 
-    def LogRoundTrip(
+    # Backwards-compatible alias (Go-style name).
+    LogResponse = log_response
+
+    def log_round_trip(
         self,
         req: httpx.Request,
         resp: httpx.Response | None,
@@ -203,7 +233,10 @@ class HTTPLogger:
             if config.include_duration:
                 buf.append(f" Duration: {_round_ms(duration)}")
         if config.logger is not None:
-            config.logger.Printf("%s", "".join(buf))
+            _emit_log(config.logger, "%s", "".join(buf))
+
+    # Backwards-compatible alias (Go-style name).
+    LogRoundTrip = log_round_trip
 
     def _write_timestamp(self, buf: list[str]) -> None:
         if self.config.include_timestamp:
@@ -269,27 +302,39 @@ class HTTPLogger:
     def _sanitize_params(self, data: bytes) -> bytes:
         return cast(re.Pattern[bytes], _SENSITIVE_PARAM_BYTES_RE).sub(b"\\1=[REDACTED]", data)
 
-    def SetLevel(self, level: LogLevel) -> None:
+    def set_level(self, level: LogLevel) -> None:
         """Set the logging level."""
         with self.mu:
             self.config.level = level
 
-    def GetLevel(self) -> LogLevel:
+    # Backwards-compatible alias (Go-style name).
+    SetLevel = set_level
+
+    def get_level(self) -> LogLevel:
         """Return the logging level."""
         with self.mu:
             return self.config.level
 
-    def SetConfig(self, config: LoggingConfig) -> None:
+    # Backwards-compatible alias (Go-style name).
+    GetLevel = get_level
+
+    def set_config(self, config: LoggingConfig) -> None:
         """Replace the logging configuration."""
         with self.mu:
             self.config = config
 
-    def GetConfig(self) -> LoggingConfig:
+    # Backwards-compatible alias (Go-style name).
+    SetConfig = set_config
+
+    def get_config(self) -> LoggingConfig:
         """Return the logging configuration."""
         with self.mu:
             return self.config
 
-    def Middleware(self, next: httpx.HTTPTransport) -> httpx.HTTPTransport:
+    # Backwards-compatible alias (Go-style name).
+    GetConfig = get_config
+
+    def middleware(self, next: httpx.HTTPTransport) -> httpx.HTTPTransport:
         """Return a transport that logs every round trip through ``next``.
 
         The wrapped transport keeps its own proxy/TLS/limits/pool
@@ -300,15 +345,15 @@ class HTTPLogger:
         class _LoggingTransport(httpx.HTTPTransport):
             def handle_request(self, request: httpx.Request) -> httpx.Response:
                 start = time.monotonic()
-                logger.LogRequest(request)
+                logger.log_request(request)
                 try:
                     resp = next.handle_request(request)
                 except Exception as e:
-                    logger.LogRoundTrip(request, None, timedelta(seconds=time.monotonic() - start), e)
+                    logger.log_round_trip(request, None, timedelta(seconds=time.monotonic() - start), e)
                     raise
                 duration = timedelta(seconds=time.monotonic() - start)
-                logger.LogResponse(resp, duration)
-                logger.LogRoundTrip(request, resp, duration, None)
+                logger.log_response(resp, duration)
+                logger.log_round_trip(request, resp, duration, None)
                 return resp
 
             def close(self) -> None:
@@ -319,6 +364,9 @@ class HTTPLogger:
 
         _LoggingTransport.__name__ = "LoggedTransport"
         return _LoggingTransport()
+
+    # Backwards-compatible alias (Go-style name).
+    Middleware = middleware
 
 
 class LoggedTransport:
@@ -333,15 +381,15 @@ class LoggedTransport:
     def handle_request(self, request: httpx.Request) -> httpx.Response:
         """Log and forward a request."""
         start = time.monotonic()
-        self.logger.LogRequest(request)
+        self.logger.log_request(request)
         try:
             resp = self.transport.handle_request(request)
         except Exception as e:
-            self.logger.LogRoundTrip(request, None, timedelta(seconds=time.monotonic() - start), e)
+            self.logger.log_round_trip(request, None, timedelta(seconds=time.monotonic() - start), e)
             raise
         duration = timedelta(seconds=time.monotonic() - start)
-        self.logger.LogResponse(resp, duration)
-        self.logger.LogRoundTrip(request, resp, duration, None)
+        self.logger.log_response(resp, duration)
+        self.logger.log_round_trip(request, resp, duration, None)
         return resp
 
     def close(self) -> None:
@@ -353,11 +401,15 @@ class LoggedTransport:
         return LoggedTransport(self.transport, self.logger)
 
 
-def NewLoggedTransport(transport: httpx.HTTPTransport | None, logger: HTTPLogger) -> LoggedTransport:
+def new_logged_transport(transport: httpx.HTTPTransport | None, logger: HTTPLogger) -> LoggedTransport:
     """Create a logged transport (defaults to a plain transport when None)."""
     if transport is None:
         transport = _make_transport()
     return LoggedTransport(transport, logger)
+
+
+# Backwards-compatible alias (Go-style name).
+NewLoggedTransport = new_logged_transport
 
 
 def _get_remote_addr(req: httpx.Request) -> str:
@@ -385,7 +437,7 @@ def _round_ms(d: timedelta) -> timedelta:
     return timedelta(microseconds=us)
 
 
-def DumpRequest(req: httpx.Request, body: bool = True) -> str:
+def dump_request(req: httpx.Request, body: bool = True) -> str:
     """Serialize a request for debugging (strings, not bytes)."""
     lines = [f"{req.method} {req.url} HTTP/1.1"]
     for key, value in _headers_of(req):
@@ -396,12 +448,20 @@ def DumpRequest(req: httpx.Request, body: bool = True) -> str:
     return "\n".join(lines) + "\n"
 
 
-def DumpRequestOut(req: httpx.Request, body: bool = True) -> str:
-    """Serialize an outgoing request (alias of DumpRequest)."""
-    return DumpRequest(req, body)
+# Backwards-compatible alias (Go-style name).
+DumpRequest = dump_request
 
 
-def DumpResponse(resp: httpx.Response, body: bool = True) -> str:
+def dump_request_out(req: httpx.Request, body: bool = True) -> str:
+    """Serialize an outgoing request (alias of dump_request)."""
+    return dump_request(req, body)
+
+
+# Backwards-compatible alias (Go-style name).
+DumpRequestOut = dump_request_out
+
+
+def dump_response(resp: httpx.Response, body: bool = True) -> str:
     """Serialize a response for debugging (strings, not bytes)."""
     text = http.client.responses.get(resp.status_code, _STR_UNKNOWN)
     lines = [f"HTTP/1.1 {resp.status_code} {text}"]
@@ -413,7 +473,11 @@ def DumpResponse(resp: httpx.Response, body: bool = True) -> str:
     return "\n".join(lines) + "\n"
 
 
-def SanitizeHeaders(headers: httpx.Headers) -> httpx.Headers:
+# Backwards-compatible alias (Go-style name).
+DumpResponse = dump_response
+
+
+def sanitize_headers(headers: httpx.Headers) -> httpx.Headers:
     """Return a copy of the headers with sensitive values redacted."""
     sanitized: list[tuple[str, str]] = []
     for key, value in headers.multi_items():
@@ -424,18 +488,30 @@ def SanitizeHeaders(headers: httpx.Headers) -> httpx.Headers:
     return httpx.Headers(sanitized)
 
 
-def SanitizeURL(url: str) -> str:
+# Backwards-compatible alias (Go-style name).
+SanitizeHeaders = sanitize_headers
+
+
+def sanitize_url(url: str) -> str:
     """Redact sensitive query parameters in a URL string."""
     return _SENSITIVE_PARAM_RE.sub(r"\1=[REDACTED]", url)
 
 
-def SanitizeBody(body: bytes) -> bytes:
+# Backwards-compatible alias (Go-style name).
+SanitizeURL = sanitize_url
+
+
+def sanitize_body(body: bytes) -> bytes:
     """Redact credit cards, SSNs, emails, and sensitive parameters."""
     result = _CREDIT_CARD_RE.sub(b"[CREDIT_CARD_REDACTED]", body)
     result = _SSN_RE.sub(b"[SSN_REDACTED]", result)
     result = _EMAIL_RE.sub(b"[EMAIL_REDACTED]", result)
     result = cast(re.Pattern[bytes], _SENSITIVE_PARAM_BYTES_RE).sub(b"\\1=[REDACTED]", result)
     return result
+
+
+# Backwards-compatible alias (Go-style name).
+SanitizeBody = sanitize_body
 
 
 def _truncate_body(body: bytes, max_size: int) -> bytes:
@@ -451,20 +527,28 @@ _logger_registry_lock = threading.RLock()
 _loggerContextKey = "http_logger"
 
 
-def WithLogger(ctx: _Context, logger: HTTPLogger) -> _Context:
+def with_logger(ctx: _Context, logger: HTTPLogger) -> _Context:
     """Attach an HTTP logger to a context (context.WithValue)."""
     with _logger_registry_lock:
         _logger_registry[ctx] = logger
     return ctx
 
 
-def LoggerFromContext(ctx: _Context) -> HTTPLogger | None:
+# Backwards-compatible alias (Go-style name).
+WithLogger = with_logger
+
+
+def logger_from_context(ctx: _Context) -> HTTPLogger | None:
     """Return the logger stored in the context, if any."""
     with _logger_registry_lock:
         logger = _logger_registry.get(ctx)
     if logger is not None:
         return logger
     return None
+
+
+# Backwards-compatible alias (Go-style name).
+LoggerFromContext = logger_from_context
 
 
 __all__ = [
@@ -480,24 +564,35 @@ __all__ = [
     "LogLevel",
     "Logger",
     "_DefaultLogger",
+    "_emit_log",
     "SanitizerFunc",
     "LoggingConfig",
+    "default_logging_config",
     "DefaultLoggingConfig",
     "HTTPLogger",
     "LoggedTransport",
+    "new_logged_transport",
     "NewLoggedTransport",
     "_get_remote_addr",
     "_headers_of",
     "_round_ms",
+    "dump_request",
     "DumpRequest",
+    "dump_request_out",
     "DumpRequestOut",
+    "dump_response",
     "DumpResponse",
+    "sanitize_headers",
     "SanitizeHeaders",
+    "sanitize_url",
     "SanitizeURL",
+    "sanitize_body",
     "SanitizeBody",
     "_logger_registry",
     "_logger_registry_lock",
     "_loggerContextKey",
+    "with_logger",
     "WithLogger",
+    "logger_from_context",
     "LoggerFromContext",
 ]
