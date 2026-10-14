@@ -382,6 +382,10 @@ def _check_single_tool(tool: ToolInfo, current_build_version: str, profile: Plat
 
 # Instructions
 
+_DXRK_GIT_SPEC = "git+https://github.com/Dxrk777/Dxrk.git"
+_DXRK_UPGRADE_CMD: list[str] = ["uv", "tool", "install", "--upgrade", _DXRK_GIT_SPEC]
+_DXRK_UPGRADE_HINT = "uv tool install --upgrade git+https://github.com/Dxrk777/Dxrk.git"
+
 
 def update_hint(tool: ToolInfo, profile: PlatformProfile) -> str:
     hints: dict[str, str] = {
@@ -396,7 +400,7 @@ def update_hint(tool: ToolInfo, profile: PlatformProfile) -> str:
 def _dxrk_hint(profile: PlatformProfile) -> str:
     if profile.os not in ("darwin", "linux", "windows"):
         return ""
-    return "uv tool upgrade dxrk"
+    return _DXRK_UPGRADE_HINT
 
 
 def _DXRK_GUARDIAN_hint(profile: PlatformProfile) -> str:
@@ -645,10 +649,6 @@ def enumerate_files_in_dir(dir_path: str, exclude_names: set[str] | None = None)
         dirs[:] = [d for d in dirs if d.lower() not in exclude_names or root == clean_dir]
         for f in filenames:
             fp = os.path.join(root, f)
-            if os.path.islink(fp):
-                resolved = os.path.realpath(fp)
-                if os.path.isdir(resolved):
-                    continue
             files.append(fp)
 
     return files
@@ -850,6 +850,11 @@ def _execute_one(r: UpdateResult, profile: PlatformProfile, dry_run: bool) -> To
 
 
 def _run_strategy(r: UpdateResult, profile: PlatformProfile) -> None:
+    # Dxrk se distribuye vía git, no vía PyPI ni brew: siempre upgrade vía uv+git.
+    if r.tool.name == "dxrk":
+        _dxrk_upgrade()
+        return
+
     method = effective_method(r.tool, profile)
 
     if method == InstallMethod.BREW:
@@ -898,10 +903,24 @@ def _go_install_upgrade(tool: ToolInfo, latest_version: str) -> None:
         raise RuntimeError(f"go install {target}: {result.stderr.strip()}")
 
 
+def _dxrk_upgrade() -> None:
+    try:
+        result = subprocess.run(
+            _DXRK_UPGRADE_CMD,
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+    except FileNotFoundError:
+        raise ManualFallbackError(f"actualiza 'dxrk': ejecuta `{_DXRK_UPGRADE_HINT}`") from None
+    if result.returncode != 0:
+        raise RuntimeError(f"uv tool install --upgrade dxrk: {result.stderr.strip() or result.stdout.strip()}")
+
+
 def _binary_upgrade(r: UpdateResult, profile: PlatformProfile) -> None:
     if r.tool.name == "dxrk":
-        # Dxrk ships via git (uv tool install git+https://github.com/Dxrk777/Dxrk.git), not as a GitHub release asset.
-        raise ManualFallbackError("actualiza 'dxrk': ejecuta `uv tool upgrade dxrk`")
+        _dxrk_upgrade()
+        return
     if profile.os == "windows":
         hint = r.update_hint or f"Descarga manualmente desde https://github.com/Dxrk777/{r.tool.repo}/releases"
         raise ManualFallbackError(
