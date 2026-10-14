@@ -70,34 +70,34 @@ class TestLogLevel:
         assert hx.LogLevel.LogLevelDebug == 4
 
     def test_string(self):
-        assert hx.LogLevel.LogLevelNone.String() == "NONE"
-        assert hx.LogLevel.LogLevelError.String() == "ERROR"
-        assert hx.LogLevel.LogLevelWarn.String() == "WARN"
-        assert hx.LogLevel.LogLevelInfo.String() == "INFO"
-        assert hx.LogLevel.LogLevelDebug.String() == "DEBUG"
+        assert hx.LogLevel.LogLevelNone.to_string() == "NONE"
+        assert hx.LogLevel.LogLevelError.to_string() == "ERROR"
+        assert hx.LogLevel.LogLevelWarn.to_string() == "WARN"
+        assert hx.LogLevel.LogLevelInfo.to_string() == "INFO"
+        assert hx.LogLevel.LogLevelDebug.to_string() == "DEBUG"
         assert str(hx.LogLevel.LogLevelInfo) == "INFO"
 
 
 class TestRetryPolicy:
     def test_retryable_status_codes(self):
         policy = hx.RetryPolicy()
-        assert policy.IsRetryable(408)
-        assert policy.IsRetryable(429)
-        assert policy.IsRetryable(500)
-        assert policy.IsRetryable(502)
-        assert policy.IsRetryable(503)
-        assert policy.IsRetryable(504)
+        assert policy.is_retryable(408)
+        assert policy.is_retryable(429)
+        assert policy.is_retryable(500)
+        assert policy.is_retryable(502)
+        assert policy.is_retryable(503)
+        assert policy.is_retryable(504)
 
     def test_non_retryable_status_codes(self):
         policy = hx.RetryPolicy()
-        assert not policy.IsRetryable(200)
-        assert not policy.IsRetryable(301)
-        assert not policy.IsRetryable(404)
+        assert not policy.is_retryable(200)
+        assert not policy.is_retryable(301)
+        assert not policy.is_retryable(404)
 
 
-class TestNewHTTPClient:
+class Testnew_http_client:
     def test_defaults(self):
-        client, err = hx.NewHTTPClient(None)
+        client, err = hx.new_http_client(None)
         assert err is None
         assert client is not None
         assert isinstance(client, hx.HTTPClient)
@@ -106,15 +106,15 @@ class TestNewHTTPClient:
         assert client.retry_policy.max_retries == hx.defaultMaxRetries
 
     def test_timeout_option_applied(self):
-        client, err = hx.NewHTTPClient(hx.ClientOptions(timeout=timedelta(seconds=7)))
+        client, err = hx.new_http_client(hx.ClientOptions(timeout=timedelta(seconds=7)))
         assert err is None
         assert client is not None
         assert client.client.timeout.read == 7.0
 
     def test_proxy_config_applied_to_transport(self):
-        pc, err = hx.NewProxyConfig("http://127.0.0.1:1234")
+        pc, err = hx.new_proxy_config("http://127.0.0.1:1234")
         assert err is None
-        client, err = hx.NewHTTPClient(hx.ClientOptions(proxy_config=pc))
+        client, err = hx.new_http_client(hx.ClientOptions(proxy_config=pc))
         assert err is None
         assert client is not None
         pool = client.transport._pool
@@ -123,54 +123,54 @@ class TestNewHTTPClient:
         assert pool._proxy_url.port == 1234
 
     def test_invalid_proxy_url_rejected(self):
-        pc, err = hx.NewProxyConfig("")
+        pc, err = hx.new_proxy_config("")
         assert pc is None
         assert err is not None
 
 
 class TestProxyConfig:
     def test_proxy_url_roundtrip(self):
-        pc, err = hx.NewProxyConfig("http://user:pass@127.0.0.1:8080")
+        pc, err = hx.new_proxy_config("http://user:pass@127.0.0.1:8080")
         assert err is None
-        assert pc.GetProxyURL() == "http://user:pass@127.0.0.1:8080"
+        assert pc.get_proxy_url() == "http://user:pass@127.0.0.1:8080"
         assert pc.type == hx.ProxyType.ProxyTypeHTTP
-        assert pc.ProxyPort() == 8080
+        assert pc.proxy_port() == 8080
 
     def test_should_bypass(self):
-        pc, err = hx.NewProxyConfig("http://127.0.0.1:8080")
+        pc, err = hx.new_proxy_config("http://127.0.0.1:8080")
         assert err is None
-        pc.SetNoProxy("localhost")
-        assert pc.ShouldBypass("localhost")
-        assert not pc.ShouldBypass("example.com")
+        pc.set_no_proxy("localhost")
+        assert pc.should_bypass("localhost")
+        assert not pc.should_bypass("example.com")
 
 
 class TestClientRequests:
     def test_do_success(self, http_server):
-        client, err = hx.NewHTTPClient(None)
+        client, err = hx.new_http_client(None)
         assert err is None
         server = f"http://127.0.0.1:{http_server.server_address[1]}/"
         req = hx.httpx.Request("GET", server)
-        resp, err = client.Do(req)
+        resp, err = client.do(req)
         assert err is None
         assert resp.status_code == 200
         assert resp.read() == b"ok"
 
     def test_timeout_option_enforced(self, http_server):
         http_server.mode = "slow"
-        client, err = hx.NewHTTPClient(hx.ClientOptions(timeout=timedelta(milliseconds=10)))
+        client, err = hx.new_http_client(hx.ClientOptions(timeout=timedelta(milliseconds=10)))
         assert err is None
         server = f"http://127.0.0.1:{http_server.server_address[1]}/"
         req = hx.httpx.Request("GET", server)
-        resp, err = client.Do(req)
+        resp, err = client.do(req)
         assert err is not None
         assert resp is None
 
     def test_no_retry_on_success(self, http_server):
-        client, err = hx.NewHTTPClient(None)
+        client, err = hx.new_http_client(None)
         assert err is None
         server = f"http://127.0.0.1:{http_server.server_address[1]}/"
         req = hx.httpx.Request("GET", server)
-        resp, err = client.Do(req)
+        resp, err = client.do(req)
         assert err is None
         assert http_server.request_count == 1
         assert resp.status_code == 200
@@ -178,11 +178,11 @@ class TestClientRequests:
     def test_no_retry_on_non_retryable_status(self, http_server):
         http_server.mode = "not_found"
         policy = hx.RetryPolicy(max_retries=3, retry_backoff=timedelta(milliseconds=5))
-        client, err = hx.NewHTTPClient(hx.ClientOptions(retry_policy=policy))
+        client, err = hx.new_http_client(hx.ClientOptions(retry_policy=policy))
         assert err is None
         server = f"http://127.0.0.1:{http_server.server_address[1]}/"
         req = hx.httpx.Request("GET", server)
-        resp, err = client.Do(req)
+        resp, err = client.do(req)
         assert err is None or isinstance(err, hx.HttpError)
         assert http_server.request_count == 1
         assert resp.status_code == 404
@@ -191,11 +191,11 @@ class TestClientRequests:
         http_server.mode = "retryable"
         http_server.ok_at = 3
         policy = hx.RetryPolicy(max_retries=3, retry_backoff=timedelta(milliseconds=5))
-        client, err = hx.NewHTTPClient(hx.ClientOptions(retry_policy=policy))
+        client, err = hx.new_http_client(hx.ClientOptions(retry_policy=policy))
         assert err is None
         server = f"http://127.0.0.1:{http_server.server_address[1]}/"
         req = hx.httpx.Request("GET", server)
-        resp, err = client.Do(req)
+        resp, err = client.do(req)
         assert err is None
         assert http_server.request_count == 3
         assert resp.status_code == 200
@@ -204,11 +204,11 @@ class TestClientRequests:
         http_server.mode = "retryable"
         http_server.ok_at = 99
         policy = hx.RetryPolicy(max_retries=2, retry_backoff=timedelta(milliseconds=5))
-        client, err = hx.NewHTTPClient(hx.ClientOptions(retry_policy=policy))
+        client, err = hx.new_http_client(hx.ClientOptions(retry_policy=policy))
         assert err is None
         server = f"http://127.0.0.1:{http_server.server_address[1]}/"
         req = hx.httpx.Request("GET", server)
-        resp, err = client.Do(req)
+        resp, err = client.do(req)
         assert err is None
         assert resp is not None
         assert resp.status_code == 503
@@ -225,10 +225,10 @@ class _CancelledCtx:
 
 class TestDoWithContext:
     def test_canceled_context_returns_error(self, http_server):
-        client, err = hx.NewHTTPClient(None)
+        client, err = hx.new_http_client(None)
         assert err is None
         req = hx.httpx.Request("GET", f"http://127.0.0.1:{http_server.server_address[1]}/")
-        resp, err = client.DoWithContext(_CancelledCtx(), req)
+        resp, err = client.do_with_context(_CancelledCtx(), req)
         assert resp is None
         assert isinstance(err, hx.HttpError)
         assert "context canceled" in str(err)

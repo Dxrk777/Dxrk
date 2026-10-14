@@ -52,10 +52,10 @@ class _CaptureLogger:
     def __init__(self) -> None:
         self.msgs: list[str] = []
 
-    def Printf(self, format: str, *args: object) -> None:
+    def printf(self, format: str, *args: object) -> None:
         self.msgs.append(format % args if args else format)
 
-    def Println(self, *args: object) -> None:
+    def println(self, *args: object) -> None:
         self.msgs.append(" ".join(str(a) for a in args))
 
     @property
@@ -74,12 +74,12 @@ def _resp(req: httpx.Request, status: int = 200, content: bytes = b"ok") -> http
 
 
 # ---------------------------------------------------------------------------
-# pool — PoolConfig / DefaultPoolConfig / NewConnectionPool
+# pool — PoolConfig / default_pool_config / new_connection_pool
 # ---------------------------------------------------------------------------
 
 
 def test_default_pool_config_values() -> None:
-    cfg = hx.DefaultPoolConfig()
+    cfg = hx.default_pool_config()
     assert cfg.max_idle_conns == hx.defaultMaxIdleConns == 100
     assert cfg.max_idle_conns_per_host == hx.defaultMaxIdleConnsPerHost == 10
     assert cfg.idle_conn_timeout == hx.defaultIdleConnTimeout == timedelta(seconds=90)
@@ -90,14 +90,14 @@ def test_default_pool_config_values() -> None:
 
 
 def test_new_connection_pool_none_uses_defaults() -> None:
-    pool = hx.NewConnectionPool(None)
+    pool = hx.new_connection_pool(None)
     assert pool.max_idle_conns == 100
     assert pool.max_idle_per_host == 10
     assert pool.max_conns_per_host == 0
     assert pool.idle_conn_timeout == timedelta(seconds=90)
     # transport limits reflect config
     assert pool.transport._pool._max_keepalive_connections == 100  # type: ignore[attr-defined]
-    pool.Close()
+    pool.close()
 
 
 def test_new_connection_pool_custom_config() -> None:
@@ -107,144 +107,147 @@ def test_new_connection_pool_custom_config() -> None:
         idle_conn_timeout=timedelta(seconds=5),
         max_conns_per_host=7,
     )
-    pool = hx.NewConnectionPool(cfg)
-    assert pool.GetMaxIdleConns() == 5
-    assert pool.GetMaxIdleConnsPerHost() == 3
-    assert pool.GetMaxConnsPerHost() == 7
-    assert pool.GetIdleConnTimeout() == timedelta(seconds=5)
-    pool.Close()
+    pool = hx.new_connection_pool(cfg)
+    assert pool.get_max_idle_conns() == 5
+    assert pool.get_max_idle_conns_per_host() == 3
+    assert pool.get_max_conns_per_host() == 7
+    assert pool.get_idle_conn_timeout() == timedelta(seconds=5)
+    pool.close()
 
 
 def test_connection_pool_get_transport() -> None:
-    pool = hx.NewConnectionPool(None)
-    tr = pool.GetTransport()
+    pool = hx.new_connection_pool(None)
+    tr = pool.get_transport()
     assert tr is pool.transport
-    pool.Close()
+    pool.close()
 
 
 def test_connection_pool_set_max_idle_conns() -> None:
-    pool = hx.NewConnectionPool(None)
-    pool.SetMaxIdleConns(42)
-    assert pool.GetMaxIdleConns() == 42
+    pool = hx.new_connection_pool(None)
+    pool.set_max_idle_conns(42)
+    assert pool.get_max_idle_conns() == 42
     assert pool.max_idle_conns == 42
     assert pool.transport._pool._max_keepalive_connections == 42  # type: ignore[attr-defined]
-    assert pool.Stats().max_idle_conns == 42
-    pool.Close()
+    assert pool.get_stats().max_idle_conns == 42
+    pool.close()
 
 
 def test_connection_pool_set_max_idle_per_host() -> None:
-    pool = hx.NewConnectionPool(None)
-    pool.SetMaxIdleConnsPerHost(9)
-    assert pool.GetMaxIdleConnsPerHost() == 9
+    pool = hx.new_connection_pool(None)
+    pool.set_max_idle_conns_per_host(9)
+    assert pool.get_max_idle_conns_per_host() == 9
     assert pool.stats.max_idle_per_host == 9
-    pool.Close()
+    pool.close()
 
 
 def test_connection_pool_set_max_conns_per_host() -> None:
-    pool = hx.NewConnectionPool(None)
-    pool.SetMaxConnsPerHost(15)
-    assert pool.GetMaxConnsPerHost() == 15
+    pool = hx.new_connection_pool(None)
+    pool.set_max_conns_per_host(15)
+    assert pool.get_max_conns_per_host() == 15
     assert pool.stats.max_conns_per_host == 15
     # httpx sets _max_connections when not None
     assert pool.transport._pool._max_connections == 15  # type: ignore[attr-defined]
-    pool.Close()
+    pool.close()
 
 
 def test_connection_pool_set_idle_timeout() -> None:
-    pool = hx.NewConnectionPool(None)
+    pool = hx.new_connection_pool(None)
     d = timedelta(seconds=33)
-    pool.SetIdleConnTimeout(d)
-    assert pool.GetIdleConnTimeout() == d
-    assert pool.Stats().idle_conn_timeout == d
-    pool.Close()
+    pool.set_idle_conn_timeout(d)
+    assert pool.get_idle_conn_timeout() == d
+    assert pool.get_stats().idle_conn_timeout == d
+    pool.close()
 
 
 def test_connection_pool_stats_active_calculation() -> None:
-    pool = hx.NewConnectionPool(None)
+    pool = hx.new_connection_pool(None)
     # simulate internal stats
     with pool.stats_mu:
         pool.stats.total_conns = 10
         pool.stats.idle_conns = 4
         pool.stats.wait_count = 2
-    snap = pool.Stats()
+    snap = pool.get_stats()
     assert snap.total_conns == 10
     assert snap.idle_conns == 4
     assert snap.active_conns == 6
     assert snap.wait_count == 2
     # mutate snap doesn't affect pool
     snap.total_conns = 999
-    assert pool.Stats().total_conns == 10
-    pool.Close()
+    assert pool.get_stats().total_conns == 10
+    pool.close()
 
 
 def test_connection_pool_close_idle_and_close_idempotent() -> None:
-    pool = hx.NewConnectionPool(None)
-    assert pool.IsClosed() is False
-    pool.CloseIdleConnections()
+    pool = hx.new_connection_pool(None)
+    assert pool.is_closed() is False
+    pool.close_idle_connections()
     # close should be idempotent
-    pool.Close()
-    assert pool.IsClosed() is True
-    pool.Close()
-    assert pool.IsClosed() is True
+    pool.close()
+    assert pool.is_closed() is True
+    pool.close()
+    assert pool.is_closed() is True
 
 
 def test_connection_pool_clone_copies_settings() -> None:
-    pool = hx.NewConnectionPool(None)
-    pool.SetMaxIdleConns(11)
-    pool.SetMaxConnsPerHost(12)
-    clone = pool.Clone()
+    pool = hx.new_connection_pool(None)
+    pool.set_max_idle_conns(11)
+    pool.set_max_conns_per_host(12)
+    clone = pool.clone()
     assert clone is not pool
     assert clone.max_idle_conns == 11
     assert clone.max_conns_per_host == 12
     # stats are copied at clone time, not shared (independent pools)
     assert clone.stats is not pool.stats
     assert clone.stats == pool.stats
-    pool.Close()
-    clone.Close()
+    pool.close()
+    clone.close()
 
 
 def test_connection_pool_reset_clears_stats() -> None:
-    pool = hx.NewConnectionPool(None)
+    pool = hx.new_connection_pool(None)
     with pool.stats_mu:
         pool.stats.total_conns = 5
         pool.stats.idle_conns = 2
-    pool.Reset()
-    snap = pool.Stats()
+    pool.reset()
+    snap = pool.get_stats()
     assert snap.total_conns == 0
     assert snap.idle_conns == 0
-    pool.Close()
+    pool.close()
 
 
 def test_connection_pool_with_proxy_success_and_errors(monkeypatch: pytest.MonkeyPatch) -> None:
-    pool = hx.NewConnectionPool(None)
+    pool = hx.new_connection_pool(None)
     # success
-    pool.WithProxy("http://127.0.0.1:8080")
+    pool.with_proxy("http://127.0.0.1:8080")
     assert pool.transport is not None
     # invalid url -> ErrInvalidProxyURL or similar
     with pytest.raises(Exception):
-        pool.WithProxy("")
-    # None config case: need to force NewProxyConfig to return (None, err)
-    # use unsupported scheme that NewProxyConfig rejects
+        pool.with_proxy("")
+    # None config case: need to force new_proxy_config to return (None, err)
+    # use unsupported scheme that new_proxy_config rejects
     with pytest.raises(Exception):
-        pool.WithProxy("ftp://127.0.0.1:21")
-    pool.Close()
+        pool.with_proxy("ftp://127.0.0.1:21")
+    pool.close()
 
 
 def test_connection_pool_with_tls_client_config(monkeypatch: pytest.MonkeyPatch) -> None:
-    pool = hx.NewConnectionPool(None)
+    pool = hx.new_connection_pool(None)
     # success with default TLS config
-    cfg = hx.NewTLSConfig()
-    pool.WithTLSClientConfig(cfg)
+    cfg = hx.new_tls_config()
+    pool.with_tls_client_config(cfg)
     assert pool.transport is not None
 
-    # error path: make BuildClientTLSConfig raise HttpError
+    # error path: make build_client_tls_config raise HttpError
     class BadTLS:
-        def BuildClientTLSConfig(self):  # type: ignore[no-untyped-def]
+        def build_client_tls_config(self):  # type: ignore[no-untyped-def]
             raise hx.HttpError("bad tls")
 
+        # Backwards-compatible alias (Go-style name).
+        BuildClientTLSConfig = build_client_tls_config
+
     with pytest.raises(hx.HttpError):
-        pool.WithTLSClientConfig(BadTLS())  # type: ignore[arg-type]
-    pool.Close()
+        pool.with_tls_client_config(BadTLS())  # type: ignore[arg-type]
+    pool.close()
 
 
 # ---------------------------------------------------------------------------
@@ -253,42 +256,42 @@ def test_connection_pool_with_tls_client_config(monkeypatch: pytest.MonkeyPatch)
 
 
 def test_new_pooled_client_defaults_and_custom_timeout() -> None:
-    pool = hx.NewConnectionPool(None)
-    pc = hx.NewPooledClient(pool, timedelta(seconds=0))
+    pool = hx.new_connection_pool(None)
+    pc = hx.new_pooled_client(pool, timedelta(seconds=0))
     assert pc.timeout == timedelta(seconds=30)
-    assert pc.GetPool() is pool
-    assert pc.GetClient() is pc.client
-    pc2 = hx.NewPooledClient(pool, timedelta(seconds=7))
+    assert pc.get_pool() is pool
+    assert pc.get_client() is pc.client
+    pc2 = hx.new_pooled_client(pool, timedelta(seconds=7))
     assert pc2.timeout == timedelta(seconds=7)
-    pc.Close()
-    pc2.Close()
-    assert pool.IsClosed() is True
+    pc.close()
+    pc2.close()
+    assert pool.is_closed() is True
 
 
 def test_pooled_client_do_success(monkeypatch: pytest.MonkeyPatch) -> None:
-    pool = hx.NewConnectionPool(None)
-    pc = hx.NewPooledClient(pool, timedelta(seconds=5))
+    pool = hx.new_connection_pool(None)
+    pc = hx.new_pooled_client(pool, timedelta(seconds=5))
 
     def fake_send(req: httpx.Request, stream: bool = True) -> httpx.Response:  # type: ignore[no-untyped-def]
         return _resp(req, 200, b"hello")
 
     monkeypatch.setattr(pc.client, "send", fake_send)
     req = _req("http://example.com/")
-    resp, err = pc.Do(req)
+    resp, err = pc.do(req)
     assert err is None
     assert resp is not None and resp.status_code == 200
-    pc.Close()
+    pc.close()
 
 
 def test_pooled_client_do_timeout_and_http_errors(monkeypatch: pytest.MonkeyPatch) -> None:
-    pool = hx.NewConnectionPool(None)
-    pc = hx.NewPooledClient(pool, timedelta(seconds=5))
+    pool = hx.new_connection_pool(None)
+    pc = hx.new_pooled_client(pool, timedelta(seconds=5))
 
     def raise_timeout(req, stream=True):  # type: ignore[no-untyped-def]
         raise hx.httpx.ReadTimeout("read timeout")
 
     monkeypatch.setattr(pc.client, "send", raise_timeout)
-    resp, err = pc.Do(_req())
+    resp, err = pc.do(_req())
     assert resp is None
     assert isinstance(err, hx.HttpError)
 
@@ -296,21 +299,21 @@ def test_pooled_client_do_timeout_and_http_errors(monkeypatch: pytest.MonkeyPatc
         raise hx.httpx.ConnectError("connect failed")
 
     monkeypatch.setattr(pc.client, "send", raise_connect)
-    resp2, err2 = pc.Do(_req())
+    resp2, err2 = pc.do(_req())
     assert resp2 is None
     assert isinstance(err2, hx.HttpError)
-    pc.Close()
+    pc.close()
 
 
 def test_pooled_client_do_with_context_canceled() -> None:
-    pool = hx.NewConnectionPool(None)
-    pc = hx.NewPooledClient(pool, timedelta(seconds=5))
+    pool = hx.new_connection_pool(None)
+    pc = hx.new_pooled_client(pool, timedelta(seconds=5))
 
     class Ctx:
         def err(self):  # type: ignore[no-untyped-def]
             return "canceled"
 
-    resp, err = pc.DoWithContext(Ctx(), _req())  # type: ignore[arg-type]
+    resp, err = pc.do_with_context(Ctx(), _req())  # type: ignore[arg-type]
     assert resp is None
     assert isinstance(err, hx.HttpError)
     assert "canceled" in str(err)
@@ -322,20 +325,20 @@ def test_pooled_client_do_with_context_canceled() -> None:
             return None
 
     req = _req()
-    resp2, err2 = pc.DoWithContext(OkCtx(), req)  # type: ignore[arg-type]
+    resp2, err2 = pc.do_with_context(OkCtx(), req)  # type: ignore[arg-type]
     assert err2 is None
     assert resp2 is not None
     assert hasattr(req, "_ctx")
-    pc.Close()
+    pc.close()
 
 
 def test_pooled_client_set_timeout_and_close() -> None:
-    pool = hx.NewConnectionPool(None)
-    pc = hx.NewPooledClient(pool, timedelta(seconds=5))
-    pc.SetTimeout(timedelta(seconds=9))
+    pool = hx.new_connection_pool(None)
+    pc = hx.new_pooled_client(pool, timedelta(seconds=5))
+    pc.set_timeout(timedelta(seconds=9))
     assert pc.timeout == timedelta(seconds=9)
-    pc.Close()
-    assert pool.IsClosed() is True
+    pc.close()
+    assert pool.is_closed() is True
 
 
 # ---------------------------------------------------------------------------
@@ -344,50 +347,50 @@ def test_pooled_client_set_timeout_and_close() -> None:
 
 
 def test_pool_monitor_init_defaults_and_is_running() -> None:
-    pool = hx.NewConnectionPool(None)
+    pool = hx.new_connection_pool(None)
     m = hx.PoolMonitor(pool, timedelta(seconds=0), None)
     assert m.interval == timedelta(seconds=10)
-    assert m.IsRunning() is False
-    pool.Close()
+    assert m.is_running() is False
+    pool.close()
 
 
 def test_pool_monitor_start_stop_idempotent() -> None:
-    pool = hx.NewConnectionPool(None)
+    pool = hx.new_connection_pool(None)
     calls: list[hx.PoolStats] = []
 
     def on_stats(s: hx.PoolStats) -> None:
         calls.append(s)
 
     m = hx.PoolMonitor(pool, timedelta(milliseconds=20), on_stats)
-    m.Start()
-    assert m.IsRunning() is True
+    m.start()
+    assert m.is_running() is True
     # second start should be no-op
-    m.Start()
-    assert m.IsRunning() is True
+    m.start()
+    assert m.is_running() is True
     # el hilo del monitor puede tardar en arrancar en CI cargado: esperar con
     # deadline en vez de sleep fijo (flaky en macOS con sleep(0.07))
     deadline = time.monotonic() + 5.0
     while not calls and time.monotonic() < deadline:
         time.sleep(0.01)
-    m.Stop()
-    assert m.IsRunning() is False
+    m.stop()
+    assert m.is_running() is False
     # second stop no-op
-    m.Stop()
-    assert m.IsRunning() is False
+    m.stop()
+    assert m.is_running() is False
     # should have at least one callback
     assert len(calls) >= 1
-    pool.Close()
+    pool.close()
 
 
 def test_pool_monitor_thread_daemon_and_no_callback() -> None:
-    pool = hx.NewConnectionPool(None)
+    pool = hx.new_connection_pool(None)
     m = hx.PoolMonitor(pool, timedelta(milliseconds=10), None)
-    m.Start()
+    m.start()
     # ensure thread is daemon
     assert m.thread is not None and m.thread.daemon is True
     time.sleep(0.03)
-    m.Stop()
-    pool.Close()
+    m.stop()
+    pool.close()
 
 
 # ---------------------------------------------------------------------------
@@ -396,7 +399,7 @@ def test_pool_monitor_thread_daemon_and_no_callback() -> None:
 
 
 def test_default_logging_config_values() -> None:
-    cfg = hx.DefaultLoggingConfig()
+    cfg = hx.default_logging_config()
     assert cfg.level == hx.LogLevel.LogLevelInfo
     assert cfg.max_body_size == hx.defaultMaxBodyLogSize
     assert cfg.log_request_headers is True
@@ -408,60 +411,60 @@ def test_httplogger_init_and_level(tmp_path: Path) -> None:
     cap = _CaptureLogger()
     cfg = hx.LoggingConfig(logger=cap, level=hx.LogLevel.LogLevelDebug, max_body_size=0)
     logger = hx.HTTPLogger(cfg)
-    assert logger.GetLevel() == hx.LogLevel.LogLevelDebug
+    assert logger.get_level() == hx.LogLevel.LogLevelDebug
     assert logger.config.max_body_size == hx.defaultMaxBodyLogSize
-    logger.SetLevel(hx.LogLevel.LogLevelWarn)
-    assert logger.GetLevel() == hx.LogLevel.LogLevelWarn
+    logger.set_level(hx.LogLevel.LogLevelWarn)
+    assert logger.get_level() == hx.LogLevel.LogLevelWarn
     # GetConfig / SetConfig
     new_cfg = hx.LoggingConfig(logger=cap, level=hx.LogLevel.LogLevelInfo)
-    logger.SetConfig(new_cfg)
-    assert logger.GetConfig().level == hx.LogLevel.LogLevelInfo
+    logger.set_config(new_cfg)
+    assert logger.get_config().level == hx.LogLevel.LogLevelInfo
     # None config defaults
     l2 = hx.HTTPLogger(None)
     assert l2.config.logger is not None
 
 
 def test_loglevel_string() -> None:
-    assert hx.LogLevel.LogLevelNone.String() == "NONE"
-    assert hx.LogLevel.LogLevelError.String() == "ERROR"
-    assert hx.LogLevel.LogLevelWarn.String() == "WARN"
-    assert hx.LogLevel.LogLevelInfo.String() == "INFO"
-    assert hx.LogLevel.LogLevelDebug.String() == "DEBUG"
+    assert hx.LogLevel.LogLevelNone.to_string() == "NONE"
+    assert hx.LogLevel.LogLevelError.to_string() == "ERROR"
+    assert hx.LogLevel.LogLevelWarn.to_string() == "WARN"
+    assert hx.LogLevel.LogLevelInfo.to_string() == "INFO"
+    assert hx.LogLevel.LogLevelDebug.to_string() == "DEBUG"
     # unknown value: IntEnum raises on invalid construction, so test via fallback path
-    assert hx.LogLevel.LogLevelDebug.String() != "UNKNOWN"
-    assert hx.LogLevel(4).String() == "DEBUG"
+    assert hx.LogLevel.LogLevelDebug.to_string() != "UNKNOWN"
+    assert hx.LogLevel(4).to_string() == "DEBUG"
 
 
 def test_sanitize_helpers_and_dump() -> None:
-    # SanitizeHeaders
+    # sanitize_headers
     headers = httpx.Headers([("Authorization", "Bearer secret"), ("X-Keep", "1"), ("X-Api-Key", "abc")])
-    out = hx.SanitizeHeaders(headers)
+    out = hx.sanitize_headers(headers)
     assert out.get("Authorization") == "[REDACTED]"
     assert out.get("X-Keep") == "1"
     assert out.get("X-Api-Key") == "[REDACTED]"
-    # SanitizeURL
+    # sanitize_url
     assert (
-        hx.SanitizeURL("https://host/path?token=abc&password=xyz&other=1")
+        hx.sanitize_url("https://host/path?token=abc&password=xyz&other=1")
         == "https://host/path?token=[REDACTED]&password=[REDACTED]&other=1"
     )
-    # SanitizeBody patterns
-    assert b"[CREDIT_CARD_REDACTED]" in hx.SanitizeBody(b"card 4111 1111 1111 1111 end")
-    assert b"[SSN_REDACTED]" in hx.SanitizeBody(b"ssn 123-45-6789 x")
-    assert b"[EMAIL_REDACTED]" in hx.SanitizeBody(b"mail a@b.com ok")
-    assert hx.SanitizeBody(b"password=hunter2&code=zzz") == b"password=[REDACTED]&code=[REDACTED]"
+    # sanitize_body patterns
+    assert b"[CREDIT_CARD_REDACTED]" in hx.sanitize_body(b"card 4111 1111 1111 1111 end")
+    assert b"[SSN_REDACTED]" in hx.sanitize_body(b"ssn 123-45-6789 x")
+    assert b"[EMAIL_REDACTED]" in hx.sanitize_body(b"mail a@b.com ok")
+    assert hx.sanitize_body(b"password=hunter2&code=zzz") == b"password=[REDACTED]&code=[REDACTED]"
     # Dump helpers
     req = _req("http://example.com/path", content=b"hello")
     req.headers["x-test"] = "v"
-    d = hx.DumpRequest(req, body=True)
+    d = hx.dump_request(req, body=True)
     assert "GET http://example.com/path" in d
     assert "x-test: v" in d
     assert "hello" in d
-    assert hx.DumpRequestOut(req) == d
-    assert "hello" not in hx.DumpRequest(req, body=False)
+    assert hx.dump_request_out(req) == d
+    assert "hello" not in hx.dump_request(req, body=False)
     resp = _resp(req, 200, b"world")
-    dr = hx.DumpResponse(resp, body=True)
+    dr = hx.dump_response(resp, body=True)
     assert "200" in dr and "world" in dr
-    assert "world" not in hx.DumpResponse(resp, body=False)
+    assert "world" not in hx.dump_response(resp, body=False)
 
 
 def test_headers_of_and_remote_addr_and_round_ms() -> None:
@@ -484,13 +487,13 @@ def test_headers_of_and_remote_addr_and_round_ms() -> None:
 
 def test_with_logger_and_logger_from_context() -> None:
     ctx = hx._background()
-    assert hx.LoggerFromContext(ctx) is None
+    assert hx.logger_from_context(ctx) is None
     cap = _CaptureLogger()
     logger = hx.HTTPLogger(hx.LoggingConfig(logger=cap))
-    with_logger = hx.WithLogger(ctx, logger)
-    assert hx.LoggerFromContext(with_logger) is logger
+    with_logger = hx.with_logger(ctx, logger)
+    assert hx.logger_from_context(with_logger) is logger
     # non-registered context returns None
-    assert hx.LoggerFromContext(hx._background()) is None
+    assert hx.logger_from_context(hx._background()) is None
 
 
 # ---------------------------------------------------------------------------
@@ -508,7 +511,7 @@ def test_httplogger_log_request_sanitizes_headers_and_body() -> None:
     req.headers["Authorization"] = "Bearer token"
     req.headers["User-Agent"] = "dxrk-test/1.0"
     req.headers["x-forwarded-for"] = "1.2.3.4"
-    logger.LogRequest(req)
+    logger.log_request(req)
     assert len(cap.msgs) == 1
     txt = cap.msgs[0]
     assert "POST http://example.com/api?token=secret123" in txt
@@ -522,7 +525,7 @@ def test_httplogger_log_request_sanitizes_headers_and_body() -> None:
 def test_httplogger_log_request_suppressed_when_level_none() -> None:
     cap = _CaptureLogger()
     logger = hx.HTTPLogger(hx.LoggingConfig(logger=cap, level=hx.LogLevel.LogLevelNone))
-    logger.LogRequest(_req())
+    logger.log_request(_req())
     assert cap.msgs == []
 
 
@@ -531,7 +534,7 @@ def test_httplogger_log_request_body_empty_and_no_headers(monkeypatch: pytest.Mo
     cfg = hx.LoggingConfig(logger=cap, level=hx.LogLevel.LogLevelInfo, log_request_headers=False, log_request_body=True)
     logger = hx.HTTPLogger(cfg)
     req = _req(content=b"")
-    logger.LogRequest(req)
+    logger.log_request(req)
     assert len(cap.msgs) == 1
     # body empty not logged because req.content is falsy
     assert "Request Headers" not in cap.msgs[0]
@@ -540,7 +543,7 @@ def test_httplogger_log_request_body_empty_and_no_headers(monkeypatch: pytest.Mo
     cfg2 = hx.LoggingConfig(logger=cap2, level=hx.LogLevel.LogLevelInfo, sanitize_body=False, sanitize_params=True)
     logger2 = hx.HTTPLogger(cfg2)
     req2 = httpx.Request("POST", "http://example.com/", content=b"password=hunter2&ok=1")
-    logger2.LogRequest(req2)
+    logger2.log_request(req2)
     assert "password=[REDACTED]" in cap2.msgs[0]
     assert "ok=1" in cap2.msgs[0]
 
@@ -554,14 +557,14 @@ def test_httplogger_custom_sanitizer_applied() -> None:
     cfg = hx.LoggingConfig(logger=cap, level=hx.LogLevel.LogLevelInfo, custom_sanitizers=[my_sanitizer])
     logger = hx.HTTPLogger(cfg)
     req = httpx.Request("POST", "http://example.com/", content=b"hello world")
-    logger.LogRequest(req)
+    logger.log_request(req)
     assert "[HELLO] world" in cap.msgs[0]
     # response too
     cap2 = _CaptureLogger()
     cfg2 = hx.LoggingConfig(logger=cap2, level=hx.LogLevel.LogLevelInfo, custom_sanitizers=[my_sanitizer])
     logger2 = hx.HTTPLogger(cfg2)
     resp = httpx.Response(200, request=_req(), content=b"hello again")
-    logger2.LogResponse(resp, timedelta(milliseconds=5))
+    logger2.log_response(resp, timedelta(milliseconds=5))
     assert "[HELLO] again" in cap2.msgs[0]
 
 
@@ -570,7 +573,7 @@ def test_httplogger_log_response_with_duration_and_headers() -> None:
     logger = hx.HTTPLogger(hx.LoggingConfig(logger=cap, level=hx.LogLevel.LogLevelInfo))
     req = _req()
     resp = httpx.Response(200, request=req, content=b"ok body", headers=httpx.Headers([("Set-Cookie", "secret")]))
-    logger.LogResponse(resp, timedelta(milliseconds=12))
+    logger.log_response(resp, timedelta(milliseconds=12))
     txt = cap.msgs[0]
     assert "200 OK" in txt
     assert "Duration:" in txt
@@ -582,7 +585,7 @@ def test_httplogger_log_response_with_duration_and_headers() -> None:
 def test_httplogger_log_response_suppressed() -> None:
     cap = _CaptureLogger()
     logger = hx.HTTPLogger(hx.LoggingConfig(logger=cap, level=hx.LogLevel.LogLevelWarn))
-    logger.LogResponse(_resp(_req()), timedelta(milliseconds=1))
+    logger.log_response(_resp(_req()), timedelta(milliseconds=1))
     assert cap.msgs == []
 
 
@@ -591,27 +594,27 @@ def test_httplogger_log_roundtrip_error_and_success_paths() -> None:
     logger = hx.HTTPLogger(hx.LoggingConfig(logger=cap, level=hx.LogLevel.LogLevelInfo))
     req = _req()
     # error path
-    logger.LogRoundTrip(req, None, timedelta(milliseconds=5), Exception("boom"))
+    logger.log_round_trip(req, None, timedelta(milliseconds=5), Exception("boom"))
     assert "ERROR: boom" in cap.msgs[0]
     # debug error includes request line
     cap2 = _CaptureLogger()
     logger2 = hx.HTTPLogger(hx.LoggingConfig(logger=cap2, level=hx.LogLevel.LogLevelDebug))
-    logger2.LogRoundTrip(req, None, timedelta(milliseconds=5), Exception("boom"))
+    logger2.log_round_trip(req, None, timedelta(milliseconds=5), Exception("boom"))
     assert "GET http://example.com/" in cap2.msgs[0]
     # success path
     cap3 = _CaptureLogger()
     logger3 = hx.HTTPLogger(hx.LoggingConfig(logger=cap3, level=hx.LogLevel.LogLevelInfo))
     resp = _resp(req, 200)
-    logger3.LogRoundTrip(req, resp, timedelta(milliseconds=3), None)
+    logger3.log_round_trip(req, resp, timedelta(milliseconds=3), None)
     assert "200 OK" in cap3.msgs[0]
     assert "Duration:" in cap3.msgs[0]
     # suppressed when level none and no error
     cap4 = _CaptureLogger()
     logger4 = hx.HTTPLogger(hx.LoggingConfig(logger=cap4, level=hx.LogLevel.LogLevelNone))
-    logger4.LogRoundTrip(req, resp, timedelta(milliseconds=1), None)
+    logger4.log_round_trip(req, resp, timedelta(milliseconds=1), None)
     assert cap4.msgs == []
     # but error still logs even when level none
-    logger4.LogRoundTrip(req, None, timedelta(milliseconds=1), Exception("err"))
+    logger4.log_round_trip(req, None, timedelta(milliseconds=1), Exception("err"))
     assert len(cap4.msgs) == 1
 
 
@@ -644,8 +647,8 @@ def test_logged_transport_handle_request_and_close_clone() -> None:
     clone = lt.clone()
     assert clone is not lt
     assert clone.transport is fake
-    # NewLoggedTransport with None
-    lt2 = hx.NewLoggedTransport(None, logger)
+    # new_logged_transport with None
+    lt2 = hx.new_logged_transport(None, logger)
     assert lt2.transport is not None
     lt2.close()
 
@@ -679,7 +682,7 @@ def test_httplogger_middleware_logs() -> None:
             pass
 
     nxt = NextTransport()
-    logged_cls = logger.Middleware(nxt)
+    logged_cls = logger.middleware(nxt)
     # Middleware returns a transport instance with handle_request
     assert isinstance(logged_cls, httpx.HTTPTransport)
     # handle request via inner LoggedTransport logic
@@ -699,7 +702,7 @@ def test_httplogger_middleware_logs() -> None:
 
     cap2 = _CaptureLogger()
     logger2 = hx.HTTPLogger(hx.LoggingConfig(logger=cap2, level=hx.LogLevel.LogLevelInfo))
-    logged2 = logger2.Middleware(ErrNext())
+    logged2 = logger2.middleware(ErrNext())
     with pytest.raises(httpx.ReadTimeout):
         logged2.handle_request(_req())
     assert any("ERROR" in m for m in cap2.msgs)
@@ -730,7 +733,7 @@ def test_transport_make_and_env_proxy(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_transport_from_config_and_proxy_url_of() -> None:
     # _transport_from_config with proxy_config
-    pc, _ = hx.NewProxyConfig("http://127.0.0.1:8080")
+    pc, _ = hx.new_proxy_config("http://127.0.0.1:8080")
     assert pc is not None
     tr = hx._transport_from_config(pc, None)
     assert tr is not None

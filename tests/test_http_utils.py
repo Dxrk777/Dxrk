@@ -15,66 +15,66 @@ def test_proxy_type_values():
 
 def test_proxy_auth_string_encode():
     empty = H.ProxyAuth()
-    assert empty.String() == ""
-    assert empty.Encode() == ""
+    assert empty.to_string() == ""
+    assert empty.encode() == ""
     user_only = H.ProxyAuth(username="u")
-    assert user_only.String() == "u"
-    assert user_only.Encode() == "u:"
+    assert user_only.to_string() == "u"
+    assert user_only.encode() == "u:"
     full = H.ProxyAuth(username="u", password="p")
-    assert full.String() == "u:p"
-    assert full.Encode() == "u:p"
+    assert full.to_string() == "u:p"
+    assert full.encode() == "u:p"
     assert str(empty) == ""
     assert str(full) == "u:p"
 
 
 def test_proxy_config_urls():
-    http_proxy = H.NewHTTPProxy("localhost", 3128)
-    assert http_proxy.GetProxyURL() == "http://localhost:3128"
-    https_proxy = H.NewHTTPSProxy("localhost", 443)
-    assert https_proxy.GetProxyURL() == "https://localhost:443"
-    socks = H.NewSOCKS5Proxy("127.0.0.1", 1080)
-    assert socks.GetProxyURL() == "socks5://127.0.0.1:1080"
-    authed = H.NewHTTPProxy("localhost", 8080, H.ProxyAuth(username="u", password="p"))
-    assert authed.GetProxyURL() == "http://u:p@localhost:8080"
+    http_proxy = H.new_http_proxy("localhost", 3128)
+    assert http_proxy.get_proxy_url() == "http://localhost:3128"
+    https_proxy = H.new_https_proxy("localhost", 443)
+    assert https_proxy.get_proxy_url() == "https://localhost:443"
+    socks = H.new_socks5_proxy("127.0.0.1", 1080)
+    assert socks.get_proxy_url() == "socks5://127.0.0.1:1080"
+    authed = H.new_http_proxy("localhost", 8080, H.ProxyAuth(username="u", password="p"))
+    assert authed.get_proxy_url() == "http://u:p@localhost:8080"
 
 
 def test_proxy_default_ports():
-    assert H.ProxyConfig(type=H.ProxyType.ProxyTypeHTTP).ProxyPort() == 8080
-    assert H.ProxyConfig(type=H.ProxyType.ProxyTypeHTTPS).ProxyPort() == 8443
-    assert H.ProxyConfig(type=H.ProxyType.ProxyTypeSOCKS5).ProxyPort() == 1080
-    assert H.ProxyConfig(type=H.ProxyType.ProxyTypeSOCKS4).ProxyPort() == 1080
-    assert H.ProxyConfig().ProxyPort() == 8080
+    assert H.ProxyConfig(type=H.ProxyType.ProxyTypeHTTP).proxy_port() == 8080
+    assert H.ProxyConfig(type=H.ProxyType.ProxyTypeHTTPS).proxy_port() == 8443
+    assert H.ProxyConfig(type=H.ProxyType.ProxyTypeSOCKS5).proxy_port() == 1080
+    assert H.ProxyConfig(type=H.ProxyType.ProxyTypeSOCKS4).proxy_port() == 1080
+    assert H.ProxyConfig().proxy_port() == 8080
 
 
 def test_proxy_string_empty_on_unsupported():
     cfg = H.ProxyConfig(type="bogus")  # type: ignore[arg-type]
-    assert cfg.String() == ""
+    assert cfg.to_string() == ""
     assert str(cfg) == ""
 
 
 def test_bypass_matching():
-    cfg = H.NewHTTPProxy("p", 8080)
-    cfg.AddBypass("")
-    cfg.AddBypass("*.internal")
-    cfg.AddBypass("localhost")
-    assert cfg.ShouldBypass("api.internal")
-    assert not cfg.ShouldBypass("api.external")
-    assert cfg.ShouldBypass("localhost")
-    cfg.SetNoProxy("example.com")
-    assert cfg.ShouldBypass("example.com")
-    wild = H.NewHTTPProxy("p", 8080)
-    wild.AddBypass("*")
-    assert wild.ShouldBypass("anything")
-    star = H.NewHTTPProxy("p", 8080)
-    star.AddBypass("pre*")
-    assert star.ShouldBypass("prefix.example")
-    assert not star.ShouldBypass("other.example")
+    cfg = H.new_http_proxy("p", 8080)
+    cfg.add_bypass("")
+    cfg.add_bypass("*.internal")
+    cfg.add_bypass("localhost")
+    assert cfg.should_bypass("api.internal")
+    assert not cfg.should_bypass("api.external")
+    assert cfg.should_bypass("localhost")
+    cfg.set_no_proxy("example.com")
+    assert cfg.should_bypass("example.com")
+    wild = H.new_http_proxy("p", 8080)
+    wild.add_bypass("*")
+    assert wild.should_bypass("anything")
+    star = H.new_http_proxy("p", 8080)
+    star.add_bypass("pre*")
+    assert star.should_bypass("prefix.example")
+    assert not star.should_bypass("other.example")
 
 
 def test_proxy_clone():
-    cfg = H.NewHTTPProxy("p", 8080, H.ProxyAuth(username="u", password="p"))
-    cfg.AddBypass("x")
-    clone = cfg.Clone()
+    cfg = H.new_http_proxy("p", 8080, H.ProxyAuth(username="u", password="p"))
+    cfg.add_bypass("x")
+    clone = cfg.clone()
     assert clone is not cfg
     assert clone.host == cfg.host
     assert clone.auth is not cfg.auth
@@ -84,7 +84,7 @@ def test_proxy_clone():
 
 
 def test_new_proxy_config_parse():
-    cfg, err = H.NewProxyConfig("http://user:pass@proxy.example:8080?bypass=a,b&no_proxy=c")
+    cfg, err = H.new_proxy_config("http://user:pass@proxy.example:8080?bypass=a,b&no_proxy=c")
     assert err is None
     assert cfg is not None
     assert cfg.type is H.ProxyType.ProxyTypeHTTP
@@ -93,33 +93,33 @@ def test_new_proxy_config_parse():
     assert cfg.auth is not None and cfg.auth.username == "user"
     assert cfg.bypass == ["a", "b"]
     assert cfg.no_proxy == "c"
-    assert cfg.GetProxyURL() == "http://user:pass@proxy.example:8080"
+    assert cfg.get_proxy_url() == "http://user:pass@proxy.example:8080"
 
 
 def test_new_proxy_config_errors():
-    cfg, err = H.NewProxyConfig("")
+    cfg, err = H.new_proxy_config("")
     assert cfg is None
     assert err is H.ErrInvalidProxyURL
-    cfg2, err2 = H.NewProxyConfig("ftp://x")
+    cfg2, err2 = H.new_proxy_config("ftp://x")
     assert cfg2 is None
     assert err2 is not None
     assert "unsupported proxy scheme" in str(err2)
-    cfg3, err3 = H.NewProxyConfig("socks5://h:1080")
+    cfg3, err3 = H.new_proxy_config("socks5://h:1080")
     assert err3 is None and cfg3 is not None
     assert cfg3.type is H.ProxyType.ProxyTypeSOCKS5
 
 
 def test_parse_proxy_url_alias():
-    cfg, err = H.ParseProxyURL("https://h:8443")
+    cfg, err = H.parse_proxy_url("https://h:8443")
     assert err is None and cfg is not None
-    assert cfg.GetProxyURL() == "https://h:8443"
+    assert cfg.get_proxy_url() == "https://h:8443"
 
 
 def test_must_parse_proxy_url():
-    cfg = H.MustParseProxyURL("http://h:1")
+    cfg = H.must_parse_proxy_url("http://h:1")
     assert cfg is not None
     with pytest.raises(Exception):
-        H.MustParseProxyURL("")
+        H.must_parse_proxy_url("")
 
 
 def test_bypass_list_parsing():
@@ -154,39 +154,39 @@ def test_get_proxy_from_environment(monkeypatch):
     monkeypatch.delenv("http_proxy", raising=False)
     monkeypatch.delenv("NO_PROXY", raising=False)
     monkeypatch.delenv("no_proxy", raising=False)
-    assert H.GetProxyFromEnvironment() is None
+    assert H.get_proxy_from_environment() is None
     monkeypatch.setenv("HTTPS_PROXY", "http://p:8080")
     monkeypatch.setenv("NO_PROXY", "local")
-    cfg = H.GetProxyFromEnvironment()
+    cfg = H.get_proxy_from_environment()
     assert cfg is not None and cfg.host == "p"
     assert cfg.no_proxy == "local"
     monkeypatch.delenv("HTTPS_PROXY")
     monkeypatch.setenv("http_proxy", "invalid scheme")
-    assert H.GetProxyFromEnvironment() is None
+    assert H.get_proxy_from_environment() is None
 
 
 def test_parse_proxy_url_alias_2():
-    cfg, err = H.ParseProxyURL("https://h:8443")
+    cfg, err = H.parse_proxy_url("https://h:8443")
     assert err is None and cfg is not None
-    assert cfg.GetProxyURL() == "https://h:8443"
+    assert cfg.get_proxy_url() == "https://h:8443"
 
 
 def test_retry_policy():
-    policy = H.DefaultRetryPolicy()
+    policy = H.default_retry_policy()
     assert policy.max_retries == 3
     assert policy.retry_backoff == timedelta(milliseconds=100)
-    assert policy.IsRetryable(429)
-    assert policy.IsRetryable(503)
-    assert policy.IsRetryable(408)
-    assert not policy.IsRetryable(404)
-    assert not policy.IsRetryable(200)
+    assert policy.is_retryable(429)
+    assert policy.is_retryable(503)
+    assert policy.is_retryable(408)
+    assert not policy.is_retryable(404)
+    assert not policy.is_retryable(200)
 
 
 def test_retry_policy_custom():
     policy = H.RetryPolicy(max_retries=0, retryable_status_codes=[500])
     assert policy.max_retries == 0
-    assert policy.IsRetryable(500)
-    assert not policy.IsRetryable(429)
+    assert policy.is_retryable(500)
+    assert not policy.is_retryable(429)
 
 
 def test_pem_decode_roundtrip():
@@ -199,29 +199,29 @@ def test_pem_decode_roundtrip():
         format=serialization.PrivateFormat.PKCS8,
         encryption_algorithm=serialization.NoEncryption(),
     )
-    parsed = H.ParsePrivateKey(pem)
+    parsed = H.parse_private_key(pem)
     assert parsed is not None
     assert H._pem_decode(b"not pem") is None
     with pytest.raises(H.HttpError):
-        H.ParsePrivateKey(b"garbage")
+        H.parse_private_key(b"garbage")
 
 
 def test_cert_pool():
-    pool = H.NewCertPool()
+    pool = H.new_cert_pool()
     assert pool is not None
 
 
 def test_tls_config_build():
-    cfg = H.NewTLSConfig()
-    ctx = cfg.BuildTLSConfig()
+    cfg = H.new_tls_config()
+    ctx = cfg.build_tls_config()
     assert isinstance(ctx, ssl_ctx())
-    client = cfg.BuildClientTLSConfig()
+    client = cfg.build_client_tls_config()
     assert client.check_hostname
     with pytest.raises(H.HttpError):
-        cfg.BuildServerTLSConfig()
-    cloned = cfg.Clone()
+        cfg.build_server_tls_config()
+    cloned = cfg.clone()
     assert cloned is not cfg
-    assert cfg.WithServerName("x").server_name == "x"
+    assert cfg.with_server_name("x").server_name == "x"
 
 
 def ssl_ctx():
@@ -232,13 +232,13 @@ def ssl_ctx():
 
 def test_sanitize():
     headers = httpx.Headers({"Authorization": "Bearer secret", "X-Keep": "1"})
-    out = H.SanitizeHeaders(headers)
+    out = H.sanitize_headers(headers)
     assert out.get("Authorization") == "[REDACTED]"
     assert out.get("X-Keep") == "1"
-    assert "secret" not in H.SanitizeURL("http://u:secret@h/path").split("@")[0] or True
-    assert H.SanitizeURL("https://host/path?token=abc") == "https://host/path?token=[REDACTED]"
-    assert H.SanitizeBody(b"a" * 100) == b"a" * 100
-    assert H.SanitizeBody(b"") == b""
+    assert "secret" not in H.sanitize_url("http://u:secret@h/path").split("@")[0] or True
+    assert H.sanitize_url("https://host/path?token=abc") == "https://host/path?token=[REDACTED]"
+    assert H.sanitize_body(b"a" * 100) == b"a" * 100
+    assert H.sanitize_body(b"") == b""
 
 
 def test_round_ms():
@@ -250,20 +250,20 @@ def test_round_ms():
 
 def test_dump_helpers():
     req = httpx.Request("GET", "http://example.com/")
-    dumped = H.DumpRequest(req)
+    dumped = H.dump_request(req)
     assert "GET" in dumped
     assert "http://example.com/" in dumped
     resp = httpx.Response(200, request=req)
-    dumped_resp = H.DumpResponse(resp)
+    dumped_resp = H.dump_response(resp)
     assert "200" in dumped_resp
 
 
 def test_logger_context():
     ctx = H._background()
-    assert H.LoggerFromContext(ctx) is None
+    assert H.logger_from_context(ctx) is None
     logger = H.HTTPLogger()
-    with_logger = H.WithLogger(ctx, logger)
-    assert H.LoggerFromContext(with_logger) is logger
+    with_logger = H.with_logger(ctx, logger)
+    assert H.logger_from_context(with_logger) is logger
 
 
 def test_context_helpers():
@@ -349,33 +349,33 @@ def test_headers_of_multi():
 def test_dump_request_out():
     req = httpx.Request("POST", "http://example.com/path")
     req.headers["x-test"] = "v"
-    out = H.DumpRequestOut(req)
-    assert out == H.DumpRequest(req)
+    out = H.dump_request_out(req)
+    assert out == H.dump_request(req)
     assert "POST http://example.com/path" in out
     assert "x-test: v" in out
-    no_body = H.DumpRequestOut(req, body=False)
+    no_body = H.dump_request_out(req, body=False)
     assert no_body == out
 
 
 def test_dump_response_body():
     req = httpx.Request("GET", "http://example.com/")
     resp = httpx.Response(200, request=req, content=b"hello world")
-    dumped = H.DumpResponse(resp)
+    dumped = H.dump_response(resp)
     assert "hello world" in dumped
     resp2 = httpx.Response(599, request=req, content=b"x")
-    assert "unknown" in H.DumpResponse(resp2)
+    assert "unknown" in H.dump_response(resp2)
 
 
 def test_sanitize_body_patterns():
-    assert H.SanitizeBody(b"card 4111 1111 1111 1111 end") == b"card [CREDIT_CARD_REDACTED] end"
-    assert H.SanitizeBody(b"ssn 123-45-6789 x") == b"ssn [SSN_REDACTED] x"
-    assert H.SanitizeBody(b"mail a@b.com ok") == b"mail [EMAIL_REDACTED] ok"
-    assert H.SanitizeBody(b"password=hunter2&code=zzz") == b"password=[REDACTED]&code=[REDACTED]"
-    assert H.SanitizeBody(b"plain body") == b"plain body"
+    assert H.sanitize_body(b"card 4111 1111 1111 1111 end") == b"card [CREDIT_CARD_REDACTED] end"
+    assert H.sanitize_body(b"ssn 123-45-6789 x") == b"ssn [SSN_REDACTED] x"
+    assert H.sanitize_body(b"mail a@b.com ok") == b"mail [EMAIL_REDACTED] ok"
+    assert H.sanitize_body(b"password=hunter2&code=zzz") == b"password=[REDACTED]&code=[REDACTED]"
+    assert H.sanitize_body(b"plain body") == b"plain body"
 
 
 def test_new_http_client_defaults():
-    hc, err = H.NewHTTPClient(None)
+    hc, err = H.new_http_client(None)
     assert err is None
     assert hc is not None
     assert hc.client is not None
@@ -384,7 +384,7 @@ def test_new_http_client_defaults():
 
 def test_new_http_client_disable_compression():
     opts = H.ClientOptions(disable_compression=True)
-    hc, err = H.NewHTTPClient(opts)
+    hc, err = H.new_http_client(opts)
     assert err is None and hc is not None
 
 
@@ -407,27 +407,27 @@ def test_parse_certificate_helpers():
         .sign(key, hashes.SHA256())
     )
     pem = cert.public_bytes(serialization.Encoding.PEM)
-    parsed = H.ParseCertificate(pem)
+    parsed = H.parse_certificate(pem)
     assert parsed is not None
-    assert H.CertificateToPEM(parsed) == pem
+    assert H.certificate_to_pem(parsed) == pem
     key_pem = key.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
         encryption_algorithm=serialization.NoEncryption(),
     )
-    parsed_key = H.ParsePrivateKey(key_pem)
+    parsed_key = H.parse_private_key(key_pem)
     assert parsed_key is not None
-    assert H.PrivateKeyToPEM(parsed_key) == key_pem
+    assert H.private_key_to_pem(parsed_key) == key_pem
     with pytest.raises(H.HttpError):
-        H.ParseCertificate(b"garbage")
+        H.parse_certificate(b"garbage")
 
 
 def test_socks4_get_proxy_url():
     cfg = H.ProxyConfig(type=H.ProxyType.ProxyTypeSOCKS4, host="h", port=1080)
-    assert cfg.GetProxyURL() == "socks4://h:1080"
-    assert cfg.ProxyPort() == 1080
+    assert cfg.get_proxy_url() == "socks4://h:1080"
+    assert cfg.proxy_port() == 1080
     bogus = H.ProxyConfig(type="bogus", host="h")  # type: ignore[arg-type]
-    assert bogus.ProxyPort() == 0
+    assert bogus.proxy_port() == 0
 
 
 def test_context_deadline_expired():
@@ -458,18 +458,18 @@ def test_context_set_deadline_override():
 def test_do_with_canceled_context():
     import time
 
-    hc, err = H.NewHTTPClient(None)
+    hc, err = H.new_http_client(None)
     assert err is None and hc is not None
     ctx = H._Context(deadline=time.monotonic() - 1)
     req = httpx.Request("GET", "http://example.com/")
     setattr(req, "_ctx", ctx)
-    resp, rerr = hc.DoWithRetry(req, H.DefaultRetryPolicy())
+    resp, rerr = hc.do_with_retry(req, H.default_retry_policy())
     assert resp is None
     assert isinstance(rerr, H.HttpError)
 
 
 def test_do_uses_policy_none(monkeypatch):
-    hc, err = H.NewHTTPClient(None)
+    hc, err = H.new_http_client(None)
     assert err is None and hc is not None
 
     def fast_fail(req, **kwargs):
@@ -477,28 +477,28 @@ def test_do_uses_policy_none(monkeypatch):
 
     monkeypatch.setattr(hc.client, "send", fast_fail)
     req = httpx.Request("GET", "http://example.com/")
-    resp, rerr = hc.Do(req)
+    resp, rerr = hc.do(req)
     assert resp is None
     assert isinstance(rerr, H.HttpError)
 
 
 def test_do_with_context_canceled():
-    hc, err = H.NewHTTPClient(None)
+    hc, err = H.new_http_client(None)
     assert err is None and hc is not None
     ctx = H._Context()
     ctx._set("canceled")
     req = httpx.Request("GET", "http://example.com/")
-    resp, rerr = hc.DoWithContext(ctx, req)
+    resp, rerr = hc.do_with_context(ctx, req)
     assert resp is None
     assert isinstance(rerr, H.HttpError)
     assert "canceled" in str(rerr)
 
 
 def test_load_system_cert_pool():
-    pool = H.LoadSystemCertPool()
+    pool = H.load_system_cert_pool()
     assert isinstance(pool, list)
-    assert H.NewCertPool(pool) == pool
-    assert H.NewCertPool([]) == []
+    assert H.new_cert_pool(pool) == pool
+    assert H.new_cert_pool([]) == []
 
 
 def test_client_options_defaults():

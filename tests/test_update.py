@@ -10,6 +10,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from dxrk.update import (
+    _DXRK_UPGRADE_CMD,
+    _DXRK_UPGRADE_HINT,
     InstallMethod,
     ManualFallbackError,
     ToolInfo,
@@ -18,10 +20,12 @@ from dxrk.update import (
     UpdateResult,
     UpdateStatus,
     UpgradeReport,
+    _binary_upgrade,
     _detect_command_hint,
     _detect_npm_package_version,
     _DXRK_GUARDIAN_hint,
     _dxrk_hint,
+    _dxrk_upgrade,
     _execute_one,
     _go_arch,
     _install_script_url,
@@ -31,6 +35,7 @@ from dxrk.update import (
     _opencode_pm_from_metadata,
     _parse_version_parts,
     _resolve_asset_url,
+    _run_strategy,
     _select_opencode_package_manager,
     _status_icon,
     as_manual_fallback,
@@ -245,17 +250,17 @@ class TestDxrkHint:
     def test_darwin(self):
         p = MagicMock()
         p.os = "darwin"
-        assert _dxrk_hint(p) == "uv tool upgrade dxrk"
+        assert _dxrk_hint(p) == _DXRK_UPGRADE_HINT
 
     def test_linux(self):
         p = MagicMock()
         p.os = "linux"
-        assert _dxrk_hint(p) == "uv tool upgrade dxrk"
+        assert _dxrk_hint(p) == _DXRK_UPGRADE_HINT
 
     def test_windows(self):
         p = MagicMock()
         p.os = "windows"
-        assert _dxrk_hint(p) == "uv tool upgrade dxrk"
+        assert _dxrk_hint(p) == _DXRK_UPGRADE_HINT
 
     def test_unknown_os(self):
         p = MagicMock()
@@ -289,7 +294,7 @@ class TestUpdateHint:
         p.os = "darwin"
         p.package_manager = "brew"
         t = ToolInfo(name="dxrk")
-        assert "uv tool upgrade dxrk" in update_hint(t, p)
+        assert _DXRK_UPGRADE_HINT in update_hint(t, p)
 
     def test_memory(self):
         p = MagicMock()
@@ -1166,3 +1171,61 @@ class TestFetchLatestReleaseWithToken:
         # Verify auth header was set
         call_args = mock_urlopen.call_args[0][0]
         assert call_args.get_header("Authorization") == "Bearer ghs_token123"
+
+
+class TestDxrkUpgrade:
+    def test_upgrade_cmd_pins_git_spec(self):
+        assert _DXRK_UPGRADE_CMD == ["uv", "tool", "install", "--upgrade", "git+https://github.com/Dxrk777/Dxrk.git"]
+        assert "git+https://github.com/Dxrk777/Dxrk.git" in _DXRK_UPGRADE_HINT
+        assert "upgrade" in _DXRK_UPGRADE_HINT
+
+    @patch("dxrk.update.subprocess.run")
+    def test_runs_correct_command(self, mock_run):
+        mock_run.return_value = MagicMock(returncode=0, stderr="", stdout="")
+        _dxrk_upgrade()
+        mock_run.assert_called_once_with(
+            ["uv", "tool", "install", "--upgrade", "git+https://github.com/Dxrk777/Dxrk.git"],
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+
+    @patch("dxrk.update.subprocess.run")
+    def test_failure_raises(self, mock_run):
+        mock_run.return_value = MagicMock(returncode=1, stderr="boom", stdout="")
+        with pytest.raises(RuntimeError, match="boom"):
+            _dxrk_upgrade()
+
+    @patch("dxrk.update.subprocess.run", side_effect=FileNotFoundError)
+    def test_missing_uv_falls_back_to_manual(self, mock_run):
+        with pytest.raises(ManualFallbackError) as exc:
+            _dxrk_upgrade()
+        assert _DXRK_UPGRADE_HINT in exc.value.hint
+
+    @patch("dxrk.update._dxrk_upgrade")
+    @patch("dxrk.update._brew_upgrade")
+    def test_run_strategy_prefers_git_over_brew(self, mock_brew, mock_dxrk):
+        p = MagicMock()
+        p.package_manager = "brew"
+        r = UpdateResult(
+            tool=ToolInfo(name="dxrk"),
+            installed_version="1.0.0",
+            latest_version="2.0.0",
+            status=UpdateStatus.UPDATE_AVAILABLE,
+        )
+        _run_strategy(r, p)
+        mock_dxrk.assert_called_once_with()
+        mock_brew.assert_not_called()
+
+    @patch("dxrk.update._dxrk_upgrade")
+    def test_binary_upgrade_dispatches_to_git(self, mock_dxrk):
+        p = MagicMock()
+        p.os = "linux"
+        r = UpdateResult(
+            tool=ToolInfo(name="dxrk"),
+            installed_version="1.0.0",
+            latest_version="2.0.0",
+            status=UpdateStatus.UPDATE_AVAILABLE,
+        )
+        _binary_upgrade(r, p)
+        mock_dxrk.assert_called_once_with()
