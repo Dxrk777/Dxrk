@@ -45,8 +45,6 @@ def calculate_burn_rate(current: float, previous: float, window: timedelta) -> f
         return 0
     delta = current - previous
     secs = window.total_seconds()
-    if secs <= 0:
-        return 0
     return delta / secs
 
 

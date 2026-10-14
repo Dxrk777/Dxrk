@@ -52,7 +52,6 @@ class DependencyTreeScreen(Screen):
 
         plan = get_ctx().plan
         ordered = plan.steps if plan else []
-        added: set[str] = set()
 
         if not ordered:
             scroll.mount(Static("[yellow]Aún no hay componentes seleccionados.[/]"))
@@ -63,8 +62,6 @@ class DependencyTreeScreen(Screen):
                 num = f"[dim]{idx + 1}.[/]"
                 name = step.name
                 note = "[green]incluido[/]"
-                if hasattr(step, "id") and step.id in added:
-                    note = "[yellow]dependencia automática[/]"
                 scroll.mount(Static(f"  {num} {name} {note}"))
 
                 found = [c for c in ALL_COMPONENTS if c.id.value == step.id]

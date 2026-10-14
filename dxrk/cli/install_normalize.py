@@ -95,20 +95,14 @@ def normalize_components(values: list[str], preset: PresetID) -> list[ComponentI
 
 
 def normalize_skills(values: list[str]) -> list[SkillID]:
-    from dxrk.catalog import mvp_skills
-
     if not values:
         return []
-
-    allowed: set[SkillID] = set(s.id for s in mvp_skills())
 
     skills: list[SkillID] = []
     for raw in values:
         try:
             sid = SkillID(raw)
         except ValueError:
-            raise ValueError(f"skill no compatible {raw!r}")
-        if sid not in allowed:
             raise ValueError(f"skill no compatible {raw!r}")
         skills.append(sid)
     return _unique(skills)
@@ -131,11 +125,9 @@ def default_agents_from_detection(detection: DetectionResult) -> list[AgentID]:
         if not state.exists:
             continue
         try:
-            aid = AgentID(state.agent.replace("-", "_").upper())
+            agents.append(AgentID(state.agent))
         except ValueError:
             continue
-        if aid in AgentID:
-            agents.append(aid)
 
     if agents:
         return agents

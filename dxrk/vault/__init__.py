@@ -141,13 +141,12 @@ class Vault:
                 except Exception:
                     path = str(Path.home() / ".dxrk" / "tenants" / tenant_id / "vault.enc")
             v = cls(path, key, tenant_id=tenant_id)
-            if path != "":
-                try:
-                    v._load()
-                except (ValueError, json.JSONDecodeError) as e:
-                    raise RuntimeError(f"load vault: {e}") from e
-                except FileNotFoundError:
-                    pass
+            try:
+                v._load()
+            except (ValueError, json.JSONDecodeError) as e:
+                raise RuntimeError(f"load vault: {e}") from e
+            except FileNotFoundError:
+                pass
             return v
 
         # Legacy single-tenant path (retrocompat)

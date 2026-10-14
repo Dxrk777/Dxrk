@@ -351,8 +351,7 @@ def load_policy_for_tenant(tenant_id: str, user: str | None = None) -> Permissio
     role = resolver.resolve(user or "")
     ctx = PermissionContext()
     rules = _policy_rules_for_role(role)
-    if rules:
-        ctx.add_policy_rules(rules)
+    ctx.add_policy_rules(rules)
     return ctx
 
 

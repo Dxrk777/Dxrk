@@ -27,7 +27,6 @@ _fallback_compact_rules = (
 _exclude_names = {"_shared", "skill-registry"}
 _exclude_prefixes = ["sdd-"]
 _h2_heading_re = re.compile(r"^##\s+(.+?)\s*$")
-_next_h2_re = re.compile(r"^##\s+")
 _bullet_line_re = re.compile(r"^-\s+(.+)$")
 _ordered_list_line_re = re.compile(r"^\d+[.)]\s+(.+)$")
 _fallback_rule_headings = [
@@ -113,9 +112,7 @@ def regenerate(cwd: str, home: str, force: bool) -> Result:
     cwd = os.path.normpath(cwd)
     home = os.path.normpath(home)
 
-    existing_dirs = _unique_existing_dirs(
-        project_skill_dirs(cwd) + user_skill_dirs(home)
-    )
+    existing_dirs = _unique_existing_dirs(project_skill_dirs(cwd) + user_skill_dirs(home))
     files = _find_all_skill_files(existing_dirs)
 
     registry_path = os.path.join(cwd, RegistryRelPath)
@@ -146,8 +143,6 @@ def regenerate(cwd: str, home: str, force: bool) -> Result:
             continue
         if rel != "." and not rel.startswith(".."):
             sources.append(rel)
-        elif rel == ".":
-            sources.append(".")
 
     try:
         os.makedirs(os.path.join(cwd, ".atl"), mode=0o750, exist_ok=True)
@@ -192,10 +187,7 @@ def ensure_atl_ignored(cwd: str) -> None:
     if len(existing) > 0 and not existing.endswith("\n"):
         prefix = "\n"
     header = ""
-    if (
-        "# Local AI runtime state" not in existing
-        and "# Local Pi runtime state" not in existing
-    ):
+    if "# Local AI runtime state" not in existing and "# Local Pi runtime state" not in existing:
         header = "# Local AI runtime state\n"
     fd = os.open(gitignore_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as fh:
@@ -356,9 +348,6 @@ def _extract_rules_from_headings(body: str, headings: list[str]) -> list[str]:
             continue
         if not in_section:
             continue
-        if _next_h2_re.match(line):
-            in_section = False
-            continue
         rule = _extract_rule_line(line)
         if rule is not None:
             rules.append(rule)
@@ -387,12 +376,7 @@ def _extract_rule_table_row(line: str) -> str | None:
     cells = [cell.strip() for cell in inner.split("|")]
     if len(cells) < 2:
         return None
-    if (
-        _is_table_separator(cells)
-        or _is_table_header(cells)
-        or cells[0] == ""
-        or cells[1] == ""
-    ):
+    if _is_table_separator(cells) or _is_table_header(cells) or cells[0] == "" or cells[1] == "":
         return None
     return cells[0] + ": " + cells[1]
 
@@ -405,13 +389,9 @@ def _is_table_separator(cells: list[str]) -> bool:
 
 
 def _is_table_header(cells: list[str]) -> bool:
-    if len(cells) < 2:
-        return False
     first = _normalize_heading(cells[0])
     second = _normalize_heading(cells[1])
-    return (first == "rule" and second == "requirement") or (
-        first == "target" and second == "test pattern"
-    )
+    return (first == "rule" and second == "requirement") or (first == "target" and second == "test pattern")
 
 
 def _normalize_heading(heading: str) -> str:

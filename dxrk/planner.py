@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass, field
 
 from dxrk.models import (
@@ -15,8 +14,6 @@ from dxrk.models import (
     SkillID,
 )
 from dxrk.system import PlatformProfile
-
-_logger = logging.getLogger("dxrk.planner")
 
 
 class Resolver:
@@ -126,10 +123,7 @@ def _init_soft_pairs():
     ]
 
 
-try:
-    _init_soft_pairs()
-except Exception as err:
-    _logger.warning("soft ordering pairs init failed: %s", err)
+_init_soft_pairs()
 
 
 def soft_ordering_constraints() -> list[tuple[ComponentID, ComponentID]]:

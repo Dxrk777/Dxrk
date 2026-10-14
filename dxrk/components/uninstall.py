@@ -524,12 +524,9 @@ def _rewrite_markdown_file(path: str, mutate: Callable[[str], tuple[str, bool]])
         except OSError as e:
             return False, False, str(e)
 
-        eol = "\r\n" if "\r\n" in content else "\n"
         updated, changed = mutate(content)
         if not changed:
             return False, False, None
-        if eol != "\n":
-            updated = updated.replace("\n", eol)
         if not updated.strip():
             _remove_file_if_exists(p)
             return True, True, None
@@ -570,12 +567,9 @@ def _rewrite_toml_file(path: str, mutate: Callable[[str], tuple[str, bool]]) -> 
         except OSError as e:
             return False, False, str(e)
 
-        eol = "\r\n" if "\r\n" in content else "\n"
         updated, changed = mutate(content)
         if not changed:
             return False, False, None
-        if eol != "\n":
-            updated = updated.replace("\n", eol)
         if not updated.strip():
             _remove_file_if_exists(p)
             return True, True, None

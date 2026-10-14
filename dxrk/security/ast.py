@@ -435,18 +435,18 @@ def tokenize(input_: str) -> list[Token]:
             if (
                 c == "$"
                 and j + 1 < n
-                and (
-                    input_[j + 1] == "("
-                    or input_[j + 1] == "{"
-                    or input_[j + 1].isalnum()
-                    or input_[j + 1] == "_"
-                )
+                and (input_[j + 1] == "(" or input_[j + 1] == "{" or input_[j + 1].isalnum() or input_[j + 1] == "_")
             ):
                 # stop word at variable/command substitution
                 break
             j += 1
         if j > i:
             tokens.append(Token(typ=TokenType.WORD, value=input_[i:j], pos=i))
+        else:
+            # Guarantee progress for break-set chars without a dedicated
+            # handler (e.g. "~"): consume one char as a WORD token.
+            tokens.append(Token(typ=TokenType.WORD, value=input_[i], pos=i))
+            j = i + 1
         i = j
 
     tokens.append(Token(typ=TokenType.EOF, value="", pos=i))
@@ -472,9 +472,7 @@ def build_ast(tokens: list[Token]) -> ASTNode:
             while i < n:
                 nxt = tokens[i]
                 if nxt.typ == TokenType.WORD:
-                    cmd.children.append(
-                        ASTNode(type=NodeType.WORD, value=nxt.value, pos=nxt.pos)
-                    )
+                    cmd.children.append(ASTNode(type=NodeType.WORD, value=nxt.value, pos=nxt.pos))
                     i += 1
                 elif nxt.typ in (
                     TokenType.REDIRECT_OUT,
@@ -482,9 +480,7 @@ def build_ast(tokens: list[Token]) -> ASTNode:
                     TokenType.REDIRECT_IN,
                     TokenType.HEREDOC,
                 ):
-                    redir = ASTNode(
-                        type=NodeType.REDIRECT, value=nxt.value, pos=nxt.pos
-                    )
+                    redir = ASTNode(type=NodeType.REDIRECT, value=nxt.value, pos=nxt.pos)
                     # next token should be the target
                     i += 1
                     if i < n and tokens[i].typ == TokenType.WORD:
@@ -564,8 +560,6 @@ def analyze_ast(root: ASTNode | None) -> tuple[list[str], list[str]]:
             env_vars.extend(env_vars2)
             operators.extend(ops2)
         elif child.type == NodeType.OPERATOR:
-            operators.append(child.value)
-        elif child.type == NodeType.REDIRECT:
             operators.append(child.value)
 
     return env_vars, operators

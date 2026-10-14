@@ -264,8 +264,7 @@ def parse_status(s: str) -> StatusResult:
             continue
         if line.startswith("u "):
             fields = line.split()
-            if len(fields) >= 2:
-                res.conflicts.append(fields[-1])
+            res.conflicts.append(fields[-1])
     return res
 
 
@@ -561,9 +560,7 @@ class Runner:
             raise RuntimeError(f"git push: {stderr}")
         return PushResult(success=True, message=stdout + "\n" + stderr)
 
-    def pull(
-        self, remote: str = "", branch: str = "", rebase: bool = False
-    ) -> PullResult:
+    def pull(self, remote: str = "", branch: str = "", rebase: bool = False) -> PullResult:
         args = ["pull"]
         if rebase:
             args.append("--rebase")

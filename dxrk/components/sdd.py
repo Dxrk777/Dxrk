@@ -604,7 +604,7 @@ def inject(
             changed = changed or result.Changed
             files.extend(result.Files)
 
-        elif sps == SystemPromptStrategy.JINJA_MODULES:
+        else:
             if hasattr(adapter, "bootstrap_template"):
                 adapter.bootstrap_template(home_dir)
             config_dir = adapter.global_config_dir(home_dir)
@@ -629,8 +629,6 @@ def inject(
             updated = filemerge.inject_markdown_section(existing, "strict-tdd-mode", "Strict TDD Mode: enabled")
             wr = filemerge.write_file_atomic(prompt_path, updated.encode("utf-8"), 0o644)
             changed = changed or wr.Changed
-            if prompt_path not in files:
-                files.append(prompt_path)
 
     # 2. Slash commands
     if adapter.supports_slash_commands:
@@ -966,8 +964,7 @@ def _inject_claude_model_assignments(content: str, assignments: dict[str, str]) 
     for key, alias in assignments.items():
         try:
             a = ClaudeModelAlias(alias)
-            if a.valid():
-                merged[key] = a.value
+            merged[key] = a.value
         except ValueError:
             pass
 
@@ -983,15 +980,12 @@ def _resolve_claude_model_alias(assignments: dict[str, str], phase: str) -> Clau
     for key, alias_str in assignments.items():
         try:
             a = ClaudeModelAlias(alias_str)
-            if a.valid():
-                merged[key] = a
+            merged[key] = a
         except ValueError:
             pass
     if alias := merged.get(phase):
         return alias
-    if alias := merged.get("default"):
-        return alias
-    return ClaudeModelAlias.SONNET
+    return merged.get("default", ClaudeModelAlias.SONNET)
 
 
 def _render_claude_model_assignments_section(assignments: Mapping[str, str]) -> str:
@@ -1064,8 +1058,6 @@ def _strip_bare_orchestrator_section(content: str) -> str:
 
     while before and not before[-1].strip():
         before.pop()
-    while after and not after[0].strip():
-        after.pop(0)
 
     parts = []
     if before:

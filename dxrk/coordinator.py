@@ -41,8 +41,11 @@ class CoordinatorMode(StrEnum):
     ModeWorker = "worker"
     ModeUnknown = "unknown"
 
-    def String(self) -> str:
+    def to_string(self) -> str:
         return self.value
+
+    # Backwards-compatible alias (Go-style name).
+    String = to_string
 
     def __str__(self) -> str:
         return self.value
@@ -57,8 +60,11 @@ class AgentStatus(StrEnum):
     AgentDone = "done"
     AgentUnknown = "unknown"
 
-    def String(self) -> str:
+    def to_string(self) -> str:
         return self.value
+
+    # Backwards-compatible alias (Go-style name).
+    String = to_string
 
     def __str__(self) -> str:
         return self.value
@@ -128,9 +134,7 @@ class Worker:
     started_at: datetime | None = None
     done_at: datetime | None = None
     cancel: Callable[[], None] | None = None
-    _lock: threading.RLock = field(
-        default_factory=threading.RLock, repr=False, compare=False
-    )
+    _lock: threading.RLock = field(default_factory=threading.RLock, repr=False, compare=False)
 
     def assign_task(self, task: str) -> None:
         with self._lock:
@@ -206,23 +210,15 @@ class Team:
     name: str
     members: list[Worker] = field(default_factory=list)
     messages: list[Message] = field(default_factory=list)
-    _lock: threading.RLock = field(
-        default_factory=threading.RLock, repr=False, compare=False
-    )
+    _lock: threading.RLock = field(default_factory=threading.RLock, repr=False, compare=False)
 
     def route_message(self, from_: str, to: str, content: str) -> None:
         with self._lock:
             if not self._is_member(from_):
-                raise AgentNotFoundError(
-                    f"agent {from_!r} is not a member of team {self.name!r}"
-                )
+                raise AgentNotFoundError(f"agent {from_!r} is not a member of team {self.name!r}")
             if to != "all" and not self._is_member(to):
-                raise AgentNotFoundError(
-                    f"agent {to!r} is not a member of team {self.name!r}"
-                )
-            self.messages.append(
-                Message(from_=from_, to=to, content=content, timestamp=_utcnow())
-            )
+                raise AgentNotFoundError(f"agent {to!r} is not a member of team {self.name!r}")
+            self.messages.append(Message(from_=from_, to=to, content=content, timestamp=_utcnow()))
 
     def broadcast(self, from_: str, content: str) -> None:
         self.route_message(from_, "all", content)
@@ -240,7 +236,7 @@ class Team:
 
     def member_statuses(self) -> dict[str, str]:
         with self._lock:
-            return {member.id: member.status.String() for member in self.members}
+            return {member.id: member.status.to_string() for member in self.members}
 
     def recent_messages(self, n: int) -> list[Message]:
         with self._lock:
@@ -297,16 +293,12 @@ class Coordinator:
                     member.status = AgentStatus.AgentDone
             del self._teams[name]
 
-    def send_message(
-        self, team_name: str, from_agent: str, to_agent: str, message_text: str
-    ) -> None:
+    def send_message(self, team_name: str, from_agent: str, to_agent: str, message_text: str) -> None:
         with self._lock:
             team = self._require_team(team_name)
             team.route_message(from_agent, to_agent, message_text)
 
-    def broadcast_message(
-        self, team_name: str, from_agent: str, message_text: str
-    ) -> None:
+    def broadcast_message(self, team_name: str, from_agent: str, message_text: str) -> None:
         with self._lock:
             team = self._require_team(team_name)
             team.broadcast(from_agent, message_text)
@@ -373,17 +365,11 @@ class Coordinator:
                 parts.append("## Shared Scratchpad\n\n" + "\n".join(lines) + "\n")
             team = self._teams.get(team_name)
             if team is not None:
-                members_desc = ", ".join(
-                    f"{member.id} ({member.status.String()})" for member in team.members
-                )
+                members_desc = ", ".join(f"{member.id} ({member.status.to_string()})" for member in team.members)
                 parts.append(f"## Team: {team_name}\n\nMembers: {members_desc}\n\n")
                 with team._lock:
                     for msg in team.messages:
-                        if (
-                            msg.to == worker_id
-                            or msg.from_ == worker_id
-                            or msg.to == "all"
-                        ):
+                        if msg.to == worker_id or msg.from_ == worker_id or msg.to == "all":
                             parts.append(f"[{msg.from_} → {msg.to}]: {msg.content}\n")
             return "".join(parts)
 

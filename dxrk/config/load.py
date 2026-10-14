@@ -19,13 +19,12 @@ def _load_config_dict(data: dict[str, Any]) -> Config:
     cfg = Default()
 
     project = data.get("project") if isinstance(data.get("project"), dict) else {}
-    if isinstance(project, dict):
-        if project.get("name"):
-            cfg.project.name = str(project["name"])
-        if project.get("root"):
-            cfg.project.root = str(project["root"])
-        if project.get("default_provider"):
-            cfg.project.default_provider = str(project["default_provider"])
+    if project.get("name"):
+        cfg.project.name = str(project["name"])
+    if project.get("root"):
+        cfg.project.root = str(project["root"])
+    if project.get("default_provider"):
+        cfg.project.default_provider = str(project["default_provider"])
 
     providers = data.get("providers")
     if isinstance(providers, list) and providers:
