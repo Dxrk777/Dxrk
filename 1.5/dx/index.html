@@ -1001,10 +1001,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#21-gap-actual" class="md-nav__link">
+  <a href="#21-gap-actual-contexto-historico-v012-v020" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2.1 Gap actual
+        2.1 Gap actual (contexto histórico v0.1.2 → v0.2.0)
       
     </span>
   </a>
@@ -1403,10 +1403,11 @@
 
 <h1 id="dxrk-github-dx-plan-top1-post-dxrkmemory-20">Dxrk GitHub DX — Plan Top1 post-DxrkMemory 2.0</h1>
 <blockquote>
-<p><strong>Estado:</strong> Accepted · <strong>Fecha:</strong> 2026-08-28 · <strong>Versión:</strong> 0.2.0-draft<br />
+<p><strong>Estado:</strong> Historical (v0.2.0 release plan) · <strong>Fecha:</strong> 2026-08-28 · <strong>Versión documento:</strong> 0.2.0-draft<br />
 <strong>Alcance:</strong> DX de GitHub (README, docs site, community, distribución vía git + GitHub Releases, star growth) <strong>sin tocar <code>dxrk/memory/</code></strong>.<br />
 <strong>Nota 2026-10:</strong> sin PyPI por diseño (ver <code>.github/workflows/publish.yml:26-29</code> y commit <code>3b1d235</code>). La §5 checklist PyPI abajo es histórica y queda sustituida por release vía git + GitHub Releases; no ejecutar publish a PyPI.
-<strong>Contexto flagship:</strong> DxrkMemory 2.0 cerrado — 14 módulos stdlib-only (<code>dxrk/memory</code> + <code>backend/</code>), 141 tests en <code>tests/test_memory*.py</code>, 203 py files en repo, CLI dual (<code>dxrk</code>/<code>dxrk-py</code>) + TUI Textual 22 screens, 42 agentes, 55 entradas <code>dxrk/</code>. Fase 2 enterprise multi-tenant diseñada. README 169L, <code>docs/memory.md</code> 209L, <code>MIGRATION_3.3.5_3.7.1</code> 97L, ADR-002 (separación memoria) y ADR-003 (stdlib-only vs hybrid) existen.</p>
+<strong>Contexto flagship (histórico v0.2.0):</strong> DxrkMemory 2.0 cerrado — 14 módulos stdlib-only (<code>dxrk/memory</code> + <code>backend/</code>), 141 tests en <code>tests/test_memory*.py</code>, 203 py files en repo, CLI dual (<code>dxrk</code>/<code>dxrk-py</code>) + TUI Textual 22 screens, 42 agentes, 55 entradas <code>dxrk/</code>. Fase 2 enterprise multi-tenant diseñada. README 169L, <code>docs/memory.md</code> 209L, <code>MIGRATION_3.3.5_3.7.1</code> 97L, ADR-002 (separación memoria) y ADR-003 (stdlib-only vs hybrid) existen.
+<strong>Estado actual (v1.5.0):</strong> Proyecto en v1.5.0 con 100% coverage, 7160 tests, 42 agentes. Este documento conserva el plan original de v0.2.0 como referencia histórica.</p>
 </blockquote>
 <p>Este documento es el <strong>plan ejecutable</strong> para llevar a Dxrk a <strong>Top1 GitHub DX</strong> en su categoría (AI agent ecosystem / local-first memory). No es roadmap vago: cada sección trae tabla/checklist/snippet reproducible y criterio de done.</p>
 <hr />
@@ -1554,8 +1555,11 @@ uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </sp
 <p><strong>Criterio done:</strong> <code>docs/benchmarks.md</code> existe con tabla + metodología + comando reproducible + artefacto <code>benchmarks/results/*.json</code> versionado y link en README.</p>
 <hr />
 <h2 id="2-readme-hero-de-169l-a-top1">2. README hero — de 169L a Top1</h2>
-<h3 id="21-gap-actual">2.1 Gap actual</h3>
-<p>README actual ya es bueno (Release v0.1.2, License MIT, Python 3.13, Platform, CI, Stars + social-preview.png + demo.gif 44K + tabla "Por qué Dxrk" + 42 agentes + Features flagship). <strong>Falta para Top1:</strong> badges de calidad (tests, coverage 80%, mypy), tagline de 1 línea memorizable, quickstart 30s copy-paste con <code>uv tool install</code> vía git (sin PyPI), comparación embed, social proof.</p>
+<h3 id="21-gap-actual-contexto-historico-v012-v020">2.1 Gap actual (contexto histórico v0.1.2 → v0.2.0)</h3>
+<blockquote>
+<p><strong>Histórico:</strong> Este gap describe el estado en v0.1.2 (agosto 2026). El README actual (v1.5.0) ya incluye badges, coverage 100%, etc.</p>
+</blockquote>
+<p>README actual ya es bueno (Release v0.1.2, License MIT, Python 3.13, Platform, CI, Stars + social-preview.png + demo.gif 44K + tabla "Por qué Dxrk" + 42 agentes + Features flagship). <strong>Falta para Top1 (en v0.2.0):</strong> badges de calidad (tests, coverage 80%, mypy), tagline de 1 línea memorizable, quickstart 30s copy-paste con <code>uv tool install</code> vía git (sin PyPI), comparación embed, social proof.</p>
 <h3 id="22-hero-propuesto-snippet-para-readmemd1-60">2.2 Hero propuesto (snippet para <code>README.md:1-60</code>)</h3>
 <div class="highlight"><pre><span></span><code><span class="gh"># Dxrk — Memory local-first en 30 segundos. 42 agentes, 1 comando.</span>
 
@@ -1569,9 +1573,11 @@ uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </sp
   &lt;a href=&quot;https://codecov.io/gh/Dxrk777/Dxrk&quot;&gt;&lt;img alt=&quot;Coverage&quot; src=&quot;https://img.shields.io/badge/coverage-80%25-brightgreen&quot;&gt;&lt;/a&gt;
   &lt;a href=&quot;https://www.python.org/downloads/&quot;&gt;&lt;img alt=&quot;Python&quot; src=&quot;https://img.shields.io/badge/Python-3.13%2B-3776AB&quot;&gt;&lt;/a&gt;
   &lt;a href=&quot;LICENSE&quot;&gt;&lt;img alt=&quot;License&quot; src=&quot;https://img.shields.io/badge/License-MIT-green&quot;&gt;&lt;/a&gt;
-  &lt;a href=&quot;https://github.com/Dxrk777/Dxrk/releases/latest&quot;&gt;&lt;img alt=&quot;Release&quot; src=&quot;https://img.shields.io/badge/Release-v1.5.0-blue&quot;&gt;&lt;/a&gt;
+  &lt;a href=&quot;https://github.com/Dxrk777/Dxrk/releases/latest&quot;&gt;&lt;img alt=&quot;Release&quot; src=&quot;https://img.shields.io/badge/Release-v0.2.0-blue&quot;&gt;&lt;/a&gt;
   &lt;a href=&quot;https://github.com/Dxrk777/Dxrk&quot;&gt;&lt;img alt=&quot;Stars&quot; src=&quot;https://img.shields.io/github/stars/Dxrk777/Dxrk?style=social&quot;&gt;&lt;/a&gt;
 &lt;/p&gt;
+
+<span class="k">&gt; </span><span class="ge">**Nota histórica:** Este snippet era la propuesta para v0.2.0 (coverage 80%). En v1.5.0 actual: coverage 100%, 7160 tests.</span>
 
 &lt;p align=&quot;center&quot;&gt;
   &lt;img src=&quot;docs/assets/demo.gif&quot; alt=&quot;Dxrk demo — init + mine + query en 30s&quot; width=&quot;780&quot;&gt;
@@ -1592,7 +1598,7 @@ pal = Palace(&quot;~/.dxrk/palace&quot;); pal.search(&quot;hybrid BM25&quot;, n_
 <p><strong>Por qué DxrkMemory 2.0:</strong> <code>sqlite3</code> FTS5 <code>trigram→porter→unicode61</code> + BM25 híbrido, Graph temporal <code>valid_from/valid_to</code>, AAAK 600–900 tok wake-up, Palace locks <code>~/.dxrk/locks</code> 900s, FIFO guard <code>O_NONBLOCK</code> — ver <a href="../memory/"><code>docs/memory.md</code></a> · <a href="../MIGRATION_3.3.5_3.7.1/"><code>docs/MIGRATION_3.3.5_3.7.1.md</code></a> · <a href="./"><code>docs/dx.md</code></a>
 <div class="highlight"><pre><span></span><code>### 2.3 Checklist README hero (done = PR merged)
 
-- [ ] Badges: **Tests** (2760 passed), **Coverage 80%** (shield dinámico Codecov o `coverage 80%` estático hasta integrar), **Python 3.13**, **License MIT**, **Release GitHub (sin PyPI)**, **Platform**, **Stars social** (7 badges, 1 línea).
+- [ ] Badges: **Tests** (2760 passed), **Coverage 80%** (plan v0.2.0; v1.5.0 actual: 100%), **Python 3.13**, **License MIT**, **Release GitHub (sin PyPI)**, **Platform**, **Stars social** (7 badges, 1 línea).
 - [ ] Tagline 1-línea memorizable bajo H1 (no solo `&lt;strong&gt;Ecosistema…` sino `Memory local-first en 30 segundos…`).
 - [ ] Demo GIF/screenshot placeholder con `docs/assets/demo.gif` (44K ya existe) + caption 30s + `width` fijo para no romper mobile.
 - [ ] Quickstart 30s con `uv tool install git+https://github.com/Dxrk777/Dxrk.git` (sin PyPI; distribución vía git) — 3 comandos copy-paste + bloque Python 2 líneas.
@@ -1979,7 +1985,7 @@ uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </
 </tr>
 <tr>
 <td><strong>Tests</strong></td>
-<td style="text-align: right;">141 memory + 2760 total, 80% cov</td>
+<td style="text-align: right;">141 memory + 2760 total, 80% cov (objetivo v0.2.0; v1.5.0 actual: 7160 tests, 100% cov)</td>
 <td style="text-align: right;">180 + 3000, 85%</td>
 <td><code>pytest --cov</code></td>
 </tr>
@@ -2067,7 +2073,7 @@ uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </
 <p>Cada PR verifica:</p>
 <div class="highlight"><pre><span></span><code>uvx<span class="w"> </span>ruff<span class="w"> </span>check<span class="w"> </span>dxrk<span class="w"> </span>tests
 uv<span class="w"> </span>run<span class="w"> </span>mypy<span class="w"> </span>dxrk
-uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>-q<span class="w"> </span>--cov<span class="o">=</span>dxrk<span class="w"> </span>--cov-report<span class="o">=</span>term<span class="w"> </span>--cov-fail-under<span class="o">=</span><span class="m">80</span>
+uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>-q<span class="w"> </span>--cov<span class="o">=</span>dxrk<span class="w"> </span>--cov-report<span class="o">=</span>term<span class="w"> </span>--cov-fail-under<span class="o">=</span><span class="m">80</span><span class="w">  </span><span class="c1"># gate histórico v0.2.0; v1.5.0 usa 100%</span>
 uv<span class="w"> </span>run<span class="w"> </span>mkdocs<span class="w"> </span>build<span class="w">  </span><span class="c1"># 0 warnings</span>
 </code></pre></div>
 <hr />
@@ -2090,7 +2096,7 @@ uv<span class="w"> </span>run<span class="w"> </span>mkdocs<span class="w"> </sp
 </tr>
 <tr>
 <td>Coverage 80% gate rompe por memory-only tests</td>
-<td>Mantener <code>pytest --cov=dxrk --cov-fail-under=80</code> solo en ubuntu, windows <code>pytest -q</code> sin cov (ya en <code>ci.yml</code>)</td>
+<td>Mantener <code>pytest --cov=dxrk --cov-fail-under=80</code> solo en ubuntu, windows <code>pytest -q</code> sin cov (ya en <code>ci.yml</code>); <strong>v1.5.0: gate subido a 100%</strong></td>
 </tr>
 <tr>
 <td>Stars no crecen sin launch</td>
@@ -2119,8 +2125,8 @@ uv<span class="w"> </span>run<span class="w"> </span>mkdocs<span class="w"> </sp
 <li><code>adr/ADR-002-memory-separation.md</code> — aislamiento DxrkMemory / Learner / RAG</li>
 <li><code>adr/ADR-003-hybrid-vs-stdlib.md</code> — decisión stdlib-only vs hybrid (P5)</li>
 <li><code>mkdocs.yml</code> — nav actual 12 entradas, fix propuesto §3</li>
-<li><code>pyproject.toml</code> — 0.1.2 → 0.2.0 checklist §5</li>
-<li><code>.github/workflows/ci.yml</code> — 3 OS × Python 3.13, ruff+ mypy+ pytest cov 80%</li>
+<li><code>pyproject.toml</code> — 0.1.2 → 0.2.0 checklist §5 (histórico; v1.5.0 actual)</li>
+<li><code>.github/workflows/ci.yml</code> — 3 OS × Python 3.13, ruff+ mypy+ pytest cov 80% (histórico v0.2.0; v1.5.0: 100%)</li>
 <li><code>.github/workflows/publish.yml</code> — tag <code>v*</code> → build smoke + git-cliff + gh-release (sin PyPI; distribución vía git)</li>
 <li><code>README.md</code> — 169L actual, hero propuesto §2 → ~220L</li>
 <li><code>CONTRIBUTING.md</code> / <code>CODE_OF_CONDUCT.md</code> / <code>SECURITY.md</code> — community baseline §4</li>
