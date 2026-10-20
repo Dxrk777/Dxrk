@@ -79,7 +79,7 @@ dxrk = ["assets/**/*"]
 testpaths = ["tests"]
 pythonpath = ["."]
 asyncio_mode = "auto"
-addopts = "--cov=dxrk --cov-report=term-missing --cov-fail-under=80"
+addopts = "--cov=dxrk --cov-report=term-missing --cov-fail-under=100"
 markers = [
   "antigravity: Antigravity adapter tests",
   "claude: Claude adapter tests",
