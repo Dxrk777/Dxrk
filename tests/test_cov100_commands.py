@@ -943,6 +943,7 @@ class TestCostDoctorEnterpriseExport:
         dest = tmp_path / "default.md"
         code, out, _ = _run(_reg(), ["export", s.id], str(tmp_path))
         assert code in (0, 1)
+        assert (tmp_path / f"{s.id[:8]}.md").exists()
         code, _, err = _run(_reg(), ["export", s.id, "--output", str(dest), "--format", "bogus"], str(tmp_path))
         assert code == 1
         assert "no compatible" in err
@@ -2039,10 +2040,10 @@ class TestMemoryCommandsFull:
 
         import dxrk.memory.eval_harness as eh
 
-        monkeypatch.setattr("dxrk.memory.palace.DxrkMemory", _FakeDM)
-        monkeypatch.setattr(eh, "generate_synthetic_queries", lambda dm, wing="default", n=10: [])
+        monkeypatch.setattr("dxrk.memory.malla.DxrkMemory", _FakeDM)
+        monkeypatch.setattr(eh, "generate_synthetic_queries", lambda dm, nodo="default", n=10: [])
         report = SimpleNamespace(
-            wing="w1",
+            nodo="w1",
             num_queries=3,
             recall_at_k=0.9,
             mrr=0.8,
@@ -2057,7 +2058,7 @@ class TestMemoryCommandsFull:
             def __init__(self, dm, path):
                 pass
 
-            def run(self, wing="default", queries=None):
+            def run(self, nodo="default", queries=None):
                 assert queries == []
                 return report
 
@@ -2078,9 +2079,9 @@ class TestMemoryCommandsFull:
         assert code == 1
         assert "RBAC_DENIED" in err
         monkeypatch.undo()
-        monkeypatch.setattr("dxrk.memory.palace.DxrkMemory", _FakeDM)
-        qs = [SimpleNamespace(query="q" * 70, wing="w1")]
-        monkeypatch.setattr(eh, "generate_synthetic_queries", lambda dm, wing="default", n=20: qs)
+        monkeypatch.setattr("dxrk.memory.malla.DxrkMemory", _FakeDM)
+        qs = [SimpleNamespace(query="q" * 70, nodo="w1")]
+        monkeypatch.setattr(eh, "generate_synthetic_queries", lambda dm, nodo="default", n=20: qs)
         monkeypatch.setenv("DXRK_MEMORY_PATH", str(tmp_path / "pal"))
         code, out, _ = _run(_reg(), ["memory", "eval", "synthetic", "w1"], str(tmp_path))
         assert code == 0
@@ -2096,14 +2097,14 @@ class TestMemoryCommandsFull:
         monkeypatch.undo()
         import dxrk.memory.metacog_v2 as mc
 
-        monkeypatch.setattr("dxrk.memory.palace.DxrkMemory", _FakeDM)
+        monkeypatch.setattr("dxrk.memory.malla.DxrkMemory", _FakeDM)
 
         class _Meta:
             def __init__(self, dm):
                 pass
 
-            def predict(self, q, wing="default"):
-                assert q == "hello" and wing == "w1"
+            def predict(self, q, nodo="default"):
+                assert q == "hello" and nodo == "w1"
                 return SimpleNamespace(confidence=0.9, difficulty=0.2, ece=0.01)
 
         monkeypatch.setattr(mc, "MetacognitionV2", _Meta)
@@ -2120,13 +2121,13 @@ class TestMemoryCommandsFull:
         monkeypatch.undo()
         import dxrk.memory.metacog_v2 as mc
 
-        monkeypatch.setattr("dxrk.memory.palace.DxrkMemory", _FakeDM)
+        monkeypatch.setattr("dxrk.memory.malla.DxrkMemory", _FakeDM)
 
         class _Meta:
             def __init__(self, dm):
                 pass
 
-            def fit_calibration(self, wing="default", method="temperature"):
+            def fit_calibration(self, nodo="default", method="temperature"):
                 assert method == "isotonic"
                 return {"temp": 1.5}
 
@@ -2151,7 +2152,7 @@ class TestMemoryCommandsFull:
             str(tmp_path),
         )
         assert code == 0
-        assert "tenant=t1, wing=w1" in out
+        assert "tenant=t1, nodo=w1" in out
 
     def test_calibrate_chain_deny_and_ok(self, tmp_path, monkeypatch):
         self._deny(monkeypatch)
@@ -2197,12 +2198,12 @@ class TestMemoryCommandsFull:
         monkeypatch.undo()
         import dxrk.memory.production as prod
 
-        monkeypatch.setattr("dxrk.memory.palace.DxrkMemory", _FakeDM)
+        monkeypatch.setattr("dxrk.memory.malla.DxrkMemory", _FakeDM)
         monkeypatch.setattr(prod, "load_slo_config", lambda path: {"p99": 100})
         monkeypatch.setattr(
             prod,
             "check_slo",
-            lambda dm, wing="default", config=None: SimpleNamespace(compliant=True, details=["latency ok"]),
+            lambda dm, nodo="default", config=None: SimpleNamespace(compliant=True, details=["latency ok"]),
         )
         monkeypatch.setenv("DXRK_MEMORY_PATH", str(tmp_path / "pal"))
         code, out, _ = _run(_reg(), ["memory", "production", "slo", "w1"], str(tmp_path))
@@ -2217,13 +2218,13 @@ class TestMemoryCommandsFull:
         monkeypatch.undo()
         import dxrk.memory.production as prod
 
-        monkeypatch.setattr("dxrk.memory.palace.DxrkMemory", _FakeDM)
+        monkeypatch.setattr("dxrk.memory.malla.DxrkMemory", _FakeDM)
 
         class _Roll:
             def __init__(self, path):
                 pass
 
-            def check_regression(self, wing="default"):
+            def check_regression(self, nodo="default"):
                 return {"should_rollback": True, "severity": "high", "details": ["reg1"]}
 
         monkeypatch.setattr(prod, "AutoRollbackManager", _Roll)
@@ -2246,7 +2247,7 @@ class TestMemoryCommandsFull:
             last_run="2024-05-01",
             consecutive_passes=3,
             consecutive_failures=0,
-            rollback_history=[{"timestamp": "t", "wing": "w", "reason": "r"}],
+            rollback_history=[{"timestamp": "t", "nodo": "w", "reason": "r"}],
         )
         monkeypatch.setattr(judge, "load_judge_state", lambda path: state)
         monkeypatch.setenv("DXRK_MEMORY_PATH", str(tmp_path / "pal"))
@@ -2265,7 +2266,7 @@ class TestMemoryCommandsFull:
         import dxrk.memory.eval_harness as eh
         import dxrk.memory.judge_continuous as judge
 
-        monkeypatch.setattr("dxrk.memory.palace.DxrkMemory", _FakeDM)
+        monkeypatch.setattr("dxrk.memory.malla.DxrkMemory", _FakeDM)
         monkeypatch.setattr(eh, "EvalHarness", lambda dm, path: SimpleNamespace())
         verdict = SimpleNamespace(
             passed=True, regression_detected=False, severity="none", auto_rollback=False, details=["all good"]

@@ -61,6 +61,8 @@ def register_export_command(reg: Registry) -> None:
         output_path = ctx.flag_str("output")
         if not output_path:
             output_path = f"{s.id[:8]}.md"
+        if not os.path.isabs(output_path):
+            output_path = os.path.join(ctx.cwd, output_path)
 
         fmt = ctx.flag_str("format")
         if not fmt:
