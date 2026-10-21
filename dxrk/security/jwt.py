@@ -14,6 +14,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import IntEnum
+from urllib.parse import urlparse
 
 # ---- JWT Token Types ----
 
@@ -520,7 +521,11 @@ def validate_ingress_url(url: str, is_dev: bool) -> None:
     if is_dev:
         return None  # dev mode allows any protocol
 
-    if url.startswith("http://localhost") or url.startswith("http://127.0.0.1"):
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        parsed = None
+    if parsed is not None and parsed.scheme == "http" and parsed.hostname in {"localhost", "127.0.0.1"}:
         return None  # localhost exception
 
     if not url.startswith("https://"):
