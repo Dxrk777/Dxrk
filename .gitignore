@@ -58,6 +58,10 @@ THIRD_PARTY_LICENSES
 dxrk.yaml
 entities.json
 
+# Mutation testing artifacts
+mutants/
+.mutmut-cache
+
 # Local builds
 /bin/
 
