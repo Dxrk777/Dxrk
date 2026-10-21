@@ -45,13 +45,13 @@ def _now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
 
-def _judge_path(palace_path: str | Path) -> Path:
-    return Path(palace_path) / JUDGE_SIDECAR
+def _judge_path(malla_path: str | Path) -> Path:
+    return Path(malla_path) / JUDGE_SIDECAR
 
 
-def load_judge_state(palace_path: str | Path) -> JudgeState:
+def load_judge_state(malla_path: str | Path) -> JudgeState:
     """Load judge state from sidecar."""
-    path = _judge_path(palace_path)
+    path = _judge_path(malla_path)
     if not path.exists():
         return JudgeState()
     try:
@@ -67,9 +67,9 @@ def load_judge_state(palace_path: str | Path) -> JudgeState:
         return JudgeState()
 
 
-def save_judge_state(palace_path: str | Path, state: JudgeState) -> None:
+def save_judge_state(malla_path: str | Path, state: JudgeState) -> None:
     """Save judge state to sidecar."""
-    path = _judge_path(palace_path)
+    path = _judge_path(malla_path)
     data = {
         "last_run": state.last_run,
         "last_baseline": state.last_baseline,
@@ -81,24 +81,24 @@ def save_judge_state(palace_path: str | Path, state: JudgeState) -> None:
     path.chmod(0o600)
 
 
-def load_baseline_report(palace_path: str | Path, wing: str) -> dict | None:
-    """Load baseline evaluation report for a wing."""
-    from dxrk.memory.palace import DxrkMemory
+def load_baseline_report(malla_path: str | Path, nodo: str) -> dict | None:
+    """Load baseline evaluation report for a nodo."""
+    from dxrk.memory.malla import DxrkMemory
 
     from .eval_harness import EvalHarness
 
-    dm = DxrkMemory(str(palace_path))
+    dm = DxrkMemory(str(malla_path))
     try:
         dm.init()
-        harness = EvalHarness(dm, Path(dm.palace_path) / "eval")
-        report = harness.run(wing=wing)
+        harness = EvalHarness(dm, Path(dm.malla_path) / "eval")
+        report = harness.run(nodo=nodo)
         return asdict(report)
     finally:
         dm.close()
 
 
-def save_baseline_report(palace_path: str | Path, wing: str, report: dict) -> None:
-    """Save baseline report for a wing."""
+def save_baseline_report(malla_path: str | Path, nodo: str, report: dict) -> None:
+    """Save baseline report for a nodo."""
 
     # Reports are saved by EvalHarness.run()
     pass
@@ -109,13 +109,13 @@ class ContinuousJudge:
 
     def __init__(
         self,
-        palace_path: Path,
+        malla_path: Path,
         eval_harness: EvalHarness,
         interval_hours: int = 24,
         regression_thresholds: dict | None = None,
         auto_rollback: bool = True,
     ):
-        self.palace_path = str(palace_path)
+        self.malla_path = str(malla_path)
         self.eval_harness = eval_harness
         self.interval_seconds = interval_hours * 3600
         self.auto_rollback = auto_rollback
@@ -162,17 +162,17 @@ class ContinuousJudge:
 
     def _run_verification_cycle(self) -> Verdict:
         """Run a single verification cycle."""
-        wings: list[str] = []
-        # Get all wings from eval harness
-        for wing_path in self.eval_harness.eval_dir.glob("*.jsonl"):
-            wings.append(wing_path.stem)
+        nodos: list[str] = []
+        # Get all nodos from eval harness
+        for nodo_path in self.eval_harness.eval_dir.glob("*.jsonl"):
+            nodos.append(nodo_path.stem)
 
-        for wing in wings:
-            verdict = self._verify_wing(str(wing))
+        for nodo in nodos:
+            verdict = self._verify_nodo(str(nodo))
             self._last_verdict = verdict
 
             # Update judge state
-            state = load_judge_state(self.palace_path)
+            state = load_judge_state(self.malla_path)
             state.last_run = _now_iso()
 
             if verdict.passed:
@@ -182,21 +182,21 @@ class ContinuousJudge:
                 state.consecutive_failures += 1
                 state.consecutive_passes = 0
 
-            save_judge_state(self.palace_path, state)
+            save_judge_state(self.malla_path, state)
 
         return self._last_verdict or Verdict(
             passed=True, regression_detected=False, severity="none", details=[], current_report={}, baseline_report=None
         )
 
-    def _verify_wing(self, wing: str) -> Verdict:
-        """Verify a single wing against its baseline."""
-        from dxrk.memory.palace import DxrkMemory
+    def _verify_nodo(self, nodo: str) -> Verdict:
+        """Verify a single nodo against its baseline."""
+        from dxrk.memory.malla import DxrkMemory
 
-        dm = DxrkMemory(str(self.palace_path))
+        dm = DxrkMemory(str(self.malla_path))
         try:
             dm.init()
             # Get current evaluation
-            current_report_dict = load_baseline_report(self.palace_path, wing)
+            current_report_dict = load_baseline_report(self.malla_path, nodo)
             if not current_report_dict:
                 return Verdict(
                     passed=True,
@@ -210,13 +210,13 @@ class ContinuousJudge:
             current_report = EvalReport(**current_report_dict)
 
             # Load baseline
-            baseline_report = load_baseline_report(Path(self.palace_path), wing)
+            baseline_report = load_baseline_report(Path(self.malla_path), nodo)
 
             if baseline_report is None:
                 # First run: save as baseline, pass
                 from dataclasses import asdict
 
-                save_baseline_report(Path(self.palace_path), wing, asdict(self.eval_harness.run(wing)))
+                save_baseline_report(Path(self.malla_path), nodo, asdict(self.eval_harness.run(nodo)))
                 return Verdict(
                     passed=True,
                     regression_detected=False,
@@ -229,26 +229,26 @@ class ContinuousJudge:
             baseline = EvalReport(**baseline_report)
 
             # Detect regression
-            verdict = self._compare_reports(current_report, baseline, wing)
+            verdict = self._compare_reports(current_report, baseline, nodo)
 
             # Auto-rollback if regression detected and auto_rollback enabled
             if verdict.regression_detected and self.auto_rollback and verdict.severity == "critical":
-                from dxrk.memory.palace import DxrkMemory
+                from dxrk.memory.malla import DxrkMemory
 
                 from .calibrate_v2 import save_calibration
 
-                dm = DxrkMemory(str(self.palace_path))
+                dm = DxrkMemory(str(self.malla_path))
                 try:
                     dm.init()
                     # Load calibration chain and rollback
-                    chain = get_calibration_chain(Path(self.palace_path), "", wing)
+                    chain = get_calibration_chain(Path(self.malla_path), "", nodo)
                     if len(chain) >= 2:
                         # Restore previous calibration
                         previous = chain[1]
-                        save_calibration(Path(self.palace_path), previous)
+                        save_calibration(Path(self.malla_path), previous)
 
                         # Log rollback
-                        self._log_rollback(wing, "", "auto_rollback_critical")
+                        self._log_rollback(nodo, "", "auto_rollback_critical")
                 finally:
                     dm.close()
 
@@ -266,7 +266,7 @@ class ContinuousJudge:
         finally:
             dm.close()
 
-    def _compare_reports(self, current: EvalReport, baseline: EvalReport, wing: str) -> Verdict:
+    def _compare_reports(self, current: EvalReport, baseline: EvalReport, nodo: str) -> Verdict:
         """Compare current report against baseline."""
         severity = "none"
         details = []
@@ -312,21 +312,21 @@ class ContinuousJudge:
             baseline_report=asdict(baseline),
         )
 
-    def _log_rollback(self, wing: str, tenant: str, reason: str):
+    def _log_rollback(self, nodo: str, tenant: str, reason: str):
         """Log rollback event."""
-        state = load_judge_state(self.palace_path)
+        state = load_judge_state(self.malla_path)
         entry = {
             "timestamp": _now_iso(),
-            "wing": wing,
+            "nodo": nodo,
             "tenant": tenant,
             "reason": reason,
         }
         state.rollback_history.append(entry)
-        save_judge_state(self.palace_path, state)
+        save_judge_state(self.malla_path, state)
 
     def get_status(self) -> dict:
         """Get current judge status."""
-        state = load_judge_state(self.palace_path)
+        state = load_judge_state(self.malla_path)
         return {
             "running": self._running,
             "last_run": state.last_run,

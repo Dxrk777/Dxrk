@@ -944,7 +944,7 @@ class TestEvalHarnessRemainder:
         from dxrk.memory.eval_harness import EvalQuery, load_eval_dataset, save_eval_dataset
 
         p = tmp_path / "q.jsonl"
-        save_eval_dataset(p, [EvalQuery(query="q", expected_drawer_ids=["a"], wing="w")])
+        save_eval_dataset(p, [EvalQuery(query="q", expected_fragmento_ids=["a"], nodo="w")])
         with p.open("a") as f:
             f.write("\n   \n")
         queries = load_eval_dataset(p)
@@ -953,35 +953,35 @@ class TestEvalHarnessRemainder:
     def test_synthetic_skips_empty_and_short(self):
         from dxrk.memory.eval_harness import generate_synthetic_queries
 
-        palace = SimpleNamespace(
-            list_drawers=lambda **k: [
+        malla = SimpleNamespace(
+            list_fragmentos=lambda **k: [
                 {"metadata": {}, "document": ""},
                 {"metadata": {}, "document": "a b"},
                 {"id": "d3", "metadata": {}, "document": "alpha beta gamma delta epsilon"},
             ]
         )
-        out = generate_synthetic_queries(palace, "w", n=5)
+        out = generate_synthetic_queries(malla, "w", n=5)
         assert isinstance(out, list)
 
     def test_run_empty_generates_and_reports(self, tmp_path):
         from dxrk.memory.eval_harness import EvalHarness
 
-        palace = SimpleNamespace(list_drawers=lambda **k: [])
-        harness = EvalHarness(palace, tmp_path)
+        malla = SimpleNamespace(list_fragmentos=lambda **k: [])
+        harness = EvalHarness(malla, tmp_path)
         report = harness.run("w")
         assert report.num_queries == 0
 
     def test_run_loads_queries_from_file(self, tmp_path):
         from dxrk.memory.eval_harness import EvalHarness, EvalQuery, save_eval_dataset
 
-        palace = SimpleNamespace(
-            list_drawers=lambda **k: [],
+        malla = SimpleNamespace(
+            list_fragmentos=lambda **k: [],
             search=lambda **k: {"results": [{"id": "a"}]},
         )
-        harness = EvalHarness(palace, tmp_path)
+        harness = EvalHarness(malla, tmp_path)
         save_eval_dataset(
             tmp_path / "w.jsonl",
-            [EvalQuery(query="q", expected_drawer_ids=["a"], wing="w")],
+            [EvalQuery(query="q", expected_fragmento_ids=["a"], nodo="w")],
         )
         report = harness.run("w")
         assert report.num_queries == 1
@@ -990,9 +990,9 @@ class TestEvalHarnessRemainder:
     def test_run_explicit_queries(self, tmp_path):
         from dxrk.memory.eval_harness import EvalHarness, EvalQuery
 
-        palace = SimpleNamespace(search=lambda **k: {"results": []})
-        harness = EvalHarness(palace, tmp_path)
-        report = harness.run("w", queries=[EvalQuery(query="q", expected_drawer_ids=["a"], wing="w")])
+        malla = SimpleNamespace(search=lambda **k: {"results": []})
+        harness = EvalHarness(malla, tmp_path)
+        report = harness.run("w", queries=[EvalQuery(query="q", expected_fragmento_ids=["a"], nodo="w")])
         assert report.num_queries == 1
 
     def test_calibrate_placeholder(self, tmp_path):
@@ -1506,14 +1506,14 @@ class TestThompsonRemainder:
     def test_quarantined_skipped(self):
         from dxrk.memory.thompson import select_evaluation_candidates
 
-        palace = SimpleNamespace(
-            iter_drawers=lambda: [
+        malla = SimpleNamespace(
+            iter_fragmentos=lambda: [
                 {"id": "q", "metadata": {"quarantined": True}},
                 {"id": "p", "metadata": {"pinned": True}},
                 {"id": "ok", "metadata": {}},
             ]
         )
-        out = select_evaluation_candidates(palace, n=10)
+        out = select_evaluation_candidates(malla, n=10)
         assert out == ["ok"] or (isinstance(out, list) and "q" not in out and "p" not in out)
 
 
@@ -1593,10 +1593,10 @@ class TestProvidersBackendRemainder:
 
 
 class TestStressRemainder:
-    def _palace(self, tmp_path):
-        from dxrk.memory.palace import DxrkMemory
+    def _malla(self, tmp_path):
+        from dxrk.memory.malla import DxrkMemory
 
-        dm = DxrkMemory(str(tmp_path / "palace"))
+        dm = DxrkMemory(str(tmp_path / "malla"))
         dm.init()
         return dm
 
@@ -1609,7 +1609,7 @@ class TestStressRemainder:
     def test_metadata_edge_cases(self, tmp_path):
         from dxrk.memory.stress import compute_system_stress
 
-        dm = self._palace(tmp_path)
+        dm = self._malla(tmp_path)
         try:
             old = "2000-01-01T00:00:00+00:00"
             fake_col = SimpleNamespace(
@@ -1625,8 +1625,8 @@ class TestStressRemainder:
                 )
             )
             with (
-                mock.patch.object(dm, "list_wings", return_value=["w"]),
-                mock.patch.object(dm, "wing_usage", return_value={"count": 6, "budget": 10}),
+                mock.patch.object(dm, "list_nodos", return_value=["w"]),
+                mock.patch.object(dm, "nodo_usage", return_value={"count": 6, "budget": 10}),
                 mock.patch.object(dm, "_collection", return_value=fake_col),
             ):
                 state = compute_system_stress(dm)
@@ -1638,9 +1638,9 @@ class TestStressRemainder:
     def test_hysteresis_previously_active(self, tmp_path):
         from dxrk.memory.stress import StressState, compute_system_stress, save_stress_state
 
-        dm = self._palace(tmp_path)
+        dm = self._malla(tmp_path)
         try:
-            save_stress_state(tmp_path / "palace", StressState(level=0.9, defenses_active=True))
+            save_stress_state(tmp_path / "malla", StressState(level=0.9, defenses_active=True))
             state = compute_system_stress(dm)
             assert state.defenses_active is False
         finally:
@@ -1775,7 +1775,7 @@ class TestMemoryQuarantineSkips:
             metadatas=[[{"quarantined": True}, {"S": 1.0}]],
             distances=[[0.5, 0.05]],
         )
-        with mock.patch.object(m, "_palace_collection", SimpleNamespace(query=lambda **k: fake_q)):
+        with mock.patch.object(m, "_malla_collection", SimpleNamespace(query=lambda **k: fake_q)):
             out = m.search("proj", "hola mundo")
         assert isinstance(out, list)
         assert all(e.id != "a" for e in out)
@@ -1787,7 +1787,7 @@ class TestMemoryQuarantineSkips:
             documents=["d1", "d2"],
             metadatas=[{"quarantined": True}, {"S": 1.0}],
         )
-        with mock.patch.object(m, "_palace_collection", SimpleNamespace(get=lambda **k: fake_g)):
+        with mock.patch.object(m, "_malla_collection", SimpleNamespace(get=lambda **k: fake_g)):
             out = m.search("proj", "")
         assert isinstance(out, list)
         assert all(e.id != "a" for e in out)
@@ -1819,54 +1819,54 @@ class TestReviewScreenRemainder:
 
 
 class TestCalibrateRemainder:
-    def _drawers(self):
+    def _fragmentos(self):
         return [
-            {"id": "a", "document": "alpha beta gamma delta", "metadata": {"wing": "w"}},
-            {"id": "b", "document": "epsilon zeta eta theta", "metadata": {"wing": "w"}},
-            {"id": "c", "document": "", "metadata": {"wing": "w"}},
-            {"id": "z", "document": "other wing doc here", "metadata": {"wing": "x"}},
+            {"id": "a", "document": "alpha beta gamma delta", "metadata": {"nodo": "w"}},
+            {"id": "b", "document": "epsilon zeta eta theta", "metadata": {"nodo": "w"}},
+            {"id": "c", "document": "", "metadata": {"nodo": "w"}},
+            {"id": "z", "document": "other nodo doc here", "metadata": {"nodo": "x"}},
         ]
 
-    def test_recall_few_drawers(self):
+    def test_recall_few_fragmentos(self):
         from dxrk.memory.calibrate import CalibrationParams, evaluate_recall_at_k
 
-        palace = SimpleNamespace(iter_drawers=lambda: self._drawers()[:1])
-        assert evaluate_recall_at_k(palace, "w", CalibrationParams()) == 0.0
+        malla = SimpleNamespace(iter_fragmentos=lambda: self._fragmentos()[:1])
+        assert evaluate_recall_at_k(malla, "w", CalibrationParams()) == 0.0
 
     def test_recall_skips_empty_doc(self):
         from dxrk.memory.calibrate import CalibrationParams, evaluate_recall_at_k
 
-        palace = SimpleNamespace(iter_drawers=lambda: self._drawers())
-        out = evaluate_recall_at_k(palace, "w", CalibrationParams(), k=5, sample_size=10)
+        malla = SimpleNamespace(iter_fragmentos=lambda: self._fragmentos())
+        out = evaluate_recall_at_k(malla, "w", CalibrationParams(), k=5, sample_size=10)
         assert out == 0.0
 
-    def test_wing_few_candidates(self):
+    def test_nodo_few_candidates(self):
         import dxrk.memory.calibrate as cal
 
-        palace = SimpleNamespace(iter_drawers=lambda: self._drawers())
+        malla = SimpleNamespace(iter_fragmentos=lambda: self._fragmentos())
         with mock.patch.object(cal, "select_evaluation_candidates", return_value=["a"]):
-            assert cal.calibrate_wing(palace, "w") == cal.DEFAULT_PARAMS
+            assert cal.calibrate_nodo(malla, "w") == cal.DEFAULT_PARAMS
 
-    def test_wing_optimizes(self, tmp_path):
+    def test_nodo_optimizes(self, tmp_path):
         import dxrk.memory.calibrate as cal
         from dxrk.memory.qieo import QIEOConfig
 
-        palace = SimpleNamespace(iter_drawers=lambda: self._drawers(), _path=str(tmp_path))
+        malla = SimpleNamespace(iter_fragmentos=lambda: self._fragmentos(), _path=str(tmp_path))
         cfg = QIEOConfig(pop_size=4, n_iter=2)
         with mock.patch.object(cal, "select_evaluation_candidates", return_value=["a", "b"]):
-            out = cal.calibrate_wing(palace, "w", qieo_config=cfg, objective_k=2, objective_samples=4)
+            out = cal.calibrate_nodo(malla, "w", qieo_config=cfg, objective_k=2, objective_samples=4)
         assert out.method == "qieo"
 
 
 class TestLayersRemainder:
-    def test_palace_tenant_fallback(self):
+    def test_malla_tenant_fallback(self):
         import dxrk.memory.layers as layers
 
         with mock.patch("dxrk.tenant.migration.tenant_root", side_effect=OSError("sin tenant")):
-            out = layers._resolve_palace_path("t1", None)
-        assert out.endswith(os.path.join(".dxrk", "palace"))
+            out = layers._resolve_malla_path("t1", None)
+        assert out.endswith(os.path.join(".dxrk", "malla"))
 
-    def test_palace_migrated_default(self):
+    def test_malla_migrated_default(self):
         import dxrk.memory.layers as layers
 
         with (
@@ -1874,18 +1874,18 @@ class TestLayersRemainder:
             mock.patch("dxrk.tenant.migration.is_migrated", return_value=True),
             mock.patch("dxrk.tenant.migration.tenant_root", side_effect=OSError("ro")),
         ):
-            out = layers._resolve_palace_path(None, None)
-        assert out.endswith(os.path.join(".dxrk", "palace"))
+            out = layers._resolve_malla_path(None, None)
+        assert out.endswith(os.path.join(".dxrk", "malla"))
 
-    def test_palace_not_migrated(self):
+    def test_malla_not_migrated(self):
         import dxrk.memory.layers as layers
 
         with (
             mock.patch.object(layers, "_effective_tenant_id", return_value=""),
             mock.patch("dxrk.tenant.migration.is_migrated", return_value=False),
         ):
-            out = layers._resolve_palace_path(None, None)
-        assert out.endswith(os.path.join(".dxrk", "palace"))
+            out = layers._resolve_malla_path(None, None)
+        assert out.endswith(os.path.join(".dxrk", "malla"))
 
     def test_identity_not_migrated(self):
         import dxrk.memory.layers as layers
@@ -1908,14 +1908,14 @@ class TestLayersRemainder:
             out = layers._resolve_identity_path(None, None)
         assert out.endswith(os.path.join(".dxrk", "identity.txt"))
 
-    def test_layer2_no_drawers(self):
+    def test_layer2_no_fragmentos(self):
         from dxrk.memory.layers import Layer2
 
         fake_col = SimpleNamespace(get=lambda **k: SimpleNamespace(documents=["d"], metadatas=[{"quarantined": True}]))
-        layer = Layer2(palace_path="/tmp/nonexistent-palace")
+        layer = Layer2(malla_path="/tmp/nonexistent-malla")
         with mock.patch("dxrk.memory.layers._get_collection", return_value=fake_col):
-            assert layer.retrieve(wing="w") == "No drawers found for wing=w."
-            assert layer.retrieve(wing="w", room="r") == "No drawers found for wing=w room=r."
+            assert layer.retrieve(nodo="w") == "No fragmentos found for nodo=w."
+            assert layer.retrieve(nodo="w", celda="r") == "No fragmentos found for nodo=w celda=r."
 
 
 # ═══════════ ola 10 ═══════════
@@ -2797,7 +2797,7 @@ class TestHooksCliRemainder:
         import dxrk.memory.hooks_cli as hooks
 
         with (
-            mock.patch.object(hooks, "_palace_root_exists", return_value=True),
+            mock.patch.object(hooks, "_malla_root_exists", return_value=True),
             mock.patch.object(hooks, "_session_start_context", side_effect=RuntimeError("caído")),
             mock.patch.object(hooks, "_output") as out,
             mock.patch.object(hooks, "_log"),
@@ -2811,7 +2811,7 @@ class TestHooksCliRemainder:
         import dxrk.memory.hooks_cli as hooks
 
         with (
-            mock.patch.object(hooks, "_wing_from_transcript_path", side_effect=ValueError("x")),
+            mock.patch.object(hooks, "_nodo_from_transcript_path", side_effect=ValueError("x")),
             mock.patch(
                 "dxrk.memory.layers.MemoryStack",
                 return_value=SimpleNamespace(wake_up=Mock(return_value="hola")),
@@ -2819,7 +2819,7 @@ class TestHooksCliRemainder:
         ):
             assert hooks._session_start_context("t") == {"systemMessage": "hola"}
         with (
-            mock.patch.object(hooks, "_wing_from_transcript_path", return_value="wing_x"),
+            mock.patch.object(hooks, "_nodo_from_transcript_path", return_value="nodo_x"),
             mock.patch(
                 "dxrk.memory.layers.MemoryStack",
                 return_value=SimpleNamespace(wake_up=Mock(side_effect=["No memories yet para x", "texto real"])),
@@ -2827,7 +2827,7 @@ class TestHooksCliRemainder:
         ):
             assert hooks._session_start_context("t") == {"systemMessage": "texto real"}
         with (
-            mock.patch.object(hooks, "_wing_from_transcript_path", return_value="wing_x"),
+            mock.patch.object(hooks, "_nodo_from_transcript_path", return_value="nodo_x"),
             mock.patch(
                 "dxrk.memory.layers.MemoryStack",
                 return_value=SimpleNamespace(wake_up=Mock(return_value="x" * 5000)),
@@ -2836,7 +2836,7 @@ class TestHooksCliRemainder:
             out = hooks._session_start_context("t")
             assert out["systemMessage"].endswith("... (more in DxrkMemory search)")
         with (
-            mock.patch.object(hooks, "_wing_from_transcript_path", return_value="wing_x"),
+            mock.patch.object(hooks, "_nodo_from_transcript_path", return_value="nodo_x"),
             mock.patch(
                 "dxrk.memory.layers.MemoryStack",
                 return_value=SimpleNamespace(wake_up=Mock(return_value="   ")),
@@ -3161,11 +3161,11 @@ class TestScoringRemainder:
 
 
 class TestCalibrateV2Remainder:
-    def _drawers(self):
+    def _fragmentos(self):
         return [
-            {"id": "a", "document": "alpha beta gamma delta", "metadata": {"wing": "w"}},
-            {"id": "b", "document": "epsilon zeta eta theta", "metadata": {"wing": "w"}},
-            {"id": "c", "document": "", "metadata": {"wing": "w"}},
+            {"id": "a", "document": "alpha beta gamma delta", "metadata": {"nodo": "w"}},
+            {"id": "b", "document": "epsilon zeta eta theta", "metadata": {"nodo": "w"}},
+            {"id": "c", "document": "", "metadata": {"nodo": "w"}},
         ]
 
     def test_now_iso(self):
@@ -3174,10 +3174,10 @@ class TestCalibrateV2Remainder:
         assert "T" in _now_iso()
 
     def test_tenant_path_no_tenant(self, tmp_path):
-        from dxrk.memory.calibrate_v2 import _tenant_wing_path
+        from dxrk.memory.calibrate_v2 import _tenant_nodo_path
 
-        assert _tenant_wing_path(tmp_path, "", "w").name == "w.json"
-        assert _tenant_wing_path(tmp_path, "t", "w").name == "t_w.json"
+        assert _tenant_nodo_path(tmp_path, "", "w").name == "w.json"
+        assert _tenant_nodo_path(tmp_path, "t", "w").name == "t_w.json"
 
     def test_load_corrupt_global(self, tmp_path):
         from dxrk.memory.calibrate_v2 import DEFAULT_PARAMS, load_calibration
@@ -3190,24 +3190,24 @@ class TestCalibrateV2Remainder:
     def test_recall_few_and_empty_doc(self):
         from dxrk.memory.calibrate_v2 import CalibrationParams, evaluate_recall_at_k
 
-        one = SimpleNamespace(iter_drawers=lambda: self._drawers()[:1])
+        one = SimpleNamespace(iter_fragmentos=lambda: self._fragmentos()[:1])
         assert evaluate_recall_at_k(one, "w", CalibrationParams()) == 0.0
-        full = SimpleNamespace(iter_drawers=lambda: self._drawers())
+        full = SimpleNamespace(iter_fragmentos=lambda: self._fragmentos())
         assert evaluate_recall_at_k(full, "w", CalibrationParams(), k=5, sample_size=10) == 0.0
 
-    def test_wing_few_candidates(self, tmp_path):
+    def test_nodo_few_candidates(self, tmp_path):
         import dxrk.memory.calibrate_v2 as cal
 
-        palace = SimpleNamespace(iter_drawers=lambda: self._drawers(), _path=str(tmp_path))
+        malla = SimpleNamespace(iter_fragmentos=lambda: self._fragmentos(), _path=str(tmp_path))
         with mock.patch.object(cal, "select_evaluation_candidates", return_value=["a"]):
-            assert cal.calibrate_wing(palace, "w") == cal.DEFAULT_PARAMS
+            assert cal.calibrate_nodo(malla, "w") == cal.DEFAULT_PARAMS
 
-    def test_wing_optimizes(self, tmp_path):
+    def test_nodo_optimizes(self, tmp_path):
         import dxrk.memory.calibrate_v2 as cal
         from dxrk.memory.qieo import QIEOConfig
 
-        palace = SimpleNamespace(iter_drawers=lambda: self._drawers(), _path=str(tmp_path))
+        malla = SimpleNamespace(iter_fragmentos=lambda: self._fragmentos(), _path=str(tmp_path))
         cfg = QIEOConfig(pop_size=4, n_iter=2)
         with mock.patch.object(cal, "select_evaluation_candidates", return_value=["a", "b"]):
-            out = cal.calibrate_wing(palace, "w", qieo_config=cfg, objective_k=2, objective_samples=4)
+            out = cal.calibrate_nodo(malla, "w", qieo_config=cfg, objective_k=2, objective_samples=4)
         assert out.method == "qieo"

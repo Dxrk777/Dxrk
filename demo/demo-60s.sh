@@ -3,10 +3,10 @@
 # DxrkMemory + session recall — 60-second runnable demo.
 #
 # Non-interactive. Uses ONLY temp dirs (never touches the real ~/.dxrk):
-#   HOME is redirected to a mktemp dir, so hooks_cli PALACE_ROOT
+#   HOME is redirected to a mktemp dir, so hooks_cli MALLA_ROOT
 #   (~/.dxrk/memory), the session store (~/.dxrk/sessions) and the
 #   identity file all land under $DEMO_TMP. DXRK_MEMORY_PATH points the
-#   MCP server at the same temp palace.
+#   MCP server at the same temp malla.
 #
 # Run from anywhere:  bash demo/demo-60s.sh
 # Every command below was verified to exit 0 (set -e enforces it).
@@ -42,7 +42,7 @@ sys.exit(1 if r['result'].get('isError') else 0)
 "
 }
 
-say "[1/6] mine — ingest a tiny sample project into a temp palace"
+say "[1/6] mine — ingest a tiny sample project into a temp malla"
 cat > "$DEMO_TMP/sample/auth.py" <<'EOF'
 """JWT authentication middleware for protected routes."""
 SECRET_KEY = "change-me-in-production"
@@ -68,7 +68,7 @@ cat > "$DEMO_TMP/sample/deploy.md" <<'EOF'
 
 The release pipeline pushes containers to production via blue-green releases.
 EOF
-"$PY" -m dxrk.memory mine "$DEMO_TMP/sample" --wing demo
+"$PY" -m dxrk.memory mine "$DEMO_TMP/sample" --nodo demo
 
 say "[2/6] hybrid search — a natural question grep cannot answer"
 Q="how do I authenticate API users"
@@ -77,11 +77,11 @@ if grep -riF "$Q" "$DEMO_TMP/sample/" >/dev/null 2>&1; then
 else
   echo "grep: no hits (keyword mismatch)"
 fi
-"$PY" -m dxrk.memory search "$Q" --wing demo --n 1
+"$PY" -m dxrk.memory search "$Q" --nodo demo --n 1
 
-say "[3/6] pin + status — pin the auth drawer, budgets prove it stuck"
+say "[3/6] pin + status — pin the auth fragmento, budgets prove it stuck"
 DID="$("$PY" -c "
-from dxrk.memory.palace import DxrkMemory
+from dxrk.memory.malla import DxrkMemory
 dm = DxrkMemory('$DXRK_MEMORY_PATH'); dm.init()
 from dxrk.memory.search import build_where_filter
 col = dm._collection(create=False)
@@ -95,15 +95,15 @@ echo "pinning: $DID"
 # Seed one episodic session entry first (same write path hook_stop uses:
 # source_file='session:<id>'), so the timeline below shows session + pin.
 "$PY" -c "
-from dxrk.memory.palace import DxrkMemory
+from dxrk.memory.malla import DxrkMemory
 dm = DxrkMemory('$DXRK_MEMORY_PATH'); dm.init()
-dm.add_drawer(wing='demo', room='2026-09-27',
+dm.add_fragmento(nodo='demo', celda='2026-09-27',
     content='SESSION:2026-09-27|session:demo-001|msgs:4|recent:fixed the JWT expiry bug',
     source_file='session:demo-001', chunk_index=0)
 print('session episode recorded')
 "
 echo "demo identity: Dxrk demo bot" > "$HOME/.dxrk/identity.txt"
-mcp 2 dxrk_memory_pin "{\"drawer_id\":\"$DID\"}"
+mcp 2 dxrk_memory_pin "{\"fragmento_id\":\"$DID\"}"
 mcp 3 dxrk_memory_status '{}'
 
 say "[4/6] timeline — episodic session + pin history, chronological"
@@ -119,4 +119,4 @@ say "[6/6] sessions CLI — create/list/info on the sqlite backend"
 SID="$("$PY" -c "from dxrk.commands.session import list_session_files; print(list_session_files()[0].id)")"
 "$PY" -c "from dxrk.commands import register_all; raise SystemExit(register_all().execute(['session', 'info', '$SID']))"
 
-say "DEMO OK — palace, sessions and hooks all lived under $DEMO_TMP (now cleaned up)"
+say "DEMO OK — malla, sessions and hooks all lived under $DEMO_TMP (now cleaned up)"

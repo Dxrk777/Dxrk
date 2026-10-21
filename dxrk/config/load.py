@@ -18,7 +18,8 @@ def _load_config_dict(data: dict[str, Any]) -> Config:
     """Builds a Config from a parsed dict, keeping defaults for missing sections."""
     cfg = Default()
 
-    project = data.get("project") if isinstance(data.get("project"), dict) else {}
+    raw_project = data.get("project")
+    project: dict[str, Any] = raw_project if isinstance(raw_project, dict) else {}
     if project.get("name"):
         cfg.project.name = str(project["name"])
     if project.get("root"):

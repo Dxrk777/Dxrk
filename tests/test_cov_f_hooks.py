@@ -32,16 +32,16 @@ def _reset_hc_flag():
     hc._state_dir_initialized = False
 
 
-def _iso_hc(monkeypatch, tmp_path, *, palace=True):
-    palace_root = tmp_path / "palace"
+def _iso_hc(monkeypatch, tmp_path, *, malla=True):
+    malla_root = tmp_path / "malla"
     state_dir = tmp_path / "hstate"
-    if palace:
-        palace_root.mkdir(parents=True, exist_ok=True)
-    monkeypatch.setattr(hc, "PALACE_ROOT", palace_root)
+    if malla:
+        malla_root.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(hc, "MALLA_ROOT", malla_root)
     monkeypatch.setattr(hc, "STATE_DIR", state_dir)
     monkeypatch.setattr(hc, "_MINE_PID_DIR", state_dir / "mine_pids")
     hc._state_dir_initialized = False
-    return palace_root, state_dir
+    return malla_root, state_dir
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1197,31 +1197,31 @@ class TestCountHuman:
 
 
 class TestHcLog:
-    def test_no_palace_noop(self, tmp_path, monkeypatch):
-        _iso_hc(monkeypatch, tmp_path, palace=False)
+    def test_no_malla_noop(self, tmp_path, monkeypatch):
+        _iso_hc(monkeypatch, tmp_path, malla=False)
         hc._log("hello")
         assert not (tmp_path / "hstate").exists()
 
     def test_write_and_reuse(self, tmp_path, monkeypatch):
-        _iso_hc(monkeypatch, tmp_path, palace=True)
+        _iso_hc(monkeypatch, tmp_path, malla=True)
         hc._log("first")
         hc._log("second")
         text = (tmp_path / "hstate" / "hook.log").read_text(encoding="utf-8")
         assert "first" in text and "second" in text
 
     def test_mkdir_oserror(self, tmp_path, monkeypatch):
-        _iso_hc(monkeypatch, tmp_path, palace=True)
+        _iso_hc(monkeypatch, tmp_path, malla=True)
         monkeypatch.setattr(Path, "mkdir", lambda *a, **k: (_ for _ in ()).throw(OSError("ro")))
         hc._log("x")
 
     def test_chmod_oserror(self, tmp_path, monkeypatch):
-        _iso_hc(monkeypatch, tmp_path, palace=True)
+        _iso_hc(monkeypatch, tmp_path, malla=True)
         monkeypatch.setattr(Path, "chmod", lambda *a, **k: (_ for _ in ()).throw(OSError("ro")))
         hc._log("x")
         assert (tmp_path / "hstate" / "hook.log").exists()
 
     def test_write_oserror(self, tmp_path, monkeypatch):
-        _iso_hc(monkeypatch, tmp_path, palace=True)
+        _iso_hc(monkeypatch, tmp_path, malla=True)
         real_open = open
 
         def _fake_open(path, *a, **k):
@@ -1296,9 +1296,9 @@ class TestMineTimeout:
 class TestPidFile:
     def test_deterministic(self, tmp_path, monkeypatch):
         _iso_hc(monkeypatch, tmp_path)
-        cmd = [sys.executable, "-m", "dxrk.memory", "mine", "/tmp/p", "--wing", "default"]
+        cmd = [sys.executable, "-m", "dxrk.memory", "mine", "/tmp/p", "--nodo", "default"]
         assert hc._pid_file_for_cmd(cmd) == hc._pid_file_for_cmd(cmd)
-        other = [sys.executable, "-m", "dxrk.memory", "mine", "/other", "--wing", "x"]
+        other = [sys.executable, "-m", "dxrk.memory", "mine", "/other", "--nodo", "x"]
         assert hc._pid_file_for_cmd(other) != hc._pid_file_for_cmd(cmd)
         assert hc._pid_file_for_cmd([sys.executable, "-c", "print(1)"]).name.startswith("mine_")
 
@@ -1341,7 +1341,7 @@ class TestPidAlive:
 
 class TestMineAlreadyRunning:
     def _cmd(self):
-        return [sys.executable, "-m", "dxrk.memory", "mine", "/tmp/proj", "--wing", "default"]
+        return [sys.executable, "-m", "dxrk.memory", "mine", "/tmp/proj", "--nodo", "default"]
 
     def test_no_file(self, tmp_path, monkeypatch):
         _iso_hc(monkeypatch, tmp_path)
@@ -1430,7 +1430,7 @@ class TestCreateMineSlot:
 
 class TestClaimMineSlot:
     def _cmd(self):
-        return [sys.executable, "-m", "dxrk.memory", "mine", "/tmp/cproj", "--wing", "default"]
+        return [sys.executable, "-m", "dxrk.memory", "mine", "/tmp/cproj", "--nodo", "default"]
 
     def test_fresh_and_busy(self, tmp_path, monkeypatch):
         _iso_hc(monkeypatch, tmp_path)
@@ -1491,10 +1491,10 @@ class TestClaimMineSlot:
 
 class TestSpawnMine:
     def _cmd(self, proj):
-        return [sys.executable, "-m", "dxrk.memory", "mine", str(proj), "--wing", "default"]
+        return [sys.executable, "-m", "dxrk.memory", "mine", str(proj), "--nodo", "default"]
 
     def test_skip_when_busy(self, tmp_path, monkeypatch):
-        _iso_hc(monkeypatch, tmp_path, palace=True)
+        _iso_hc(monkeypatch, tmp_path, malla=True)
         logs = []
         monkeypatch.setattr(hc, "_claim_mine_slot", lambda cmd: None)
         monkeypatch.setattr(hc, "_log", logs.append)
@@ -1502,7 +1502,7 @@ class TestSpawnMine:
         assert any("already running" in m for m in logs)
 
     def test_success(self, tmp_path, monkeypatch):
-        _, state = _iso_hc(monkeypatch, tmp_path, palace=True)
+        _, state = _iso_hc(monkeypatch, tmp_path, malla=True)
         cmd = self._cmd(tmp_path)
         seen = {}
 
@@ -1517,7 +1517,7 @@ class TestSpawnMine:
         assert seen["env"][hc._MINE_PID_FILE_ENV] == str(pf)
 
     def test_popen_oserror_cleans(self, tmp_path, monkeypatch):
-        _iso_hc(monkeypatch, tmp_path, palace=True)
+        _iso_hc(monkeypatch, tmp_path, malla=True)
         cmd = self._cmd(tmp_path)
         pf = hc._pid_file_for_cmd(cmd)
         pf.parent.mkdir(parents=True, exist_ok=True)
@@ -1529,7 +1529,7 @@ class TestSpawnMine:
         assert not pf.exists()
 
     def test_popen_oserror_unlink_fails(self, tmp_path, monkeypatch):
-        _iso_hc(monkeypatch, tmp_path, palace=True)
+        _iso_hc(monkeypatch, tmp_path, malla=True)
         cmd = self._cmd(tmp_path)
         pf = hc._pid_file_for_cmd(cmd)
         pf.parent.mkdir(parents=True, exist_ok=True)
@@ -1541,7 +1541,7 @@ class TestSpawnMine:
             hc._spawn_mine(cmd)
 
     def test_write_oserror_ignored(self, tmp_path, monkeypatch):
-        _iso_hc(monkeypatch, tmp_path, palace=True)
+        _iso_hc(monkeypatch, tmp_path, malla=True)
         cmd = self._cmd(tmp_path)
         monkeypatch.setattr(hc.subprocess, "Popen", lambda *a, **k: SimpleNamespace(pid=1))
         real_write = Path.write_text
@@ -1579,7 +1579,7 @@ class TestAutoIngestSync:
         hc._mine_sync()
 
     def test_sync_variants(self, tmp_path, monkeypatch):
-        _iso_hc(monkeypatch, tmp_path, palace=True)
+        _iso_hc(monkeypatch, tmp_path, malla=True)
         monkeypatch.setattr(hc, "_get_mine_targets", lambda: [("/tmp/x", "default")])
         monkeypatch.setattr(hc, "_dxrk_python", lambda: "py")
         monkeypatch.setattr(hc.subprocess, "run", lambda *a, **k: SimpleNamespace(returncode=0))
@@ -1654,16 +1654,16 @@ class TestExtractThemes:
 
 class TestSaveSummary:
     def test_no_messages(self, tmp_path, monkeypatch):
-        _iso_hc(monkeypatch, tmp_path, palace=True)
+        _iso_hc(monkeypatch, tmp_path, malla=True)
         tr = tmp_path / "empty.jsonl"
         tr.write_text("")
         assert hc._save_session_summary_direct(str(tr), "s1") == {"count": 0}
         assert hc._save_session_summary_direct(str(tmp_path / "missing.jsonl"), "s1") == {"count": 0}
 
     def test_exception_path(self, tmp_path, monkeypatch):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
-        _iso_hc(monkeypatch, tmp_path, palace=True)
+        _iso_hc(monkeypatch, tmp_path, malla=True)
         tr = tmp_path / "t.jsonl"
         with open(tr, "w", encoding="utf-8") as f:
             for i in range(3):
@@ -1675,7 +1675,7 @@ class TestSaveSummary:
         assert any("error" in m for m in logs)
 
     def test_ack_oserror_ignored(self, tmp_path, monkeypatch):
-        _iso_hc(monkeypatch, tmp_path, palace=True)
+        _iso_hc(monkeypatch, tmp_path, malla=True)
         tr = tmp_path / "t2.jsonl"
         with open(tr, "w", encoding="utf-8") as f:
             for i in range(2):
@@ -1688,16 +1688,16 @@ class TestSaveSummary:
             return real_write(self, *a, **k)
 
         monkeypatch.setattr(Path, "write_text", _fake_write)
-        res = hc._save_session_summary_direct(str(tr), "sAck", wing="wing_t")
-        assert res["count"] == 2 and "drawer_id" in res
+        res = hc._save_session_summary_direct(str(tr), "sAck", nodo="nodo_t")
+        assert res["count"] == 2 and "fragmento_id" in res
 
     def test_success(self, tmp_path, monkeypatch):
-        _iso_hc(monkeypatch, tmp_path, palace=True)
+        _iso_hc(monkeypatch, tmp_path, malla=True)
         tr = tmp_path / "t3.jsonl"
         with open(tr, "w", encoding="utf-8") as f:
             for i in range(2):
                 f.write(json.dumps({"message": {"role": "user", "content": f"project alpha content {i}"}}) + "\n")
-        res = hc._save_session_summary_direct(str(tr), "sOk", wing="wing_t")
+        res = hc._save_session_summary_direct(str(tr), "sOk", nodo="nodo_t")
         assert res["count"] == 2
         assert isinstance(res["themes"], list)
 
@@ -1712,7 +1712,7 @@ class TestIngestTranscript:
         hc._ingest_transcript(str(tmp_path / "missing.jsonl"))
 
     def test_success(self, tmp_path, monkeypatch):
-        _iso_hc(monkeypatch, tmp_path, palace=True)
+        _iso_hc(monkeypatch, tmp_path, malla=True)
         tr = tmp_path / "big.jsonl"
         tr.write_text("x" * 200)
         calls = []
@@ -1725,7 +1725,7 @@ class TestIngestTranscript:
         assert any("ingest started" in m for m in logs)
 
     def test_spawn_oserror(self, tmp_path, monkeypatch):
-        _iso_hc(monkeypatch, tmp_path, palace=True)
+        _iso_hc(monkeypatch, tmp_path, malla=True)
         tr = tmp_path / "big2.jsonl"
         tr.write_text("y" * 200)
         monkeypatch.setattr(hc, "_spawn_mine", lambda cmd: (_ for _ in ()).throw(OSError("ro")))
@@ -1733,7 +1733,7 @@ class TestIngestTranscript:
         hc._ingest_transcript(str(tr))
 
 
-class TestWingFromTranscript:
+class TestVenaFromTranscript:
     def test_cwd_variants(self, tmp_path):
         tr = tmp_path / "t.jsonl"
         with open(tr, "w", encoding="utf-8") as f:
@@ -1742,21 +1742,21 @@ class TestWingFromTranscript:
             f.write('{"cwd": ""}\n')
             f.write('{"cwd": "/"}\n')
             f.write('{"cwd": "/home/user/Projects/MyProject"}\n')
-        assert hc._wing_from_transcript_path(str(tr)) == "wing_myproject"
+        assert hc._nodo_from_transcript_path(str(tr)) == "nodo_myproject"
 
     def test_open_oserror(self, tmp_path, monkeypatch):
         tr = tmp_path / "o.jsonl"
         tr.write_text('{"cwd": "/a/b"}\n')
         monkeypatch.setattr(Path, "open", lambda *a, **k: (_ for _ in ()).throw(OSError("ro")))
-        assert hc._wing_from_transcript_path(str(tr)) == "wing_sessions"
+        assert hc._nodo_from_transcript_path(str(tr)) == "nodo_sessions"
 
     def test_encoded_paths(self):
-        assert hc._wing_from_transcript_path("/x/.claude/projects/-Users-bob-git-CoolProj/y.jsonl") == "wing_coolproj"
-        assert hc._wing_from_transcript_path("/x/.claude/projects/-plainproj/y.jsonl") == "wing_plainproj"
-        assert hc._wing_from_transcript_path("/x/.claude/projects/-Users-bob-dev-Thing/y.jsonl") == "wing_thing"
-        assert hc._wing_from_transcript_path("/some-Projects-AwesomeX/file.jsonl") == "wing_awesomex"
-        assert hc._wing_from_transcript_path("/nonexistent_xyz/f.jsonl") == "wing_sessions"
-        assert hc._wing_from_transcript_path("") == "wing_sessions"
+        assert hc._nodo_from_transcript_path("/x/.claude/projects/-Users-bob-git-CoolProj/y.jsonl") == "nodo_coolproj"
+        assert hc._nodo_from_transcript_path("/x/.claude/projects/-plainproj/y.jsonl") == "nodo_plainproj"
+        assert hc._nodo_from_transcript_path("/x/.claude/projects/-Users-bob-dev-Thing/y.jsonl") == "nodo_thing"
+        assert hc._nodo_from_transcript_path("/some-Projects-AwesomeX/file.jsonl") == "nodo_awesomex"
+        assert hc._nodo_from_transcript_path("/nonexistent_xyz/f.jsonl") == "nodo_sessions"
+        assert hc._nodo_from_transcript_path("") == "nodo_sessions"
 
     def test_no_cwd_exhausts(self, tmp_path):
         tr = tmp_path / "nc.jsonl"
@@ -1764,25 +1764,25 @@ class TestWingFromTranscript:
             f.write("\n")
             f.write('{"a": 1}\n')
             f.write('{"cwd": }\n')
-        assert hc._wing_from_transcript_path(str(tr)) == "wing_sessions"
+        assert hc._nodo_from_transcript_path(str(tr)) == "nodo_sessions"
 
     def test_200_line_break(self, tmp_path):
         tr = tmp_path / "big.jsonl"
         with open(tr, "w", encoding="utf-8") as f:
             for _ in range(205):
                 f.write('{"a": 1}\n')
-        assert hc._wing_from_transcript_path(str(tr)) == "wing_sessions"
+        assert hc._nodo_from_transcript_path(str(tr)) == "nodo_sessions"
 
     def test_empty_project_after_prefix(self):
-        assert hc._wing_from_transcript_path("/x/.claude/projects/-git-/y.jsonl") == "wing_sessions"
+        assert hc._nodo_from_transcript_path("/x/.claude/projects/-git-/y.jsonl") == "nodo_sessions"
 
 
 class TestHookStop:
     def _base(self):
         return {"session_id": "sess1", "stop_hook_active": False, "transcript_path": ""}
 
-    def test_no_palace(self, tmp_path, monkeypatch):
-        _iso_hc(monkeypatch, tmp_path, palace=False)
+    def test_no_malla(self, tmp_path, monkeypatch):
+        _iso_hc(monkeypatch, tmp_path, malla=False)
         outs = []
         monkeypatch.setattr(hc, "_output", outs.append)
         hc.hook_stop(self._base(), "dxrk")
@@ -1790,7 +1790,7 @@ class TestHookStop:
 
     @pytest.mark.parametrize("active", [True, "true", "1", "yes", "YES"])
     def test_stop_active(self, tmp_path, monkeypatch, active):
-        _iso_hc(monkeypatch, tmp_path, palace=True)
+        _iso_hc(monkeypatch, tmp_path, malla=True)
         outs = []
         monkeypatch.setattr(hc, "_output", outs.append)
         data = self._base()
@@ -1799,7 +1799,7 @@ class TestHookStop:
         assert outs == [{}]
 
     def test_below_interval(self, tmp_path, monkeypatch):
-        _iso_hc(monkeypatch, tmp_path, palace=True)
+        _iso_hc(monkeypatch, tmp_path, malla=True)
         outs = []
         monkeypatch.setattr(hc, "_output", outs.append)
         monkeypatch.setattr(hc, "_count_human_messages", lambda p: 3)
@@ -1807,13 +1807,13 @@ class TestHookStop:
         assert outs == [{}]
 
     def test_bad_last_save_and_zero_count(self, tmp_path, monkeypatch):
-        _, state = _iso_hc(monkeypatch, tmp_path, palace=True)
+        _, state = _iso_hc(monkeypatch, tmp_path, malla=True)
         state.mkdir(parents=True, exist_ok=True)
         (state / "sess1_last_save").write_text("garbage")
         outs = []
         monkeypatch.setattr(hc, "_output", outs.append)
         monkeypatch.setattr(hc, "_count_human_messages", lambda p: 20)
-        monkeypatch.setattr(hc, "_wing_from_transcript_path", lambda p: "wing_x")
+        monkeypatch.setattr(hc, "_nodo_from_transcript_path", lambda p: "nodo_x")
         monkeypatch.setattr(hc, "_save_session_summary_direct", lambda *a, **k: {"count": 0})
         monkeypatch.setattr(hc, "_ingest_transcript", lambda p: None)
         monkeypatch.setattr(hc, "_maybe_auto_ingest", lambda: None)
@@ -1823,12 +1823,12 @@ class TestHookStop:
         assert outs == [{}]
 
     def test_trigger_save_success(self, tmp_path, monkeypatch):
-        _, state = _iso_hc(monkeypatch, tmp_path, palace=True)
+        _, state = _iso_hc(monkeypatch, tmp_path, malla=True)
         outs = []
         ingested, auto = [], []
         monkeypatch.setattr(hc, "_output", outs.append)
         monkeypatch.setattr(hc, "_count_human_messages", lambda p: 20)
-        monkeypatch.setattr(hc, "_wing_from_transcript_path", lambda p: "wing_x")
+        monkeypatch.setattr(hc, "_nodo_from_transcript_path", lambda p: "nodo_x")
         monkeypatch.setattr(hc, "_save_session_summary_direct", lambda *a, **k: {"count": 3, "themes": ["alpha"]})
         monkeypatch.setattr(hc, "_ingest_transcript", lambda p: ingested.append(p))
         monkeypatch.setattr(hc, "_maybe_auto_ingest", lambda: auto.append(1))
@@ -1840,7 +1840,7 @@ class TestHookStop:
         assert ingested and auto
 
     def test_trigger_empty_transcript(self, tmp_path, monkeypatch):
-        _iso_hc(monkeypatch, tmp_path, palace=True)
+        _iso_hc(monkeypatch, tmp_path, malla=True)
         outs = []
         saved = []
         auto = []
@@ -1852,11 +1852,11 @@ class TestHookStop:
         assert outs == [{}] and saved == [] and auto == [1]
 
     def test_last_save_write_oserror(self, tmp_path, monkeypatch):
-        _iso_hc(monkeypatch, tmp_path, palace=True)
+        _iso_hc(monkeypatch, tmp_path, malla=True)
         outs = []
         monkeypatch.setattr(hc, "_output", outs.append)
         monkeypatch.setattr(hc, "_count_human_messages", lambda p: 20)
-        monkeypatch.setattr(hc, "_wing_from_transcript_path", lambda p: "wing_x")
+        monkeypatch.setattr(hc, "_nodo_from_transcript_path", lambda p: "nodo_x")
         monkeypatch.setattr(hc, "_save_session_summary_direct", lambda *a, **k: {"count": 2, "themes": []})
         monkeypatch.setattr(hc, "_ingest_transcript", lambda p: None)
         monkeypatch.setattr(hc, "_maybe_auto_ingest", lambda: None)
@@ -1875,29 +1875,29 @@ class TestHookStop:
 
 
 class TestSessionStartPrecompact:
-    def test_session_start_no_palace(self, tmp_path, monkeypatch):
-        _iso_hc(monkeypatch, tmp_path, palace=False)
+    def test_session_start_no_malla(self, tmp_path, monkeypatch):
+        _iso_hc(monkeypatch, tmp_path, malla=False)
         outs = []
         monkeypatch.setattr(hc, "_output", outs.append)
         hc.hook_session_start({"session_id": "s"}, "dxrk")
         assert outs == [{}]
 
     def test_session_start_ok(self, tmp_path, monkeypatch):
-        _, state = _iso_hc(monkeypatch, tmp_path, palace=True)
+        _, state = _iso_hc(monkeypatch, tmp_path, malla=True)
         outs = []
         monkeypatch.setattr(hc, "_output", outs.append)
         hc.hook_session_start({"session_id": "s"}, "dxrk")
         assert outs == [{}] and state.is_dir()
 
-    def test_precompact_no_palace(self, tmp_path, monkeypatch):
-        _iso_hc(monkeypatch, tmp_path, palace=False)
+    def test_precompact_no_malla(self, tmp_path, monkeypatch):
+        _iso_hc(monkeypatch, tmp_path, malla=False)
         outs = []
         monkeypatch.setattr(hc, "_output", outs.append)
         hc.hook_precompact({"session_id": "s", "transcript_path": ""}, "dxrk")
         assert outs == [{}]
 
     def test_precompact_ok(self, tmp_path, monkeypatch):
-        _iso_hc(monkeypatch, tmp_path, palace=True)
+        _iso_hc(monkeypatch, tmp_path, malla=True)
         outs, ingested, synced = [], [], []
         monkeypatch.setattr(hc, "_output", outs.append)
         monkeypatch.setattr(hc, "_ingest_transcript", lambda p: ingested.append(p))
@@ -1906,7 +1906,7 @@ class TestSessionStartPrecompact:
         assert outs == [{}] and len(ingested) == 1 and synced == [1]
 
     def test_precompact_no_transcript(self, tmp_path, monkeypatch):
-        _iso_hc(monkeypatch, tmp_path, palace=True)
+        _iso_hc(monkeypatch, tmp_path, malla=True)
         outs, ingested, synced = [], [], []
         monkeypatch.setattr(hc, "_output", outs.append)
         monkeypatch.setattr(hc, "_ingest_transcript", lambda p: ingested.append(p))
@@ -1917,7 +1917,7 @@ class TestSessionStartPrecompact:
 
 class TestRunHook:
     def test_bad_stdin(self, tmp_path, monkeypatch):
-        _iso_hc(monkeypatch, tmp_path, palace=True)
+        _iso_hc(monkeypatch, tmp_path, malla=True)
         calls = []
         monkeypatch.setattr(hc, "hook_session_start", lambda data, harness: calls.append((data, harness)))
         monkeypatch.setattr(sys, "stdin", io.StringIO("{bad json"))
@@ -2168,12 +2168,12 @@ class TestAgentMemorySqliteInit:
         assert m._use_sqlite is True
         assert (tmp_path / "sub").is_dir()
 
-    def test_palace_typeerror_fallback(self, tmp_path, _iso_tenant, monkeypatch):
-        import dxrk.memory.palace as pal
+    def test_malla_typeerror_fallback(self, tmp_path, _iso_tenant, monkeypatch):
+        import dxrk.memory.malla as pal
 
         stub_col = _StubCol()
 
-        class _FakePalace:
+        class _FakeSangre:
             def __init__(self, path, *a, **k):
                 if "tenant_id" in k:
                     raise TypeError("no tenant kw")
@@ -2185,10 +2185,10 @@ class TestAgentMemorySqliteInit:
             def _collection(self, create=True):
                 return stub_col
 
-        monkeypatch.setattr(pal, "Palace", _FakePalace)
+        monkeypatch.setattr(pal, "Malla", _FakeSangre)
         m = AgentMemory(path=str(tmp_path / "pfb"))
         assert m._use_sqlite is True
-        assert m._palace_collection is stub_col
+        assert m._malla_collection is stub_col
 
     def test_chmod_oserror_ignored(self, tmp_path, _iso_tenant, monkeypatch):
         monkeypatch.setattr(Path, "chmod", lambda *a, **k: (_ for _ in ()).throw(OSError("ro")))
@@ -2196,9 +2196,9 @@ class TestAgentMemorySqliteInit:
         assert m._use_sqlite is True
 
     def test_init_failure_falls_back(self, tmp_path, _iso_tenant, monkeypatch):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
-        monkeypatch.setattr(pal.Palace, "init", lambda self: (_ for _ in ()).throw(RuntimeError("boom")))
+        monkeypatch.setattr(pal.Malla, "init", lambda self: (_ for _ in ()).throw(RuntimeError("boom")))
         m = _sqlite_mem(tmp_path, "badpal")
         assert m._use_sqlite is False
 
@@ -2207,14 +2207,14 @@ class TestAgentMemoryStoreSqlite:
     def test_metadata_upsert(self, tmp_path, _iso_tenant):
         m = _sqlite_mem(tmp_path, "st1")
         m.store(MemoryEntry(content="hello meta", project_id="p1", session_id="s1", metadata={"custom": "v"}))
-        got = m._palace_collection.get(ids=[], include=["documents", "metadatas"])
+        got = m._malla_collection.get(ids=[], include=["documents", "metadatas"])
         assert got is not None
         res = m.retrieve(next(iter(m._entries)))
         assert res is not None
 
     def test_upsert_error_ignored(self, tmp_path, _iso_tenant, monkeypatch):
         m = _sqlite_mem(tmp_path, "st2")
-        monkeypatch.setattr(m._palace_collection, "upsert", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
+        monkeypatch.setattr(m._malla_collection, "upsert", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
         m.store(MemoryEntry(content="hello upsert-fail", project_id="p1"))
         assert len(m._entries) == 1
         assert m.retrieve(next(iter(m._entries))) is not None
@@ -2223,7 +2223,7 @@ class TestAgentMemoryStoreSqlite:
         m = AgentMemory(path=str(tmp_path / "ev"), max_entries=1)
         m.store(MemoryEntry(id="a", content="first entry here", project_id="p1"))
         monkeypatch.setattr(
-            m._palace_collection, "delete", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("del boom"))
+            m._malla_collection, "delete", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("del boom"))
         )
         m.store(MemoryEntry(id="b", content="second entry here", project_id="p1"))
         assert "a" not in m._entries and "b" in m._entries
@@ -2248,7 +2248,7 @@ class TestAgentMemoryStoreSqlite:
 class TestAgentMemoryRetrieveSqlite:
     def test_empty_ids(self, tmp_path, _iso_tenant):
         m = _sqlite_mem(tmp_path, "rt0")
-        m._palace_collection = _StubCol(getres=SimpleNamespace(ids=[], documents=[], metadatas=[]))
+        m._malla_collection = _StubCol(getres=SimpleNamespace(ids=[], documents=[], metadatas=[]))
         assert m.retrieve("ghost") is None
 
     def test_full_meta(self, tmp_path, _iso_tenant):
@@ -2258,52 +2258,52 @@ class TestAgentMemoryRetrieveSqlite:
             "session_id": "s1",
             "type": 1,
             "importance": 2.5,
-            "wing": "w",
-            "room": "r",
+            "nodo": "w",
+            "celda": "r",
             "source_file": "f",
             "filed_at": "2024-01-01T00:00:00",
             "custom": "k",
         }
-        m._palace_collection = _StubCol(getres=SimpleNamespace(ids=["a"], documents=["doc a"], metadatas=[meta]))
+        m._malla_collection = _StubCol(getres=SimpleNamespace(ids=["a"], documents=["doc a"], metadatas=[meta]))
         e = m.retrieve("a")
         assert e is not None and e.content == "doc a"
         assert e.type == MemoryType.EPISODIC and e.importance == 2.5
         assert e.metadata == {"custom": "k"}
-        assert e.wing == "w" and e.palace_path == "f"
+        assert e.nodo == "w" and e.malla_path == "f"
         e2 = m.retrieve("a")
         assert e2.access_count == 2
 
     def test_meta_not_dict_and_bad_values(self, tmp_path, _iso_tenant):
         m = _sqlite_mem(tmp_path, "rt2")
-        m._palace_collection = _StubCol(getres=SimpleNamespace(ids=["b"], documents=[""], metadatas=["bad"]))
+        m._malla_collection = _StubCol(getres=SimpleNamespace(ids=["b"], documents=[""], metadatas=["bad"]))
         e = m.retrieve("b")
         assert e is not None and e.metadata is None and e.type == MemoryType.SEMANTIC
         m2 = _sqlite_mem(tmp_path, "rt2b")
-        m2._palace_collection = _StubCol(
+        m2._malla_collection = _StubCol(
             getres=SimpleNamespace(ids=["c"], documents=["x"], metadatas=[{"type": "bad", "importance": "bad"}])
         )
         e2 = m2.retrieve("c")
         assert e2.type == MemoryType.SEMANTIC and e2.importance == 0.0
         m3 = _sqlite_mem(tmp_path, "rt2c")
-        m3._palace_collection = _StubCol(
+        m3._malla_collection = _StubCol(
             getres=SimpleNamespace(ids=["d"], documents=["x"], metadatas=[{"mem_type": 2, "importance": None}])
         )
         assert m3.retrieve("d").type == MemoryType.PROCEDURAL
 
     def test_get_raises(self, tmp_path, _iso_tenant):
         m = _sqlite_mem(tmp_path, "rt3")
-        m._palace_collection = _StubCol(get_exc=RuntimeError("boom"))
+        m._malla_collection = _StubCol(get_exc=RuntimeError("boom"))
         assert m.retrieve("ghost") is None
 
     def test_delete_missing_sqlite(self, tmp_path, _iso_tenant):
         m = _sqlite_mem(tmp_path, "del1")
         stub = _StubCol()
-        m._palace_collection = stub
+        m._malla_collection = stub
         m.delete("ghost")
         assert stub.deleted == [{"ids": ["ghost"]}]
-        m._palace_collection = _StubCol()
+        m._malla_collection = _StubCol()
         monkeypatch_del = mock.MagicMock(side_effect=RuntimeError("boom"))
-        m._palace_collection.delete = monkeypatch_del
+        m._malla_collection.delete = monkeypatch_del
         m.delete("ghost2")
 
     def test_delete_missing_json(self, _iso_tenant):
@@ -2313,7 +2313,7 @@ class TestAgentMemoryRetrieveSqlite:
     def test_delete_present_sqlite_error(self, tmp_path, _iso_tenant):
         m = _sqlite_mem(tmp_path, "del2")
         m.store(MemoryEntry(id="a", content="hello", project_id="p1", session_id="s1"))
-        m._palace_collection.delete = mock.MagicMock(side_effect=RuntimeError("boom"))
+        m._malla_collection.delete = mock.MagicMock(side_effect=RuntimeError("boom"))
         m.delete("a")
         assert "a" not in m._entries
 
@@ -2331,8 +2331,8 @@ class TestAgentMemorySearchSqlite:
             "session_id": "s1",
             "type": 1,
             "importance": 2.0,
-            "wing": "w",
-            "room": "r",
+            "nodo": "w",
+            "celda": "r",
             "source_file": "f",
             "filed_at": "2024-06-01T00:00:00",
         }
@@ -2341,7 +2341,7 @@ class TestAgentMemorySearchSqlite:
 
     def test_basic_query(self, tmp_path, _iso_tenant):
         m = _sqlite_mem(tmp_path, "sq0")
-        m._palace_collection = _StubCol(qres=_qres(["a"], ["hello alpha"], [self._meta(custom="k")], [0.2]))
+        m._malla_collection = _StubCol(qres=_qres(["a"], ["hello alpha"], [self._meta(custom="k")], [0.2]))
         out = m.search("p1", "alpha")
         assert [e.id for e in out] == ["a"]
         assert out[0].importance == 2.0
@@ -2352,14 +2352,14 @@ class TestAgentMemorySearchSqlite:
         del meta["type"]
         meta["mem_type"] = 2
         m = _sqlite_mem(tmp_path, "sq0b")
-        m._palace_collection = _StubCol(qres=_qres(["a"], ["hello"], [meta], [0.1]))
+        m._malla_collection = _StubCol(qres=_qres(["a"], ["hello"], [meta], [0.1]))
         out = m.search("p1", "hello", MemoryType.PROCEDURAL, 10)
         assert [e.id for e in out] == ["a"]
         assert out[0].type == MemoryType.PROCEDURAL
 
     def test_bad_type_and_importance_query_path(self, tmp_path, _iso_tenant):
         m = _sqlite_mem(tmp_path, "sq0c")
-        m._palace_collection = _StubCol(qres=_qres(["a"], ["hello"], [self._meta(type="bad", importance="bad")], [0.4]))
+        m._malla_collection = _StubCol(qres=_qres(["a"], ["hello"], [self._meta(type="bad", importance="bad")], [0.4]))
         out = m.search("p1", "hello", 0, 10)
         assert len(out) == 1
         assert out[0].type == MemoryType.SEMANTIC
@@ -2369,36 +2369,36 @@ class TestAgentMemorySearchSqlite:
         # Phase 1B: the AND-token post-filter is gone — backend ranking
         # decides; only a light relevance floor drops near-zero fused hits.
         m = _sqlite_mem(tmp_path, "sq1")
-        m._palace_collection = _StubCol(qres=_qres(["a"], ["nothing here"], [self._meta()], [0.1]))
+        m._malla_collection = _StubCol(qres=_qres(["a"], ["nothing here"], [self._meta()], [0.1]))
         assert [e.id for e in m.search("p1", "zzz_no_match")] == ["a"]
-        m._palace_collection = _StubCol(qres=_qres(["a"], ["nothing here"], [self._meta()], [0.99]))
+        m._malla_collection = _StubCol(qres=_qres(["a"], ["nothing here"], [self._meta()], [0.99]))
         assert m.search("p1", "zzz_no_match") == []
 
     def test_memtype_filter(self, tmp_path, _iso_tenant):
         m = _sqlite_mem(tmp_path, "sq2a")
-        m._palace_collection = _StubCol(qres=_qres(["a"], ["hello"], [self._meta()], [0.1]))
+        m._malla_collection = _StubCol(qres=_qres(["a"], ["hello"], [self._meta()], [0.1]))
         assert len(m.search("p1", "hello", MemoryType.EPISODIC, 10)) == 1
         m2 = _sqlite_mem(tmp_path, "sq2b")
-        m2._palace_collection = _StubCol(qres=_qres(["a"], ["hello"], [self._meta()], [0.1]))
+        m2._malla_collection = _StubCol(qres=_qres(["a"], ["hello"], [self._meta()], [0.1]))
         assert m2.search("p1", "hello", MemoryType.PROCEDURAL, 10) == []
         m3 = _sqlite_mem(tmp_path, "sq2c")
-        m3._palace_collection = _StubCol(qres=_qres(["a"], ["hello"], [self._meta(type="bad")], [0.1]))
+        m3._malla_collection = _StubCol(qres=_qres(["a"], ["hello"], [self._meta(type="bad")], [0.1]))
         assert m3.search("p1", "hello", MemoryType.EPISODIC, 10) == []
 
     def test_date_window(self, tmp_path, _iso_tenant):
         m = _sqlite_mem(tmp_path, "sq3a")
-        m._palace_collection = _StubCol(qres=_qres(["a"], ["hello"], [self._meta()], [0.1]))
+        m._malla_collection = _StubCol(qres=_qres(["a"], ["hello"], [self._meta()], [0.1]))
         assert len(m.search("p1", "hello", 0, 10, since="2024-01-01", before="2025-01-01")) == 1
         m2 = _sqlite_mem(tmp_path, "sq3b")
-        m2._palace_collection = _StubCol(qres=_qres(["a"], ["hello"], [self._meta()], [0.1]))
+        m2._malla_collection = _StubCol(qres=_qres(["a"], ["hello"], [self._meta()], [0.1]))
         assert m2.search("p1", "hello", 0, 10, since="2025-01-01", before="2026-01-01") == []
         m3 = _sqlite_mem(tmp_path, "sq3c")
-        m3._palace_collection = _StubCol(qres=_qres(["a"], ["hello"], [self._meta(filed_at=None)], [0.1]))
+        m3._malla_collection = _StubCol(qres=_qres(["a"], ["hello"], [self._meta(filed_at=None)], [0.1]))
         assert m3.search("p1", "hello", 0, 10, since="2024-01-01", before="2025-01-01") == []
 
     def test_parse_error_raises(self, tmp_path, _iso_tenant):
         m = _sqlite_mem(tmp_path, "sq4")
-        m._palace_collection = _StubCol(qres=_qres(["a"], ["hello"], [self._meta()], [0.1]))
+        m._malla_collection = _StubCol(qres=_qres(["a"], ["hello"], [self._meta()], [0.1]))
         with pytest.raises(ValueError):
             m.search("p1", "hello", 0, 10, since="not-a-date")
         with pytest.raises(ValueError):
@@ -2406,31 +2406,31 @@ class TestAgentMemorySearchSqlite:
 
     def test_dist_and_importance(self, tmp_path, _iso_tenant):
         m = _sqlite_mem(tmp_path, "sq5")
-        m._palace_collection = _StubCol(qres=_qres(["a"], ["hello"], [self._meta(importance=0)], [None]))
+        m._malla_collection = _StubCol(qres=_qres(["a"], ["hello"], [self._meta(importance=0)], [None]))
         out = m.search("p1", "hello")
         assert out[0].importance == 0.0
-        m._palace_collection = _StubCol(qres=_qres(["a"], ["hello"], [self._meta(importance=0)], ["bad"]))
+        m._malla_collection = _StubCol(qres=_qres(["a"], ["hello"], [self._meta(importance=0)], ["bad"]))
         assert m.search("p1", "hello")[0].importance == 0.0
-        m._palace_collection = _StubCol(qres=_qres(["a"], ["hello"], ["notadict"], [0.3]))
+        m._malla_collection = _StubCol(qres=_qres(["a"], ["hello"], ["notadict"], [0.3]))
         out2 = m.search("p1", "hello")
         assert out2[0].importance == pytest.approx(0.7)
 
     def test_limit_break(self, tmp_path, _iso_tenant):
         m = _sqlite_mem(tmp_path, "sq6")
         metas = [self._meta(), self._meta()]
-        m._palace_collection = _StubCol(qres=_qres(["a", "b"], ["hello one", "hello two"], metas, [0.1, 0.2]))
+        m._malla_collection = _StubCol(qres=_qres(["a", "b"], ["hello one", "hello two"], metas, [0.1, 0.2]))
         assert len(m.search("p1", "hello", 0, 1)) == 1
 
     def test_broken_qres(self, tmp_path, _iso_tenant):
         m = _sqlite_mem(tmp_path, "sq7")
-        m._palace_collection = _StubCol(qres=object())
+        m._malla_collection = _StubCol(qres=object())
         assert m.search("p1", "hello") == []
 
     def test_query_raises(self, tmp_path, _iso_tenant):
         m = _sqlite_mem(tmp_path, "sq8")
-        m._palace_collection = _StubCol(query_exc=RuntimeError("boom"))
+        m._malla_collection = _StubCol(query_exc=RuntimeError("boom"))
         assert m.search("p1", "hello") == []
-        m._palace_collection = _StubCol(query_exc=ValueError("bad window"))
+        m._malla_collection = _StubCol(query_exc=ValueError("bad window"))
         with pytest.raises(ValueError):
             m.search("p1", "hello")
 
@@ -2439,7 +2439,7 @@ class TestAgentMemorySearchSqlite:
         getres = SimpleNamespace(
             ids=["a", "b"], documents=["doc a", "doc b"], metadatas=[self._meta(), self._meta(type=2)]
         )
-        m._palace_collection = _StubCol(getres=getres)
+        m._malla_collection = _StubCol(getres=getres)
         assert len(m.search("p1", "")) == 2
         assert len(m.search("p1", "", MemoryType.PROCEDURAL, 10)) == 1
         assert len(m.search("p1", "", 0, 1)) == 1
@@ -2449,15 +2449,15 @@ class TestAgentMemorySearchSqlite:
         del meta["type"]
         meta["mem_type"] = 2
         m = _sqlite_mem(tmp_path, "sq9b")
-        m._palace_collection = _StubCol(getres=SimpleNamespace(ids=["a"], documents=["doc"], metadatas=[meta]))
+        m._malla_collection = _StubCol(getres=SimpleNamespace(ids=["a"], documents=["doc"], metadatas=[meta]))
         assert len(m.search("p1", "", MemoryType.PROCEDURAL, 10)) == 1
         m2 = _sqlite_mem(tmp_path, "sq9c")
-        m2._palace_collection = _StubCol(
+        m2._malla_collection = _StubCol(
             getres=SimpleNamespace(ids=["a"], documents=["doc"], metadatas=[self._meta(type="bad")])
         )
         assert len(m2.search("p1", "", MemoryType.PROCEDURAL, 10)) == 0
         m3 = _sqlite_mem(tmp_path, "sq9d")
-        m3._palace_collection = _StubCol(
+        m3._malla_collection = _StubCol(
             getres=SimpleNamespace(ids=["a"], documents=["doc"], metadatas=[self._meta(type="bad")])
         )
         out = m3.search("p1", "", 0, 10)
@@ -2470,24 +2470,24 @@ class TestAgentMemorySearchSqlite:
             documents=["doc"],
             metadatas=[self._meta(filed_at="2024-06-01T00:00:00", importance="bad")],
         )
-        m._palace_collection = _StubCol(getres=getres)
+        m._malla_collection = _StubCol(getres=getres)
         assert len(m.search("p1", "", 0, 10, since="2024-01-01", before="2025-01-01")) == 1
         m2 = _sqlite_mem(tmp_path, "sq10b")
-        m2._palace_collection = _StubCol(getres=getres)
+        m2._malla_collection = _StubCol(getres=getres)
         assert m2.search("p1", "", 0, 10, since="2026-01-01", before="2027-01-01") == []
         m3 = _sqlite_mem(tmp_path, "sq10c")
-        m3._palace_collection = _StubCol(getres=SimpleNamespace(ids=["a"], documents=["d"], metadatas=["bad"]))
+        m3._malla_collection = _StubCol(getres=SimpleNamespace(ids=["a"], documents=["d"], metadatas=["bad"]))
         assert len(m3.search("p1", "")) == 1
         m4 = _sqlite_mem(tmp_path, "sq10d")
-        m4._palace_collection = _StubCol(getres=getres)
+        m4._malla_collection = _StubCol(getres=getres)
         assert m4.search("p1", "", 0, 0) == []
 
     def test_empty_query_raises(self, tmp_path, _iso_tenant):
         m = _sqlite_mem(tmp_path, "sq11")
-        m._palace_collection = _StubCol(get_exc=ValueError("bad"))
+        m._malla_collection = _StubCol(get_exc=ValueError("bad"))
         with pytest.raises(ValueError):
             m.search("p1", "")
-        m._palace_collection = _StubCol(get_exc=RuntimeError("boom"))
+        m._malla_collection = _StubCol(get_exc=RuntimeError("boom"))
         assert m.search("p1", "") == []
 
 
@@ -2545,36 +2545,36 @@ class TestAgentMemoryStatsSqlite:
     def test_count_raises_fallback(self, tmp_path, _iso_tenant):
         m = _sqlite_mem(tmp_path, "stats2")
         m.store(MemoryEntry(content="hello", project_id="p1"))
-        m._palace_collection = _StubCol(count_val=RuntimeError("boom"))
+        m._malla_collection = _StubCol(count_val=RuntimeError("boom"))
         st = m.stats()
         assert st.total_entries == 1
 
-    def test_get_raises_palace_count(self, tmp_path, _iso_tenant):
+    def test_get_raises_malla_count(self, tmp_path, _iso_tenant):
         m = _sqlite_mem(tmp_path, "stats3")
         m.store(MemoryEntry(content="hello", project_id="p1"))
-        m._palace_collection = _StubCol(count_val=7, get_exc=RuntimeError("boom"))
+        m._malla_collection = _StubCol(count_val=7, get_exc=RuntimeError("boom"))
         st = m.stats()
         assert st.total_entries == 7
 
-    def test_empty_ids_palace_count(self, tmp_path, _iso_tenant):
+    def test_empty_ids_malla_count(self, tmp_path, _iso_tenant):
         m = _sqlite_mem(tmp_path, "stats4")
         m.store(MemoryEntry(content="hello", project_id="p1"))
-        m._palace_collection = _StubCol(count_val=4, getres=SimpleNamespace(ids=[], metadatas=[]))
+        m._malla_collection = _StubCol(count_val=4, getres=SimpleNamespace(ids=[], metadatas=[]))
         assert m.stats().total_entries == 4
 
     def test_meta_branches(self, tmp_path, _iso_tenant):
         m = _sqlite_mem(tmp_path, "stats5")
         m.store(MemoryEntry(content="hello", project_id="p1"))
-        metas = ["notadict", {"type": "bad", "wing": "w1", "room": "r1"}, {"mem_type": 1}, {"wing": 123, "room": 456}]
-        m._palace_collection = _StubCol(count_val=9, getres=SimpleNamespace(ids=["a", "b", "c", "d"], metadatas=metas))
+        metas = ["notadict", {"type": "bad", "nodo": "w1", "celda": "r1"}, {"mem_type": 1}, {"nodo": 123, "celda": 456}]
+        m._malla_collection = _StubCol(count_val=9, getres=SimpleNamespace(ids=["a", "b", "c", "d"], metadatas=metas))
         st = m.stats()
         assert st.total_entries == 9
         assert st.by_project == 1 and st.by_session == 1
 
-    def test_no_wings_fallback(self, tmp_path, _iso_tenant):
+    def test_no_nodos_fallback(self, tmp_path, _iso_tenant):
         m = _sqlite_mem(tmp_path, "stats6")
         m.store(MemoryEntry(content="hello", project_id="p1", session_id="s1"))
-        m._palace_collection = _StubCol(count_val=3, getres=SimpleNamespace(ids=["a"], metadatas=[{"type": 0}]))
+        m._malla_collection = _StubCol(count_val=3, getres=SimpleNamespace(ids=["a"], metadatas=[{"type": 0}]))
         st = m.stats()
         assert st.total_entries == 3
         assert st.by_project == 1 and st.by_session == 1

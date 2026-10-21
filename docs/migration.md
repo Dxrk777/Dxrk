@@ -8,7 +8,7 @@ Ver también `tenants.md` para el layout destino.
 
 | Origen legado | Destino en `tenants/default/` |
 |---------------|-------------------------------|
-| `palace/sqlite_palace.db` (+ sidecars `-wal`/`-shm`) | `palace/sqlite_palace.db` |
+| `malla/malla.db` o `malla/sqlite_malla.db` (+ sidecars `-wal`/`-shm`) | `tenants/default/malla/malla.db` |
 | `locks/` | `locks/` |
 | `knowledge_graph.sqlite3` | `knowledge_graph.sqlite3` |
 | `identity.txt` | `identity.txt` |

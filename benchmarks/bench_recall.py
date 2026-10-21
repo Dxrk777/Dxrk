@@ -45,14 +45,14 @@ from pathlib import Path
 from typing import Any
 
 from dxrk import __version__ as _DXRK_VERSION
-from dxrk.memory.palace import DxrkMemory
+from dxrk.memory.malla import DxrkMemory
 from dxrk.memory.search import _bm25_scores as _bm25_scores
 from dxrk.memory.vectors import embed_counts as _embed_counts
 from dxrk.memory.vectors import embed_query_counts as _embed_query_counts
 from dxrk.memory.vectors import idf_weights as _idf_weights
 from dxrk.memory.vectors import weighted_cosine as _weighted_cosine
 
-WING = "bench"
+NODO = "bench"
 DOCS_PER_TOPIC = 10
 
 # ---------------------------------------------------------------------------
@@ -136,7 +136,7 @@ CORPUS: dict[str, list[str]] = {
 }
 
 # (query, target topic): conceptual (vocabulary-mismatched), lexical, and
-# short phrasings per topic — the mix a memory palace actually serves.
+# short phrasings per topic — the mix a memory malla actually serves.
 QUERIES: list[tuple[str, str]] = [
     ("how do we handle auth?", "auth"),
     ("JWT token refresh flow?", "auth"),
@@ -207,20 +207,20 @@ class RecallRow:
     n_queries: int
 
 
-def build_palace(path: str) -> DxrkMemory:
+def build_malla(path: str) -> DxrkMemory:
     dm = DxrkMemory(path)
     dm.init()
     for topic, docs in CORPUS.items():
         for i, doc in enumerate(docs):
-            dm.add_drawer(WING, topic, doc, source_file=f"/eval/{topic}_{i}.md", chunk_index=0)
+            dm.add_fragmento(NODO, topic, doc, source_file=f"/eval/{topic}_{i}.md", chunk_index=0)
     return dm
 
 
 def fetch_corpus(dm: DxrkMemory) -> tuple[list[str], list[str]]:
-    got = dm._collection(create=False).get(where={"wing": WING}, include=["documents", "metadatas"], limit=1000)
+    got = dm._collection(create=False).get(where={"nodo": NODO}, include=["documents", "metadatas"], limit=1000)
     docs = [str(d) for d in got.documents]
-    rooms = [str(m.get("room", "?")) if isinstance(m, dict) else "?" for m in got.metadatas]
-    return docs, rooms
+    celdas = [str(m.get("celda", "?")) if isinstance(m, dict) else "?" for m in got.metadatas]
+    return docs, celdas
 
 
 def rank_bm25_only(query: str, docs: list[str], k: int = K) -> list[int]:
@@ -235,24 +235,24 @@ def rank_vector_only(query: str, counts: list[list[float]], idf: list[float], k:
 
 
 def rank_hybrid(dm: DxrkMemory, query: str, k: int = K) -> list[str]:
-    res = dm.search(query, wing=WING, n_results=k)
+    res = dm.search(query, nodo=NODO, n_results=k)
     hits = res.get("results", [])
     assert isinstance(hits, list)
-    rooms: list[str] = []
+    celdas: list[str] = []
     for h in hits:
         assert isinstance(h, dict)
-        rooms.append(str(h.get("source_file", "")).split("_")[0].removesuffix(".md"))
-    return rooms
+        celdas.append(str(h.get("source_file", "")).split("_")[0].removesuffix(".md"))
+    return celdas
 
 
 def measure(*, reps: int = 5) -> tuple[list[RecallRow], dict[str, Any]]:
     """Build the corpus, rank every query with each method, time each call."""
     with tempfile.TemporaryDirectory() as td:
-        dm = build_palace(str(Path(td) / "palace"))
+        dm = build_malla(str(Path(td) / "malla"))
         try:
             n_docs = dm.count()
             assert n_docs == sum(len(v) for v in CORPUS.values()), f"dedupe collapsed corpus: {n_docs}"
-            docs, rooms = fetch_corpus(dm)
+            docs, celdas = fetch_corpus(dm)
             assert len(docs) == n_docs
             counts = [_embed_counts(d) for d in docs]
             idf = _idf_weights(counts)
@@ -271,10 +271,10 @@ def measure(*, reps: int = 5) -> tuple[list[RecallRow], dict[str, Any]]:
                     h = rank_hybrid(dm, q)
                     lat["hybrid"].append(time.perf_counter() - t0)
                     t0 = time.perf_counter()
-                    b = [rooms[i] for i in rank_bm25_only(q, docs)]
+                    b = [celdas[i] for i in rank_bm25_only(q, docs)]
                     lat["bm25-only"].append(time.perf_counter() - t0)
                     t0 = time.perf_counter()
-                    v = [rooms[i] for i in rank_vector_only(q, counts, idf)]
+                    v = [celdas[i] for i in rank_vector_only(q, counts, idf)]
                     lat["vector-only"].append(time.perf_counter() - t0)
                     ranks["hybrid"][q] = h
                     ranks["bm25-only"][q] = b

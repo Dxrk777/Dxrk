@@ -2,8 +2,8 @@
 """Expanded DxrkMemory coverage — 80+ tests, stdlib only, pytest.
 
 Covers: types, date_window, search, graph, dialect, miner,
-palace/DxrkMemory, layers, backend/sqlite, hooks_cli, mcp_server.
-Isolated via tmp_path for palace_path; global ~/.dxrk locks not polluted.
+malla/DxrkMemory, layers, backend/sqlite, hooks_cli, mcp_server.
+Isolated via tmp_path for malla_path; global ~/.dxrk locks not polluted.
 """
 
 from __future__ import annotations
@@ -66,7 +66,7 @@ class TestMemoryEntry:
         assert e.importance == 0.0
         assert e.project_id == ""
         assert e.title == ""
-        assert e.wing == ""
+        assert e.nodo == ""
 
     def test_custom_fields(self):
         from dxrk.memory.types import MemoryEntry, MemoryType
@@ -78,29 +78,29 @@ class TestMemoryEntry:
         assert e.type == MemoryType.EPISODIC
 
 
-class TestDrawerRecord:
+class TestGlobuloRecord:
     def test_make_id_deterministic(self):
-        from dxrk.memory.types import DrawerRecord
+        from dxrk.memory.types import FragmentoRecord
 
-        a = DrawerRecord.make_id("w", "r", "/a/b.txt", 0)
-        b = DrawerRecord.make_id("w", "r", "/a/b.txt", 0)
+        a = FragmentoRecord.make_id("w", "r", "/a/b.txt", 0)
+        b = FragmentoRecord.make_id("w", "r", "/a/b.txt", 0)
         assert a == b
-        assert a.startswith("drawer_w_r_")
-        assert len(a) == len("drawer_w_r_") + 24
+        assert a.startswith("fragmento_w_r_")
+        assert len(a) == len("fragmento_w_r_") + 24
 
     def test_make_id_diff_chunk(self):
-        from dxrk.memory.types import DrawerRecord
+        from dxrk.memory.types import FragmentoRecord
 
-        a = DrawerRecord.make_id("w", "r", "/a/b.txt", 0)
-        b = DrawerRecord.make_id("w", "r", "/a/b.txt", 1)
+        a = FragmentoRecord.make_id("w", "r", "/a/b.txt", 0)
+        b = FragmentoRecord.make_id("w", "r", "/a/b.txt", 1)
         assert a != b
 
-    def test_make_id_diff_wing_room_hash_only_file_and_index(self):
-        from dxrk.memory.types import DrawerRecord
+    def test_make_id_diff_nodo_celda_hash_only_file_and_index(self):
+        from dxrk.memory.types import FragmentoRecord
 
-        # implementation hashes only source_file + chunk_index, wing/room only in prefix
-        a = DrawerRecord.make_id("w1", "r1", "/a/b.txt", 0)
-        b = DrawerRecord.make_id("w2", "r2", "/a/b.txt", 0)
+        # implementation hashes only source_file + chunk_index, nodo/celda only in prefix
+        a = FragmentoRecord.make_id("w1", "r1", "/a/b.txt", 0)
+        b = FragmentoRecord.make_id("w2", "r2", "/a/b.txt", 0)
         # prefix differs but hash suffix same
         suffix_a = a.split("_")[-1]
         suffix_b = b.split("_")[-1]
@@ -108,23 +108,23 @@ class TestDrawerRecord:
         assert a != b
 
     def test_make_id_hash_matches(self):
-        from dxrk.memory.types import DrawerRecord
+        from dxrk.memory.types import FragmentoRecord
 
-        wing, room, src, idx = "wing", "room", "/tmp/file.md", 3
+        nodo, celda, src, idx = "nodo", "celda", "/tmp/file.md", 3
         expected = hashlib.sha256(f"{src}{idx}".encode()).hexdigest()[:24]
-        assert DrawerRecord.make_id(wing, room, src, idx) == f"drawer_{wing}_{room}_{expected}"
+        assert FragmentoRecord.make_id(nodo, celda, src, idx) == f"fragmento_{nodo}_{celda}_{expected}"
 
     def test_defaults(self):
-        from dxrk.memory.types import DrawerRecord
+        from dxrk.memory.types import FragmentoRecord
 
-        r = DrawerRecord(
-            drawer_id="drawer_w_r_abc",
-            wing="w",
-            room="r",
+        r = FragmentoRecord(
+            fragmento_id="fragmento_w_r_abc",
+            nodo="w",
+            celda="r",
             content="c",
             source_file="/a",
             chunk_index=0,
-            palace_path="/p",
+            malla_path="/p",
         )
         assert r.hall == "general"
         assert r.entities == ""
@@ -153,14 +153,14 @@ class TestClosetRecord:
 
         c = ClosetRecord(
             closet_id="closet_w_r_abc",
-            wing="w",
-            room="r",
+            nodo="w",
+            celda="r",
             source_file="/a",
             content="c",
-            drawer_ids=("d1", "d2"),
-            palace_path="/p",
+            fragmento_ids=("d1", "d2"),
+            malla_path="/p",
         )
-        assert c.drawer_ids == ("d1", "d2")
+        assert c.fragmento_ids == ("d1", "d2")
         assert c.normalize_version == 2
 
 
@@ -390,29 +390,29 @@ class TestHybridRank:
 
 
 class TestBuildWhereFilter:
-    def test_wing_and_room(self):
+    def test_nodo_and_celda(self):
         from dxrk.memory.search import build_where_filter
 
-        assert build_where_filter("w", "r") == {"$and": [{"wing": "w"}, {"room": "r"}]}
-        assert build_where_filter("w", None) == {"wing": "w"}
-        assert build_where_filter(None, "r") == {"room": "r"}
+        assert build_where_filter("w", "r") == {"$and": [{"nodo": "w"}, {"celda": "r"}]}
+        assert build_where_filter("w", None) == {"nodo": "w"}
+        assert build_where_filter(None, "r") == {"celda": "r"}
         assert build_where_filter(None, None) == {}
         assert build_where_filter("", "") == {}
 
     def test_search_where_filter_used_in_hybrid(self, tmp_path: Path):
-        from dxrk.memory.backend import PalaceRef, SqliteBackend
+        from dxrk.memory.backend import MallaRef, SqliteBackend
 
         be = SqliteBackend()
-        ref = PalaceRef(id=str(tmp_path), local_path=str(tmp_path))
-        col = be.get_collection(palace=ref, collection_name="wf_test", create=True)
-        col.add(documents=["hello a"], ids=["a1"], metadatas=[{"wing": "w1", "room": "r1"}])
-        col.add(documents=["hello b"], ids=["b1"], metadatas=[{"wing": "w2", "room": "r1"}])
+        ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
+        col = be.get_collection(malla=ref, collection_name="wf_test", create=True)
+        col.add(documents=["hello a"], ids=["a1"], metadatas=[{"nodo": "w1", "celda": "r1"}])
+        col.add(documents=["hello b"], ids=["b1"], metadatas=[{"nodo": "w2", "celda": "r1"}])
         from dxrk.memory.search import build_where_filter, hybrid_search
 
         wf = build_where_filter("w1", None)
         res = hybrid_search(col, "hello", where=wf, n_results=5)
         # only w1 should match
-        sources = [r["wing"] for r in res["results"]]
+        sources = [r["nodo"] for r in res["results"]]
         assert all(s == "w1" for s in sources)
         be.close()
 
@@ -425,24 +425,24 @@ class TestClosetBoosts:
         assert CLOSET_RANK_BOOSTS == [0.40, 0.25, 0.15, 0.08, 0.04]
 
     def test_cap_respected(self, tmp_path: Path):
-        from dxrk.memory.backend import PalaceRef, SqliteBackend
+        from dxrk.memory.backend import MallaRef, SqliteBackend
         from dxrk.memory.search import CLOSET_DISTANCE_CAP, hybrid_search
 
         be = SqliteBackend()
-        ref = PalaceRef(id=str(tmp_path), local_path=str(tmp_path))
-        drawer_col = be.get_collection(palace=ref, collection_name="drawers", create=True)
-        closet_col = be.get_collection(palace=ref, collection_name="closets", create=True)
-        # drawer doc
-        drawer_col.add(
+        ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
+        fragmento_col = be.get_collection(malla=ref, collection_name="fragmentos", create=True)
+        closet_col = be.get_collection(malla=ref, collection_name="closets", create=True)
+        # fragmento doc
+        fragmento_col.add(
             documents=["hello world unique"],
             ids=["d1"],
-            metadatas=[{"wing": "w", "room": "r", "source_file": "/a/b.txt"}],
+            metadatas=[{"nodo": "w", "celda": "r", "source_file": "/a/b.txt"}],
         )
         # closet doc far distance (> cap) should not boost
         closet_col.add(
             documents=["hello world unique"],
             ids=["c1"],
-            metadatas=[{"wing": "w", "room": "r", "source_file": "/a/b.txt"}],
+            metadatas=[{"nodo": "w", "celda": "r", "source_file": "/a/b.txt"}],
         )
         # monkeypatch closet collection query to return high distance
 
@@ -457,7 +457,7 @@ class TestClosetBoosts:
             )
 
         with mock.patch.object(closet_col, "query", side_effect=fake_query):
-            res = hybrid_search(drawer_col, "hello", n_results=5, closet_collection=closet_col)
+            res = hybrid_search(fragmento_col, "hello", n_results=5, closet_collection=closet_col)
             # distance > cap => no boost
             assert res["results"][0]["closet_boost"] == 0.0
         be.close()
@@ -620,7 +620,7 @@ class TestDialect:
 
         d = Dialect()
         txt = "We decided to switch to Postgres because it scales better. The api design is critical."
-        comp = d.compress(txt, {"source_file": "/a/b.md", "wing": "w", "room": "r"})
+        comp = d.compress(txt, {"source_file": "/a/b.md", "nodo": "w", "celda": "r"})
         # header line + zettel
         assert "w|r|?|b" in comp or "w" in comp
         assert "0:" in comp
@@ -630,7 +630,7 @@ class TestDialect:
 
         d = Dialect()
         txt = "We decided to switch to Postgres because it scales better."
-        comp = d.compress(txt, {"wing": "w", "room": "r", "source_file": "/tmp/file.txt"})
+        comp = d.compress(txt, {"nodo": "w", "celda": "r", "source_file": "/tmp/file.txt"})
         decoded = d.decode(comp)
         assert isinstance(decoded, dict)
         assert "header" in decoded
@@ -678,14 +678,14 @@ class TestDialect:
 # ---------------------------------------------------------------------------
 class TestChunkText:
     def test_basic(self):
-        from dxrk.memory.palace import chunk_text
+        from dxrk.memory.malla import chunk_text
 
         chunks = chunk_text("a" * 100)
         assert len(chunks) == 1
         assert chunks[0]["content"] == "a" * 100
 
     def test_overlap_guard(self):
-        from dxrk.memory.palace import chunk_text
+        from dxrk.memory.malla import chunk_text
 
         with pytest.raises(ValueError, match="chunk_overlap"):
             chunk_text("hello", chunk_size=10, chunk_overlap=10)
@@ -693,13 +693,13 @@ class TestChunkText:
             chunk_text("hello", chunk_size=10, chunk_overlap=15)
 
     def test_min_chunk_filter(self):
-        from dxrk.memory.palace import chunk_text
+        from dxrk.memory.malla import chunk_text
 
         chunks = chunk_text("hi", min_chunk_size=10)
         assert chunks == []
 
     def test_negative_size_raises(self):
-        from dxrk.memory.palace import chunk_text
+        from dxrk.memory.malla import chunk_text
 
         with pytest.raises(ValueError):
             chunk_text("hello", chunk_size=0)
@@ -840,40 +840,40 @@ class TestScanProject:
 
 
 # ---------------------------------------------------------------------------
-# palace/DxrkMemory
+# malla/DxrkMemory
 # ---------------------------------------------------------------------------
 class TestDxrkMemory:
-    def test_add_drawer(self, tmp_path: Path):
-        from dxrk.memory.palace import DxrkMemory
+    def test_add_fragmento(self, tmp_path: Path):
+        from dxrk.memory.malla import DxrkMemory
 
-        pal = tmp_path / "palace"
+        pal = tmp_path / "malla"
         dm = DxrkMemory(str(pal))
         dm.init()
-        did = dm.add_drawer("w1", "r1", "hello world", "/a/b.txt", 0)
-        assert did.startswith("drawer_w1_r1_")
-        got = dm.get_drawer(did)
+        did = dm.add_fragmento("w1", "r1", "hello world", "/a/b.txt", 0)
+        assert did.startswith("fragmento_w1_r1_")
+        got = dm.get_fragmento(did)
         assert got is not None
         assert got["document"] == "hello world"
         dm.close()
 
     def test_search_since_before(self, tmp_path: Path):
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
-        pal = tmp_path / "palace"
+        pal = tmp_path / "malla"
         dm = DxrkMemory(str(pal))
         dm.init()
-        # Add two drawers with known filed_at via direct upsert to control dates
+        # Add two fragmentos with known filed_at via direct upsert to control dates
         col = dm._collection(create=True)  # type: ignore[attr-defined]
         # Use manual dates: add with filed_at metadata
         col.upsert(
             documents=["old content hello"],
             ids=["id_old"],
-            metadatas=[{"wing": "w", "room": "r", "source_file": "/old.txt", "filed_at": "2026-01-01T00:00:00+00:00"}],
+            metadatas=[{"nodo": "w", "celda": "r", "source_file": "/old.txt", "filed_at": "2026-01-01T00:00:00+00:00"}],
         )
         col.upsert(
             documents=["new content hello"],
             ids=["id_new"],
-            metadatas=[{"wing": "w", "room": "r", "source_file": "/new.txt", "filed_at": "2026-02-15T00:00:00+00:00"}],
+            metadatas=[{"nodo": "w", "celda": "r", "source_file": "/new.txt", "filed_at": "2026-02-15T00:00:00+00:00"}],
         )
         # since 2026-02-01 should only include new
         res = dm.search("hello", since="2026-02-01")
@@ -888,17 +888,17 @@ class TestDxrkMemory:
         dm.close()
 
     def test_mine_chunk_total_and_same_fstat(self, tmp_path: Path):
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
         proj = tmp_path / "proj"
         proj.mkdir()
         (proj / "a.md").write_text("hello world " * 200)
-        pal = tmp_path / "palace"
+        pal = tmp_path / "malla"
         dm = DxrkMemory(str(pal))
         dm.init()
-        result = dm.mine(str(proj), wing="default", room="general")
+        result = dm.mine(str(proj), nodo="default", celda="general")
         assert result["files_mined"] == 1
-        assert result["drawers_added"] >= 1
+        assert result["fragmentos_added"] >= 1
         # check metadata chunk_total and source_mtime
         col = dm._collection(create=False)  # type: ignore[attr-defined]
         got = col.get(include=["metadatas"], limit=10)
@@ -913,37 +913,37 @@ class TestDxrkMemory:
         dm.close()
 
     def test_mine_dry_run_no_persist(self, tmp_path: Path):
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
         proj = tmp_path / "proj2"
         proj.mkdir()
         (proj / "b.md").write_text("hello " * 100)
-        pal = tmp_path / "palace2"
+        pal = tmp_path / "malla2"
         dm = DxrkMemory(str(pal))
         dm.init()
         res = dm.mine(str(proj), dry_run=True)
-        assert res["drawers_added"] >= 1
+        assert res["fragmentos_added"] >= 1
         assert dm.count() == 0
         dm.close()
 
     def test_locks_reentrant(self, tmp_path: Path):
-        from dxrk.memory.palace import mine_palace_lock
+        from dxrk.memory.malla import mine_malla_lock
 
-        pal = str(tmp_path / "palace_lock")
+        pal = str(tmp_path / "malla_lock")
         Path(pal).mkdir(parents=True, exist_ok=True)
-        with mine_palace_lock(pal):
-            with mine_palace_lock(pal):
+        with mine_malla_lock(pal):
+            with mine_malla_lock(pal):
                 assert True
         # after release, should be able to acquire again
-        with mine_palace_lock(pal):
+        with mine_malla_lock(pal):
             assert True
 
     def test_reap(self, tmp_path: Path, monkeypatch):
-        from dxrk.memory.palace import reap_stale_dxrk_locks
+        from dxrk.memory.malla import reap_stale_dxrk_locks
 
         # monkeypatch lock dir to tmp_path isolation
         fake_lock_dir = tmp_path / "locks"
-        monkeypatch.setattr("dxrk.memory.palace._dxrk_lock_dir", lambda: fake_lock_dir)
+        monkeypatch.setattr("dxrk.memory.malla._dxrk_lock_dir", lambda: fake_lock_dir)
         fake_lock_dir.mkdir(parents=True, exist_ok=True)
         # create a stale lock file old enough
         stale = fake_lock_dir / "abc123.lock"
@@ -956,16 +956,16 @@ class TestDxrkMemory:
         # On linux, flock file not held -> will be removed
         # Accept either reaped 1 or skipped 0 depending on lock semantics
         assert reaped + skipped >= 0
-        # Ensure mine_palace locks are skipped
-        palace_lock = fake_lock_dir / "mine_palace_abc.lock"
-        palace_lock.write_text("x")
-        os.utime(palace_lock, (old_time, old_time))
+        # Ensure mine_malla locks are skipped
+        malla_lock = fake_lock_dir / "mine_malla_abc.lock"
+        malla_lock.write_text("x")
+        os.utime(malla_lock, (old_time, old_time))
         reaped2, _ = reap_stale_dxrk_locks(min_age_seconds=3600)
-        # palace locks skipped by filter
-        assert palace_lock.exists()
+        # malla locks skipped by filter
+        assert malla_lock.exists()
 
     def test_sigterm_handler_install(self):
-        from dxrk.memory.palace import _install_shutdown_signal_handlers
+        from dxrk.memory.malla import _install_shutdown_signal_handlers
 
         # handlers only install from main thread; ensure call doesn't crash
         _install_shutdown_signal_handlers()
@@ -979,56 +979,56 @@ class TestDxrkMemory:
             assert callable(h2)
 
     def test_where_filter_via_search(self, tmp_path: Path):
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
-        pal = tmp_path / "palace_w"
+        pal = tmp_path / "malla_w"
         dm = DxrkMemory(str(pal))
         dm.init()
-        dm.add_drawer("wingA", "room1", "hello filter test", "/a.txt", 0)
-        dm.add_drawer("wingB", "room1", "hello filter test", "/b.txt", 0)
-        res = dm.search("hello", wing="wingA")
+        dm.add_fragmento("nodoA", "celda1", "hello filter test", "/a.txt", 0)
+        dm.add_fragmento("nodoB", "celda1", "hello filter test", "/b.txt", 0)
+        res = dm.search("hello", nodo="nodoA")
         for r in res["results"]:
-            assert r["wing"] == "wingA"
+            assert r["nodo"] == "nodoA"
         dm.close()
 
-    def test_add_drawer_same_id_idempotent(self, tmp_path: Path):
-        from dxrk.memory.palace import DxrkMemory
+    def test_add_fragmento_same_id_idempotent(self, tmp_path: Path):
+        from dxrk.memory.malla import DxrkMemory
 
-        pal = tmp_path / "palace_idem"
+        pal = tmp_path / "malla_idem"
         dm = DxrkMemory(str(pal))
         dm.init()
-        id1 = dm.add_drawer("w", "r", "content v1", "/same.txt", 0)
-        id2 = dm.add_drawer("w", "r", "content v2", "/same.txt", 0)
+        id1 = dm.add_fragmento("w", "r", "content v1", "/same.txt", 0)
+        id2 = dm.add_fragmento("w", "r", "content v2", "/same.txt", 0)
         assert id1 == id2
         assert dm.count() == 1
-        got = dm.get_drawer(id1)
+        got = dm.get_fragmento(id1)
         assert got is not None
         assert got["document"] == "content v2"
         dm.close()
 
-    def test_list_wings_rooms(self, tmp_path: Path):
-        from dxrk.memory.palace import DxrkMemory
+    def test_list_nodos_celdas(self, tmp_path: Path):
+        from dxrk.memory.malla import DxrkMemory
 
-        pal = tmp_path / "palace_lr"
+        pal = tmp_path / "malla_lr"
         dm = DxrkMemory(str(pal))
         dm.init()
-        dm.add_drawer("w1", "r1", "c1", "/a1.txt", 0)
-        dm.add_drawer("w1", "r2", "c2", "/a2.txt", 0)
-        dm.add_drawer("w2", "r1", "c3", "/a3.txt", 0)
-        assert set(dm.list_wings()) == {"w1", "w2"}
-        assert set(dm.list_rooms("w1")) == {"r1", "r2"}
+        dm.add_fragmento("w1", "r1", "c1", "/a1.txt", 0)
+        dm.add_fragmento("w1", "r2", "c2", "/a2.txt", 0)
+        dm.add_fragmento("w2", "r1", "c3", "/a3.txt", 0)
+        assert set(dm.list_nodos()) == {"w1", "w2"}
+        assert set(dm.list_celdas("w1")) == {"r1", "r2"}
         dm.close()
 
     def test_health_and_count(self, tmp_path: Path):
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
-        pal = tmp_path / "palace_h"
+        pal = tmp_path / "malla_h"
         dm = DxrkMemory(str(pal))
         dm.init()
         h = dm.health()
         assert h["ok"] is True
         assert dm.count() == 0
-        dm.add_drawer("w", "r", "hi", "/a.txt", 0)
+        dm.add_fragmento("w", "r", "hi", "/a.txt", 0)
         assert dm.count() == 1
         dm.close()
 
@@ -1058,16 +1058,16 @@ class TestLayers:
 
     def test_memory_stack_wake_up_tokens(self, tmp_path: Path):
         from dxrk.memory.layers import MemoryStack
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
-        pal = tmp_path / "palace_stack"
+        pal = tmp_path / "malla_stack"
         ident = tmp_path / "ident.txt"
         ident.write_text("Identity " * 25)
         dm = DxrkMemory(str(pal))
         dm.init()
-        # Add enough drawers to reach ~500+ chars L1. Contents must be
+        # Add enough fragmentos to reach ~500+ chars L1. Contents must be
         # genuinely distinct: Phase 2 write-time dedupe collapses
-        # near-identical drawers (same information, divergent copies).
+        # near-identical fragmentos (same information, divergent copies).
         topics = [
             "harbour master logged seventeen container ships before the tide",
             "sourdough starter needs daily rye flour and lukewarm spring water",
@@ -1086,50 +1086,50 @@ class TestLayers:
             "lockkeeper opened the lower gates for the narrowboat convoy",
         ]
         for i in range(15):
-            dm.add_drawer("w", f"room{i % 3}", (topics[i] + " ") * 8 + f"note-{i}", f"/file{i}.md", 0)
-        ms = MemoryStack(palace_path=str(pal), identity_path=str(ident))
+            dm.add_fragmento("w", f"celda{i % 3}", (topics[i] + " ") * 8 + f"note-{i}", f"/file{i}.md", 0)
+        ms = MemoryStack(malla_path=str(pal), identity_path=str(ident))
         wake = ms.wake_up()
         assert "Identity" in wake
         assert "## L1" in wake
-        # token estimate roughly 600-900 for populated palace
+        # token estimate roughly 600-900 for populated malla
         total_tokens = len(wake) // 4
         assert 100 <= total_tokens <= 1500  # generous but ensures not empty/truncated
         # also check status
         st = ms.status()
-        assert st["palace_path"] == str(pal)
-        assert st["total_drawers"] == 15
+        assert st["malla_path"] == str(pal)
+        assert st["total_fragmentos"] == 15
         dm.close()
 
     def test_layer1_generate_empty(self, tmp_path: Path):
         from dxrk.memory.layers import Layer1
 
         pal = tmp_path / "empty_pal"
-        # No palace yet
+        # No malla yet
         l1 = Layer1(str(pal))
         out = l1.generate()
-        assert "No palace" in out or "No memories" in out
+        assert "No malla" in out or "No memories" in out
 
     def test_layer2_retrieve(self, tmp_path: Path):
         from dxrk.memory.layers import Layer2
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
-        pal = tmp_path / "palace_l2"
+        pal = tmp_path / "malla_l2"
         dm = DxrkMemory(str(pal))
         dm.init()
-        dm.add_drawer("wingX", "roomY", "unique l2 content", "/a.md", 0)
+        dm.add_fragmento("nodoX", "celdaY", "unique l2 content", "/a.md", 0)
         l2 = Layer2(str(pal))
-        out = l2.retrieve(wing="wingX", room="roomY")
+        out = l2.retrieve(nodo="nodoX", celda="celdaY")
         assert "unique l2 content" in out or "L2" in out
         dm.close()
 
     def test_layer3_search(self, tmp_path: Path):
         from dxrk.memory.layers import Layer3
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
-        pal = tmp_path / "palace_l3"
+        pal = tmp_path / "malla_l3"
         dm = DxrkMemory(str(pal))
         dm.init()
-        dm.add_drawer("w", "r", "deep search hello", "/a.md", 0)
+        dm.add_fragmento("w", "r", "deep search hello", "/a.md", 0)
         l3 = Layer3(str(pal))
         out = l3.search("hello")
         assert "hello" in out.lower() or "No results" not in out
@@ -1137,12 +1137,12 @@ class TestLayers:
 
     def test_token_estimate_consistency(self, tmp_path: Path):
         from dxrk.memory.layers import Layer1
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
-        pal = tmp_path / "palace_tok"
+        pal = tmp_path / "malla_tok"
         dm = DxrkMemory(str(pal))
         dm.init()
-        dm.add_drawer("w", "r", "token test " * 50, "/a.md", 0)
+        dm.add_fragmento("w", "r", "token test " * 50, "/a.md", 0)
         l1 = Layer1(str(pal))
         gen = l1.generate()
         assert l1.token_estimate() == len(gen) // 4
@@ -1154,13 +1154,13 @@ class TestLayers:
 # ---------------------------------------------------------------------------
 class TestBackendSqlite:
     def test_wal_mode(self, tmp_path: Path):
-        from dxrk.memory.backend import PalaceRef, SqliteBackend
+        from dxrk.memory.backend import MallaRef, SqliteBackend
 
         be = SqliteBackend()
-        ref = PalaceRef(id=str(tmp_path), local_path=str(tmp_path))
-        col = be.get_collection(palace=ref, collection_name="wal_test", create=True)
-        col.add(documents=["hi"], ids=["1"], metadatas=[{"wing": "w"}])
-        db_path = tmp_path / "sqlite_palace.db"
+        ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
+        col = be.get_collection(malla=ref, collection_name="wal_test", create=True)
+        col.add(documents=["hi"], ids=["1"], metadatas=[{"nodo": "w"}])
+        db_path = tmp_path / "malla.db"
         conn = sqlite3.connect(str(db_path))
         cur = conn.execute("PRAGMA journal_mode;")
         mode = cur.fetchone()[0]
@@ -1173,12 +1173,12 @@ class TestBackendSqlite:
         be.close()
 
     def test_fts5_exists(self, tmp_path: Path):
-        from dxrk.memory.backend import PalaceRef, SqliteBackend
+        from dxrk.memory.backend import MallaRef, SqliteBackend
 
         be = SqliteBackend()
-        ref = PalaceRef(id=str(tmp_path), local_path=str(tmp_path))
-        be.get_collection(palace=ref, collection_name="fts_test", create=True)
-        db_path = tmp_path / "sqlite_palace.db"
+        ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
+        be.get_collection(malla=ref, collection_name="fts_test", create=True)
+        db_path = tmp_path / "malla.db"
         conn = sqlite3.connect(str(db_path))
         cur = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='embedding_fts'")
         row = cur.fetchone()
@@ -1191,13 +1191,13 @@ class TestBackendSqlite:
         be.close()
 
     def test_add_query_get_delete_count(self, tmp_path: Path):
-        from dxrk.memory.backend import PalaceRef, SqliteBackend
+        from dxrk.memory.backend import MallaRef, SqliteBackend
 
         be = SqliteBackend()
-        ref = PalaceRef(id=str(tmp_path), local_path=str(tmp_path))
-        col = be.get_collection(palace=ref, collection_name="c1", create=True)
+        ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
+        col = be.get_collection(malla=ref, collection_name="c1", create=True)
         assert col.count() == 0
-        col.add(documents=["hello world"], ids=["id1"], metadatas=[{"wing": "w", "room": "r"}])
+        col.add(documents=["hello world"], ids=["id1"], metadatas=[{"nodo": "w", "celda": "r"}])
         assert col.count() == 1
         got = col.get(ids=["id1"], include=["documents", "metadatas"])
         assert got.ids == ["id1"]
@@ -1211,22 +1211,22 @@ class TestBackendSqlite:
         be.close()
 
     def test_where_and_in(self, tmp_path: Path):
-        from dxrk.memory.backend import PalaceRef, SqliteBackend
+        from dxrk.memory.backend import MallaRef, SqliteBackend
 
         be = SqliteBackend()
-        ref = PalaceRef(id=str(tmp_path), local_path=str(tmp_path))
-        col = be.get_collection(palace=ref, collection_name="c2", create=True)
-        col.add(documents=["a"], ids=["a1"], metadatas=[{"wing": "w1", "room": "r1", "chunk_index": 0}])
-        col.add(documents=["b"], ids=["b1"], metadatas=[{"wing": "w1", "room": "r2", "chunk_index": 1}])
-        col.add(documents=["c"], ids=["c1"], metadatas=[{"wing": "w2", "room": "r1", "chunk_index": 2}])
+        ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
+        col = be.get_collection(malla=ref, collection_name="c2", create=True)
+        col.add(documents=["a"], ids=["a1"], metadatas=[{"nodo": "w1", "celda": "r1", "chunk_index": 0}])
+        col.add(documents=["b"], ids=["b1"], metadatas=[{"nodo": "w1", "celda": "r2", "chunk_index": 1}])
+        col.add(documents=["c"], ids=["c1"], metadatas=[{"nodo": "w2", "celda": "r1", "chunk_index": 2}])
         # $and
-        got = col.get(where={"$and": [{"wing": "w1"}, {"room": "r1"}]})
+        got = col.get(where={"$and": [{"nodo": "w1"}, {"celda": "r1"}]})
         assert got.ids == ["a1"]
         # $in operator via _where_to_sql through get where
         got2 = col.get(where={"chunk_index": {"$in": [0, 2]}})
         assert set(got2.ids) == {"a1", "c1"}
         # query with where $and
-        q = col.query(query_texts=["a"], n_results=5, where={"$and": [{"wing": "w1"}, {"room": "r1"}]})
+        q = col.query(query_texts=["a"], n_results=5, where={"$and": [{"nodo": "w1"}, {"celda": "r1"}]})
         # should only have a1 in first bucket if FTS matches?
         # at least filter respected: if results empty fallback still respects? check not containing c1
         flat_ids = [i for bucket in q.ids for i in bucket]
@@ -1234,56 +1234,56 @@ class TestBackendSqlite:
         be.close()
 
     def test_unsupported_operator_raises(self, tmp_path: Path):
-        from dxrk.memory.backend import PalaceRef, SqliteBackend
+        from dxrk.memory.backend import MallaRef, SqliteBackend
         from dxrk.memory.backend.base import UnsupportedFilterError
 
         be = SqliteBackend()
-        ref = PalaceRef(id=str(tmp_path), local_path=str(tmp_path))
-        col = be.get_collection(palace=ref, collection_name="c3", create=True)
-        col.add(documents=["hi"], ids=["1"], metadatas=[{"wing": "w"}])
+        ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
+        col = be.get_collection(malla=ref, collection_name="c3", create=True)
+        col.add(documents=["hi"], ids=["1"], metadatas=[{"nodo": "w"}])
         with pytest.raises(UnsupportedFilterError):
-            col.get(where={"wing": {"$unknown": "x"}})
+            col.get(where={"nodo": {"$unknown": "x"}})
         with pytest.raises(UnsupportedFilterError):
-            col.get(where={"$or": [{"wing": "w"}]})  # unsupported top-level op
+            col.get(where={"$or": [{"nodo": "w"}]})  # unsupported top-level op
         be.close()
 
     def test_upsert_and_count(self, tmp_path: Path):
-        from dxrk.memory.backend import PalaceRef, SqliteBackend
+        from dxrk.memory.backend import MallaRef, SqliteBackend
 
         be = SqliteBackend()
-        ref = PalaceRef(id=str(tmp_path), local_path=str(tmp_path))
-        col = be.get_collection(palace=ref, collection_name="up", create=True)
-        col.add(documents=["first"], ids=["1"], metadatas=[{"wing": "w"}])
-        col.upsert(documents=["second"], ids=["1"], metadatas=[{"wing": "w2"}])
+        ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
+        col = be.get_collection(malla=ref, collection_name="up", create=True)
+        col.add(documents=["first"], ids=["1"], metadatas=[{"nodo": "w"}])
+        col.upsert(documents=["second"], ids=["1"], metadatas=[{"nodo": "w2"}])
         assert col.count() == 1
         got = col.get(ids=["1"])
         assert got.documents[0] == "second"
-        assert got.metadatas[0]["wing"] == "w2"
+        assert got.metadatas[0]["nodo"] == "w2"
         be.close()
 
     def test_delete_by_where(self, tmp_path: Path):
-        from dxrk.memory.backend import PalaceRef, SqliteBackend
+        from dxrk.memory.backend import MallaRef, SqliteBackend
 
         be = SqliteBackend()
-        ref = PalaceRef(id=str(tmp_path), local_path=str(tmp_path))
-        col = be.get_collection(palace=ref, collection_name="delw", create=True)
-        col.add(documents=["a"], ids=["a1"], metadatas=[{"wing": "del"}])
-        col.add(documents=["b"], ids=["b1"], metadatas=[{"wing": "keep"}])
-        col.delete(where={"wing": "del"})
+        ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
+        col = be.get_collection(malla=ref, collection_name="delw", create=True)
+        col.add(documents=["a"], ids=["a1"], metadatas=[{"nodo": "del"}])
+        col.add(documents=["b"], ids=["b1"], metadatas=[{"nodo": "keep"}])
+        col.delete(where={"nodo": "del"})
         assert col.count() == 1
-        got = col.get(where={"wing": "keep"})
+        got = col.get(where={"nodo": "keep"})
         assert got.ids == ["b1"]
         be.close()
 
     def test_health_and_detect(self, tmp_path: Path):
-        from dxrk.memory.backend import PalaceRef, SqliteBackend
+        from dxrk.memory.backend import MallaRef, SqliteBackend
 
         be = SqliteBackend()
-        ref = PalaceRef(id=str(tmp_path), local_path=str(tmp_path))
+        ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
         # before init, health unhealthy
         h = be.health(ref)
         assert h.ok is False
-        be.get_collection(palace=ref, collection_name="hc", create=True)
+        be.get_collection(malla=ref, collection_name="hc", create=True)
         h2 = be.health(ref)
         assert h2.ok is True
         # detect
@@ -1292,36 +1292,36 @@ class TestBackendSqlite:
         be.close()
 
     def test_close_behavior(self, tmp_path: Path):
-        from dxrk.memory.backend import PalaceRef, SqliteBackend
+        from dxrk.memory.backend import MallaRef, SqliteBackend
         from dxrk.memory.backend.base import BackendClosedError
 
         be = SqliteBackend()
-        ref = PalaceRef(id=str(tmp_path), local_path=str(tmp_path))
-        col = be.get_collection(palace=ref, collection_name="cls", create=True)
+        ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
+        col = be.get_collection(malla=ref, collection_name="cls", create=True)
         be.close()
         with pytest.raises(BackendClosedError):
-            be.get_collection(palace=ref, collection_name="cls2", create=True)
+            be.get_collection(malla=ref, collection_name="cls2", create=True)
         # collection also closed?
         with pytest.raises(Exception):
             col.add(documents=["hi"], ids=["x"])
 
     def test_get_empty_ids_returns_empty(self, tmp_path: Path):
-        from dxrk.memory.backend import PalaceRef, SqliteBackend
+        from dxrk.memory.backend import MallaRef, SqliteBackend
 
         be = SqliteBackend()
-        ref = PalaceRef(id=str(tmp_path), local_path=str(tmp_path))
-        col = be.get_collection(palace=ref, collection_name="emptyid", create=True)
+        ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
+        col = be.get_collection(malla=ref, collection_name="emptyid", create=True)
         got = col.get(ids=[])
         assert got.ids == []
         be.close()
 
     def test_query_without_text_fallback(self, tmp_path: Path):
-        from dxrk.memory.backend import PalaceRef, SqliteBackend
+        from dxrk.memory.backend import MallaRef, SqliteBackend
 
         be = SqliteBackend()
-        ref = PalaceRef(id=str(tmp_path), local_path=str(tmp_path))
-        col = be.get_collection(palace=ref, collection_name="qnt", create=True)
-        col.add(documents=["hello"], ids=["1"], metadatas=[{"wing": "w"}])
+        ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
+        col = be.get_collection(malla=ref, collection_name="qnt", create=True)
+        col.add(documents=["hello"], ids=["1"], metadatas=[{"nodo": "w"}])
         q = col.query(query_texts=[""], n_results=5)
         # fallback returns something
         assert q.ids[0] == ["1"] or q.ids[0] == []
@@ -1363,41 +1363,41 @@ class TestHooksCli:
         # negative pid handling: on linux -1 means all processes; we just ensure it returns bool
         assert isinstance(_pid_alive(-2), bool)
 
-    def test_wing_from_transcript_path_cwd(self, tmp_path: Path):
-        from dxrk.memory.hooks_cli import _wing_from_transcript_path
+    def test_nodo_from_transcript_path_cwd(self, tmp_path: Path):
+        from dxrk.memory.hooks_cli import _nodo_from_transcript_path
 
         transcript = tmp_path / "transcript.jsonl"
         # write jsonl with cwd
         with open(transcript, "w", encoding="utf-8") as f:
             f.write(json.dumps({"cwd": "/home/alice/Projects/MyProject"}) + "\n")
             f.write(json.dumps({"cwd": "/other"}) + "\n")
-        wing = _wing_from_transcript_path(str(transcript))
-        assert wing == "wing_myproject"
+        nodo = _nodo_from_transcript_path(str(transcript))
+        assert nodo == "nodo_myproject"
 
-    def test_wing_from_transcript_path_encoded(self):
-        from dxrk.memory.hooks_cli import _wing_from_transcript_path
+    def test_nodo_from_transcript_path_encoded(self):
+        from dxrk.memory.hooks_cli import _nodo_from_transcript_path
 
         path = "/home/user/.claude/projects/-Users-alice-Projects-myproj/transcript.jsonl"
-        wing = _wing_from_transcript_path(path)
-        assert wing.startswith("wing_")
-        assert "myproj" in wing
+        nodo = _nodo_from_transcript_path(path)
+        assert nodo.startswith("nodo_")
+        assert "myproj" in nodo
 
-    def test_wing_from_transcript_path_fallback(self, tmp_path: Path):
-        from dxrk.memory.hooks_cli import _wing_from_transcript_path
+    def test_nodo_from_transcript_path_fallback(self, tmp_path: Path):
+        from dxrk.memory.hooks_cli import _nodo_from_transcript_path
 
         missing = tmp_path / "missing.jsonl"
-        wing = _wing_from_transcript_path(str(missing))
-        assert wing == "wing_sessions"
+        nodo = _nodo_from_transcript_path(str(missing))
+        assert nodo == "nodo_sessions"
         # also weird path without regex match
-        wing2 = _wing_from_transcript_path("/tmp/foo.jsonl")
-        assert wing2 == "wing_sessions"
+        nodo2 = _nodo_from_transcript_path("/tmp/foo.jsonl")
+        assert nodo2 == "nodo_sessions"
 
     def test_mine_slot_timeout_and_pid_file(self, tmp_path: Path, monkeypatch):
         from dxrk.memory import hooks_cli as hc
         from dxrk.memory.hooks_cli import _mine_already_running, _pid_file_for_cmd
 
         monkeypatch.setattr(hc, "_MINE_PID_DIR", tmp_path / "pids")
-        fake_cmd = ["python", "-m", "dxrk.memory", "mine", "/proj", "--wing", "default"]
+        fake_cmd = ["python", "-m", "dxrk.memory", "mine", "/proj", "--nodo", "default"]
         pid_file = _pid_file_for_cmd(fake_cmd)
         # no pid file => not running
         assert _mine_already_running(fake_cmd) is False
@@ -1426,14 +1426,14 @@ class TestMcpServer:
         expected = {
             "dxrk_memory_status",
             "dxrk_memory_search",
-            "dxrk_memory_add_drawer",
-            "dxrk_memory_get_drawer",
-            "dxrk_memory_list_drawers",
-            "dxrk_memory_update_drawer",
-            "dxrk_memory_delete_drawer",
+            "dxrk_memory_add_fragmento",
+            "dxrk_memory_get_fragmento",
+            "dxrk_memory_list_fragmentos",
+            "dxrk_memory_update_fragmento",
+            "dxrk_memory_delete_fragmento",
             "dxrk_memory_check_duplicate",
-            "dxrk_memory_list_wings",
-            "dxrk_memory_list_rooms",
+            "dxrk_memory_list_nodos",
+            "dxrk_memory_list_celdas",
             "dxrk_memory_taxonomy",
             "dxrk_memory_mine",
             "dxrk_memory_kg_query",
@@ -1506,12 +1506,12 @@ class TestMcpServer:
     def test_call_tool_status_and_search_stdio(self, tmp_path: Path, monkeypatch):
         from dxrk.memory.mcp_server import _dispatch
 
-        monkeypatch.setenv("DXRK_MEMORY_PATH", str(tmp_path / "mcp_palace"))
+        monkeypatch.setenv("DXRK_MEMORY_PATH", str(tmp_path / "mcp_malla"))
         # status tool
         resp = _dispatch({"method": "tools/call", "id": 10, "params": {"name": "dxrk_memory_status", "arguments": {}}})
         assert "result" in resp
         content = json.loads(resp["result"]["content"][0]["text"])
-        assert "palace_path" in content
+        assert "malla_path" in content
         # search tool requires query; missing query should error? Actually server checks sanitized
         resp2 = _dispatch(
             {
@@ -1526,20 +1526,20 @@ class TestMcpServer:
         resp3 = _dispatch({"method": "tools/call", "id": 12, "params": {"name": "unknown_tool", "arguments": {}}})
         assert "error" in resp3
 
-    def test_call_tool_add_and_get_drawer(self, tmp_path: Path, monkeypatch):
+    def test_call_tool_add_and_get_fragmento(self, tmp_path: Path, monkeypatch):
         from dxrk.memory.mcp_server import _dispatch
 
         monkeypatch.setenv("DXRK_MEMORY_PATH", str(tmp_path / "mcp_pal2"))
-        # add drawer
+        # add fragmento
         add_resp = _dispatch(
             {
                 "method": "tools/call",
                 "id": 20,
                 "params": {
-                    "name": "dxrk_memory_add_drawer",
+                    "name": "dxrk_memory_add_fragmento",
                     "arguments": {
-                        "wing": "w1",
-                        "room": "r1",
+                        "nodo": "w1",
+                        "celda": "r1",
                         "content": "mcp hello",
                         "source_file": "/a.txt",
                         "chunk_index": 0,
@@ -1549,23 +1549,23 @@ class TestMcpServer:
         )
         assert add_resp["result"]["isError"] is False
         data = json.loads(add_resp["result"]["content"][0]["text"])
-        did = data["drawer_id"]
-        # get drawer
+        did = data["fragmento_id"]
+        # get fragmento
         get_resp = _dispatch(
             {
                 "method": "tools/call",
                 "id": 21,
-                "params": {"name": "dxrk_memory_get_drawer", "arguments": {"drawer_id": did}},
+                "params": {"name": "dxrk_memory_get_fragmento", "arguments": {"fragmento_id": did}},
             }
         )
         gdata = json.loads(get_resp["result"]["content"][0]["text"])
-        assert gdata["drawer"] is not None
-        # list wings
-        wings_resp = _dispatch(
-            {"method": "tools/call", "id": 22, "params": {"name": "dxrk_memory_list_wings", "arguments": {}}}
+        assert gdata["fragmento"] is not None
+        # list nodos
+        nodos_resp = _dispatch(
+            {"method": "tools/call", "id": 22, "params": {"name": "dxrk_memory_list_nodos", "arguments": {}}}
         )
-        wdata = json.loads(wings_resp["result"]["content"][0]["text"])
-        assert "w1" in wdata["wings"]
+        wdata = json.loads(nodos_resp["result"]["content"][0]["text"])
+        assert "w1" in wdata["nodos"]
         # taxonomy
         tax_resp = _dispatch(
             {"method": "tools/call", "id": 23, "params": {"name": "dxrk_memory_taxonomy", "arguments": {}}}
@@ -1650,8 +1650,8 @@ class TestMcpServer:
                 "method": "tools/call",
                 "id": 40,
                 "params": {
-                    "name": "dxrk_memory_add_drawer",
-                    "arguments": {"wing": "w", "room": "r", "content": "one", "source_file": "/one.txt"},
+                    "name": "dxrk_memory_add_fragmento",
+                    "arguments": {"nodo": "w", "celda": "r", "content": "one", "source_file": "/one.txt"},
                 },
             }
         )
@@ -1660,18 +1660,18 @@ class TestMcpServer:
                 "method": "tools/call",
                 "id": 41,
                 "params": {
-                    "name": "dxrk_memory_add_drawer",
-                    "arguments": {"wing": "w", "room": "r", "content": "two", "source_file": "/two.txt"},
+                    "name": "dxrk_memory_add_fragmento",
+                    "arguments": {"nodo": "w", "celda": "r", "content": "two", "source_file": "/two.txt"},
                 },
             }
         )
-        did2 = json.loads(add2["result"]["content"][0]["text"])["drawer_id"]
-        # list drawers
+        did2 = json.loads(add2["result"]["content"][0]["text"])["fragmento_id"]
+        # list fragmentos
         lst = _dispatch(
             {
                 "method": "tools/call",
                 "id": 42,
-                "params": {"name": "dxrk_memory_list_drawers", "arguments": {"limit": 10}},
+                "params": {"name": "dxrk_memory_list_fragmentos", "arguments": {"limit": 10}},
             }
         )
         assert json.loads(lst["result"]["content"][0]["text"])["count"] >= 1
@@ -1680,7 +1680,7 @@ class TestMcpServer:
             {
                 "method": "tools/call",
                 "id": 43,
-                "params": {"name": "dxrk_memory_delete_drawer", "arguments": {"drawer_id": did2}},
+                "params": {"name": "dxrk_memory_delete_fragmento", "arguments": {"fragmento_id": did2}},
             }
         )
         assert json.loads(del_resp["result"]["content"][0]["text"])["deleted"] == did2
@@ -1704,7 +1704,7 @@ class TestMcpServer:
                 "params": {"name": "dxrk_memory_mine", "arguments": {"project_dir": str(proj)}},
             }
         )
-        assert "drawers_added" in json.loads(mine_resp["result"]["content"][0]["text"])
+        assert "fragmentos_added" in json.loads(mine_resp["result"]["content"][0]["text"])
 
     def test_stdio_main_loop(self, tmp_path: Path, monkeypatch):
         import io
@@ -1742,46 +1742,46 @@ def test_types_top_by_importance_sorts_when_short():
     assert [e.importance for e in types_tbi(entries, 10)] == [0.9, 0.5, 0.1]
 
 
-def test_layer1_generate_filters_by_wing(tmp_path: Path):
+def test_layer1_generate_filters_by_nodo(tmp_path: Path):
     from dxrk.memory.layers import Layer1
-    from dxrk.memory.palace import DxrkMemory
+    from dxrk.memory.malla import DxrkMemory
 
-    pal = tmp_path / "pal_wing"
+    pal = tmp_path / "pal_nodo"
     dm = DxrkMemory(str(pal))
     dm.init()
     try:
-        dm.add_drawer("alpha", "r", "alpha only content " * 20, "/a.txt", 0)
-        dm.add_drawer("beta", "r", "beta only content " * 20, "/b.txt", 0)
-        out = Layer1(str(pal), wing="alpha").generate()
+        dm.add_fragmento("alpha", "r", "alpha only content " * 20, "/a.txt", 0)
+        dm.add_fragmento("beta", "r", "beta only content " * 20, "/b.txt", 0)
+        out = Layer1(str(pal), nodo="alpha").generate()
         assert "alpha only content" in out
         assert "beta only content" not in out
-        # no filter -> both wings present
+        # no filter -> both nodos present
         out_all = Layer1(str(pal)).generate()
         assert "alpha only content" in out_all
         assert "beta only content" in out_all
-        # unknown wing -> explicit empty message, not silent all-wings leak
-        assert "No memories yet for wing=zeta" in Layer1(str(pal), wing="zeta").generate()
+        # unknown nodo -> explicit empty message, not silent all-nodos leak
+        assert "No memories yet for nodo=zeta" in Layer1(str(pal), nodo="zeta").generate()
     finally:
         dm.close()
 
 
-def test_memory_stack_wake_up_wing_filters_without_mutation(tmp_path: Path):
+def test_memory_stack_wake_up_nodo_filters_without_mutation(tmp_path: Path):
     from dxrk.memory.layers import MemoryStack
-    from dxrk.memory.palace import DxrkMemory
+    from dxrk.memory.malla import DxrkMemory
 
-    pal = tmp_path / "pal_stack_wing"
+    pal = tmp_path / "pal_stack_nodo"
     ident = tmp_path / "ident.txt"
     ident.write_text("stack identity")
     dm = DxrkMemory(str(pal))
     dm.init()
     try:
-        dm.add_drawer("alpha", "r", "alpha stack content " * 20, "/a.txt", 0)
-        dm.add_drawer("beta", "r", "beta stack content " * 20, "/b.txt", 0)
-        ms = MemoryStack(palace_path=str(pal), identity_path=str(ident))
-        scoped = ms.wake_up(wing="alpha")
+        dm.add_fragmento("alpha", "r", "alpha stack content " * 20, "/a.txt", 0)
+        dm.add_fragmento("beta", "r", "beta stack content " * 20, "/b.txt", 0)
+        ms = MemoryStack(malla_path=str(pal), identity_path=str(ident))
+        scoped = ms.wake_up(nodo="alpha")
         assert "alpha stack content" in scoped
         assert "beta stack content" not in scoped
-        # scoped call must not stick: unscoped wake_up still sees both wings
+        # scoped call must not stick: unscoped wake_up still sees both nodos
         full = ms.wake_up()
         assert "alpha stack content" in full
         assert "beta stack content" in full
@@ -1798,10 +1798,10 @@ def test_mcp_check_duplicate_detects_exact_content(tmp_path: Path, monkeypatch):
             "method": "tools/call",
             "id": 1,
             "params": {
-                "name": "dxrk_memory_add_drawer",
+                "name": "dxrk_memory_add_fragmento",
                 "arguments": {
-                    "wing": "w",
-                    "room": "r",
+                    "nodo": "w",
+                    "celda": "r",
                     "content": "the quick brown fox jumps over",
                     "source_file": "/f.txt",
                 },
@@ -1833,7 +1833,7 @@ def test_mcp_check_duplicate_detects_exact_content(tmp_path: Path, monkeypatch):
     assert json.loads(fresh["result"]["content"][0]["text"])["duplicate"] is False
 
 
-def test_mcp_update_drawer_no_orphan_on_wing_change(tmp_path: Path, monkeypatch):
+def test_mcp_update_fragmento_no_orphan_on_nodo_change(tmp_path: Path, monkeypatch):
     from dxrk.memory.mcp_server import _dispatch
 
     monkeypatch.setenv("DXRK_MEMORY_PATH", str(tmp_path / "pal_upd"))
@@ -1842,12 +1842,12 @@ def test_mcp_update_drawer_no_orphan_on_wing_change(tmp_path: Path, monkeypatch)
             "method": "tools/call",
             "id": 1,
             "params": {
-                "name": "dxrk_memory_add_drawer",
-                "arguments": {"wing": "w1", "room": "r", "content": "update me content here", "source_file": "/u.txt"},
+                "name": "dxrk_memory_add_fragmento",
+                "arguments": {"nodo": "w1", "celda": "r", "content": "update me content here", "source_file": "/u.txt"},
             },
         }
     )
-    did = json.loads(add["result"]["content"][0]["text"])["drawer_id"]
+    did = json.loads(add["result"]["content"][0]["text"])["fragmento_id"]
 
     def _count():
         st = _dispatch({"method": "tools/call", "id": 99, "params": {"name": "dxrk_memory_status", "arguments": {}}})
@@ -1859,8 +1859,8 @@ def test_mcp_update_drawer_no_orphan_on_wing_change(tmp_path: Path, monkeypatch)
             "method": "tools/call",
             "id": 2,
             "params": {
-                "name": "dxrk_memory_update_drawer",
-                "arguments": {"drawer_id": did, "wing": "w2", "content": "update me content here revised"},
+                "name": "dxrk_memory_update_fragmento",
+                "arguments": {"fragmento_id": did, "nodo": "w2", "content": "update me content here revised"},
             },
         }
     )
@@ -1870,15 +1870,15 @@ def test_mcp_update_drawer_no_orphan_on_wing_change(tmp_path: Path, monkeypatch)
         {
             "method": "tools/call",
             "id": 3,
-            "params": {"name": "dxrk_memory_get_drawer", "arguments": {"drawer_id": did}},
+            "params": {"name": "dxrk_memory_get_fragmento", "arguments": {"fragmento_id": did}},
         }
     )
-    drawer = json.loads(got["result"]["content"][0]["text"])["drawer"]
-    assert drawer["metadata"]["wing"] == "w2"
-    assert "revised" in drawer["document"]
+    fragmento = json.loads(got["result"]["content"][0]["text"])["fragmento"]
+    assert fragmento["metadata"]["nodo"] == "w2"
+    assert "revised" in fragmento["document"]
 
 
-def test_mcp_update_drawer_not_found_is_error(tmp_path: Path, monkeypatch):
+def test_mcp_update_fragmento_not_found_is_error(tmp_path: Path, monkeypatch):
     from dxrk.memory.mcp_server import _dispatch
 
     monkeypatch.setenv("DXRK_MEMORY_PATH", str(tmp_path / "pal_nf"))
@@ -1886,7 +1886,7 @@ def test_mcp_update_drawer_not_found_is_error(tmp_path: Path, monkeypatch):
         {
             "method": "tools/call",
             "id": 1,
-            "params": {"name": "dxrk_memory_update_drawer", "arguments": {"drawer_id": "missing-id"}},
+            "params": {"name": "dxrk_memory_update_fragmento", "arguments": {"fragmento_id": "missing-id"}},
         }
     )
     assert resp["result"]["isError"] is True

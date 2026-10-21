@@ -28,11 +28,11 @@ dxrk-py install --agent claude-code --preset full-dxrk --dry-run  # 2) vista pre
 python -m dxrk.memory mine ./mi-proyecto                        # 3) indexa tu codigo (FTS5 + BM25, offline)
 python -m dxrk.memory search "arquitectura memoria"             # 4) busca (AND de tokens; ver docs/tutorial.md)
 ```
-> **Por qué DxrkMemory 2.0:** `sqlite3` FTS5 `trigram→porter→unicode61` + BM25 híbrido, Graph temporal `valid_from/valid_to`, AAAK 600–900 tok wake-up, Palace locks `~/.dxrk/locks` 900s — ver [`docs/memory.md`](docs/memory.md) · [`docs/MIGRATION_3.3.5_3.7.1.md`](docs/MIGRATION_3.3.5_3.7.1.md) · [`docs/dx.md`](docs/dx.md)
+> **Por qué DxrkMemory 2.0:** `sqlite3` FTS5 `trigram→porter→unicode61` + BM25 híbrido, Graph temporal `valid_from/valid_to`, AAAK 600–900 tok wake-up, Malla locks `~/.dxrk/locks` 900s — ver [`docs/memory.md`](docs/memory.md) · [`docs/MIGRATION_3.3.5_3.7.1.md`](docs/MIGRATION_3.3.5_3.7.1.md) · [`docs/dx.md`](docs/dx.md)
 
 - 🐍 **Python 3.13+** con TUI moderna basada en [Textual](https://textual.textualize.io/)
 - 🤖 Configura **14 agentes** con un solo comando
-- 🧠 **DxrkMemory 2.0 — Flagship local-first stdlib-only** (sin `chromadb`, sin `onnx`) — `sqlite3` FTS5 `trigram`+WAL, 37 módulos 14228 LOC, hybrid BM25, Palace locks, Graph temporal, dialecto AAAK, wake-up **600–900 tok** (paridad mempalace 3.7.1) — ver [`docs/memory.md`](docs/memory.md)
+- 🧠 **DxrkMemory 2.0 — Flagship local-first stdlib-only** (sin `chromadb`, sin `onnx`) — `sqlite3` FTS5 `trigram`+WAL, 37 módulos 14228 LOC, hybrid BM25, Malla locks, Graph temporal, dialecto AAAK, wake-up **600–900 tok** (paridad con el motor legado 3.7.1) — ver [`docs/memory.md`](docs/memory.md)
 - ⚡ Conmutador de proveedores y modelos con asignación por fase vía `dxrk-py model` (`list`/`current`/`set`)
 
 ## Instalación
@@ -113,7 +113,7 @@ Ver [docs/tenants.md](docs/tenants.md) y [docs/rbac.md](docs/rbac.md).
 
 ## Características
 
-- 🧠 **DxrkMemory 2.0 — Flagship top1 local-first stdlib-only** — `dxrk/memory` 37 archivos 14228 LOC `sqlite3` **FTS5 `trigram`+WAL** sin `chromadb`/sin `onnx`/sin `numpy`; `chr-join` LEGACY `dxrk_drawers` compat, `0` traces `engram`/`mempal` (979 reemplazos + 7 `git mv`), **fidelity 3.7.1** (388 files / 50+ commits `359c579`): re-mine honesty `1654cd2`/`759b8f1`, FIFO `O_NONBLOCK`+`S_ISREG` `db29959`, orphan lock reap `27212e5` `~/.dxrk/locks` 900 s, `since`/`before` `5036e3c` pool 3×/15×, SIGTERM. Hybrid **BM25** + closet boost, **Graph** temporal `valid_from`/`valid_to`+`as_of`, dialecto **AAAK** `compress`/`decode`, **Layers** wake-up **600–900 tok** (L0 100 + L1 500–800) — [`docs/memory.md`](docs/memory.md) · [`docs/MIGRATION_3.3.5_3.7.1.md`](docs/MIGRATION_3.3.5_3.7.1.md) · `from dxrk.memory import AgentMemory, Palace, KnowledgeGraph` — verif. `uv run pytest tests/test_memory.py -q` **19 passed**
+- 🧠 **DxrkMemory 2.0 — Flagship top1 local-first stdlib-only** — `dxrk/memory` 37 archivos 14228 LOC `sqlite3` **FTS5 `trigram`+WAL** sin `chromadb`/sin `onnx`/sin `numpy`; collection `dxrk_fragmentos`, `0` traces `engram`/`mempal` (979 reemplazos + 7 `git mv`), **fidelity 3.7.1** (388 files / 50+ commits `359c579`): re-mine honesty `1654cd2`/`759b8f1`, FIFO `O_NONBLOCK`+`S_ISREG` `db29959`, orphan lock reap `27212e5` `~/.dxrk/locks` 900 s, `since`/`before` `5036e3c` pool 3×/15×, SIGTERM. Hybrid **BM25** + closet boost, **Graph** temporal `valid_from`/`valid_to`+`as_of`, dialecto **AAAK** `compress`/`decode`, **Layers** wake-up **600–900 tok** (L0 100 + L1 500–800) — [`docs/memory.md`](docs/memory.md) · [`docs/MIGRATION_3.3.5_3.7.1.md`](docs/MIGRATION_3.3.5_3.7.1.md) · `from dxrk.memory import AgentMemory, Malla, KnowledgeGraph` — verif. `uv run pytest tests/test_memory.py -q` **19 passed**
 - ✅ **Spec-Driven Development** — workflow completo con `/sdd-init`, skill registry, hooks y permisos
 - ✅ **Skills curadas** — `dxrk-py install --component skills`
 - ✅ **35+ servidores MCP** — configurables vía `.mcp.json`
@@ -124,7 +124,7 @@ Ver [docs/tenants.md](docs/tenants.md) y [docs/rbac.md](docs/rbac.md).
 ## Novedades — próxima v1.5.0 (en `main`, sin publicar)
 
 - 🧠 **Recall híbrido local** — vectores stdlib-only (hashing trick char 3-grams, `DIM 512`, coseno IDF) fusionados `0.6·cos + 0.3·BM25 + 0.05·recency + 0.05·importance + 0.03·access`, con harness de eval (`tests/test_memory_recall_eval.py`) — ver [`docs/memory.md`](docs/memory.md)
-- 🧰 **4 herramientas MCP de ciclo de vida** (`dxrk_memory_consolidate`, `dxrk_memory_forget`, `dxrk_memory_pin`, `dxrk_memory_timeline`; 35 tools) + budgets por wing (`wing_usage()`/`budgets()`, cap 1000, pinned exento de eviction) — ver [`docs/memory.md`](docs/memory.md)
+- 🧰 **4 herramientas MCP de ciclo de vida** (`dxrk_memory_consolidate`, `dxrk_memory_forget`, `dxrk_memory_pin`, `dxrk_memory_timeline`; 35 tools) + budgets por nodo (`nodo_usage()`/`budgets()`, cap 1000, pinned exento de eviction) — ver [`docs/memory.md`](docs/memory.md)
 - 💾 **Sesiones durables** — escrituras atómicas (tmp + `fsync` + `os.replace`), índice con self-heal, fallback `.gz`, cuarentena `.quarantine/`, IDs sanitizados anti path-traversal; opt-in SQLite-WAL con `DXRK_SESSION_BACKEND=sqlite` — ver [`docs/session.md`](docs/session.md)
 - 🐝 **Swarm honesto** — dispatch real (least-loaded / work-stealing), health con probe pluggable (`StatusUnhealthy` alcanzable), event bus y linkage sesión↔swarm (`SwarmTaskStore`, `session_id` en tasks/results)
 
@@ -136,7 +136,7 @@ dxrk/
 ├── cli/             # Interfaz de línea de comandos
 ├── commands/        # Comandos disponibles (/commit, /branch, ...)
 ├── config/          # Configuración, perfiles y feature flags
-├── memory/          # DxrkMemory 2.0 flagship stdlib-only 37 módulos 14228 LOC — Palace+sqlite FTS5+Graph+Layers+AAAK+miner (ver docs/memory.md)
+├── memory/          # DxrkMemory 2.0 flagship stdlib-only 37 módulos 14228 LOC — Malla+sqlite FTS5+Graph+Layers+AAAK+miner (ver docs/memory.md)
 ├── rag/             # RAG local (chunking, indexado, consulta)
 ├── security/        # Permisos y verificación de seguridad
 ├── tools/           # Herramientas de detección y utilidades
@@ -180,7 +180,7 @@ Editando `model.provider` en tu `config.yaml` (ver [docs/config.md](docs/config.
 
 | Documento | Descripción |
 |---|---|
-| [memory.md](docs/memory.md) | **DxrkMemory 2.0 flagship** — 37 módulos, sqlite FTS5, Palace locks, BM25, Graph, AAAK, Layers 600–900 tok |
+| [memory.md](docs/memory.md) | **DxrkMemory 2.0 flagship** — 37 módulos, sqlite FTS5, Malla locks, BM25, Graph, AAAK, Layers 600–900 tok |
 | [MIGRATION_3.3.5_3.7.1.md](docs/MIGRATION_3.3.5_3.7.1.md) | Migración mempalace 3.3.5 → 3.7.1 — delta 388 files, parches portados |
 | [intended-usage.md](docs/intended-usage.md) | Uso previsto del proyecto |
 | [agents.md](docs/agents.md) | Adaptadores de agentes |

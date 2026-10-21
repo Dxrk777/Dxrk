@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 """Smoke + regression net for the public recall benchmark.
 
-Pins ``benchmarks/bench_recall.py``: the corpus builds intact (60 drawers,
+Pins ``benchmarks/bench_recall.py``: the corpus builds intact (60 fragmentos,
 no dedupe collapse), every metric lands in [0, 1], and the published
 ordering holds (hybrid P@1 >= each ablation — the numbers in
 docs/benchmarks.md are measured from this code path).
@@ -12,14 +12,14 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from benchmarks.bench_recall import CORPUS, QUERIES, build_palace, measure
+from benchmarks.bench_recall import CORPUS, QUERIES, build_malla, measure
 
 
 def test_recall_corpus_builds_intact() -> None:
     expected = sum(len(v) for v in CORPUS.values())
     assert expected >= 50
     with tempfile.TemporaryDirectory() as td:
-        dm = build_palace(str(Path(td) / "palace"))
+        dm = build_malla(str(Path(td) / "malla"))
         try:
             assert dm.count() == expected
         finally:

@@ -55,28 +55,28 @@ def thompson_select(
     return [item_id for item_id, _ in scored[:n]]
 
 
-def thompson_select_drawers(
-    palace,
+def thompson_select_fragmentos(
+    malla,
     n: int = 10,
     min_visits: int = 0,
 ) -> list[str]:
     """
-    Select drawers for evaluation using Thompson Sampling.
+    Select fragmentos for evaluation using Thompson Sampling.
 
-    Prioritizes drawers with high uncertainty (low visits) for exploration,
-    while still exploiting known high-value drawers.
+    Prioritizes fragmentos with high uncertainty (low visits) for exploration,
+    while still exploiting known high-value fragmentos.
 
     Args:
-        palace: DxrkMemory instance
-        n: number of drawers to select
+        malla: DxrkMemory instance
+        n: number of fragmentos to select
         min_visits: minimum access_count_total to consider
 
     Returns:
-        List of drawer_ids
+        List of fragmento_ids
     """
     candidates = []
-    for drawer in palace.iter_drawers():
-        meta = drawer.get("metadata", {})
+    for fragmento in malla.iter_fragmentos():
+        meta = fragmento.get("metadata", {})
         visits = meta.get("access_count_total", meta.get("access_count", 0))
         if visits < min_visits:
             continue
@@ -89,7 +89,7 @@ def thompson_select_drawers(
         misses = meta.get("irt_misses", 0)
         alpha = hits + 1.0
         beta = misses + 1.0
-        candidates.append((drawer["id"], alpha, beta))
+        candidates.append((fragmento["id"], alpha, beta))
 
     return thompson_select(candidates, n)
 
@@ -113,7 +113,7 @@ def update_beta_prior(hits: int, misses: int, reward: float) -> tuple[float, flo
 
 
 def select_evaluation_candidates(
-    palace,
+    malla,
     n: int = 10,
     config: ThompsonConfig | None = None,
 ) -> list[str]:
@@ -127,8 +127,8 @@ def select_evaluation_candidates(
         config = ThompsonConfig()
 
     items = []
-    for drawer in palace.iter_drawers():
-        meta = drawer.get("metadata", {})
+    for fragmento in malla.iter_fragmentos():
+        meta = fragmento.get("metadata", {})
         if meta.get("quarantined") or meta.get("pinned"):
             continue
 
@@ -139,6 +139,6 @@ def select_evaluation_candidates(
         alpha = hits + config.alpha_prior
         beta = misses + config.beta_prior
 
-        items.append((drawer["id"], alpha, beta))
+        items.append((fragmento["id"], alpha, beta))
 
     return thompson_select(items, n, config.exploration_bonus)

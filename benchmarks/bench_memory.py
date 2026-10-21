@@ -12,8 +12,8 @@ Usage:
     uv run python -m pytest benchmarks/ -q   # smoke via pytest fallback
 
 Baseline v0.2.0 (laptop M3 / Ubuntu 22.04, Python 3.13, WAL, FTS5 trigram→porter):
-    1k drawers  p50 ~35 ms, p95 ~55 ms, mine ~1200 drawers/s
-    10k drawers p50 ~68 ms, p95 ~110 ms, mine ~1100 drawers/s
+    1k fragmentos  p50 ~35 ms, p95 ~55 ms, mine ~1200 fragmentos/s
+    10k fragmentos p50 ~68 ms, p95 ~110 ms, mine ~1100 fragmentos/s
     Graph traverse (depth 2, 500 triples) p50 ~8 ms
     AAAK compress single doc (~800 chars) ~0.08 ms
     wake_up L0+L1 (600-900 tok) <50 ms cold
@@ -31,7 +31,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from dxrk.memory import Palace
+from dxrk.memory import Malla
 from dxrk.memory.dialect import Dialect
 from dxrk.memory.graph import KnowledgeGraph
 from dxrk.memory.layers import MemoryStack
@@ -80,7 +80,7 @@ class BenchCase:
     corpus: int
     runs: int
     stats: dict[str, float]
-    throughput: float | None = None  # ops/sec or drawers/sec when applicable
+    throughput: float | None = None  # ops/sec or fragmentos/sec when applicable
     extra: dict[str, Any] | None = None
 
 
@@ -89,7 +89,7 @@ SYNTHETIC_TOPICS: list[str] = [
     "deployment pipeline kubernetes docker",
     "graph temporal valid_from valid_to traverse",
     "AAAK dialect compress tokens emotion flag",
-    "palace mine locks O_NONBLOCK FIFO guard",
+    "malla mine locks O_NONBLOCK FIFO guard",
     "memory layers L0 L1 L2 L3 wake_up",
     "vault HKDF per-tenant encryption",
     "http client pool TLS proxy sanitize",
@@ -100,7 +100,7 @@ QUERY_SET: list[str] = [
     "architecture",
     "graph temporal",
     "AAAK compress",
-    "palace mine",
+    "malla mine",
     "deployment",
     "vault encryption",
     "memory layers",
@@ -113,24 +113,24 @@ def _synthetic_doc(idx: int) -> str:
         f"Document {idx:05d} — {topic}. "
         f"Content chunk {idx} with synthetic text for BM25. "
         f"Lorem ipsum dolor sit amet, iteration {idx % 100} about {topic}. "
-        f"Keywords: dxrk memory palace drawer wing room benchmark {idx}. "
+        f"Keywords: dxrk memory malla fragmento nodo celda benchmark {idx}. "
         f"Detail paragraph for search relevance scoring test case {idx}."
     )
 
 
-def _build_corpus(palace_path: str, n_drawers: int, wing: str = "bench", room: str = "general") -> Palace:
-    pal = Palace(palace_path)
+def _build_corpus(malla_path: str, n_fragmentos: int, nodo: str = "bench", celda: str = "general") -> Malla:
+    pal = Malla(malla_path)
     pal.init()
-    # Use batched add_drawer equivalent via direct Palace.add_drawer loop.
-    # For throughput we keep per-drawer lock-free via single palace init, not per-file mine.
-    for i in range(n_drawers):
+    # Use batched add_fragmento equivalent via direct Malla.add_fragmento loop.
+    # For throughput we keep per-fragmento lock-free via single malla init, not per-file mine.
+    for i in range(n_fragmentos):
         content = _synthetic_doc(i)
         source_file = f"/tmp/synth/doc_{i:05d}.md"
-        pal.add_drawer(wing=wing, room=room, content=content, source_file=source_file, chunk_index=0)
+        pal.add_fragmento(nodo=nodo, celda=celda, content=content, source_file=source_file, chunk_index=0)
     return pal
 
 
-def _bench_search(pal: Palace, queries: list[str], runs: int, n_results: int = 5) -> list[float]:
+def _bench_search(pal: Malla, queries: list[str], runs: int, n_results: int = 5) -> list[float]:
     times: list[float] = []
     qlen = len(queries)
     for r in range(runs):
@@ -142,7 +142,7 @@ def _bench_search(pal: Palace, queries: list[str], runs: int, n_results: int = 5
     return times
 
 
-def _bench_search_with_window(pal: Palace, queries: list[str], runs: int) -> list[float]:
+def _bench_search_with_window(pal: Malla, queries: list[str], runs: int) -> list[float]:
     times: list[float] = []
     qlen = len(queries)
     for r in range(runs):
@@ -154,28 +154,28 @@ def _bench_search_with_window(pal: Palace, queries: list[str], runs: int) -> lis
     return times
 
 
-def _bench_mine_throughput(n_files: int = 200, wing: str = "bench") -> tuple[float, dict[str, float]]:
-    with tempfile.TemporaryDirectory() as proj_td, tempfile.TemporaryDirectory() as palace_td:
+def _bench_mine_throughput(n_files: int = 200, nodo: str = "bench") -> tuple[float, dict[str, float]]:
+    with tempfile.TemporaryDirectory() as proj_td, tempfile.TemporaryDirectory() as malla_td:
         proj = Path(proj_td)
         for i in range(n_files):
-            # each file ~1.2k chars -> ~2 chunks per file with 800/100? but add_drawer mine path uses single-pass
-            # mine() will chunk each file; throughput measured as drawers/sec
+            # each file ~1.2k chars -> ~2 chunks per file with 800/100? but add_fragmento mine path uses single-pass
+            # mine() will chunk each file; throughput measured as fragmentos/sec
             (proj / f"file_{i:04d}.md").write_text(_synthetic_doc(i) * 2, encoding="utf-8")
-        pal = Palace(palace_td)
+        pal = Malla(malla_td)
         pal.init()
         t0 = time.perf_counter()
-        result = pal.mine(proj, wing=wing, room="bench")
+        result = pal.mine(proj, nodo=nodo, celda="bench")
         t1 = time.perf_counter()
         elapsed = t1 - t0
-        raw = result.get("drawers_added", 0)
+        raw = result.get("fragmentos_added", 0)
         if isinstance(raw, (int, float)):
-            drawers = int(raw)
+            fragmentos = int(raw)
         elif isinstance(raw, str) and raw.isdigit():
-            drawers = int(raw)
+            fragmentos = int(raw)
         else:
-            drawers = 0
-        thr = float(drawers / elapsed) if elapsed > 0 else 0.0
-        return thr, {"files_mined": float(drawers), "elapsed_s": float(elapsed), "throughput_drawers_per_s": thr}
+            fragmentos = 0
+        thr = float(fragmentos / elapsed) if elapsed > 0 else 0.0
+        return thr, {"files_mined": float(fragmentos), "elapsed_s": float(elapsed), "throughput_fragmentos_per_s": thr}
 
 
 def _bench_graph_traverse(n_triples: int = 500) -> list[float]:
@@ -200,32 +200,32 @@ def _bench_graph_traverse(n_triples: int = 500) -> list[float]:
 
 
 def _bench_dialect_compress(n_docs: int = 1000) -> list[float]:
-    dialect = Dialect(entities={"Dxrk": "DXRK", "Palace": "PAL"})
+    dialect = Dialect(entities={"Dxrk": "DXRK", "Malla": "PAL"})
     docs = [_synthetic_doc(i) for i in range(n_docs)]
     # warmup
-    dialect.compress(docs[0], metadata={"wing": "bench", "room": "general", "source_file": "bench.md"})
+    dialect.compress(docs[0], metadata={"nodo": "bench", "celda": "general", "source_file": "bench.md"})
     times: list[float] = []
     for d in docs:
         t0 = time.perf_counter()
-        dialect.compress(d, metadata={"wing": "bench", "room": "general", "source_file": "bench.md"})
+        dialect.compress(d, metadata={"nodo": "bench", "celda": "general", "source_file": "bench.md"})
         t1 = time.perf_counter()
         times.append(t1 - t0)
     return times
 
 
-def _bench_layers_wake_up(n_drawers: int = 200) -> list[float]:
+def _bench_layers_wake_up(n_fragmentos: int = 200) -> list[float]:
     with tempfile.TemporaryDirectory() as td:
-        pal = Palace(td)
+        pal = Malla(td)
         pal.init()
-        for i in range(n_drawers):
-            pal.add_drawer(
-                wing="bench",
-                room="general",
+        for i in range(n_fragmentos):
+            pal.add_fragmento(
+                nodo="bench",
+                celda="general",
                 content=_synthetic_doc(i),
                 source_file=f"/tmp/synth/wake_{i}.md",
                 chunk_index=0,
             )
-        stack = MemoryStack(palace_path=td)
+        stack = MemoryStack(malla_path=td)
         # warmup
         stack.wake_up()
         times: list[float] = []
@@ -243,8 +243,8 @@ def _bench_cold_import() -> list[float]:
     times: list[float] = []
     for _ in range(10):
         t0 = time.perf_counter()
-        # re-import palace module attribute lookup as proxy for import cost
-        __import__("dxrk.memory.palace")
+        # re-import malla module attribute lookup as proxy for import cost
+        __import__("dxrk.memory.malla")
         t1 = time.perf_counter()
         times.append(t1 - t0)
     return times
@@ -262,9 +262,9 @@ def _format_markdown(cases: list[BenchCase]) -> str:
     for c in cases:
         s = c.stats
         thr = f"{c.throughput:.0f}/s" if c.throughput is not None else "—"
-        # throughput column overloaded: drawers/s for mine, ops/s otherwise
+        # throughput column overloaded: fragmentos/s for mine, ops/s otherwise
         if c.throughput is not None and "mine" in c.name:
-            thr = f"{c.throughput:.0f} drawers/s"
+            thr = f"{c.throughput:.0f} fragmentos/s"
         elif c.throughput is not None:
             thr = f"{c.throughput:.0f} ops/s"
         lines.append(
@@ -275,10 +275,10 @@ def _format_markdown(cases: list[BenchCase]) -> str:
     lines.append("")
     lines.append("## Notas")
     lines.append(
-        "- `search` usa `Palace.search` híbrido BM25 (`k1=1.5 b=0.75`) + FTS5 trigram→porter fallback, pool 3×/15×."
+        "- `search` usa `Malla.search` híbrido BM25 (`k1=1.5 b=0.75`) + FTS5 trigram→porter fallback, pool 3×/15×."
     )
     lines.append("- `search+window` añade `since`/`before` sobre `filed_at` (stdlib wall-clock).")
-    lines.append("- `mine` mide `Palace.mine` con `O_NONBLOCK` + `S_ISREG` guard, WAL, locks `~/.dxrk/locks`.")
+    lines.append("- `mine` mide `Malla.mine` con `O_NONBLOCK` + `S_ISREG` guard, WAL, locks `~/.dxrk/locks`.")
     lines.append("- `graph traverse` BFS depth 2 sobre `KnowledgeGraph` WAL, `as_of` temporal.")
     lines.append("- `dialect compress` AAAK `Dialect.compress` single-doc 800 chars.")
     lines.append("- `wake_up L0+L1` 600–900 tok (`MemoryStack.wake_up`).")
@@ -304,7 +304,7 @@ def run_suite(
 
     # --- search benchmarks per corpus size ---
     for n in corpus_sizes:
-        # isolate each corpus in its own tmp palace to avoid cross-contamination
+        # isolate each corpus in its own tmp malla to avoid cross-contamination
         with tempfile.TemporaryDirectory() as td:
             pal = _build_corpus(td, n)
             # warmup 5 queries before timing
@@ -332,7 +332,7 @@ def run_suite(
     # --- mine throughput ---
     n_files = 30 if quick else 200
     thr_mine, extra = _bench_mine_throughput(n_files=n_files)
-    # report mine as ops/s = drawers/s; corpus = total drawers mined
+    # report mine as ops/s = fragmentos/s; corpus = total fragmentos mined
     mine_stats = {
         "count": 1.0,
         "mean_ms": float(extra["elapsed_s"] * 1000),
@@ -377,7 +377,7 @@ def run_suite(
     )
 
     # --- layers wake_up ---
-    w_times = _bench_layers_wake_up(n_drawers=50 if quick else 200)
+    w_times = _bench_layers_wake_up(n_fragmentos=50 if quick else 200)
     wstats = _stats_ms(w_times)
     w_thr = float(len(w_times) / sum(w_times)) if sum(w_times) > 0 else 0.0
     cases.append(

@@ -20,11 +20,11 @@ from dxrk.memory.stress import (
 
 
 class TestStress:
-    def test_stress_empty_palace(self, tmp_path: Path) -> None:
-        """Empty palace has zero stress."""
-        from dxrk.memory.palace import DxrkMemory
+    def test_stress_empty_malla(self, tmp_path: Path) -> None:
+        """Empty malla has zero stress."""
+        from dxrk.memory.malla import DxrkMemory
 
-        dm = DxrkMemory(str(tmp_path / "palace"))
+        dm = DxrkMemory(str(tmp_path / "malla"))
         dm.init()
         try:
             state = compute_system_stress(dm)
@@ -35,15 +35,15 @@ class TestStress:
 
     def test_stress_density_component(self, tmp_path: Path) -> None:
         """Higher density increases stress (when cap > 0)."""
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
-        dm = DxrkMemory(str(tmp_path / "palace"))
+        dm = DxrkMemory(str(tmp_path / "malla"))
         dm.init()
         try:
             # Need to set a cap for density to be meaningful
-            dm._max_entries_per_wing = 100
+            dm._max_entries_per_nodo = 100
             for i in range(50):
-                dm.add_drawer("w", "r", f"content {i}", f"/f{i}.md", i)
+                dm.add_fragmento("w", "r", f"content {i}", f"/f{i}.md", i)
             state = compute_system_stress(dm)
             assert state.density > 0.0
             assert state.density <= 1.0
@@ -52,13 +52,13 @@ class TestStress:
 
     def test_stress_inverse_stability(self, tmp_path: Path) -> None:
         """Low stability (high 1/S) increases stress."""
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
-        dm = DxrkMemory(str(tmp_path / "palace"))
+        dm = DxrkMemory(str(tmp_path / "malla"))
         dm.init()
         try:
-            # Add drawer with very low S (will be migrated to have S)
-            dm.add_drawer("w", "r", "unstable", "/u.md", 0)
+            # Add fragmento with very low S (will be migrated to have S)
+            dm.add_fragmento("w", "r", "unstable", "/u.md", 0)
             state = compute_system_stress(dm)
             assert state.avg_inv_stability >= 0.0
         finally:
@@ -66,19 +66,19 @@ class TestStress:
 
     def test_stress_recent_quarantines(self, tmp_path: Path) -> None:
         """Recent quarantines increase stress."""
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
-        dm = DxrkMemory(str(tmp_path / "palace"))
+        dm = DxrkMemory(str(tmp_path / "malla"))
         dm.init()
         try:
-            did = dm.add_drawer("w", "r", "to quarantine", "/q.md", 0)
+            did = dm.add_fragmento("w", "r", "to quarantine", "/q.md", 0)
             # Manually quarantine (simulate checksum mismatch)
-            from dxrk.memory.palace import DxrkMemory
+            from dxrk.memory.malla import DxrkMemory
 
             col = dm._collection(create=False)
             raw = col.get(ids=[did], include=["documents", "metadatas"])
             col.upsert(documents=["TAMPERED"], ids=[did], metadatas=[raw.metadatas[0]])
-            dm.get_drawer(did)  # triggers quarantine
+            dm.get_fragmento(did)  # triggers quarantine
             state = compute_system_stress(dm)
             assert state.recent_quarantines >= 1
         finally:

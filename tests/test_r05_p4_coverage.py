@@ -2097,9 +2097,58 @@ def test_tui_detection_screen_run_detection_work(tmp_path: Path, monkeypatch: py
     assert True  # just ensure no crash
 
 
-async def test_welcome_badge_refreshes_after_tenant_switch(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_tui_legacy_detection_show_results_covers_tool_and_config_rows(
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    from types import SimpleNamespace
+
+    from dxrk.tui.app import DetectionScreen
+    from dxrk.tui.context import TUIContext, ctx_var
+
+    detection = SimpleNamespace(
+        system=SimpleNamespace(os="linux", arch="x64", shell="bash", profile=SimpleNamespace(package_manager="apt")),
+        tools={
+            "git": SimpleNamespace(installed=True, path="/usr/bin/git"),
+            "ripgrep": SimpleNamespace(installed=False, path=""),
+        },
+        configs=[SimpleNamespace(path="/home/user/.claude")],
+    )
+    token = ctx_var.set(TUIContext(version="test", detection=detection))
+    try:
+        screen = DetectionScreen()
+        spinner = MagicMock()
+        container = MagicMock()
+        scroll = MagicMock()
+        status = MagicMock()
+
+        def fake_query(selector, *a, **k):  # type: ignore[no-untyped-def]
+            if "detection-spinner" in str(selector):
+                return spinner
+            if "detection-container" in str(selector):
+                return container
+            if "detection-status" in str(selector):
+                return status
+            return scroll
+
+        static_cls = MagicMock()
+        monkeypatch.setattr(screen, "query_one", fake_query)
+        monkeypatch.setattr("dxrk.tui.app.VerticalScroll", lambda *a, **k: scroll)
+        monkeypatch.setattr("dxrk.tui.app.Static", static_cls)
+
+        screen._show_results()
+
+        rendered = [str(call.args[0]) for call in static_cls.call_args_list if call.args]
+        assert spinner.display is False
+        assert container.mount.called
+        assert any("git" in text and "/usr/bin/git" in text for text in rendered)
+        assert any("ripgrep" in text for text in rendered)
+        assert any("/home/user/.claude" in text for text in rendered)
+        assert status.update.called
+    finally:
+        ctx_var.reset(token)
+
+
+async def test_welcome_badge_refreshes_after_tenant_switch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Regression: cached WelcomeScreen must show the new tenant after switch."""
     _iso_home(tmp_path, monkeypatch)
     from textual.widgets import Static

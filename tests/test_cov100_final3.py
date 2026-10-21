@@ -4,7 +4,6 @@ opencode/task/planner/router/yolo/pool/proxy/git/chunker."""
 
 from __future__ import annotations
 
-import io
 import json
 import os
 import threading
@@ -158,9 +157,9 @@ class TestModelBranches:
         assert sel.has_component(ComponentID.SDD) is False
 
     def test_resolve_home_error(self, monkeypatch):
-        from dxrk.model import _resolve_home
-
         import pytest
+
+        from dxrk.model import _resolve_home
 
         monkeypatch.setattr(os.path, "expanduser", lambda p: "~")
         with pytest.raises(OSError):
@@ -310,10 +309,10 @@ class TestPlannerBranches:
             assert AgentID.CLAUDE_CODE in resolved.unsupported_agents
 
     def test_unknown_dependency(self):
+        import pytest
+
         from dxrk.models import ComponentID
         from dxrk.planner import DependencyResolver, Graph
-
-        import pytest
 
         r = DependencyResolver(Graph({ComponentID.THEME: [ComponentID.SDD]}))
         with pytest.raises(ValueError, match="unknown dependency"):
@@ -416,12 +415,12 @@ class TestPoolProxyBranches:
         pool.close()
 
     def test_do_ctx_canceled(self):
+        from datetime import timedelta
+
         import httpx
 
         from dxrk.utils.http.context import _background, _with_cancel
         from dxrk.utils.http.pool import new_connection_pool, new_pooled_client
-
-        from datetime import timedelta
 
         pool = new_connection_pool(None)
         pc = new_pooled_client(pool, timedelta(seconds=5))

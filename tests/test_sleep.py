@@ -23,11 +23,11 @@ from dxrk.memory.sleep import (
 )
 
 
-def make_drawer(did: str, wing: str = "w", room: str = "r", **kwargs):
-    """Create a mock drawer for testing."""
+def make_fragmento(did: str, nodo: str = "w", celda: str = "r", **kwargs):
+    """Create a mock fragmento for testing."""
     meta = {
-        "wing": wing,
-        "room": room,
+        "nodo": nodo,
+        "celda": celda,
         "filed_at": (datetime.now(UTC) - timedelta(days=60)).isoformat(),
         "S": 10.0,
         "D": 5.0,
@@ -43,44 +43,44 @@ def make_drawer(did: str, wing: str = "w", room: str = "r", **kwargs):
     }
 
 
-def make_palace(drawers: list):
-    """Create a mock palace with given drawers."""
-    palace = Mock()
-    palace._path = "/tmp/palace"
-    palace.iter_drawers.return_value = drawers
+def make_malla(fragmentos: list):
+    """Create a mock malla with given fragmentos."""
+    malla = Mock()
+    malla._path = "/tmp/malla"
+    malla.iter_fragmentos.return_value = fragmentos
 
-    def get_drawer(did):
-        for d in drawers:
+    def get_fragmento(did):
+        for d in fragmentos:
             if d["id"] == did:
                 return d
         return None
 
-    palace.get_drawer.side_effect = get_drawer
-    palace.supersede_drawer = Mock()
-    palace.update_drawer = Mock()
-    return palace
+    malla.get_fragmento.side_effect = get_fragmento
+    malla.supersede_fragmento = Mock()
+    malla.update_fragmento = Mock()
+    return malla
 
 
 class TestSleep:
     def test_is_protected_pinned(self) -> None:
-        """Pinned drawers are protected."""
-        drawer = make_drawer("d1", pinned=True)
-        assert is_protected(drawer) is True
+        """Pinned fragmentos are protected."""
+        fragmento = make_fragmento("d1", pinned=True)
+        assert is_protected(fragmento) is True
 
     def test_is_protected_quarantined(self) -> None:
-        """Quarantined drawers are protected."""
-        drawer = make_drawer("d1", quarantined=True)
-        assert is_protected(drawer) is True
+        """Quarantined fragmentos are protected."""
+        fragmento = make_fragmento("d1", quarantined=True)
+        assert is_protected(fragmento) is True
 
     def test_is_protected_recent_valid_to(self) -> None:
         """Recent valid_to protects."""
-        drawer = make_drawer("d1", valid_to=(datetime.now(UTC) - timedelta(days=3)).isoformat())
-        assert is_protected(drawer) is True
+        fragmento = make_fragmento("d1", valid_to=(datetime.now(UTC) - timedelta(days=3)).isoformat())
+        assert is_protected(fragmento) is True
 
     def test_is_protected_old_valid_to(self) -> None:
         """Old valid_to does not protect."""
-        drawer = make_drawer("d1", valid_to=(datetime.now(UTC) - timedelta(days=10)).isoformat())
-        assert is_protected(drawer) is False
+        fragmento = make_fragmento("d1", valid_to=(datetime.now(UTC) - timedelta(days=10)).isoformat())
+        assert is_protected(fragmento) is False
 
     def test_age_days(self) -> None:
         """Age calculation works."""
@@ -97,29 +97,29 @@ class TestSleep:
 
     def test_select_sleep_candidates_basic(self) -> None:
         """Select candidates based on PE, staleness, contradiction."""
-        drawers = [
-            make_drawer("d1", score_ledger=[{"pe": 0.5}]),  # high PE
-            make_drawer("d2", score_ledger=[{"pe": 0.1}]),  # low PE
-            make_drawer("d3", superseded_count=2),  # contradiction
+        fragmentos = [
+            make_fragmento("d1", score_ledger=[{"pe": 0.5}]),  # high PE
+            make_fragmento("d2", score_ledger=[{"pe": 0.1}]),  # low PE
+            make_fragmento("d3", superseded_count=2),  # contradiction
         ]
-        palace = make_palace(drawers)
-        candidates = select_sleep_candidates(palace, limit=10)
+        malla = make_malla(fragmentos)
+        candidates = select_sleep_candidates(malla, limit=10)
         assert len(candidates) >= 2  # d1 (PE) and d3 (contradiction)
         # d1 should have reason "pe_high"
         reasons = [c.reason for c in candidates]
         assert "pe_high" in reasons or "contradiction" in reasons
 
     def test_select_sleep_candidates_excludes_protected(self) -> None:
-        """Protected drawers excluded."""
-        drawers = [
-            make_drawer("d1", pinned=True),
-            make_drawer("d2", quarantined=True),
-            make_drawer("d3", valid_to=(datetime.now(UTC) - timedelta(days=3)).isoformat()),
-            make_drawer("d4"),  # normal
+        """Protected fragmentos excluded."""
+        fragmentos = [
+            make_fragmento("d1", pinned=True),
+            make_fragmento("d2", quarantined=True),
+            make_fragmento("d3", valid_to=(datetime.now(UTC) - timedelta(days=3)).isoformat()),
+            make_fragmento("d4"),  # normal
         ]
-        palace = make_palace(drawers)
-        candidates = select_sleep_candidates(palace, limit=10)
-        ids = [c.drawer_id for c in candidates]
+        malla = make_malla(fragmentos)
+        candidates = select_sleep_candidates(malla, limit=10)
+        ids = [c.fragmento_id for c in candidates]
         assert "d1" not in ids
         assert "d2" not in ids
         assert "d3" not in ids
@@ -127,85 +127,85 @@ class TestSleep:
 
     def test_stress_lowers_threshold(self) -> None:
         """Stress mode lowers selection threshold."""
-        drawers = [make_drawer(f"d{i}", score_ledger=[{"pe": 0.15}]) for i in range(5)]
-        palace = make_palace(drawers)
+        fragmentos = [make_fragmento(f"d{i}", score_ledger=[{"pe": 0.15}]) for i in range(5)]
+        malla = make_malla(fragmentos)
 
-        normal = select_sleep_candidates(palace, limit=10, stress_active=False)
-        stress = select_sleep_candidates(palace, limit=10, stress_active=True)
+        normal = select_sleep_candidates(malla, limit=10, stress_active=False)
+        stress = select_sleep_candidates(malla, limit=10, stress_active=True)
         assert len(stress) >= len(normal)
 
     def test_consolidate_candidate_success(self) -> None:
         """Consolidation updates S/D/rd on success."""
-        drawer = make_drawer("d1", S=10.0, D=5.0, rd=100.0, score_ledger=[{"pe": 0.1}])
-        palace = make_palace([drawer])
+        fragmento = make_fragmento("d1", S=10.0, D=5.0, rd=100.0, score_ledger=[{"pe": 0.1}])
+        malla = make_malla([fragmento])
 
         candidate = SleepCandidate("d1", priority=1.0, reason="pe_high")
-        result = consolidate_candidate(palace, candidate)
+        result = consolidate_candidate(malla, candidate)
 
         assert result["status"] == "consolidated"
         assert "S" in result
         assert "D" in result
-        palace.update_drawer.assert_called()
+        malla.update_fragmento.assert_called()
 
     def test_consolidate_candidate_lapse(self) -> None:
         """Consolidation applies lapse on negative PE."""
-        drawer = make_drawer("d1", S=10.0, D=5.0, rd=100.0, score_ledger=[{"pe": -0.3}])
-        palace = make_palace([drawer])
+        fragmento = make_fragmento("d1", S=10.0, D=5.0, rd=100.0, score_ledger=[{"pe": -0.3}])
+        malla = make_malla([fragmento])
 
         candidate = SleepCandidate("d1", priority=1.0, reason="pe_high")
-        result = consolidate_candidate(palace, candidate)
+        result = consolidate_candidate(malla, candidate)
 
         assert result["status"] == "consolidated"
-        palace.update_drawer.assert_called()
+        malla.update_fragmento.assert_called()
 
     def test_consolidate_protected_skipped(self) -> None:
-        """Protected drawers skipped."""
-        drawer = make_drawer("d1", pinned=True)
-        palace = make_palace([drawer])
+        """Protected fragmentos skipped."""
+        fragmento = make_fragmento("d1", pinned=True)
+        malla = make_malla([fragmento])
 
         candidate = SleepCandidate("d1", priority=1.0, reason="pe_high")
-        result = consolidate_candidate(palace, candidate)
+        result = consolidate_candidate(malla, candidate)
 
         assert result["status"] == "protected"
 
     def test_reorganize_near_dup_merge(self) -> None:
         """Near-duplicates merged in REM."""
         doc = "hello world this is a test document about memory consolidation hello world this is a test document about memory consolidation"
-        drawers = [
-            make_drawer("d1", document=doc, S=10.0),
-            make_drawer("d2", document=doc + " extra", S=5.0),  # similar
+        fragmentos = [
+            make_fragmento("d1", document=doc, S=10.0),
+            make_fragmento("d2", document=doc + " extra", S=5.0),  # similar
         ]
-        palace = make_palace(drawers)
+        malla = make_malla(fragmentos)
 
         candidate = SleepCandidate("d1", priority=1.0, reason="near_dup")
-        result = reorganize_candidate(palace, candidate)
+        result = reorganize_candidate(malla, candidate)
 
         # Should merge - might not if similarity < 0.85, so check both
         assert result["status"] in ("merged", "no_merge")
         if result["status"] == "merged":
-            palace.supersede_drawer.assert_called()
+            malla.supersede_fragmento.assert_called()
 
-    def test_reorganize_no_merge_different_wing(self) -> None:
-        """Different wing = no merge."""
+    def test_reorganize_no_merge_different_nodo(self) -> None:
+        """Different nodo = no merge."""
         doc = "hello world"
-        drawers = [
-            make_drawer("d1", document=doc, wing="w1"),
-            make_drawer("d2", document=doc, wing="w2"),
+        fragmentos = [
+            make_fragmento("d1", document=doc, nodo="w1"),
+            make_fragmento("d2", document=doc, nodo="w2"),
         ]
-        palace = make_palace(drawers)
+        malla = make_malla(fragmentos)
 
         candidate = SleepCandidate("d1", priority=1.0, reason="near_dup")
-        result = reorganize_candidate(palace, candidate)
+        result = reorganize_candidate(malla, candidate)
 
         assert result["status"] == "no_merge"
 
     def test_sleep_cycle_stats(self, tmp_path: Path) -> None:
         """Sleep cycle returns stats."""
-        drawers = [make_drawer(f"d{i}", score_ledger=[{"pe": 0.5}]) for i in range(5)]
-        palace = make_palace(drawers)
-        palace._path = str(tmp_path)
+        fragmentos = [make_fragmento(f"d{i}", score_ledger=[{"pe": 0.5}]) for i in range(5)]
+        malla = make_malla(fragmentos)
+        malla._path = str(tmp_path)
 
-        stats = sleep_cycle(palace, limit=5, stress_active=False)
+        stats = sleep_cycle(malla, limit=5, stress_active=False)
 
         assert "candidates" in stats
         assert "nrem_consolidated" in stats
@@ -229,10 +229,10 @@ class TestSleep:
         assert loaded.total_consolidated == 0
 
     def test_reconsolidate_labile(self) -> None:
-        """Labile drawers decay if not reconsolidated."""
-        drawer = make_drawer("d1", labile_until=(datetime.now(UTC) - timedelta(hours=1)).isoformat())
-        palace = make_palace([drawer])
+        """Labile fragmentos decay if not reconsolidated."""
+        fragmento = make_fragmento("d1", labile_until=(datetime.now(UTC) - timedelta(hours=1)).isoformat())
+        malla = make_malla([fragmento])
 
-        count = reconsolidate_labile(palace)
+        count = reconsolidate_labile(malla)
         assert count == 1
-        palace.update_drawer.assert_called()
+        malla.update_fragmento.assert_called()

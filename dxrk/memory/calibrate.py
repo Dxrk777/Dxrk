@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Calibrate wing — QIEO + Thompson Sampling integration for FSRS parameters."""
+"""Calibrate nodo — QIEO + Thompson Sampling integration for FSRS parameters."""
 
 from __future__ import annotations
 
@@ -15,13 +15,13 @@ from .scoring import r_fsrs
 from .thompson import ThompsonConfig, select_evaluation_candidates
 
 CALIBRATION_DIR = ".calibration"
-CALIBRATION_FILE = "{wing}.json"
+CALIBRATION_FILE = "{nodo}.json"
 SCHEMA_VERSION = 2
 
 
 @dataclass(frozen=True)
 class CalibrationParams:
-    """Calibrated FSRS parameters for a wing."""
+    """Calibrated FSRS parameters for a nodo."""
 
     a: float = 1.5  # growth rate
     b: float = 0.2  # stability decay
@@ -36,9 +36,9 @@ class CalibrationParams:
 DEFAULT_PARAMS = CalibrationParams()
 
 
-def load_calibration(palace_path: Path, wing: str) -> CalibrationParams:
+def load_calibration(malla_path: Path, nodo: str) -> CalibrationParams:
     """Load calibration from JSON file."""
-    path = palace_path / CALIBRATION_DIR / CALIBRATION_FILE.format(wing=wing)
+    path = malla_path / CALIBRATION_DIR / CALIBRATION_FILE.format(nodo=nodo)
     if not path.exists():
         return DEFAULT_PARAMS
     try:
@@ -57,18 +57,18 @@ def load_calibration(palace_path: Path, wing: str) -> CalibrationParams:
         return DEFAULT_PARAMS
 
 
-def save_calibration(palace_path: Path, wing: str, params: CalibrationParams) -> None:
+def save_calibration(malla_path: Path, nodo: str, params: CalibrationParams) -> None:
     """Save calibration to JSON file (0o600)."""
-    cal_dir = palace_path / CALIBRATION_DIR
+    cal_dir = malla_path / CALIBRATION_DIR
     cal_dir.mkdir(exist_ok=True)
-    path = cal_dir / CALIBRATION_FILE.format(wing=wing)
+    path = cal_dir / CALIBRATION_FILE.format(nodo=nodo)
     path.write_text(json.dumps(asdict(params), indent=2))
     path.chmod(0o600)
 
 
 def evaluate_recall_at_k(
-    palace,
-    wing: str,
+    malla,
+    nodo: str,
     params: CalibrationParams,
     k: int = 10,
     sample_size: int = 50,
@@ -76,30 +76,30 @@ def evaluate_recall_at_k(
     """
     Evaluate recall@k using given FSRS parameters.
 
-    Simulates queries against the palace and measures how often
-    the correct drawer is in top-k.
+    Simulates queries against the malla and measures how often
+    the correct fragmento is in top-k.
     """
-    # Get drawers from this wing
-    drawers = [d for d in palace.iter_drawers() if d.get("metadata", {}).get("wing") == wing]
-    if len(drawers) < 2:
+    # Get fragmentos from this nodo
+    fragmentos = [d for d in malla.iter_fragmentos() if d.get("metadata", {}).get("nodo") == nodo]
+    if len(fragmentos) < 2:
         return 0.0
 
     # Sample queries
-    queries = random.sample(drawers, min(sample_size, len(drawers)))
+    queries = random.sample(fragmentos, min(sample_size, len(fragmentos)))
     hits = 0
 
-    for q_drawer in queries:
-        q_id = q_drawer["id"]
-        q_drawer.get("metadata", {})
+    for q_fragmento in queries:
+        q_id = q_fragmento["id"]
+        q_fragmento.get("metadata", {})
 
         # Get true content for similarity
-        q_doc = q_drawer.get("document", "")
+        q_doc = q_fragmento.get("document", "")
         if not q_doc:
             continue
 
-        # Score all drawers with these params
+        # Score all fragmentos with these params
         scored = []
-        for d in drawers:
+        for d in fragmentos:
             if d["id"] == q_id:
                 continue
             meta = d.get("metadata", {})
@@ -119,16 +119,16 @@ def evaluate_recall_at_k(
     return hits / len(queries) if queries else 0.0
 
 
-def calibrate_wing(
-    palace,
-    wing: str,
+def calibrate_nodo(
+    malla,
+    nodo: str,
     qieo_config: QIEOConfig | None = None,
     thompson_config: ThompsonConfig | None = None,
     objective_k: int = 10,
     objective_samples: int = 30,
 ) -> CalibrationParams:
     """
-    Calibrate FSRS parameters for a wing using QIEO + Thompson Sampling.
+    Calibrate FSRS parameters for a nodo using QIEO + Thompson Sampling.
 
     Process:
     1. Thompson Sampling selects evaluation candidates (explore/exploit)
@@ -136,8 +136,8 @@ def calibrate_wing(
     3. Save calibrated params
 
     Args:
-        palace: DxrkMemory instance
-        wing: wing name to calibrate
+        malla: DxrkMemory instance
+        nodo: nodo name to calibrate
         qieo_config: QIEO configuration
         thompson_config: Thompson Sampling configuration
         objective_k: k for recall@k
@@ -152,16 +152,16 @@ def calibrate_wing(
         thompson_config = ThompsonConfig()
 
     # Select evaluation candidates via Thompson Sampling
-    candidate_ids = select_evaluation_candidates(palace, n=20, config=thompson_config)
+    candidate_ids = select_evaluation_candidates(malla, n=20, config=thompson_config)
 
     if not candidate_ids:
         return DEFAULT_PARAMS
 
-    # Get candidate drawers
+    # Get candidate fragmentos
     candidates = []
-    for drawer in palace.iter_drawers():
-        if drawer["id"] in candidate_ids:
-            candidates.append(drawer)
+    for fragmento in malla.iter_fragmentos():
+        if fragmento["id"] in candidate_ids:
+            candidates.append(fragmento)
 
     if len(candidates) < 2:
         return DEFAULT_PARAMS
@@ -170,7 +170,7 @@ def calibrate_wing(
     def objective(params_list: list[float]) -> float:
         a, b, c, pe_lambda = params_list
         test_params = CalibrationParams(a=a, b=b, c=c, pe_lambda=pe_lambda)
-        return evaluate_recall_at_k(palace, wing, test_params, k=objective_k, sample_size=objective_samples)
+        return evaluate_recall_at_k(malla, nodo, test_params, k=objective_k, sample_size=objective_samples)
 
     # Bounds for parameters (based on FSRS literature)
     bounds = [
@@ -195,18 +195,18 @@ def calibrate_wing(
         schema_version=SCHEMA_VERSION,
     )
 
-    save_calibration(Path(palace._path), wing, result)
+    save_calibration(Path(malla._path), nodo, result)
     return result
 
 
-def get_calibration_params(palace_path: Path, wing: str) -> CalibrationParams:
-    """Get calibration params for a wing (load from file or defaults)."""
-    return load_calibration(palace_path, wing)
+def get_calibration_params(malla_path: Path, nodo: str) -> CalibrationParams:
+    """Get calibration params for a nodo (load from file or defaults)."""
+    return load_calibration(malla_path, nodo)
 
 
-def list_calibrated_wings(palace_path: Path) -> list[str]:
-    """List wings that have calibration files."""
-    cal_dir = palace_path / CALIBRATION_DIR
+def list_calibrated_nodos(malla_path: Path) -> list[str]:
+    """List nodos that have calibration files."""
+    cal_dir = malla_path / CALIBRATION_DIR
     if not cal_dir.exists():
         return []
     return [f.stem for f in cal_dir.glob("*.json")]

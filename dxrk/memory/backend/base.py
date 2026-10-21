@@ -16,12 +16,12 @@ class BackendError(Exception):
     """Base class for every storage-backend error."""
 
 
-class PalaceNotFoundError(BackendError, FileNotFoundError):
-    """Raised when get_collection(create=False) is called on a missing palace."""
+class MallaNotFoundError(BackendError, FileNotFoundError):
+    """Raised when get_collection(create=False) is called on a missing malla."""
 
 
-class CollectionNotInitializedError(PalaceNotFoundError):
-    """Palace exists but requested collection has never been created."""
+class CollectionNotInitializedError(MallaNotFoundError):
+    """Malla exists but requested collection has never been created."""
 
 
 class BackendClosedError(BackendError):
@@ -46,8 +46,8 @@ class EmbedderIdentityMismatchError(BackendError):
 
 
 @dataclass(frozen=True, slots=True)
-class PalaceRef:
-    """Handle to a palace consumed by backends."""
+class MallaRef:
+    """Handle to a malla consumed by backends."""
 
     id: str
     local_path: str | None = None
@@ -237,7 +237,7 @@ class BaseCollection(ABC):
 
 
 class BaseBackend(ABC):
-    """Long-lived factory serving many palaces."""
+    """Long-lived factory serving many sangres."""
 
     name: ClassVar[str]
     spec_version: ClassVar[str] = "1.0"
@@ -247,19 +247,19 @@ class BaseBackend(ABC):
     def get_collection(
         self,
         *,
-        palace: PalaceRef,
+        malla: MallaRef,
         collection_name: str,
         create: bool = False,
         options: dict[str, object] | None = None,
     ) -> BaseCollection: ...
 
-    def close_palace(self, palace: PalaceRef) -> None:
+    def close_malla(self, malla: MallaRef) -> None:
         return None
 
     def close(self) -> None:
         return None
 
-    def health(self, palace: PalaceRef | None = None) -> HealthStatus:
+    def health(self, malla: MallaRef | None = None) -> HealthStatus:
         return HealthStatus.healthy()
 
     @classmethod

@@ -25,13 +25,13 @@ pegar aquí. Hay baseline vía pytest opcional
 | search BM25 hybrid (1k) | 1.29 ms | 715 ops/s |
 | search BM25 hybrid (10k) | 1.45 ms | 635 ops/s |
 | search+window BM25 | 1.99 ms | 464 ops/s |
-| mine throughput | 23.01 ms | 1304 drawers/s |
+| mine throughput | 23.01 ms | 1304 fragmentos/s |
 | graph traverse depth2 | 0.03 ms | 23708 ops/s |
 | dialect AAAK compress | 0.14 ms | 7552 ops/s |
 | wake_up L0+L1 | 1.24 ms | 814 ops/s |
 | cold import proxy | 0.47 µs | — |
 
-Config: warmup 5 queries, corpus 1k/10k drawers, `QUERY_SET` de 8 términos,
+Config: warmup 5 queries, corpus 1k/10k fragmentos, `QUERY_SET` de 8 términos,
 BM25 (`k1=1.5 b=0.75`) + FTS5 trigram→porter, WAL `0o600`.
 
 ## Recall híbrido (2026-09-27, `bench_recall`)
@@ -89,7 +89,7 @@ Artefacto: `benchmarks/results/2026-09-27_bench_recall.json`
 - Latencias no estrictamente comparables: el híbrido se mide end-to-end
   (sqlite + rerank) y las ablaciones como scoring en Python sobre el corpus
   pre-cargado (fetch excluido); el corpus (60 docs) no predice latencia a
-  1k/10k drawers (ver baseline de arriba para escala).
+  1k/10k fragmentos (ver baseline de arriba para escala).
 - Una sola máquina / una sola corrida de calidad (determinista) — la
   latencia varía con el hardware; re-ejecutar localmente.
 

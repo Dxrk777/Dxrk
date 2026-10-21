@@ -28,18 +28,18 @@ class TestReconsolidationEngine:
         assert 5.9 < diff_hours < 6.1
 
     def test_is_labile_after_mark(self) -> None:
-        """Drawer is labile immediately after mark_labile."""
+        """Fragmento is labile immediately after mark_labile."""
         state = ReconsolidationState()
         state = mark_labile(state)
         assert is_labile(state) is True
 
     def test_is_labile_false_when_empty(self) -> None:
-        """Drawer not labile when labile_until is empty."""
+        """Fragmento not labile when labile_until is empty."""
         state = ReconsolidationState()
         assert is_labile(state) is False
 
     def test_is_labile_false_after_window(self) -> None:
-        """Drawer not labile after window expires."""
+        """Fragmento not labile after window expires."""
         state = ReconsolidationState()
         # Set to 7 hours ago
         past = datetime.now(UTC) - timedelta(hours=7)
@@ -83,7 +83,7 @@ class TestReconsolidationEngine:
         assert new_state.reconsolidation_count == 0  # not incremented
 
     def test_reconsolidate_not_labile_no_change(self) -> None:
-        """Non-labile drawer returns unchanged."""
+        """Non-labile fragmento returns unchanged."""
         state = ReconsolidationState()
         new_state, s, d, rd = reconsolidate(state, stability=10.0, difficulty=5.0, rd=100.0, outcome=0.8)
         assert s == 10.0

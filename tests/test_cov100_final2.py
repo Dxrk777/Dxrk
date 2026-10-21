@@ -222,18 +222,18 @@ class TestMcpBranches:
 
 class TestConfidenceBranches:
     def test_get_with_attrs(self):
-        from dxrk.memory.confidence import find_related_drawers
+        from dxrk.memory.confidence import find_related_fragmentos
 
-        src = SimpleNamespace(id="a", metadata={"wing": "w", "room": "r"}, quarantined=False)
-        other = SimpleNamespace(id="b", metadata={"wing": "w", "room": "r"}, quarantined=False)
-        out = find_related_drawers(lambda i: src, lambda: [src, other], "a")
+        src = SimpleNamespace(id="a", metadata={"nodo": "w", "celda": "r"}, quarantined=False)
+        other = SimpleNamespace(id="b", metadata={"nodo": "w", "celda": "r"}, quarantined=False)
+        out = find_related_fragmentos(lambda i: src, lambda: [src, other], "a")
         assert out == [("b", 0.8)]
 
     def test_protocol_stubs(self):
-        from dxrk.memory.confidence import DrawerGetter, DrawerIterator
+        from dxrk.memory.confidence import FragmentoGetter, FragmentoIterator
 
-        assert DrawerIterator.__call__(None) is None
-        assert DrawerGetter.__call__(None, "x") is None
+        assert FragmentoIterator.__call__(None) is None
+        assert FragmentoGetter.__call__(None, "x") is None
 
 
 class TestReconsolidationBranches:
@@ -316,9 +316,9 @@ class TestCostBranches:
 
 class TestCoordinatorBranches:
     def test_fail_without_task(self):
-        from dxrk.coordinator import Worker
-
         import pytest
+
+        from dxrk.coordinator import Worker
 
         w = Worker(id="w1")
         with pytest.raises(ValueError, match="no started task"):
@@ -425,13 +425,13 @@ class TestScholarBranches:
 
 
 class TestThompsonBranches:
-    def _palace(self, drawers):
-        return SimpleNamespace(iter_drawers=lambda: drawers)
+    def _malla(self, fragmentos):
+        return SimpleNamespace(iter_fragmentos=lambda: fragmentos)
 
     def test_skip_low_visits_and_pinned(self):
-        from dxrk.memory.thompson import thompson_select_drawers
+        from dxrk.memory.thompson import thompson_select_fragmentos
 
-        palace = self._palace(
+        malla = self._malla(
             [
                 {"id": "low", "metadata": {"access_count_total": 0}},
                 {"id": "q", "metadata": {"access_count_total": 99, "quarantined": True}},
@@ -439,13 +439,13 @@ class TestThompsonBranches:
                 {"id": "ok", "metadata": {"access_count_total": 99}},
             ]
         )
-        out = thompson_select_drawers(palace, 5, min_visits=1)
+        out = thompson_select_fragmentos(malla, 5, min_visits=1)
         assert "low" not in out and "pin" not in out and "q" not in out
         assert "ok" in out
 
     def test_default_config(self):
         from dxrk.memory.thompson import select_evaluation_candidates
 
-        palace = self._palace([{"id": "a", "metadata": {"access_count_total": 5}} for _ in range(1)])
-        out = select_evaluation_candidates(palace, 3)
+        malla = self._malla([{"id": "a", "metadata": {"access_count_total": 5}} for _ in range(1)])
+        out = select_evaluation_candidates(malla, 3)
         assert isinstance(out, list)

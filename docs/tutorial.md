@@ -40,20 +40,20 @@ El flag `--tenant` y la variable `DXRK_TENANT` son equivalentes.
 
 ```bash
 python -m dxrk.memory mine ./mi-proyecto
-# mine: {'files_mined': 12, 'files_skipped': 3, 'drawers_added': 40}
+# mine: {'files_mined': 12, 'files_skipped': 3, 'fragmentos_added': 40}
 ```
 
 Notas honestas:
 
 - Indexa archivos de código (p. ej. `.py`); los `.txt` se omiten.
 - Fragmentos de menos de ~50 caracteres se omiten (ruido).
-- Todo queda en `~/.dxrk/memory/sqlite_palace.db` (SQLite FTS5, sin servidor).
+- Todo queda en `~/.dxrk/memory/malla.db` (SQLite FTS5, sin servidor).
 
 ## 4) Busca (2 min)
 
 ```bash
 python -m dxrk.memory search "arquitectura memoria" --n 5
-# {"id": "drawer_default_general_...", "content": "...", "project": "default"}
+# {"id": "fragmento_default_general_...", "content": "...", "project": "default"}
 ```
 
 Semántica: multi-palabra = **AND de tokens** (cada palabra debe aparecer en el

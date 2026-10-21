@@ -315,6 +315,6 @@ class TestAutoRollbackManager:
 
         assert len(manager._rollback_history) == 1
         entry = manager._rollback_history[0]
-        assert entry["wing"] == "w1"
+        assert entry["nodo"] == "w1"
         assert entry["tenant"] == "t1"
         assert entry["severity"] == "critical"

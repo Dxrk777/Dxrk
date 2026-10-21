@@ -737,12 +737,12 @@ class TestProductionState:
 
     def test_collect_metrics(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr("dxrk.memory.stress.compute_system_stress", lambda p: SimpleNamespace(level=0.3))
-        palace = SimpleNamespace(
+        malla = SimpleNamespace(
             search=lambda query, n_results: [],
-            list_wings=lambda: ["w1"],
-            wing_usage=lambda wing: {"quarantined": 1, "count": 5, "budget": 10},
+            list_nodos=lambda: ["w1"],
+            nodo_usage=lambda nodo: {"quarantined": 1, "count": 5, "budget": 10},
         )
-        metrics = collect_health_metrics(palace)
+        metrics = collect_health_metrics(malla)
         assert metrics.calibration_ece == {"w1": 0.05}
         assert metrics.quarantine_count == 1
         assert metrics.stress_level == 0.3
@@ -754,27 +754,27 @@ class TestProductionState:
 
     def test_health_check_and_slo(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr("dxrk.memory.stress.compute_system_stress", lambda p: SimpleNamespace(level=0.1))
-        palace = SimpleNamespace(
+        malla = SimpleNamespace(
             _path=str(tmp_path),
             search=lambda query, n_results: [],
-            list_wings=lambda: [],
-            wing_usage=lambda wing: {},
+            list_nodos=lambda: [],
+            nodo_usage=lambda nodo: {},
         )
-        metrics, status = run_production_health_check(palace)
+        metrics, status = run_production_health_check(malla)
         assert metrics.timestamp != ""
         assert isinstance(status.overall_ok, bool)
         assert (tmp_path / ".production_state.json").exists()
-        assert check_slo(palace).overall_ok == status.overall_ok
+        assert check_slo(malla).overall_ok == status.overall_ok
 
     def test_health_history_truncated(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         from dxrk.memory.production import HEALTH_HISTORY_MAX
 
         monkeypatch.setattr("dxrk.memory.stress.compute_system_stress", lambda p: SimpleNamespace(level=0.1))
-        palace = SimpleNamespace(
+        malla = SimpleNamespace(
             _path=str(tmp_path),
             search=lambda query, n_results: [],
-            list_wings=lambda: [],
-            wing_usage=lambda wing: {},
+            list_nodos=lambda: [],
+            nodo_usage=lambda nodo: {},
         )
         save_production_state(
             tmp_path,
@@ -783,7 +783,7 @@ class TestProductionState:
                 "last_calibration_rollback": "",
             },
         )
-        _, _ = run_production_health_check(palace)
+        _, _ = run_production_health_check(malla)
         assert len(load_production_state(tmp_path)["health_history"]) == HEALTH_HISTORY_MAX
 
 
@@ -837,7 +837,7 @@ class TestAutoRollback:
 
     def test_check_regression_rollback(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         report = EvalReport(
-            wing="w",
+            nodo="w",
             num_queries=10,
             recall_at_k={10: 0.1, 5: 0.1},
             mrr=0.5,
@@ -863,10 +863,10 @@ class TestAutoRollback:
             def __init__(self, dm: object, path: object) -> None:
                 pass
 
-            def run(self, wing: str) -> EvalReport:
+            def run(self, nodo: str) -> EvalReport:
                 return report
 
-        monkeypatch.setattr("dxrk.memory.palace.DxrkMemory", FakeDM)
+        monkeypatch.setattr("dxrk.memory.malla.DxrkMemory", FakeDM)
         monkeypatch.setattr("dxrk.memory.eval_harness.EvalHarness", FakeHarness)
         out = AutoRollbackManager(tmp_path).check_regression()
         assert out["should_rollback"] is True
@@ -874,7 +874,7 @@ class TestAutoRollback:
 
     def test_check_regression_clean(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         report = EvalReport(
-            wing="w",
+            nodo="w",
             num_queries=10,
             recall_at_k={10: 0.9, 5: 0.9},
             mrr=0.9,
@@ -900,10 +900,10 @@ class TestAutoRollback:
             def __init__(self, dm: object, path: object) -> None:
                 pass
 
-            def run(self, wing: str) -> EvalReport:
+            def run(self, nodo: str) -> EvalReport:
                 return report
 
-        monkeypatch.setattr("dxrk.memory.palace.DxrkMemory", FakeDM)
+        monkeypatch.setattr("dxrk.memory.malla.DxrkMemory", FakeDM)
         monkeypatch.setattr("dxrk.memory.eval_harness.EvalHarness", FakeHarness)
         out = AutoRollbackManager(tmp_path).check_regression()
         assert out["should_rollback"] is False
@@ -912,9 +912,9 @@ class TestAutoRollback:
 # ─── memory/judge_continuous.py ────────────────────────────────────────────
 
 
-def _eval_dict(wing: str = "w1", **over: object) -> dict:
+def _eval_dict(nodo: str = "w1", **over: object) -> dict:
     base: dict[str, object] = {
-        "wing": wing,
+        "nodo": nodo,
         "num_queries": 10,
         "recall_at_k": {1: 0.9, 3: 0.9, 5: 0.9, 10: 0.8, 20: 0.8},
         "mrr": 0.7,
@@ -929,8 +929,8 @@ def _eval_dict(wing: str = "w1", **over: object) -> dict:
     return base
 
 
-def _eval_report(wing: str = "w1", **over: object) -> EvalReport:
-    return EvalReport(**_eval_dict(wing, **over))  # type: ignore[arg-type]
+def _eval_report(nodo: str = "w1", **over: object) -> EvalReport:
+    return EvalReport(**_eval_dict(nodo, **over))  # type: ignore[arg-type]
 
 
 class TestJudgeBasics:
@@ -951,7 +951,7 @@ class TestJudgeBasics:
 
         class FakeDM:
             def __init__(self, path: str) -> None:
-                self.palace_path = str(path)
+                self.malla_path = str(path)
 
             def init(self) -> None:
                 pass
@@ -963,14 +963,14 @@ class TestJudgeBasics:
             def __init__(self, dm: object, path: object) -> None:
                 pass
 
-            def run(self, wing: str) -> EvalReport:
-                return _eval_report(wing)
+            def run(self, nodo: str) -> EvalReport:
+                return _eval_report(nodo)
 
-        monkeypatch.setattr("dxrk.memory.palace.DxrkMemory", FakeDM)
+        monkeypatch.setattr("dxrk.memory.malla.DxrkMemory", FakeDM)
         monkeypatch.setattr("dxrk.memory.eval_harness.EvalHarness", FakeHarness)
         out = jc.load_baseline_report(tmp_path, "w1")
         assert out is not None
-        assert out["wing"] == "w1"
+        assert out["nodo"] == "w1"
         assert closed == [True]
 
 
@@ -1011,7 +1011,7 @@ class TestJudgeLoop:
         assert len(calls) == 2
         assert "Judge cycle error" in capsys.readouterr().out
 
-    def test_cycle_empty_wings(self, tmp_path: Path) -> None:
+    def test_cycle_empty_nodos(self, tmp_path: Path) -> None:
         from dxrk.memory.judge_continuous import Verdict
 
         judge = self._judge(tmp_path)
@@ -1022,18 +1022,18 @@ class TestJudgeLoop:
     def test_cycle_pass_and_fail(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         from dxrk.memory.judge_continuous import Verdict, load_judge_state
 
-        (tmp_path / "wing1.jsonl").write_text("{}\n")
+        (tmp_path / "nodo1.jsonl").write_text("{}\n")
         harness = SimpleNamespace(eval_dir=tmp_path)
 
         ok_judge = ContinuousJudge(tmp_path, harness, interval_hours=24)  # type: ignore[arg-type]
         ok = Verdict(True, False, "none", [], {}, None)
-        monkeypatch.setattr(ContinuousJudge, "_verify_wing", lambda self, wing: ok)
+        monkeypatch.setattr(ContinuousJudge, "_verify_nodo", lambda self, nodo: ok)
         ok_judge._run_verification_cycle()
         assert load_judge_state(tmp_path).consecutive_passes == 1
 
         bad_judge = ContinuousJudge(tmp_path, harness, interval_hours=24)  # type: ignore[arg-type]
         bad = Verdict(False, True, "critical", ["x"], {}, None)
-        monkeypatch.setattr(ContinuousJudge, "_verify_wing", lambda self, wing: bad)
+        monkeypatch.setattr(ContinuousJudge, "_verify_nodo", lambda self, nodo: bad)
         bad_judge._run_verification_cycle()
         state = load_judge_state(tmp_path)
         assert state.consecutive_failures == 1
@@ -1041,9 +1041,9 @@ class TestJudgeLoop:
         assert state.last_run != ""
 
 
-class TestJudgeVerifyWing:
+class TestJudgeVerifyVena:
     def _judge(self, tmp_path: Path, **kw: object) -> ContinuousJudge:
-        harness = SimpleNamespace(eval_dir=tmp_path, run=lambda wing: _eval_report())
+        harness = SimpleNamespace(eval_dir=tmp_path, run=lambda nodo: _eval_report())
         return ContinuousJudge(tmp_path, harness, auto_rollback=True, **kw)  # type: ignore[arg-type]
 
     def test_no_current_eval(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1059,9 +1059,9 @@ class TestJudgeVerifyWing:
             def close(self) -> None:
                 pass
 
-        monkeypatch.setattr("dxrk.memory.palace.DxrkMemory", FakeDM)
+        monkeypatch.setattr("dxrk.memory.malla.DxrkMemory", FakeDM)
         monkeypatch.setattr(jc, "load_baseline_report", lambda *a, **k: None)
-        verdict = self._judge(tmp_path)._verify_wing("w1")
+        verdict = self._judge(tmp_path)._verify_nodo("w1")
         assert verdict.passed is True
         assert verdict.details == ["No current evaluation available"]
 
@@ -1079,7 +1079,7 @@ class TestJudgeVerifyWing:
                 pass
 
         saved: list[tuple] = []
-        monkeypatch.setattr("dxrk.memory.palace.DxrkMemory", FakeDM)
+        monkeypatch.setattr("dxrk.memory.malla.DxrkMemory", FakeDM)
         monkeypatch.setattr(jc, "load_baseline_report", lambda *a, **k: _eval_dict() if len(saved) == 0 else None)
 
         def _save(*a, **k):  # type: ignore[no-untyped-def]
@@ -1094,7 +1094,7 @@ class TestJudgeVerifyWing:
             return _eval_dict() if calls["n"] == 1 else None
 
         monkeypatch.setattr(jc, "load_baseline_report", _load)
-        verdict = self._judge(tmp_path)._verify_wing("w1")
+        verdict = self._judge(tmp_path)._verify_nodo("w1")
         assert verdict.details == ["First run - established baseline"]
         assert len(saved) == 1
 
@@ -1119,12 +1119,12 @@ class TestJudgeVerifyWing:
             calls["n"] += 1
             return current if calls["n"] == 1 else baseline
 
-        monkeypatch.setattr("dxrk.memory.palace.DxrkMemory", FakeDM)
+        monkeypatch.setattr("dxrk.memory.malla.DxrkMemory", FakeDM)
         monkeypatch.setattr(jc, "load_baseline_report", _load)
         monkeypatch.setattr(jc, "get_calibration_chain", lambda *a, **k: [SimpleNamespace(), SimpleNamespace()])
         saved_cal: list[tuple] = []
         monkeypatch.setattr("dxrk.memory.calibrate_v2.save_calibration", lambda *a, **k: saved_cal.append(a))
-        verdict = self._judge(tmp_path)._verify_wing("w1")
+        verdict = self._judge(tmp_path)._verify_nodo("w1")
         assert verdict.regression_detected is True
         assert verdict.severity == "critical"
         assert verdict.auto_rollback is True
@@ -1152,12 +1152,12 @@ class TestJudgeVerifyWing:
             calls["n"] += 1
             return current if calls["n"] == 1 else baseline
 
-        monkeypatch.setattr("dxrk.memory.palace.DxrkMemory", FakeDM)
+        monkeypatch.setattr("dxrk.memory.malla.DxrkMemory", FakeDM)
         monkeypatch.setattr(jc, "load_baseline_report", _load)
         monkeypatch.setattr(jc, "get_calibration_chain", lambda *a, **k: [SimpleNamespace()])
         saved_cal: list[tuple] = []
         monkeypatch.setattr("dxrk.memory.calibrate_v2.save_calibration", lambda *a, **k: saved_cal.append(a))
-        verdict = self._judge(tmp_path)._verify_wing("w1")
+        verdict = self._judge(tmp_path)._verify_nodo("w1")
         assert verdict.regression_detected is True
         assert verdict.auto_rollback is True
         assert saved_cal == []
@@ -1183,14 +1183,14 @@ class TestJudgeVerifyWing:
             calls["n"] += 1
             return current if calls["n"] == 1 else baseline
 
-        monkeypatch.setattr("dxrk.memory.palace.DxrkMemory", FakeDM)
+        monkeypatch.setattr("dxrk.memory.malla.DxrkMemory", FakeDM)
         monkeypatch.setattr(jc, "load_baseline_report", _load)
         judge = ContinuousJudge(
             tmp_path,
-            SimpleNamespace(eval_dir=tmp_path, run=lambda wing: _eval_report()),
+            SimpleNamespace(eval_dir=tmp_path, run=lambda nodo: _eval_report()),
             auto_rollback=False,
         )
-        verdict = judge._verify_wing("w1")
+        verdict = judge._verify_nodo("w1")
         assert verdict.regression_detected is True
         assert verdict.auto_rollback is False
 

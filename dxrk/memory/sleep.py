@@ -12,9 +12,9 @@ from .scoring import r_fsrs
 
 @dataclass(frozen=True)
 class SleepCandidate:
-    """A drawer selected for sleep consolidation."""
+    """A fragmento selected for sleep consolidation."""
 
-    drawer_id: str
+    fragmento_id: str
     priority: float
     reason: str  # "pe_high" | "stale" | "contradiction" | "near_dup"
 
@@ -36,9 +36,9 @@ def _now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
 
-def is_protected(drawer: dict) -> bool:
-    """Check if drawer is protected from sleep consolidation."""
-    meta = drawer.get("metadata", {})
+def is_protected(fragmento: dict) -> bool:
+    """Check if fragmento is protected from sleep consolidation."""
+    meta = fragmento.get("metadata", {})
     if meta.get("pinned"):
         return True
     if meta.get("quarantined"):
@@ -55,9 +55,9 @@ def is_protected(drawer: dict) -> bool:
     return False
 
 
-def avg_prediction_error(drawer: dict) -> float:
+def avg_prediction_error(fragmento: dict) -> float:
     """Compute average prediction error from ledger."""
-    ledger = drawer.get("metadata", {}).get("score_ledger", [])
+    ledger = fragmento.get("metadata", {}).get("score_ledger", [])
     if not ledger:
         return 0.0
     pes: list[float] = [float(entry.get("pe", 0.0)) for entry in ledger if "pe" in entry]
@@ -66,14 +66,14 @@ def avg_prediction_error(drawer: dict) -> float:
     return float(sum(abs(pe) for pe in pes) / len(pes))
 
 
-def count_supersedes(drawer: dict) -> int:
+def count_supersedes(fragmento: dict) -> int:
     """Count superseded relations."""
     # Simple heuristic: superseded count in metadata
-    return int(drawer.get("metadata", {}).get("superseded_count", 0))
+    return int(fragmento.get("metadata", {}).get("superseded_count", 0))
 
 
 def select_sleep_candidates(
-    palace,
+    malla,
     limit: int = 50,
     stress_active: bool = False,
 ) -> list[SleepCandidate]:
@@ -81,7 +81,7 @@ def select_sleep_candidates(
     Selection à la CA3 replay: prioritize prediction error, not recency.
 
     Args:
-        palace: DxrkMemory instance
+        malla: DxrkMemory instance
         limit: max candidates to return
         stress_active: if True, lower threshold (cooperative masking)
 
@@ -91,13 +91,13 @@ def select_sleep_candidates(
     threshold = 0.1 if stress_active else 0.3
     candidates = []
 
-    for drawer in palace.iter_drawers():
-        if is_protected(drawer):
+    for fragmento in malla.iter_fragmentos():
+        if is_protected(fragmento):
             continue
 
-        pe_avg = avg_prediction_error(drawer)
-        staleness = age_days(drawer.get("metadata", {}).get("filed_at"))
-        contradiction = count_supersedes(drawer)
+        pe_avg = avg_prediction_error(fragmento)
+        staleness = age_days(fragmento.get("metadata", {}).get("filed_at"))
+        contradiction = count_supersedes(fragmento)
 
         # Simulation-Selection priority (Lee & Jung 2025)
         priority = (
@@ -110,7 +110,7 @@ def select_sleep_candidates(
             reason = classify_reason(pe_avg, staleness, contradiction)
             candidates.append(
                 SleepCandidate(
-                    drawer_id=drawer["id"],
+                    fragmento_id=fragmento["id"],
                     priority=priority,
                     reason=reason,
                 )
@@ -120,7 +120,7 @@ def select_sleep_candidates(
 
 
 def classify_reason(pe_avg: float, staleness: float, contradiction: int) -> str:
-    """Classify why this drawer was selected."""
+    """Classify why this fragmento was selected."""
     if contradiction > 0:
         return "contradiction"
     if pe_avg > 0.2:
@@ -143,23 +143,23 @@ def age_days(filed_at: str | None) -> float:
         return 0.0
 
 
-def consolidate_candidate(palace, candidate: SleepCandidate) -> dict:
+def consolidate_candidate(malla, candidate: SleepCandidate) -> dict:
     """
     Consolidation CA3→CA1:
-    1. Replay: re-evaluate the drawer against corpus
+    1. Replay: re-evaluate the fragmento against corpus
     2. Integrate: update S/D with PE
     3. Prune: if near-duplicate, merge
     """
-    drawer = palace.get_drawer(candidate.drawer_id)
-    if not drawer or "document" not in drawer:
+    fragmento = malla.get_fragmento(candidate.fragmento_id)
+    if not fragmento or "document" not in fragmento:
         return {"status": "not_found"}
 
-    meta = drawer.get("metadata", {})
-    if is_protected(drawer):
+    meta = fragmento.get("metadata", {})
+    if is_protected(fragmento):
         return {"status": "protected"}
 
     # NREM phase: replay (re-evaluate)
-    pe = avg_prediction_error(drawer)
+    pe = avg_prediction_error(fragmento)
 
     # Apply consolidation based on reason
     if candidate.reason == "near_dup":
@@ -196,39 +196,39 @@ def consolidate_candidate(palace, candidate: SleepCandidate) -> dict:
     )
 
     # Persist
-    palace.update_drawer(candidate.drawer_id, metadata=new_meta)
+    malla.update_fragmento(candidate.fragmento_id, metadata=new_meta)
 
     return {"status": "consolidated", "pe": pe, "S": s_new, "D": d_new}
 
 
-def reorganize_candidate(palace, candidate: SleepCandidate) -> dict:
+def reorganize_candidate(malla, candidate: SleepCandidate) -> dict:
     """
     REM phase: reorganize representations.
     Merge near-duplicates (>0.85 similarity).
     """
-    drawer = palace.get_drawer(candidate.drawer_id)
-    if not drawer or "document" not in drawer:
+    fragmento = malla.get_fragmento(candidate.fragmento_id)
+    if not fragmento or "document" not in fragmento:
         return {"status": "not_found"}
 
-    meta = drawer.get("metadata", {})
-    if is_protected(drawer):
+    meta = fragmento.get("metadata", {})
+    if is_protected(fragmento):
         return {"status": "protected"}
 
-    # Find near-duplicates in same wing
-    wing = meta.get("wing", "")
-    room = meta.get("room", "")
-    doc = drawer["document"]
+    # Find near-duplicates in same nodo
+    nodo = meta.get("nodo", "")
+    celda = meta.get("celda", "")
+    doc = fragmento["document"]
 
     # Simple text similarity (could use embeddings in future)
-    # For now, merge if same wing/room and very similar content
-    for other in palace.iter_drawers():
-        if other["id"] == candidate.drawer_id:
+    # For now, merge if same nodo/celda and very similar content
+    for other in malla.iter_fragmentos():
+        if other["id"] == candidate.fragmento_id:
             continue
         if is_protected(other):
             continue
-        if other.get("metadata", {}).get("wing") != wing:
+        if other.get("metadata", {}).get("nodo") != nodo:
             continue
-        if other.get("metadata", {}).get("room") != room:
+        if other.get("metadata", {}).get("celda") != celda:
             continue
 
         other_doc = other.get("document", "")
@@ -239,11 +239,11 @@ def reorganize_candidate(palace, candidate: SleepCandidate) -> dict:
         sim = jaccard_similarity(doc, other_doc)
         if sim > 0.85:
             # Merge: keep higher S, combine content
-            winner = candidate.drawer_id if meta.get("S", 1.0) >= other["metadata"].get("S", 1.0) else other["id"]
-            loser = other["id"] if winner == candidate.drawer_id else candidate.drawer_id
+            winner = candidate.fragmento_id if meta.get("S", 1.0) >= other["metadata"].get("S", 1.0) else other["id"]
+            loser = other["id"] if winner == candidate.fragmento_id else candidate.fragmento_id
 
             # Mark loser as superseded
-            palace.supersede_drawer(loser, winner)
+            malla.supersede_fragmento(loser, winner)
             return {"status": "merged", "winner": winner, "loser": loser, "sim": sim}
 
     return {"status": "no_merge"}
@@ -260,9 +260,9 @@ def jaccard_similarity(a: str, b: str) -> float:
     return intersection / union if union > 0 else 0.0
 
 
-def load_sleep_state(palace_path: Path) -> SleepState:
+def load_sleep_state(malla_path: Path) -> SleepState:
     """Load sleep state from sidecar JSON."""
-    path = palace_path / SLEEP_SIDECAR
+    path = malla_path / SLEEP_SIDECAR
     if not path.exists():
         return SleepState()
     try:
@@ -278,11 +278,11 @@ def load_sleep_state(palace_path: Path) -> SleepState:
         return SleepState()
 
 
-def save_sleep_state(palace_path: Path, state: SleepState) -> None:
+def save_sleep_state(malla_path: Path, state: SleepState) -> None:
     """Persist sleep state to sidecar JSON (0o600)."""
     import json
 
-    path = palace_path / SLEEP_SIDECAR
+    path = malla_path / SLEEP_SIDECAR
     path.write_text(
         json.dumps(
             {
@@ -297,7 +297,7 @@ def save_sleep_state(palace_path: Path, state: SleepState) -> None:
 
 
 def sleep_cycle(
-    palace,
+    malla,
     limit: int = 50,
     nrem_ratio: float = 0.7,
     stress_active: bool = False,
@@ -306,7 +306,7 @@ def sleep_cycle(
     Full sleep cycle: NREM consolidation + REM reorganization.
 
     Args:
-        palace: DxrkMemory instance
+        malla: DxrkMemory instance
         limit: max candidates per cycle
         nrem_ratio: fraction for NREM (0.7)
         stress_active: if True, lower threshold
@@ -314,7 +314,7 @@ def sleep_cycle(
     Returns:
         Dict with stats.
     """
-    candidates = select_sleep_candidates(palace, limit, stress_active)
+    candidates = select_sleep_candidates(malla, limit, stress_active)
 
     nrem_count = int(limit * nrem_ratio)
     rem_count = limit - nrem_count
@@ -324,24 +324,24 @@ def sleep_cycle(
 
     # NREM: consolidation
     for c in candidates[:nrem_count]:
-        result = consolidate_candidate(palace, c)
+        result = consolidate_candidate(malla, c)
         if result.get("status") == "consolidated":
             nrem_results.append(result)
 
     # REM: reorganization
     for c in candidates[nrem_count : nrem_count + rem_count]:
-        result = reorganize_candidate(palace, c)
+        result = reorganize_candidate(malla, c)
         if result.get("status") == "merged":
             rem_results.append(result)
 
     # Update sleep state
-    state = load_sleep_state(Path(palace._path))
+    state = load_sleep_state(Path(malla._path))
     state = SleepState(
         last_sleep=_now_iso(),
         last_candidates=len(candidates),
         total_consolidated=state.total_consolidated + len(nrem_results) + len(rem_results),
     )
-    save_sleep_state(Path(palace._path), state)
+    save_sleep_state(Path(malla._path), state)
 
     return {
         "candidates": len(candidates),
@@ -351,15 +351,15 @@ def sleep_cycle(
     }
 
 
-def reconsolidate_labile(palace) -> int:
+def reconsolidate_labile(malla) -> int:
     """
-    Reconsolidate drawers in labile state (accessed within 6h but not reconsolidated).
+    Reconsolidate fragmentos in labile state (accessed within 6h but not reconsolidated).
     """
     count = 0
-    for drawer in palace.iter_drawers():
-        if is_protected(drawer):
+    for fragmento in malla.iter_fragmentos():
+        if is_protected(fragmento):
             continue
-        meta = drawer.get("metadata", {})
+        meta = fragmento.get("metadata", {})
         labile_until = meta.get("labile_until")
         if not labile_until:
             continue
@@ -369,7 +369,7 @@ def reconsolidate_labile(palace) -> int:
                 # Labile window expired without reconsolidation → soft decay
                 new_meta = dict(meta)
                 new_meta["S"] = meta.get("S", 1.0) * 0.9
-                palace.update_drawer(drawer["id"], metadata=new_meta)
+                malla.update_fragmento(fragmento["id"], metadata=new_meta)
                 count += 1
         except Exception:
             pass

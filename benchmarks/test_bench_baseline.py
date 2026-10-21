@@ -70,7 +70,7 @@ def test_bench_memory_layers_smoke() -> None:
     """Layers wake_up smoke."""
     from benchmarks.bench_memory import _bench_layers_wake_up
 
-    times = _bench_layers_wake_up(n_drawers=10)
+    times = _bench_layers_wake_up(n_fragmentos=10)
     assert len(times) == 20
     assert all(t >= 0 for t in times)
 

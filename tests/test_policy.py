@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 """Policy engine espejo (Fase 0 tanda 2, tarea 9).
 
-PolicyEngine(palace).maybe_run("write" | "periodic") con 4 triggers
+PolicyEngine(malla).maybe_run("write" | "periodic") con 4 triggers
 RBAC-gateados por memory.maintain y throttling en sidecar.
 """
 
@@ -14,9 +14,9 @@ import pytest
 
 
 def _dm(tmp_path: Path, **kwargs):  # type: ignore[no-untyped-def]
-    from dxrk.memory.palace import DxrkMemory
+    from dxrk.memory.malla import DxrkMemory
 
-    dm = DxrkMemory(str(tmp_path / "palace"), **kwargs)
+    dm = DxrkMemory(str(tmp_path / "malla"), **kwargs)
     dm.init()
     return dm
 
@@ -39,20 +39,20 @@ class TestPolicyWrite:
     def test_write_runs_over_budget_inline(self, tmp_path: Path) -> None:
         from dxrk.memory.policy import PolicyEngine
 
-        dm = _dm(tmp_path, max_entries_per_wing=100)
+        dm = _dm(tmp_path, max_entries_per_nodo=100)
         seeds = (
             "quantum garden lunar harvest festival " * 12,
             "rust borrow checker trait object lifetime elision " * 12,
             "sourdough fermentation hydration baker percentage " * 12,
         )
         for i, content in enumerate(seeds):
-            dm.add_drawer("w", "r", content, f"f{i}.py", i)
-        assert dm.wing_usage("w")["count"] == 3
-        dm._max_entries_per_wing = 1  # force over-budget without touching the store
+            dm.add_fragmento("w", "r", content, f"f{i}.py", i)
+        assert dm.nodo_usage("w")["count"] == 3
+        dm._max_entries_per_nodo = 1  # force over-budget without touching the store
         out = PolicyEngine(dm).maybe_run("write")
         assert out["ok"] is True
         assert out["results"]["over_budget"]["evicted"] >= 1
-        assert dm.wing_usage("w")["count"] <= 1
+        assert dm.nodo_usage("w")["count"] <= 1
 
     def test_invalid_trigger_rejected(self, tmp_path: Path) -> None:
         from dxrk.memory.policy import PolicyEngine
@@ -66,7 +66,7 @@ class TestPolicyPeriodic:
         from dxrk.memory.policy import PolicyEngine
 
         dm = _dm(tmp_path)
-        did = dm.add_drawer("w", "r", "stale drawer content here " * 10, "old.py", 0)
+        did = dm.add_fragmento("w", "r", "stale fragmento content here " * 10, "old.py", 0)
         col = dm._collection(create=False)
         got = col.get(ids=[did], include=["metadatas"])
         meta = dict(got.metadatas[0])
@@ -76,7 +76,7 @@ class TestPolicyPeriodic:
         col.update(ids=[did], metadatas=[meta])
         out = PolicyEngine(dm).maybe_run("periodic")
         assert out["ok"] is True
-        got2 = dm.get_drawer(did)
+        got2 = dm.get_fragmento(did)
         assert got2 is not None
         ledger = got2["metadata"].get("score_ledger") or []  # type: ignore[union-attr]
         assert any(e.get("reason") == "rescore_stale" for e in ledger)
@@ -85,8 +85,8 @@ class TestPolicyPeriodic:
         from dxrk.memory.policy import PolicyEngine
 
         dm = _dm(tmp_path)
-        good = dm.add_drawer("w", "r", "good content for sweep " * 10, "good.py", 0)
-        bad = dm.add_drawer("w", "r", "tampered content for sweep " * 10, "bad.py", 0)
+        good = dm.add_fragmento("w", "r", "good content for sweep " * 10, "good.py", 0)
+        bad = dm.add_fragmento("w", "r", "tampered content for sweep " * 10, "bad.py", 0)
         col = dm._collection(create=False)
         got = col.get(ids=[bad], include=["metadatas"])
         meta = dict(got.metadatas[0])
@@ -104,13 +104,13 @@ class TestPolicyPeriodic:
         col = dm._collection(create=True)
         col.upsert(
             documents=[""],
-            ids=["empty-doc-drawer"],
-            metadatas=[{"wing": "w", "room": "r", "source_file": "e.py", "chunk_index": 0}],
+            ids=["empty-doc-fragmento"],
+            metadatas=[{"nodo": "w", "celda": "r", "source_file": "e.py", "chunk_index": 0}],
         )
         out = PolicyEngine(dm).maybe_run("periodic")
         swept = out["results"]["quarantine_sweep"]
-        assert "empty-doc-drawer" in swept["quarantined"]
-        stub = dm.get_drawer("empty-doc-drawer")
+        assert "empty-doc-fragmento" in swept["quarantined"]
+        stub = dm.get_fragmento("empty-doc-fragmento")
         assert stub is not None and stub.get("quarantined") is True
 
     def test_periodic_throttled_15min(self, tmp_path: Path) -> None:
@@ -122,7 +122,7 @@ class TestPolicyPeriodic:
         assert all(v.get("skipped") is not True for v in first["results"].values())
         second = engine.maybe_run("periodic")
         assert all(v.get("skipped") is True for v in second["results"].values())
-        state_file = Path(dm.palace_path) / ".policy_state.json"
+        state_file = Path(dm.malla_path) / ".policy_state.json"
         assert state_file.is_file()
 
 

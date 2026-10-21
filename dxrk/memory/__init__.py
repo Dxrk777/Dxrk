@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Agent memory persistence — facade keeping AgentMemory compat while delegating to SqliteBackend when palace path is used."""
+"""Agent memory persistence — facade keeping AgentMemory compat while delegating to SqliteBackend when malla path is used."""
 
 from __future__ import annotations
 
@@ -68,10 +68,10 @@ class MemoryEntry:
     title: str = ""
     scope: str = ""
     topic_key: str = ""
-    wing: str = ""
-    room: str = ""
-    drawer_id: str = ""
-    palace_path: str = ""
+    nodo: str = ""
+    celda: str = ""
+    fragmento_id: str = ""
+    malla_path: str = ""
 
 
 @dataclass
@@ -144,7 +144,7 @@ def _below_relevance_floor(dist: object) -> bool:
 class AgentMemory:
     """In-memory entry store persisted as JSON, indexed by project, session and type.
 
-    When ``path`` points to a sqlite palace (directory or .db file) the store
+    When ``path`` points to a sqlite malla (directory or .db file) the store
     additionally delegates to :class:`dxrk.memory.backend.sqlite.SqliteBackend`
     (hybrid BM25). JSON path remains the backward-compat fallback used by tests.
     Tenant-aware via tenant_id or DXRK_TENANT env.
@@ -166,44 +166,44 @@ class AgentMemory:
         self._rag = rag
         self._vault = vault
         self.tenant_id: str = _effective_tenant_id(tenant_id)
-        # resolve tenant-aware palace path if path is None and tenant present
+        # resolve tenant-aware malla path if path is None and tenant present
         _resolved_path = _resolve_memory_tenant_path(tenant_id, path)
         # for mypy, keep path as resolved or original
         effective_path = _resolved_path if _resolved_path is not None else path
         self._path = str(effective_path) if effective_path else ""
         self._max_entries = max_entries
         self._use_sqlite = _is_sqlite_path(effective_path)
-        self._palace: object | None = None
-        self._palace_collection: object | None = None
+        self._malla: object | None = None
+        self._malla_collection: object | None = None
         if self._use_sqlite:
             try:
-                from .palace import Palace
+                from .malla import Malla
 
-                # path is palace dir or db file (tenant-aware effective_path)
-                palace_dir = str(effective_path) if effective_path else ""
+                # path is malla dir or db file (tenant-aware effective_path)
+                malla_dir = str(effective_path) if effective_path else ""
                 # if path is a file ending .db, use its parent dir
-                p = Path(palace_dir).expanduser()
+                p = Path(malla_dir).expanduser()
                 if p.is_file() or p.suffix.lower() in (".db", ".sqlite", ".sqlite3"):
-                    palace_dir = str(p.parent)
-                # Palace tenant-aware: pass tenant_id if we have one
+                    malla_dir = str(p.parent)
+                # Malla tenant-aware: pass tenant_id if we have one
                 try:
-                    pal = Palace(palace_dir, tenant_id=tenant_id)  # type: ignore[call-arg]
+                    pal = Malla(malla_dir, tenant_id=tenant_id)  # type: ignore[call-arg]
                 except TypeError:
-                    pal = Palace(palace_dir)
-                self._palace = pal
-                # ensure palace dir exists
-                Path(palace_dir).mkdir(parents=True, exist_ok=True)
+                    pal = Malla(malla_dir)
+                self._malla = pal
+                # ensure malla dir exists
+                Path(malla_dir).mkdir(parents=True, exist_ok=True)
                 try:
-                    Path(palace_dir).chmod(0o750)
+                    Path(malla_dir).chmod(0o750)
                 except OSError:
                     pass
                 pal.init()
-                self._palace_collection = pal._collection(create=True)  # type: ignore
+                self._malla_collection = pal._collection(create=True)  # type: ignore
             except Exception:
-                # fall back to JSON if palace init fails
+                # fall back to JSON if malla init fails
                 self._use_sqlite = False
-                self._palace = None
-                self._palace_collection = None
+                self._malla = None
+                self._malla_collection = None
         self._load()
 
     def store(self, entry: MemoryEntry) -> None:
@@ -238,15 +238,15 @@ class AgentMemory:
             self._by_project.setdefault(entry.project_id, []).append(entry.id)
             self._by_session.setdefault(entry.session_id, []).append(entry.id)
             self._by_type.setdefault(entry.type, []).append(entry.id)
-            # also persist to sqlite palace if enabled (palace is source of truth, dict is LRU cache)
-            if self._use_sqlite and self._palace is not None:
+            # also persist to sqlite malla if enabled (malla is source of truth, dict is LRU cache)
+            if self._use_sqlite and self._malla is not None:
                 try:
-                    wing = entry.project_id or entry.wing or "default"
-                    room = entry.session_id or entry.room or "general"
+                    nodo = entry.project_id or entry.nodo or "default"
+                    celda = entry.session_id or entry.celda or "general"
                     meta: dict[str, object] = {
-                        "wing": wing,
-                        "room": room,
-                        "source_file": entry.palace_path or entry.id,
+                        "nodo": nodo,
+                        "celda": celda,
+                        "source_file": entry.malla_path or entry.id,
                         "chunk_index": 0,
                         "importance": entry.importance,
                         "project_id": entry.project_id,
@@ -257,7 +257,7 @@ class AgentMemory:
                     }
                     if entry.metadata:
                         meta.update(entry.metadata)  # type: ignore[arg-type]
-                    self._palace_collection.upsert(documents=[entry.content], ids=[entry.id], metadatas=[meta])  # type: ignore
+                    self._malla_collection.upsert(documents=[entry.content], ids=[entry.id], metadatas=[meta])  # type: ignore
                 except Exception:
                     pass
         self._save()
@@ -269,16 +269,16 @@ class AgentMemory:
                 entry.accessed_at = _now()
                 entry.access_count += 1
                 return entry
-            if self._use_sqlite and self._palace_collection is not None:
+            if self._use_sqlite and self._malla_collection is not None:
                 try:
-                    res = self._palace_collection.get(ids=[entry_id], include=["documents", "metadatas"])  # type: ignore
+                    res = self._malla_collection.get(ids=[entry_id], include=["documents", "metadatas"])  # type: ignore
                     if res.ids:
                         doc = res.documents[0] if res.documents else ""
                         meta = res.metadatas[0] if res.metadatas else {}
                         if not isinstance(meta, dict):
                             meta = {}
-                        project_id = str(meta.get("project_id") or meta.get("wing") or "")
-                        session_id = str(meta.get("session_id") or meta.get("room") or "")
+                        project_id = str(meta.get("project_id") or meta.get("nodo") or "")
+                        session_id = str(meta.get("session_id") or meta.get("celda") or "")
                         type_val = meta.get("type")
                         if type_val is None:
                             type_val = meta.get("mem_type")
@@ -291,8 +291,8 @@ class AgentMemory:
                         except (TypeError, ValueError):
                             importance = 0.0
                         core_keys = {
-                            "wing",
-                            "room",
+                            "nodo",
+                            "celda",
                             "source_file",
                             "chunk_index",
                             "importance",
@@ -317,9 +317,9 @@ class AgentMemory:
                             project_id=project_id,
                             session_id=session_id,
                             importance=importance,
-                            wing=str(meta.get("wing") or ""),
-                            room=str(meta.get("room") or ""),
-                            palace_path=str(meta.get("source_file") or ""),
+                            nodo=str(meta.get("nodo") or ""),
+                            celda=str(meta.get("celda") or ""),
+                            malla_path=str(meta.get("source_file") or ""),
                             created_at=str(meta.get("filed_at") or ""),
                             accessed_at=_now(),
                             access_count=1,
@@ -351,8 +351,8 @@ class AgentMemory:
                 results = rag_query(query, limit)
                 if results:
                     return self._filter_results(results, project_id, mem_type)
-        # palace (sqlite) search — source of truth, dict is LRU cache
-        if self._use_sqlite and self._palace_collection is not None and query:
+        # malla (sqlite) search — source of truth, dict is LRU cache
+        if self._use_sqlite and self._malla_collection is not None and query:
             try:
                 from .date_window import filed_at_in_window, parse_window
                 from .search import build_where_filter
@@ -374,7 +374,7 @@ class AgentMemory:
                 else:
                     fetch_n = limit
 
-                qres = self._palace_collection.query(  # type: ignore[attr-defined]
+                qres = self._malla_collection.query(  # type: ignore[attr-defined]
                     query_texts=[query],
                     n_results=fetch_n,
                     where=where_filter,
@@ -413,8 +413,8 @@ class AgentMemory:
                                 mt = 0
                             if mt != int(mem_type):
                                 continue
-                        project_id_val = str(meta.get("project_id") or meta.get("wing") or "")
-                        session_id_val = str(meta.get("session_id") or meta.get("room") or "")
+                        project_id_val = str(meta.get("project_id") or meta.get("nodo") or "")
+                        session_id_val = str(meta.get("session_id") or meta.get("celda") or "")
                         type_val2 = meta.get("type")
                         if type_val2 is None:
                             type_val2 = meta.get("mem_type")
@@ -434,8 +434,8 @@ class AgentMemory:
                             similarity = 0.0
                         final_importance = imp if imp != 0 else similarity
                         core_keys = {
-                            "wing",
-                            "room",
+                            "nodo",
+                            "celda",
                             "source_file",
                             "chunk_index",
                             "importance",
@@ -460,9 +460,9 @@ class AgentMemory:
                             project_id=project_id_val,
                             session_id=session_id_val,
                             importance=final_importance,
-                            wing=str(meta.get("wing") or ""),
-                            room=str(meta.get("room") or ""),
-                            palace_path=str(meta.get("source_file") or ""),
+                            nodo=str(meta.get("nodo") or ""),
+                            celda=str(meta.get("celda") or ""),
+                            malla_path=str(meta.get("source_file") or ""),
                             created_at=str(meta.get("filed_at") or ""),
                             accessed_at=str(meta.get("filed_at") or ""),
                         )
@@ -480,8 +480,8 @@ class AgentMemory:
                 raise
             except Exception:
                 pass
-        # empty query in palace mode — list via get with where filter (palace is source of truth, dict is cache)
-        if self._use_sqlite and self._palace_collection is not None and not query:
+        # empty query in malla mode — list via get with where filter (malla is source of truth, dict is cache)
+        if self._use_sqlite and self._malla_collection is not None and not query:
             try:
                 from .date_window import filed_at_in_window, parse_window
                 from .search import build_where_filter
@@ -497,7 +497,7 @@ class AgentMemory:
                 fetch_lim = limit * 3 if needs_post else limit
                 if not fetch_lim:
                     fetch_lim = 10
-                got = self._palace_collection.get(  # type: ignore[attr-defined]
+                got = self._malla_collection.get(  # type: ignore[attr-defined]
                     where=where_filter, include=["documents", "metadatas"], limit=fetch_lim
                 )
                 out2: list[MemoryEntry] = []
@@ -519,8 +519,8 @@ class AgentMemory:
                                 mt = 0
                             if mt != int(mem_type):
                                 continue
-                        project_id_val = str(meta.get("project_id") or meta.get("wing") or "")
-                        session_id_val = str(meta.get("session_id") or meta.get("room") or "")
+                        project_id_val = str(meta.get("project_id") or meta.get("nodo") or "")
+                        session_id_val = str(meta.get("session_id") or meta.get("celda") or "")
                         type_val2 = meta.get("type")
                         if type_val2 is None:
                             type_val2 = meta.get("mem_type")
@@ -533,8 +533,8 @@ class AgentMemory:
                         except (TypeError, ValueError):
                             imp = 0.0
                         core_keys = {
-                            "wing",
-                            "room",
+                            "nodo",
+                            "celda",
                             "source_file",
                             "chunk_index",
                             "importance",
@@ -559,9 +559,9 @@ class AgentMemory:
                             project_id=project_id_val,
                             session_id=session_id_val,
                             importance=imp,
-                            wing=str(meta.get("wing") or ""),
-                            room=str(meta.get("room") or ""),
-                            palace_path=str(meta.get("source_file") or ""),
+                            nodo=str(meta.get("nodo") or ""),
+                            celda=str(meta.get("celda") or ""),
+                            malla_path=str(meta.get("source_file") or ""),
                             created_at=str(meta.get("filed_at") or ""),
                             accessed_at=str(meta.get("filed_at") or ""),
                         )
@@ -640,18 +640,18 @@ class AgentMemory:
             entry = self._entries.pop(entry_id, None)
             if entry is None:
                 # try sqlite delete even if not in dict
-                if self._use_sqlite and self._palace_collection is not None:
+                if self._use_sqlite and self._malla_collection is not None:
                     try:
-                        self._palace_collection.delete(ids=[entry_id])  # type: ignore
+                        self._malla_collection.delete(ids=[entry_id])  # type: ignore
                     except Exception:
                         pass
                 return
             self._remove_from_index(self._by_project.get(entry.project_id), entry_id)
             self._remove_from_index(self._by_session.get(entry.session_id), entry_id)
             self._remove_from_index(self._by_type.get(entry.type), entry_id)
-            if self._use_sqlite and self._palace_collection is not None:
+            if self._use_sqlite and self._malla_collection is not None:
                 try:
-                    self._palace_collection.delete(ids=[entry_id])  # type: ignore
+                    self._malla_collection.delete(ids=[entry_id])  # type: ignore
                 except Exception:
                     pass
         self._save()
@@ -662,9 +662,9 @@ class AgentMemory:
         self._remove_from_index(self._by_project.get(oldest.project_id), oldest.id)
         self._remove_from_index(self._by_session.get(oldest.session_id), oldest.id)
         self._remove_from_index(self._by_type.get(oldest.type), oldest.id)
-        if self._use_sqlite and self._palace_collection is not None:
+        if self._use_sqlite and self._malla_collection is not None:
             try:
-                self._palace_collection.delete(ids=[oldest.id])  # type: ignore
+                self._malla_collection.delete(ids=[oldest.id])  # type: ignore
             except Exception:
                 pass
 
@@ -682,15 +682,15 @@ class AgentMemory:
             by_type: dict[MemoryType, int] = {}
             for e in self._entries.values():
                 by_type[e.type] = by_type.get(e.type, 0) + 1
-            if self._use_sqlite and self._palace_collection is not None:
+            if self._use_sqlite and self._malla_collection is not None:
                 try:
-                    palace_count = self._palace_collection.count()  # type: ignore
-                    # try palace distribution for fidelity, fallback to dict
+                    malla_count = self._malla_collection.count()  # type: ignore
+                    # try malla distribution for fidelity, fallback to dict
                     try:
-                        got = self._palace_collection.get(include=["metadatas"], limit=5000)  # type: ignore
+                        got = self._malla_collection.get(include=["metadatas"], limit=5000)  # type: ignore
                         pal_by_type: dict[MemoryType, int] = {}
-                        pal_wings: set[str] = set()
-                        pal_rooms: set[str] = set()
+                        pal_nodos: set[str] = set()
+                        pal_celdas: set[str] = set()
                         for m in got.metadatas:
                             if not isinstance(m, dict):
                                 continue
@@ -702,18 +702,18 @@ class AgentMemory:
                             except (ValueError, TypeError):
                                 mt = MemoryType.SEMANTIC
                             pal_by_type[mt] = pal_by_type.get(mt, 0) + 1
-                            wing = m.get("wing") or m.get("project_id")
-                            if isinstance(wing, str) and wing:
-                                pal_wings.add(wing)
-                            room = m.get("room") or m.get("session_id")
-                            if isinstance(room, str) and room:
-                                pal_rooms.add(room)
+                            nodo = m.get("nodo") or m.get("project_id")
+                            if isinstance(nodo, str) and nodo:
+                                pal_nodos.add(nodo)
+                            celda = m.get("celda") or m.get("session_id")
+                            if isinstance(celda, str) and celda:
+                                pal_celdas.add(celda)
                         if got.ids:
                             pal_by_type_final = pal_by_type or by_type
-                            by_project = len(pal_wings) if pal_wings else len(self._by_project)
-                            by_session = len(pal_rooms) if pal_rooms else len(self._by_session)
+                            by_project = len(pal_nodos) if pal_nodos else len(self._by_project)
+                            by_session = len(pal_celdas) if pal_celdas else len(self._by_session)
                             return MemoryStats(
-                                total_entries=palace_count,
+                                total_entries=malla_count,
                                 by_project=by_project,
                                 by_session=by_session,
                                 by_type=pal_by_type_final,
@@ -721,7 +721,7 @@ class AgentMemory:
                     except Exception:
                         pass
                     return MemoryStats(
-                        total_entries=palace_count,
+                        total_entries=malla_count,
                         by_project=len(self._by_project),
                         by_session=len(self._by_session),
                         by_type=by_type,
@@ -774,18 +774,18 @@ class AgentMemory:
             self._by_type.setdefault(e.type, []).append(e.id)
 
 
-# Re-export palace / backend symbols for facade
+# Re-export malla / backend symbols for facade
 try:
-    from .backend import PalaceRef  # noqa: F401
+    from .backend import MallaRef  # noqa: F401
     from .backend.base import HealthStatus  # noqa: F401
     from .date_window import filed_at_in_window, parse_date_bound, parse_window  # noqa: F401
     from .dialect import Dialect  # noqa: F401
     from .entity_detector import classify_entity, extract_candidates, score_entity  # noqa: F401
     from .graph import KnowledgeGraph  # noqa: F401
     from .layers import Layer0, Layer1, Layer2, Layer3, MemoryStack  # noqa: F401
+    from .malla import DxrkMalla, DxrkMemory, Malla, reap_stale_dxrk_locks, reap_stale_mine_locks  # noqa: F401
     from .miner import GitignoreMatcher, scan_project  # noqa: F401
-    from .miner import chunk_text as palace_chunk_text
-    from .palace import DxrkMemory, DxrkPalace, Palace, reap_stale_dxrk_locks, reap_stale_mine_locks  # noqa: F401
+    from .miner import chunk_text as malla_chunk_text
     from .scoring import decay_factor, rank_score, score_meta  # noqa: F401
     from .search import hybrid_search, sanitize_query  # noqa: F401
 except Exception:
@@ -798,9 +798,9 @@ __all__ = [
     "MemoryStats",
     "top_by_importance",
     "DxrkMemory",
-    "Palace",
-    "DxrkPalace",
-    "PalaceRef",
+    "Malla",
+    "DxrkMalla",
+    "MallaRef",
     "HealthStatus",
     "KnowledgeGraph",
     "hybrid_search",

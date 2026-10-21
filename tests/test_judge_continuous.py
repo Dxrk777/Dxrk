@@ -84,18 +84,18 @@ class TestContinuousJudge:
     def test_judge_state_persist(self, tmp_path: Path) -> None:
         """Judge state persists correctly."""
         from dxrk.memory.eval_harness import EvalHarness
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
-        dm = DxrkMemory(str(tmp_path / "palace"))
+        dm = DxrkMemory(str(tmp_path / "malla"))
         dm.init()
         try:
             for i in range(5):
-                dm.add_drawer("w", "r", f"content {i}", f"/f{i}.md", 0)
+                dm.add_fragmento("w", "r", f"content {i}", f"/f{i}.md", 0)
 
             harness = EvalHarness(dm, tmp_path / "eval")
-            judge = ContinuousJudge(tmp_path / "palace", harness, interval_hours=1)
+            judge = ContinuousJudge(tmp_path / "malla", harness, interval_hours=1)
 
-            state = load_judge_state(tmp_path / "palace")
+            state = load_judge_state(tmp_path / "malla")
             assert state.last_run == ""
 
             # Run once manually
@@ -107,16 +107,16 @@ class TestContinuousJudge:
     def test_judge_runs_cycle(self, tmp_path: Path) -> None:
         """Judge runs a verification cycle."""
         from dxrk.memory.eval_harness import EvalHarness
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
-        dm = DxrkMemory(str(tmp_path / "palace"))
+        dm = DxrkMemory(str(tmp_path / "malla"))
         dm.init()
         try:
             for i in range(5):
-                dm.add_drawer("w", "r", f"unique content {i} distinct", f"/f{i}.md", 0)
+                dm.add_fragmento("w", "r", f"unique content {i} distinct", f"/f{i}.md", 0)
 
             harness = EvalHarness(dm, tmp_path / "eval")
-            judge = ContinuousJudge(tmp_path / "palace", harness, interval_hours=1)
+            judge = ContinuousJudge(tmp_path / "malla", harness, interval_hours=1)
 
             verdict = judge.run_once()
             assert verdict is not None
@@ -127,16 +127,16 @@ class TestContinuousJudge:
     def test_judge_status(self, tmp_path: Path) -> None:
         """Judge status includes all relevant info."""
         from dxrk.memory.eval_harness import EvalHarness
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
-        dm = DxrkMemory(str(tmp_path / "palace"))
+        dm = DxrkMemory(str(tmp_path / "malla"))
         dm.init()
         try:
             for i in range(3):
-                dm.add_drawer("w", "r", f"content {i}", f"/f{i}.md", 0)
+                dm.add_fragmento("w", "r", f"content {i}", f"/f{i}.md", 0)
 
             harness = EvalHarness(dm, tmp_path / "eval")
-            judge = ContinuousJudge(tmp_path / "palace", harness, interval_hours=1)
+            judge = ContinuousJudge(tmp_path / "malla", harness, interval_hours=1)
 
             # Run once to populate state
             judge.run_once()
@@ -162,11 +162,11 @@ class TestJudgeRegressionDetection:
 
         mock_harness = Mock()
 
-        judge = ContinuousJudge(Path(tmp_path / "palace"), mock_harness, interval_hours=1)
+        judge = ContinuousJudge(Path(tmp_path / "malla"), mock_harness, interval_hours=1)
 
         # Create current and baseline EvalReports
         current_report = EvalReport(
-            wing="w",
+            nodo="w",
             num_queries=1,
             recall_at_k={10: 0.6},
             mrr=0.5,
@@ -178,7 +178,7 @@ class TestJudgeRegressionDetection:
             evaluated_at="2024-01-01T00:00:00+00:00",
         )
         baseline_report = EvalReport(
-            wing="w",
+            nodo="w",
             num_queries=1,
             recall_at_k={10: 0.7},
             mrr=0.5,
@@ -190,7 +190,7 @@ class TestJudgeRegressionDetection:
             evaluated_at="2024-01-01T00:00:00+00:00",
         )
 
-        verdict = judge._compare_reports(current_report, baseline_report, "test_wing")
+        verdict = judge._compare_reports(current_report, baseline_report, "test_nodo")
 
         # Recall dropped from 0.7 to 0.6 = 14% drop > 5% threshold
         assert verdict.regression_detected is True
@@ -203,28 +203,28 @@ class TestAutoRollback:
         """Auto-rollback triggers on critical regression."""
         from dxrk.memory.calibrate_v2 import CalibrationParams, save_calibration
         from dxrk.memory.eval_harness import EvalHarness
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
-        dm = DxrkMemory(str(tmp_path / "palace"))
+        dm = DxrkMemory(str(tmp_path / "malla"))
         dm.init()
         try:
-            # Add some drawers
+            # Add some fragmentos
             for i in range(5):
-                dm.add_drawer("w", "r", f"content {i}", f"/f{i}.md", 0)
+                dm.add_fragmento("w", "r", f"content {i}", f"/f{i}.md", 0)
 
             # Setup calibration
             save_calibration(
-                tmp_path / "palace",
-                CalibrationParams(tenant="", wing="w", a=1.5, b=0.2, c=1.0, pe_lambda=0.1, score=0.8),
+                tmp_path / "malla",
+                CalibrationParams(tenant="", nodo="w", a=1.5, b=0.2, c=1.0, pe_lambda=0.1, score=0.8),
             )
 
             EvalHarness(dm, tmp_path / "eval")
-            ContinuousJudge(tmp_path / "palace", Mock(), interval_hours=1, auto_rollback=True)
+            ContinuousJudge(tmp_path / "malla", Mock(), interval_hours=1, auto_rollback=True)
 
             # Manually trigger rollback logic
             from dxrk.memory.calibrate_v2 import get_calibration_chain
 
-            chain = get_calibration_chain(tmp_path / "palace", "", "w")
+            chain = get_calibration_chain(tmp_path / "malla", "", "w")
             assert len(chain) >= 1
 
             # Rollback to previous (should be default)

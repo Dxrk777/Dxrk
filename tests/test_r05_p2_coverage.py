@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""R05 P2 coverage boost — tenant CLI, hooks_cli, __main__, palace gaps, tenant_switcher.
+"""R05 P2 coverage boost — tenant CLI, hooks_cli, __main__, malla gaps, tenant_switcher.
 
 Aisla filesystem via monkeypatch HOME (y DXRK_TENANT) en cada test.
 No deps externos, solo pytest + stdlib + textual (ya en dxrk).
@@ -328,23 +328,23 @@ def test_hooks_pid_alive_self_and_dead(tmp_path, monkeypatch):
     assert hc._pid_alive(123) is False
 
 
-def test_hooks_wing_from_transcript_empty_and_fallback(tmp_path):
+def test_hooks_nodo_from_transcript_empty_and_fallback(tmp_path):
     import dxrk.memory.hooks_cli as hc
 
-    assert hc._wing_from_transcript_path("") == "wing_sessions"
-    assert hc._wing_from_transcript_path("/tmp/nope.jsonl") == "wing_sessions"
+    assert hc._nodo_from_transcript_path("") == "nodo_sessions"
+    assert hc._nodo_from_transcript_path("/tmp/nope.jsonl") == "nodo_sessions"
     # path with .. should be sanitized via _validate -> None then fallback regex
     # encoded project via regex 1
     p = "/home/dxrk/.claude/projects/-Users-dxrk-git-MyCoolProj/transcript.jsonl"
-    assert hc._wing_from_transcript_path(p) == "wing_mycoolproj"
+    assert hc._nodo_from_transcript_path(p) == "nodo_mycoolproj"
     # second regex Projects: re.search(r"-Projects-([^/]+?)(?:/|$)")
     p2b = "/some-Projects-AwesomeX/file.jsonl"
-    assert hc._wing_from_transcript_path(p2b) == "wing_awesomex"
-    # fallback to wing_sessions for non-matching
-    assert hc._wing_from_transcript_path("/some/other/path/file.jsonl") == "wing_sessions"
+    assert hc._nodo_from_transcript_path(p2b) == "nodo_awesomex"
+    # fallback to nodo_sessions for non-matching
+    assert hc._nodo_from_transcript_path("/some/other/path/file.jsonl") == "nodo_sessions"
 
 
-def test_hooks_wing_from_transcript_cwd_json(tmp_path, monkeypatch):
+def test_hooks_nodo_from_transcript_cwd_json(tmp_path, monkeypatch):
     import dxrk.memory.hooks_cli as hc
 
     tr = tmp_path / "transcript.jsonl"
@@ -353,17 +353,17 @@ def test_hooks_wing_from_transcript_cwd_json(tmp_path, monkeypatch):
         f.write('{"foo":"bar"}\n')
         f.write('{"cwd": "/home/user/Projects/MyProject"}\n')
         f.write('{"cwd": "/other"}\n')
-    assert hc._wing_from_transcript_path(str(tr)) == "wing_myproject"
+    assert hc._nodo_from_transcript_path(str(tr)) == "nodo_myproject"
     # cwd with spaces and dash
     tr2 = tmp_path / "tr2.jsonl"
     with open(tr2, "w", encoding="utf-8") as f:
         f.write('{"cwd": "/tmp/My Cool-Project"}\n')
-    assert hc._wing_from_transcript_path(str(tr2)) == "wing_my_cool_project"
+    assert hc._nodo_from_transcript_path(str(tr2)) == "nodo_my_cool_project"
     # with backslashes Windows style
     tr3 = tmp_path / "tr3.jsonl"
     with open(tr3, "w", encoding="utf-8") as f:
         f.write('{"cwd": "C:\\\\Users\\\\foo\\\\Projects\\\\WinProj"}\n')
-    assert hc._wing_from_transcript_path(str(tr3)) == "wing_winproj"
+    assert hc._nodo_from_transcript_path(str(tr3)) == "nodo_winproj"
     # file not exists -> fallback regex already tested
 
 
@@ -419,7 +419,7 @@ def test_hooks_maybe_auto_ingest_with_target_mocked(tmp_path, monkeypatch):
         calls.append(cmd)
 
     monkeypatch.setattr(hc, "_spawn_mine", fake_spawn)
-    # need PALACE_ROOT to exist for logging? Not needed for _maybe_auto_ingest, but _spawn_mine is mocked
+    # need MALLA_ROOT to exist for logging? Not needed for _maybe_auto_ingest, but _spawn_mine is mocked
     hc._maybe_auto_ingest()
     assert len(calls) == 1
     assert "mine" in calls[0]
@@ -435,15 +435,15 @@ def test_hooks_maybe_auto_ingest_with_target_mocked(tmp_path, monkeypatch):
     assert hc._mine_slot_timeout_secs() == 7200.0
 
 
-def test_hooks_save_session_summary_direct_with_palace(tmp_path, monkeypatch):
+def test_hooks_save_session_summary_direct_with_malla(tmp_path, monkeypatch):
     import dxrk.memory.hooks_cli as hc
 
-    palace_root = tmp_path / "palace"
+    malla_root = tmp_path / "malla"
     state_dir = tmp_path / "hook_state"
-    monkeypatch.setattr(hc, "PALACE_ROOT", palace_root)
+    monkeypatch.setattr(hc, "MALLA_ROOT", malla_root)
     monkeypatch.setattr(hc, "STATE_DIR", state_dir)
-    # need PALACE_ROOT.is_dir() for _log, but _save doesn't check that
-    palace_root.mkdir(parents=True)
+    # need MALLA_ROOT.is_dir() for _log, but _save doesn't check that
+    malla_root.mkdir(parents=True)
     # create transcript with human messages
     tr = tmp_path / "transcript.jsonl"
     with open(tr, "w", encoding="utf-8") as f:
@@ -455,17 +455,17 @@ def test_hooks_save_session_summary_direct_with_palace(tmp_path, monkeypatch):
         f.write("\n")
         json.dump({"message": {"role": "assistant", "content": "hi"}}, f)
         f.write("\n")
-    res = hc._save_session_summary_direct(str(tr), "sess123", wing="wing_test")
+    res = hc._save_session_summary_direct(str(tr), "sess123", nodo="nodo_test")
     assert res["count"] == 5
-    assert "drawer_id" in res
-    drawer_id = res["drawer_id"]
-    assert isinstance(drawer_id, str) and drawer_id
-    # check drawer actually exists via DxrkMemory
-    from dxrk.memory.palace import DxrkMemory
+    assert "fragmento_id" in res
+    fragmento_id = res["fragmento_id"]
+    assert isinstance(fragmento_id, str) and fragmento_id
+    # check fragmento actually exists via DxrkMemory
+    from dxrk.memory.malla import DxrkMemory
 
-    dm = DxrkMemory(str(palace_root))
+    dm = DxrkMemory(str(malla_root))
     dm.init()
-    got = dm.get_drawer(drawer_id)
+    got = dm.get_fragmento(fragmento_id)
     assert got is not None
     # themes extracted
     assert isinstance(res.get("themes"), list)
@@ -479,11 +479,11 @@ def test_hooks_save_session_summary_direct_with_palace(tmp_path, monkeypatch):
 def test_hooks_save_session_no_messages(tmp_path, monkeypatch):
     import dxrk.memory.hooks_cli as hc
 
-    palace_root = tmp_path / "palace2"
+    malla_root = tmp_path / "malla2"
     state_dir = tmp_path / "hook_state2"
-    monkeypatch.setattr(hc, "PALACE_ROOT", palace_root)
+    monkeypatch.setattr(hc, "MALLA_ROOT", malla_root)
     monkeypatch.setattr(hc, "STATE_DIR", state_dir)
-    palace_root.mkdir(parents=True)
+    malla_root.mkdir(parents=True)
     tr = tmp_path / "empty.jsonl"
     tr.write_text("")
     res = hc._save_session_summary_direct(str(tr), "sess999")
@@ -520,7 +520,7 @@ def test_hooks_claim_slot_and_already_running(tmp_path, monkeypatch):
     state = tmp_path / "state"
     monkeypatch.setattr(hc, "STATE_DIR", state)
     monkeypatch.setattr(hc, "_MINE_PID_DIR", state / "mine_pids")
-    cmd = [sys.executable, "-m", "dxrk.memory", "mine", "/tmp/proj", "--wing", "default"]
+    cmd = [sys.executable, "-m", "dxrk.memory", "mine", "/tmp/proj", "--nodo", "default"]
     # first claim should succeed
     p1 = hc._claim_mine_slot(cmd)
     assert p1 is not None
@@ -547,7 +547,7 @@ def test_hooks_claim_slot_and_already_running(tmp_path, monkeypatch):
     pf2 = hc._pid_file_for_cmd(cmd)
     assert pf1 == pf2
     # different cmd different file
-    pf3 = hc._pid_file_for_cmd([sys.executable, "-m", "dxrk.memory", "mine", "/other", "--wing", "x"])
+    pf3 = hc._pid_file_for_cmd([sys.executable, "-m", "dxrk.memory", "mine", "/other", "--nodo", "x"])
     assert pf3 != pf1
     # no mine in cmd
     pf4 = hc._pid_file_for_cmd([sys.executable, "-c", "print(1)"])
@@ -614,16 +614,16 @@ def test_main_mine_dispatch_dry_run(tmp_path, monkeypatch):
     proj = tmp_path / "proj_main"
     proj.mkdir()
     (proj / "hello.py").write_text("print('hello world')\n" * 50)
-    # dry_run via palace isolated HOME
-    rc = mem_main.main(["mine", str(proj), "--wing", "default", "--dry-run"])
+    # dry_run via malla isolated HOME
+    rc = mem_main.main(["mine", str(proj), "--nodo", "default", "--dry-run"])
     assert rc == 0
-    # palace should exist but have 0 drawers because dry_run
-    from dxrk.memory.palace import DxrkMemory
+    # malla should exist but have 0 fragmentos because dry_run
+    from dxrk.memory.malla import DxrkMemory
 
     dm = DxrkMemory(str(home / ".dxrk" / "memory"))
-    # if tenant migrated, path may be tenants/default/palace; fallback
+    # if tenant migrated, path may be tenants/default/malla; fallback
     try:
-        # Use explicit path from HOME logic: _iso_home already sets HOME, so palace is at home/.dxrk/memory
+        # Use explicit path from HOME logic: _iso_home already sets HOME, so malla is at home/.dxrk/memory
         # but if migrated, DxrkMemory may resolve to tenants/default; we check both
         assert dm.count() >= 0
     except Exception:
@@ -637,10 +637,10 @@ def test_main_mine_dispatch_real(tmp_path, monkeypatch):
     proj = tmp_path / "proj_real"
     proj.mkdir()
     (proj / "a.txt").write_text("alpha beta gamma " * 100)
-    rc = mem_main.main(["mine", str(proj), "--wing", "wing_a", "--room", "general"])
+    rc = mem_main.main(["mine", str(proj), "--nodo", "nodo_a", "--celda", "general"])
     assert rc == 0
     # missing project should fail
-    rc2 = mem_main.main(["mine", str(tmp_path / "nope"), "--wing", "default"])
+    rc2 = mem_main.main(["mine", str(tmp_path / "nope"), "--nodo", "default"])
     assert rc2 == 1
 
 
@@ -652,7 +652,7 @@ def test_main_search_dispatch(tmp_path, monkeypatch):
     proj = tmp_path / "proj_search"
     proj.mkdir()
     (proj / "search.txt").write_text("searchable content unicorn " * 50)
-    mem_main.main(["mine", str(proj), "--wing", "default"])
+    mem_main.main(["mine", str(proj), "--nodo", "default"])
     # mock AgentMemory search to avoid sqlite full scan? Just run real search via __main__
     # It prints json lines to stdout; capture
     import contextlib
@@ -665,9 +665,9 @@ def test_main_search_dispatch(tmp_path, monkeypatch):
         rc = mem_main.main(["search", "unicorn", "--n", "2"])
     assert rc == 0
     # output may be empty if not found but should not crash
-    # also test search with wing filter
+    # also test search with nodo filter
     with contextlib.redirect_stdout(_io.StringIO()):
-        rc2 = mem_main.main(["search", "unicorn", "--wing", "default"])
+        rc2 = mem_main.main(["search", "unicorn", "--nodo", "default"])
     assert rc2 == 0
 
 
@@ -689,13 +689,13 @@ def test_main_hooks_dispatch_and_unknown(tmp_path, monkeypatch):
     rc4 = mem_main.main(["-h"])
     assert rc4 == 0
     # hooks with session-start
-    # need PALACE_ROOT to not exist -> no-op path; isolate HOME already empty so PALACE_ROOT missing
+    # need MALLA_ROOT to not exist -> no-op path; isolate HOME already empty so MALLA_ROOT missing
     # we test hooks dispatch via _cmd_hooks
     # create invalid hook should sys.exit(1); we test via subprocess-like but call directly
 
-    # ensure palace root exists for hooks to not be no-op? But we want to test hook output
-    palace = Path.home() / ".dxrk" / "memory"
-    palace.mkdir(parents=True, exist_ok=True)
+    # ensure malla root exists for hooks to not be no-op? But we want to test hook output
+    malla = Path.home() / ".dxrk" / "memory"
+    malla.mkdir(parents=True, exist_ok=True)
     # feed empty stdin json via monkeypatch sys.stdin?
     import io as _io
     import json as _json
@@ -717,45 +717,45 @@ def test_main_hooks_dispatch_and_unknown(tmp_path, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# palace gaps
+# malla gaps
 # ---------------------------------------------------------------------------
 
 
-def test_palace_mine_dry_run_counts(tmp_path, monkeypatch):
-    from dxrk.memory.palace import DxrkMemory
+def test_malla_mine_dry_run_counts(tmp_path, monkeypatch):
+    from dxrk.memory.malla import DxrkMemory
 
     _iso_home(tmp_path, monkeypatch)
-    palace_path = tmp_path / "palace_dry"
+    malla_path = tmp_path / "malla_dry"
     proj = tmp_path / "proj_dry"
     proj.mkdir()
     (proj / "file1.txt").write_text("hello world " * 100)
     (proj / "file2.txt").write_text("another file " * 100)
-    dm = DxrkMemory(str(palace_path))
+    dm = DxrkMemory(str(malla_path))
     dm.init()
-    res = dm.mine(str(proj), wing="default", room="general", dry_run=True)
+    res = dm.mine(str(proj), nodo="default", celda="general", dry_run=True)
     assert int(res["files_mined"]) == 2  # type: ignore[arg-type]
-    assert int(res["drawers_added"]) >= 2  # type: ignore[arg-type]
+    assert int(res["fragmentos_added"]) >= 2  # type: ignore[arg-type]
     assert int(res["files_skipped"]) == 0  # type: ignore[arg-type]
-    # dry_run should not have added drawers
+    # dry_run should not have added fragmentos
     assert dm.count() == 0
     # real mine then dry_run again should still work
-    res2 = dm.mine(str(proj), wing="default", room="general", dry_run=False)
+    res2 = dm.mine(str(proj), nodo="default", celda="general", dry_run=False)
     assert int(res2["files_mined"]) == 2  # type: ignore[arg-type]
     assert dm.count() > 0
     # skipped small file
     (proj / "tiny.txt").write_text("hi")
-    res3 = dm.mine(str(proj), wing="default", dry_run=True)
+    res3 = dm.mine(str(proj), nodo="default", dry_run=True)
     assert int(res3["files_skipped"]) >= 1  # type: ignore[arg-type]
 
 
-def test_palace_reap_stale_locks(tmp_path, monkeypatch):
-    from dxrk.memory.palace import _dxrk_lock_dir, reap_stale_dxrk_locks
+def test_malla_reap_stale_locks(tmp_path, monkeypatch):
+    from dxrk.memory.malla import _dxrk_lock_dir, reap_stale_dxrk_locks
 
     _iso_home(tmp_path, monkeypatch)
     # ensure lock dir exists via DxrkMemory
-    from dxrk.memory.palace import DxrkMemory
+    from dxrk.memory.malla import DxrkMemory
 
-    dm = DxrkMemory(str(tmp_path / "palace_reap"))
+    dm = DxrkMemory(str(tmp_path / "malla_reap"))
     dm.init()
     lock_dir = _dxrk_lock_dir()
     lock_dir.mkdir(parents=True, exist_ok=True)
@@ -768,14 +768,14 @@ def test_palace_reap_stale_locks(tmp_path, monkeypatch):
     # create recent lock
     recent = lock_dir / "recent.lock"
     recent.write_text("y")
-    # create mine_palace lock should be skipped
-    palace_lock = lock_dir / "mine_palace_abc.lock"
-    palace_lock.write_text("z")
-    os.utime(palace_lock, (old_time, old_time))
+    # create mine_malla lock should be skipped
+    malla_lock = lock_dir / "mine_malla_abc.lock"
+    malla_lock.write_text("z")
+    os.utime(malla_lock, (old_time, old_time))
     reaped, skipped = reap_stale_dxrk_locks(min_age_seconds=3600)
-    # old should be reaped (if not held), recent not, palace skipped
+    # old should be reaped (if not held), recent not, malla skipped
     assert reaped >= 1
-    assert not palace_lock.exists() or skipped >= 0
+    assert not malla_lock.exists() or skipped >= 0
     # second run with none old should return 0,0 or skipped
     reaped2, skipped2 = reap_stale_dxrk_locks(min_age_seconds=3600)
     assert isinstance(reaped2, int)
@@ -783,13 +783,13 @@ def test_palace_reap_stale_locks(tmp_path, monkeypatch):
     reaped3, _ = reap_stale_dxrk_locks(min_age_seconds=3600, tenant_id="acme")
     assert isinstance(reaped3, int)
     # test via alias
-    from dxrk.memory.palace import reap_stale_mine_locks
+    from dxrk.memory.malla import reap_stale_mine_locks
 
     assert reap_stale_mine_locks is reap_stale_dxrk_locks
 
 
-def test_palace_tenant_isolation_mine(tmp_path, monkeypatch):
-    from dxrk.memory.palace import DxrkMemory
+def test_malla_tenant_isolation_mine(tmp_path, monkeypatch):
+    from dxrk.memory.malla import DxrkMemory
     from dxrk.security.rbac import TenantRoleResolver
 
     _iso_home(tmp_path, monkeypatch)
@@ -801,22 +801,22 @@ def test_palace_tenant_isolation_mine(tmp_path, monkeypatch):
     TenantRoleResolver("tenantB").save({"dev": "dev"}, "dev")
     # tenant a
     dm_a = DxrkMemory(tenant_id="tenantA", agent="dev")
-    # palace_path should be tenants/tenantA/palace
-    assert "tenantA" in dm_a.palace_path or "tenants" in dm_a.palace_path
+    # malla_path should be tenants/tenantA/malla
+    assert "tenantA" in dm_a.malla_path or "tenants" in dm_a.malla_path
     dm_a.init()
-    dm_a.mine(str(proj), wing="default")
+    dm_a.mine(str(proj), nodo="default")
     assert dm_a.count() > 0
     # tenant b should be empty
     dm_b = DxrkMemory(tenant_id="tenantB", agent="dev")
     dm_b.init()
     assert dm_b.count() == 0
-    # explicit palace_path bypasses tenant
-    explicit = tmp_path / "explicit_palace"
+    # explicit malla_path bypasses tenant
+    explicit = tmp_path / "explicit_malla"
     dm_c = DxrkMemory(str(explicit), tenant_id="tenantA", agent="dev")
     dm_c.init()
-    assert str(explicit) in dm_c.palace_path
+    assert str(explicit) in dm_c.malla_path
     # ensure lock dir tenant-aware
-    from dxrk.memory.palace import _dxrk_lock_dir
+    from dxrk.memory.malla import _dxrk_lock_dir
 
     monkeypatch.setenv("DXRK_TENANT", "tenantA")
     ld = _dxrk_lock_dir()
@@ -824,8 +824,8 @@ def test_palace_tenant_isolation_mine(tmp_path, monkeypatch):
     monkeypatch.delenv("DXRK_TENANT", raising=False)
 
 
-def test_palace_chunk_and_metadata(tmp_path):
-    from dxrk.memory.palace import DxrkMemory, _build_drawer_metadata, _detect_hall, _extract_entities, chunk_text
+def test_malla_chunk_and_metadata(tmp_path):
+    from dxrk.memory.malla import DxrkMemory, _build_fragmento_metadata, _detect_hall, _extract_entities, chunk_text
 
     # chunk validation
     try:
@@ -849,12 +849,12 @@ def test_palace_chunk_and_metadata(tmp_path):
     assert _detect_hall("api database deploy") == "technical"
     ents = _extract_entities("Alice Alice Bob Bob Alice")
     assert isinstance(ents, str)
-    meta = _build_drawer_metadata("w", "r", "src", 0, "agent", "hello Alice Alice", None, chunk_total=3)
-    assert meta["wing"] == "w"
+    meta = _build_fragmento_metadata("w", "r", "src", 0, "agent", "hello Alice Alice", None, chunk_total=3)
+    assert meta["nodo"] == "w"
     assert meta["chunk_total"] == 3
     # DxrkMemory via memory-only sentinel
     dm = DxrkMemory("memory-only")
-    assert dm.palace_path == "memory-only"
+    assert dm.malla_path == "memory-only"
 
 
 # ---------------------------------------------------------------------------

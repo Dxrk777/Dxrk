@@ -289,8 +289,8 @@ _WRITE_TOOLS: list[str] = [
     "Update",
     "Install",
     "Mine",
-    "AddDrawer",
-    "RemoveDrawer",
+    "AddGlobulo",
+    "RemoveGlobulo",
     "Chunk",
 ]
 

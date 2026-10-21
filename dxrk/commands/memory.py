@@ -84,18 +84,18 @@ def register_memory_command(reg: Registry) -> None:
             import os
 
             from dxrk.memory.eval_harness import EvalHarness, generate_synthetic_queries
-            from dxrk.memory.palace import DxrkMemory
+            from dxrk.memory.malla import DxrkMemory
 
-            palace_path = os.environ.get("DXRK_MEMORY_PATH", str(Path.home() / ".dxrk" / "memory"))
-            dm = DxrkMemory(palace_path)
+            malla_path = os.environ.get("DXRK_MEMORY_PATH", str(Path.home() / ".dxrk" / "memory"))
+            dm = DxrkMemory(malla_path)
             dm.init()
             try:
-                harness = EvalHarness(dm, Path(palace_path) / "eval")
+                harness = EvalHarness(dm, Path(malla_path) / "eval")
                 n_q = int(ctx.flags.get("n", "10"))
-                queries = generate_synthetic_queries(dm, wing=ctx.args[0] if ctx.args else "default", n=n_q)
-                report = harness.run(wing=ctx.args[0] if ctx.args else "default", queries=queries)
+                queries = generate_synthetic_queries(dm, nodo=ctx.args[0] if ctx.args else "default", n=n_q)
+                report = harness.run(nodo=ctx.args[0] if ctx.args else "default", queries=queries)
                 out = ctx.out
-                out.write(f"Evaluación: {report.wing}\n")
+                out.write(f"Evaluación: {report.nodo}\n")
                 out.write(f"  Queries: {report.num_queries}\n")
                 out.write(f"  Recall@k: {report.recall_at_k}\n")
                 out.write(f"  MRR: {report.mrr:.3f}\n")
@@ -110,7 +110,7 @@ def register_memory_command(reg: Registry) -> None:
 
         cmd = Command(
             name="memory eval run",
-            short="Ejecutar evaluación harness en un wing",
+            short="Ejecutar evaluación harness en un nodo",
             flags={"n": Flag("n", shorthand="n", default="10", help="Número de queries")},
             min_args=1,
             max_args=1,
@@ -133,19 +133,19 @@ def register_memory_command(reg: Registry) -> None:
             from pathlib import Path
 
             from dxrk.memory.eval_harness import generate_synthetic_queries
-            from dxrk.memory.palace import DxrkMemory
+            from dxrk.memory.malla import DxrkMemory
 
-            palace_path = os.environ.get("DXRK_MEMORY_PATH", str(Path.home() / ".dxrk" / "memory"))
-            dm = DxrkMemory(palace_path)
+            malla_path = os.environ.get("DXRK_MEMORY_PATH", str(Path.home() / ".dxrk" / "memory"))
+            dm = DxrkMemory(malla_path)
             dm.init()
             try:
                 queries = generate_synthetic_queries(
-                    dm, wing=ctx.args[0] if ctx.args else "default", n=int(ctx.flags.get("n", 20))
+                    dm, nodo=ctx.args[0] if ctx.args else "default", n=int(ctx.flags.get("n", 20))
                 )
                 out = ctx.out
                 out.write(f"Queries sintéticas generadas: {len(queries)}\n")
                 for q in queries[:5]:
-                    out.write(f"  - {q.query[:60]}... (wing={q.wing})\n")
+                    out.write(f"  - {q.query[:60]}... (nodo={q.nodo})\n")
             finally:
                 dm.close()
             return 0
@@ -175,15 +175,15 @@ def register_memory_command(reg: Registry) -> None:
             import os
             from pathlib import Path
 
+            from dxrk.memory.malla import DxrkMemory
             from dxrk.memory.metacog_v2 import MetacognitionV2
-            from dxrk.memory.palace import DxrkMemory
 
-            palace_path = os.environ.get("DXRK_MEMORY_PATH", str(Path.home() / ".dxrk" / "memory"))
-            dm = DxrkMemory(palace_path)
+            malla_path = os.environ.get("DXRK_MEMORY_PATH", str(Path.home() / ".dxrk" / "memory"))
+            dm = DxrkMemory(malla_path)
             dm.init()
             try:
                 meta = MetacognitionV2(dm)
-                pred = meta.predict(ctx.args[0], wing=ctx.args[1] if len(ctx.args) > 1 else "default")
+                pred = meta.predict(ctx.args[0], nodo=ctx.args[1] if len(ctx.args) > 1 else "default")
                 out = ctx.out
                 out.write("Predicción metacognitiva:\n")
                 out.write(f"  Confianza: {pred.confidence:.3f}\n")
@@ -216,16 +216,16 @@ def register_memory_command(reg: Registry) -> None:
             import os
             from pathlib import Path
 
+            from dxrk.memory.malla import DxrkMemory
             from dxrk.memory.metacog_v2 import MetacognitionV2
-            from dxrk.memory.palace import DxrkMemory
 
-            palace_path = os.environ.get("DXRK_MEMORY_PATH", str(Path.home() / ".dxrk" / "memory"))
-            dm = DxrkMemory(palace_path)
+            malla_path = os.environ.get("DXRK_MEMORY_PATH", str(Path.home() / ".dxrk" / "memory"))
+            dm = DxrkMemory(malla_path)
             dm.init()
             try:
                 meta: MetacognitionV2 = MetacognitionV2(dm)
                 result = meta.fit_calibration(
-                    wing=ctx.args[0] if ctx.args else "default", method=str(ctx.flags.get("method", "temperature"))
+                    nodo=ctx.args[0] if ctx.args else "default", method=str(ctx.flags.get("method", "temperature"))
                 )
                 out = ctx.out
                 out.write(f"Calibración ajustada: {ctx.flags.get('method', 'temperature')}\n")
@@ -263,25 +263,25 @@ def register_memory_command(reg: Registry) -> None:
 
             from dxrk.memory.calibrate_v2 import CalibrationParams, save_calibration
 
-            palace_path = os.environ.get("DXRK_MEMORY_PATH", str(Path.home() / ".dxrk" / "memory"))
-            palace = Path(palace_path)
+            malla_path = os.environ.get("DXRK_MEMORY_PATH", str(Path.home() / ".dxrk" / "memory"))
+            malla = Path(malla_path)
             params = CalibrationParams(
                 tenant=ctx.args[0],
-                wing=ctx.args[1],
+                nodo=ctx.args[1],
                 a=float(ctx.flags.get("a", 1.0)),
                 b=float(ctx.flags.get("b", 0.0)),
                 c=float(ctx.flags.get("c", 1.0)),
                 pe_lambda=float(ctx.flags.get("pe-lambda", 0.0)),
                 score=float(ctx.flags.get("score", 0.5)),
             )
-            save_calibration(palace, params)
+            save_calibration(malla, params)
             out = ctx.out
-            out.write(f"Calibración guardada: tenant={ctx.args[0]}, wing={ctx.args[1]}\n")
+            out.write(f"Calibración guardada: tenant={ctx.args[0]}, nodo={ctx.args[1]}\n")
             return 0
 
         cmd = Command(
             name="memory calibrate tenant",
-            short="Guardar calibración para tenant+wing",
+            short="Guardar calibración para tenant+nodo",
             flags={
                 "a": Flag("a", shorthand="a", default="1.0", help="Parámetro a"),
                 "b": Flag("b", shorthand="b", default="0.0", help="Parámetro b"),
@@ -311,14 +311,14 @@ def register_memory_command(reg: Registry) -> None:
 
             from dxrk.memory.calibrate_v2 import get_calibration_chain
 
-            palace_path = os.environ.get("DXRK_MEMORY_PATH", str(Path.home() / ".dxrk" / "memory"))
-            palace = Path(palace_path)
-            chain = get_calibration_chain(palace, ctx.args[0], ctx.args[1])
+            malla_path = os.environ.get("DXRK_MEMORY_PATH", str(Path.home() / ".dxrk" / "memory"))
+            malla = Path(malla_path)
+            chain = get_calibration_chain(malla, ctx.args[0], ctx.args[1])
             out = ctx.out
-            out.write(f"Cadena de calibración (tenant={ctx.args[0]}, wing={ctx.args[1]}):\n")
+            out.write(f"Cadena de calibración (tenant={ctx.args[0]}, nodo={ctx.args[1]}):\n")
             for i, c in enumerate(chain):
                 out.write(
-                    f"  {i}. tenant={c.tenant}, wing={c.wing}, a={c.a:.3f}, b={c.b:.3f}, c={c.c:.3f}, pe_lambda={c.pe_lambda:.3f}, score={c.score:.3f}\n"
+                    f"  {i}. tenant={c.tenant}, nodo={c.nodo}, a={c.a:.3f}, b={c.b:.3f}, c={c.c:.3f}, pe_lambda={c.pe_lambda:.3f}, score={c.score:.3f}\n"
                 )
             return 0
 
@@ -373,15 +373,15 @@ def register_memory_command(reg: Registry) -> None:
             import os
             from pathlib import Path
 
-            from dxrk.memory.palace import DxrkMemory
+            from dxrk.memory.malla import DxrkMemory
             from dxrk.memory.production import check_slo, load_slo_config
 
-            palace_path = os.environ.get("DXRK_MEMORY_PATH", str(Path.home() / ".dxrk" / "memory"))
-            dm = DxrkMemory(palace_path)
+            malla_path = os.environ.get("DXRK_MEMORY_PATH", str(Path.home() / ".dxrk" / "memory"))
+            dm = DxrkMemory(malla_path)
             dm.init()
             try:
-                config = load_slo_config(Path(palace_path))
-                result = check_slo(dm, wing=ctx.args[0] if ctx.args else "default", config=config)
+                config = load_slo_config(Path(malla_path))
+                result = check_slo(dm, nodo=ctx.args[0] if ctx.args else "default", config=config)
                 out = ctx.out
                 out.write(f"SLO Check: {result.compliant}\n")
                 for detail in result.details:
@@ -413,15 +413,15 @@ def register_memory_command(reg: Registry) -> None:
             import os
             from pathlib import Path
 
-            from dxrk.memory.palace import DxrkMemory
+            from dxrk.memory.malla import DxrkMemory
             from dxrk.memory.production import AutoRollbackManager
 
-            palace_path = os.environ.get("DXRK_MEMORY_PATH", str(Path.home() / ".dxrk" / "memory"))
-            dm = DxrkMemory(palace_path)
+            malla_path = os.environ.get("DXRK_MEMORY_PATH", str(Path.home() / ".dxrk" / "memory"))
+            dm = DxrkMemory(malla_path)
             dm.init()
             try:
-                rollback_mgr = AutoRollbackManager(Path(palace_path))
-                result = rollback_mgr.check_regression(wing=ctx.args[0] if ctx.args else "default")
+                rollback_mgr = AutoRollbackManager(Path(malla_path))
+                result = rollback_mgr.check_regression(nodo=ctx.args[0] if ctx.args else "default")
                 out = ctx.out
                 should_rollback = result.get("should_rollback", False)
                 severity = result.get("severity", "none")
@@ -458,8 +458,8 @@ def register_memory_command(reg: Registry) -> None:
 
             from dxrk.memory.judge_continuous import load_judge_state
 
-            palace_path = os.environ.get("DXRK_MEMORY_PATH", str(Path.home() / ".dxrk" / "memory"))
-            state = load_judge_state(Path(palace_path))
+            malla_path = os.environ.get("DXRK_MEMORY_PATH", str(Path.home() / ".dxrk" / "memory"))
+            state = load_judge_state(Path(malla_path))
             out = ctx.out
             out.write("Judge Continuo:\n")
             out.write(f"  Última ejecución: {state.last_run or 'nunca'}\n")
@@ -467,7 +467,7 @@ def register_memory_command(reg: Registry) -> None:
             out.write(f"  Fallos consecutivos: {state.consecutive_failures}\n")
             out.write(f"  Rollbacks recientes: {len(state.rollback_history)}\n")
             for r in state.rollback_history[-5:]:
-                out.write(f"  - {r.get('timestamp', '')} {r.get('wing', '')} {r.get('reason', '')}\n")
+                out.write(f"  - {r.get('timestamp', '')} {r.get('nodo', '')} {r.get('reason', '')}\n")
             return 0
 
         cmd = Command(
@@ -493,14 +493,14 @@ def register_memory_command(reg: Registry) -> None:
 
             from dxrk.memory.eval_harness import EvalHarness
             from dxrk.memory.judge_continuous import ContinuousJudge
-            from dxrk.memory.palace import DxrkMemory
+            from dxrk.memory.malla import DxrkMemory
 
-            palace_path = os.environ.get("DXRK_MEMORY_PATH", str(Path.home() / ".dxrk" / "memory"))
-            dm = DxrkMemory(palace_path)
+            malla_path = os.environ.get("DXRK_MEMORY_PATH", str(Path.home() / ".dxrk" / "memory"))
+            dm = DxrkMemory(malla_path)
             dm.init()
             try:
-                harness = EvalHarness(dm, Path(palace_path) / "eval")
-                judge = ContinuousJudge(Path(palace_path), harness, interval_hours=24)
+                harness = EvalHarness(dm, Path(malla_path) / "eval")
+                judge = ContinuousJudge(Path(malla_path), harness, interval_hours=24)
                 verdict = judge.run_once()
                 out = ctx.out
                 out.write(

@@ -1215,7 +1215,7 @@ class TestDialectRemainder:
         d = Dialect()
         out = d.compress("hi", {})
         assert "0:" in out
-        out2 = d.compress("Alice decided to switch because breakthrough", {"wing": "w"})
+        out2 = d.compress("Alice decided to switch because breakthrough", {"nodo": "w"})
         assert "DECISION" in out2 or "PIVOT" in out2
 
     def test_decode_branches(self):
@@ -1524,12 +1524,12 @@ class TestFilemergeRemainder2:
 # ═══════════ sleep ═══════════
 
 
-def _sdrawer(did, **kw):
+def _fragmento_row(did, **kw):
     from datetime import UTC, datetime, timedelta
 
     meta = {
-        "wing": "w",
-        "room": "r",
+        "nodo": "w",
+        "celda": "r",
         "filed_at": (datetime.now(UTC) - timedelta(days=60)).isoformat(),
         "S": 10.0,
         "D": 5.0,
@@ -1541,51 +1541,51 @@ def _sdrawer(did, **kw):
     return {"id": did, "document": doc, "metadata": meta}
 
 
-def _spalace(drawers):
+def _malla_rows(fragmentos):
     from unittest.mock import Mock
 
-    palace = Mock()
-    palace._path = "/tmp/palace"
-    palace.iter_drawers.return_value = drawers
+    malla = Mock()
+    malla._path = "/tmp/malla"
+    malla.iter_fragmentos.return_value = fragmentos
 
     def _get(did):
-        for d in drawers:
+        for d in fragmentos:
             if d["id"] == did:
                 return d
         return None
 
-    palace.get_drawer.side_effect = _get
-    return palace
+    malla.get_fragmento.side_effect = _get
+    return malla
 
 
 class TestSleepRemainder:
     def test_protected_bad_valid_to(self):
         from dxrk.memory.sleep import is_protected
 
-        assert is_protected(_sdrawer("d", valid_to="no-fecha")) is False
+        assert is_protected(_fragmento_row("d", valid_to="no-fecha")) is False
         assert is_protected({"id": "x"}) is False
 
     def test_avg_pe_variants(self):
         from dxrk.memory.sleep import avg_prediction_error, count_supersedes
 
-        assert avg_prediction_error(_sdrawer("d")) == 0.0
-        assert avg_prediction_error(_sdrawer("d", score_ledger=[{"x": 1}])) == 0.0
-        assert avg_prediction_error(_sdrawer("d", score_ledger=[{"pe": 0.2}, {"pe": -0.4}])) == pytest.approx(0.3)
-        assert count_supersedes(_sdrawer("d")) == 0
-        assert count_supersedes(_sdrawer("d", superseded_count=3)) == 3
+        assert avg_prediction_error(_fragmento_row("d")) == 0.0
+        assert avg_prediction_error(_fragmento_row("d", score_ledger=[{"x": 1}])) == 0.0
+        assert avg_prediction_error(_fragmento_row("d", score_ledger=[{"pe": 0.2}, {"pe": -0.4}])) == pytest.approx(0.3)
+        assert count_supersedes(_fragmento_row("d")) == 0
+        assert count_supersedes(_fragmento_row("d", superseded_count=3)) == 3
 
     def test_select_skips_low_priority(self):
         from datetime import UTC, datetime
 
         from dxrk.memory.sleep import select_sleep_candidates
 
-        fresh = _sdrawer("d", filed_at=datetime.now(UTC).isoformat())
-        palace = _spalace([fresh])
-        assert select_sleep_candidates(palace) == []
-        mild = _sdrawer("d", filed_at=datetime.now(UTC).isoformat(), score_ledger=[{"pe": 0.1}])
-        palace2 = _spalace([mild])
-        assert select_sleep_candidates(palace2) == []
-        assert select_sleep_candidates(palace2, stress_active=True) != []
+        fresh = _fragmento_row("d", filed_at=datetime.now(UTC).isoformat())
+        malla = _malla_rows([fresh])
+        assert select_sleep_candidates(malla) == []
+        mild = _fragmento_row("d", filed_at=datetime.now(UTC).isoformat(), score_ledger=[{"pe": 0.1}])
+        malla2 = _malla_rows([mild])
+        assert select_sleep_candidates(malla2) == []
+        assert select_sleep_candidates(malla2, stress_active=True) != []
 
     def test_classify_all(self):
         from dxrk.memory.sleep import classify_reason
@@ -1606,41 +1606,41 @@ class TestSleepRemainder:
     def test_consolidate_missing_and_deferred(self):
         from dxrk.memory.sleep import SleepCandidate, consolidate_candidate
 
-        palace = _spalace([])
-        assert consolidate_candidate(palace, SleepCandidate("no", 1.0, "pe_high")) == {"status": "not_found"}
+        malla = _malla_rows([])
+        assert consolidate_candidate(malla, SleepCandidate("no", 1.0, "pe_high")) == {"status": "not_found"}
         nodoc = {"id": "d", "metadata": {}}
-        palace2 = _spalace([nodoc])
-        assert consolidate_candidate(palace2, SleepCandidate("d", 1.0, "pe_high")) == {"status": "not_found"}
-        palace3 = _spalace([_sdrawer("d")])
-        assert consolidate_candidate(palace3, SleepCandidate("d", 1.0, "near_dup")) == {"status": "deferred_rem"}
+        malla2 = _malla_rows([nodoc])
+        assert consolidate_candidate(malla2, SleepCandidate("d", 1.0, "pe_high")) == {"status": "not_found"}
+        malla3 = _malla_rows([_fragmento_row("d")])
+        assert consolidate_candidate(malla3, SleepCandidate("d", 1.0, "near_dup")) == {"status": "deferred_rem"}
 
     def test_consolidate_ok(self):
         from dxrk.memory.sleep import SleepCandidate, consolidate_candidate
 
-        palace = _spalace([_sdrawer("d", score_ledger=[{"pe": 0.1}])])
-        out = consolidate_candidate(palace, SleepCandidate("d", 1.0, "pe_high"))
+        malla = _malla_rows([_fragmento_row("d", score_ledger=[{"pe": 0.1}])])
+        out = consolidate_candidate(malla, SleepCandidate("d", 1.0, "pe_high"))
         assert out["status"] == "consolidated"
-        assert palace.update_drawer.called
+        assert malla.update_fragmento.called
 
     def test_reorganize_branches(self):
         from dxrk.memory.sleep import SleepCandidate, reorganize_candidate
 
-        assert reorganize_candidate(_spalace([]), SleepCandidate("no", 1.0, "near_dup")) == {"status": "not_found"}
-        prot = _sdrawer("d", pinned=True)
-        assert reorganize_candidate(_spalace([prot]), SleepCandidate("d", 1.0, "near_dup")) == {"status": "protected"}
+        assert reorganize_candidate(_malla_rows([]), SleepCandidate("no", 1.0, "near_dup")) == {"status": "not_found"}
+        prot = _fragmento_row("d", pinned=True)
+        assert reorganize_candidate(_malla_rows([prot]), SleepCandidate("d", 1.0, "near_dup")) == {"status": "protected"}
         doc = "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu"
-        a = _sdrawer("a", document=doc, S=5.0)
-        b = _sdrawer("b", document=doc, S=10.0)
-        palace = _spalace([a, b])
-        out = reorganize_candidate(palace, SleepCandidate("a", 1.0, "near_dup"))
+        a = _fragmento_row("a", document=doc, S=5.0)
+        b = _fragmento_row("b", document=doc, S=10.0)
+        malla = _malla_rows([a, b])
+        out = reorganize_candidate(malla, SleepCandidate("a", 1.0, "near_dup"))
         assert out["status"] == "merged"
         assert out["winner"] == "b" and out["loser"] == "a"
-        c = _sdrawer("c", document="totalmente distinto uno", room="other")
-        palace2 = _spalace([a, c])
-        assert reorganize_candidate(palace2, SleepCandidate("a", 1.0, "near_dup"))["status"] == "no_merge"
-        e = _sdrawer("e", document="")
-        palace3 = _spalace([a, e])
-        assert reorganize_candidate(palace3, SleepCandidate("a", 1.0, "near_dup"))["status"] == "no_merge"
+        c = _fragmento_row("c", document="totalmente distinto uno", celda="other")
+        malla2 = _malla_rows([a, c])
+        assert reorganize_candidate(malla2, SleepCandidate("a", 1.0, "near_dup"))["status"] == "no_merge"
+        e = _fragmento_row("e", document="")
+        malla3 = _malla_rows([a, e])
+        assert reorganize_candidate(malla3, SleepCandidate("a", 1.0, "near_dup"))["status"] == "no_merge"
 
     def test_jaccard_empty(self):
         from dxrk.memory.sleep import jaccard_similarity
@@ -1659,10 +1659,10 @@ class TestSleepRemainder:
         from dxrk.memory.sleep import sleep_cycle
 
         doc = "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu"
-        drawers = [_sdrawer(f"d{i}", document=doc, score_ledger=[{"pe": 0.9}]) for i in range(4)]
-        palace = _spalace(drawers)
-        palace._path = str(tmp_path)
-        stats = sleep_cycle(palace, limit=4, nrem_ratio=0.5)
+        fragmentos = [_fragmento_row(f"d{i}", document=doc, score_ledger=[{"pe": 0.9}]) for i in range(4)]
+        malla = _malla_rows(fragmentos)
+        malla._path = str(tmp_path)
+        stats = sleep_cycle(malla, limit=4, nrem_ratio=0.5)
         assert stats["candidates"] >= 0
         assert stats["total"] >= 0
 
@@ -1671,39 +1671,39 @@ class TestSleepRemainder:
 
         from dxrk.memory.sleep import reconsolidate_labile
 
-        assert reconsolidate_labile(_spalace([_sdrawer("d", pinned=True)])) == 0
-        assert reconsolidate_labile(_spalace([_sdrawer("d")])) == 0
-        old = _sdrawer("d", labile_until=(datetime.now(UTC) - timedelta(hours=7)).isoformat())
-        palace = _spalace([old])
-        assert reconsolidate_labile(palace) == 1
-        assert palace.update_drawer.called
-        bad = _sdrawer("d", labile_until="zzz")
-        assert reconsolidate_labile(_spalace([bad])) == 0
-        future = _sdrawer("d", labile_until=(datetime.now(UTC) + timedelta(hours=7)).isoformat())
-        assert reconsolidate_labile(_spalace([future])) == 0
+        assert reconsolidate_labile(_malla_rows([_fragmento_row("d", pinned=True)])) == 0
+        assert reconsolidate_labile(_malla_rows([_fragmento_row("d")])) == 0
+        old = _fragmento_row("d", labile_until=(datetime.now(UTC) - timedelta(hours=7)).isoformat())
+        malla = _malla_rows([old])
+        assert reconsolidate_labile(malla) == 1
+        assert malla.update_fragmento.called
+        bad = _fragmento_row("d", labile_until="zzz")
+        assert reconsolidate_labile(_malla_rows([bad])) == 0
+        future = _fragmento_row("d", labile_until=(datetime.now(UTC) + timedelta(hours=7)).isoformat())
+        assert reconsolidate_labile(_malla_rows([future])) == 0
 
     def test_reorganize_skips_protected_other(self):
         from dxrk.memory.sleep import SleepCandidate, reorganize_candidate
 
         doc = "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu"
-        a = _sdrawer("a", document=doc)
-        pinned = _sdrawer("p", document="otra cosa", pinned=True)
-        palace = _spalace([a, pinned])
-        assert reorganize_candidate(palace, SleepCandidate("a", 1.0, "near_dup"))["status"] == "no_merge"
+        a = _fragmento_row("a", document=doc)
+        pinned = _fragmento_row("p", document="otra cosa", pinned=True)
+        malla = _malla_rows([a, pinned])
+        assert reorganize_candidate(malla, SleepCandidate("a", 1.0, "near_dup"))["status"] == "no_merge"
 
     def test_cycle_nrem_deferred(self, tmp_path):
         from datetime import UTC, datetime, timedelta
 
         from dxrk.memory.sleep import sleep_cycle
 
-        mild = _sdrawer(
+        mild = _fragmento_row(
             "d",
             filed_at=(datetime.now(UTC) - timedelta(days=60)).isoformat(),
             score_ledger=[{"pe": 0.2}],
         )
-        palace = _spalace([mild])
-        palace._path = str(tmp_path)
-        stats = sleep_cycle(palace, limit=2, nrem_ratio=0.7)
+        malla = _malla_rows([mild])
+        malla._path = str(tmp_path)
+        stats = sleep_cycle(malla, limit=2, nrem_ratio=0.7)
         assert stats["candidates"] == 1
         assert stats["nrem_consolidated"] == 0
 
@@ -1984,12 +1984,12 @@ class TestTenantMigrationRemainder:
         custom = home / ".dxrk" / "customdir"
         custom.mkdir(parents=True)
         (custom / "f.txt").write_text("x")
-        db = home / ".dxrk" / "palace" / "sqlite_palace.db"
+        db = home / ".dxrk" / "malla" / "malla.db"
         db.parent.mkdir(parents=True)
         db.write_text("db")
-        (home / ".dxrk" / "palace" / "sqlite_palace.db-wal").write_text("wal")
-        (home / ".dxrk" / "palace" / "sqlite_palace.db-shm").write_text("shm")
-        monkeypatch.setattr(mig, "LEGACY_PATHS", [(custom, _P("customdir")), (db, _P("palace") / "sqlite_palace.db")])
+        (home / ".dxrk" / "malla" / "malla.db-wal").write_text("wal")
+        (home / ".dxrk" / "malla" / "malla.db-shm").write_text("shm")
+        monkeypatch.setattr(mig, "LEGACY_PATHS", [(custom, _P("customdir")), (db, _P("malla") / "malla.db")])
         res = mig.migrate_legacy_to_default(dry_run=False)
         assert len(res["copied"]) == 2
         assert (mig.tenant_root("default") / "customdir" / "f.txt").exists()
@@ -2040,14 +2040,14 @@ class TestTenantMigrationRemainder:
         custom = home / ".dxrk" / "customdir"
         (custom / "sub").mkdir(parents=True)
         (custom / "sub" / "g.txt").write_text("x")
-        db = home / ".dxrk" / "palace" / "sqlite_palace.db"
+        db = home / ".dxrk" / "malla" / "malla.db"
         db.parent.mkdir(parents=True)
         db.write_text("db")
-        (home / ".dxrk" / "palace" / "sqlite_palace.db-wal").write_text("wal")
-        monkeypatch.setattr(mig, "LEGACY_PATHS", [(custom, _P("customdir")), (db, _P("palace") / "sqlite_palace.db")])
+        (home / ".dxrk" / "malla" / "malla.db-wal").write_text("wal")
+        monkeypatch.setattr(mig, "LEGACY_PATHS", [(custom, _P("customdir")), (db, _P("malla") / "malla.db")])
         res = mig.migrate_legacy_to_default(dry_run=False)
         assert len(res["copied"]) == 2
-        (mig.tenant_root("default") / "palace" / "sqlite_palace.db").unlink()
+        (mig.tenant_root("default") / "malla" / "malla.db").unlink()
         res2 = mig.migrate_legacy_to_default(dry_run=False)
         assert res2["copied"]
 
@@ -2059,11 +2059,11 @@ class TestTenantMigrationRemainder:
 
         home = tmp_path / "home"
         monkeypatch.setenv("HOME", str(home))
-        db = home / ".dxrk" / "palace" / "sqlite_palace.db"
+        db = home / ".dxrk" / "malla" / "malla.db"
         db.parent.mkdir(parents=True)
         db.write_text("db")
-        (home / ".dxrk" / "palace" / "sqlite_palace.db-wal").write_text("wal")
-        monkeypatch.setattr(mig, "LEGACY_PATHS", [(db, _P("palace") / "sqlite_palace.db")])
+        (home / ".dxrk" / "malla" / "malla.db-wal").write_text("wal")
+        monkeypatch.setattr(mig, "LEGACY_PATHS", [(db, _P("malla") / "malla.db")])
         real_copy2 = _shutil.copy2
 
         def _boom_wal(src, dst, *a, **k):
@@ -2096,92 +2096,92 @@ class TestTenantMigrationRemainder:
 # ═══════════ calibrate ═══════════
 
 
-def _cal_drawer(did, wing="w", doc="some content here"):
-    return {"id": did, "document": doc, "metadata": {"wing": wing, "S": 1.0}}
+def _cal_fragmento(did, nodo="w", doc="some content here"):
+    return {"id": did, "document": doc, "metadata": {"nodo": nodo, "S": 1.0}}
 
 
 class TestCalibrateRemainder:
-    def test_evaluate_few_drawers(self):
+    def test_evaluate_few_fragmentos(self):
         from unittest.mock import Mock
 
         from dxrk.memory.calibrate import CalibrationParams, evaluate_recall_at_k
 
-        palace = Mock()
-        palace.iter_drawers.return_value = [_cal_drawer("d1")]
-        assert evaluate_recall_at_k(palace, "w", CalibrationParams()) == 0.0
+        malla = Mock()
+        malla.iter_fragmentos.return_value = [_cal_fragmento("d1")]
+        assert evaluate_recall_at_k(malla, "w", CalibrationParams()) == 0.0
 
     def test_evaluate_empty_doc(self):
         from unittest.mock import Mock
 
         from dxrk.memory.calibrate import CalibrationParams, evaluate_recall_at_k
 
-        palace = Mock()
-        palace.iter_drawers.return_value = [_cal_drawer("d1", doc=""), _cal_drawer("d2", doc="")]
-        assert evaluate_recall_at_k(palace, "w", CalibrationParams()) == 0.0
+        malla = Mock()
+        malla.iter_fragmentos.return_value = [_cal_fragmento("d1", doc=""), _cal_fragmento("d2", doc="")]
+        assert evaluate_recall_at_k(malla, "w", CalibrationParams()) == 0.0
 
     def test_evaluate_runs(self):
         from unittest.mock import Mock
 
         from dxrk.memory.calibrate import CalibrationParams, evaluate_recall_at_k
 
-        palace = Mock()
-        palace.iter_drawers.return_value = [_cal_drawer(f"d{i}") for i in range(5)]
-        assert evaluate_recall_at_k(palace, "w", CalibrationParams(), k=2, sample_size=2) == 0.0
+        malla = Mock()
+        malla.iter_fragmentos.return_value = [_cal_fragmento(f"d{i}") for i in range(5)]
+        assert evaluate_recall_at_k(malla, "w", CalibrationParams(), k=2, sample_size=2) == 0.0
 
-    def test_wing_no_candidates(self, monkeypatch):
+    def test_nodo_no_candidates(self, monkeypatch):
         from unittest.mock import Mock
 
         import dxrk.memory.calibrate as cal
 
-        monkeypatch.setattr(cal, "select_evaluation_candidates", lambda palace, n, config: [])
-        assert cal.calibrate_wing(Mock(), "w") is cal.DEFAULT_PARAMS
+        monkeypatch.setattr(cal, "select_evaluation_candidates", lambda malla, n, config: [])
+        assert cal.calibrate_nodo(Mock(), "w") is cal.DEFAULT_PARAMS
 
-    def test_wing_single_candidate(self, monkeypatch):
+    def test_nodo_single_candidate(self, monkeypatch):
         from unittest.mock import Mock
 
         import dxrk.memory.calibrate as cal
 
-        palace = Mock()
-        palace.iter_drawers.return_value = [_cal_drawer("d1")]
-        monkeypatch.setattr(cal, "select_evaluation_candidates", lambda palace, n, config: ["d1"])
-        assert cal.calibrate_wing(palace, "w") is cal.DEFAULT_PARAMS
+        malla = Mock()
+        malla.iter_fragmentos.return_value = [_cal_fragmento("d1")]
+        monkeypatch.setattr(cal, "select_evaluation_candidates", lambda malla, n, config: ["d1"])
+        assert cal.calibrate_nodo(malla, "w") is cal.DEFAULT_PARAMS
 
     def test_calibrate_v2_edges(self, monkeypatch):
         from unittest.mock import Mock
 
         import dxrk.memory.calibrate_v2 as cal2
 
-        palace = Mock()
-        palace.iter_drawers.return_value = [_cal_drawer("d1")]
-        assert cal2.evaluate_recall_at_k(palace, "w", cal2.CalibrationParams()) == 0.0
-        monkeypatch.setattr(cal2, "select_evaluation_candidates", lambda palace, n, config: [])
-        assert cal2.calibrate_wing(Mock(), "w") is cal2.DEFAULT_PARAMS
-        palace2 = Mock()
-        palace2.iter_drawers.return_value = [_cal_drawer("d1")]
-        monkeypatch.setattr(cal2, "select_evaluation_candidates", lambda palace, n, config: ["d1"])
-        assert cal2.calibrate_wing(palace2, "w") is cal2.DEFAULT_PARAMS
+        malla = Mock()
+        malla.iter_fragmentos.return_value = [_cal_fragmento("d1")]
+        assert cal2.evaluate_recall_at_k(malla, "w", cal2.CalibrationParams()) == 0.0
+        monkeypatch.setattr(cal2, "select_evaluation_candidates", lambda malla, n, config: [])
+        assert cal2.calibrate_nodo(Mock(), "w") is cal2.DEFAULT_PARAMS
+        malla2 = Mock()
+        malla2.iter_fragmentos.return_value = [_cal_fragmento("d1")]
+        monkeypatch.setattr(cal2, "select_evaluation_candidates", lambda malla, n, config: ["d1"])
+        assert cal2.calibrate_nodo(malla2, "w") is cal2.DEFAULT_PARAMS
 
     def test_calibration_io(self, tmp_path):
 
         import dxrk.memory.calibrate as cal
         import dxrk.memory.calibrate_v2 as cal2
 
-        wing = "wtest"
-        assert cal.load_calibration(tmp_path, wing) == cal.DEFAULT_PARAMS
-        cal.save_calibration(tmp_path, wing, cal.CalibrationParams(a=2.0))
-        assert cal.load_calibration(tmp_path, wing).a == 2.0
-        assert cal.get_calibration_params(tmp_path, wing).a == 2.0
-        assert wing in cal.list_calibrated_wings(tmp_path)
-        (tmp_path / ".calibration" / f"{wing}.json").write_text("zzz")
-        assert cal.load_calibration(tmp_path, wing) == cal.DEFAULT_PARAMS
-        assert cal2.load_calibration(tmp_path, "", wing) == cal2.DEFAULT_PARAMS
-        cal2.save_calibration(tmp_path, cal2.CalibrationParams(tenant="t", wing=wing))
-        assert cal2.load_calibration(tmp_path, "t", wing).tenant == "t"
-        assert cal2.get_calibration_params(tmp_path, "t", wing).tenant == "t"
-        assert cal2.list_calibrated_wings(tmp_path)
-        (tmp_path / ".calibration" / f"global_{wing}.json").write_text("zzz")
-        assert cal2.load_calibration(tmp_path, "", wing) == cal2.DEFAULT_PARAMS
-        chain = cal2.get_calibration_chain(tmp_path, "t", wing)
+        nodo = "wtest"
+        assert cal.load_calibration(tmp_path, nodo) == cal.DEFAULT_PARAMS
+        cal.save_calibration(tmp_path, nodo, cal.CalibrationParams(a=2.0))
+        assert cal.load_calibration(tmp_path, nodo).a == 2.0
+        assert cal.get_calibration_params(tmp_path, nodo).a == 2.0
+        assert nodo in cal.list_calibrated_nodos(tmp_path)
+        (tmp_path / ".calibration" / f"{nodo}.json").write_text("zzz")
+        assert cal.load_calibration(tmp_path, nodo) == cal.DEFAULT_PARAMS
+        assert cal2.load_calibration(tmp_path, "", nodo) == cal2.DEFAULT_PARAMS
+        cal2.save_calibration(tmp_path, cal2.CalibrationParams(tenant="t", nodo=nodo))
+        assert cal2.load_calibration(tmp_path, "t", nodo).tenant == "t"
+        assert cal2.get_calibration_params(tmp_path, "t", nodo).tenant == "t"
+        assert cal2.list_calibrated_nodos(tmp_path)
+        (tmp_path / ".calibration" / f"global_{nodo}.json").write_text("zzz")
+        assert cal2.load_calibration(tmp_path, "", nodo) == cal2.DEFAULT_PARAMS
+        chain = cal2.get_calibration_chain(tmp_path, "t", nodo)
         assert chain and chain[-1] == cal2.DEFAULT_PARAMS
         assert cal2.merge_calibrations([]) == cal2.DEFAULT_PARAMS
         single = cal2.CalibrationParams(a=1.0)
@@ -2224,12 +2224,12 @@ class TestMetacogV2Remainder:
 
         st = m2.MetacogState()
         for i in range(12):
-            st = m2.record_judgment(st, 0.8, 1.0, context={"wing": "w"})
+            st = m2.record_judgment(st, 0.8, 1.0, context={"nodo": "w"})
         for i in range(3):
-            st = m2.record_judgment(st, 0.2, 0.0, context={"wing": "rare"})
+            st = m2.record_judgment(st, 0.2, 0.0, context={"nodo": "rare"})
         out = m2.detect_bias(st)
-        assert "wing=w" in out["category_bias"]
-        assert "wing=rare" not in out["category_bias"]
+        assert "nodo=w" in out["category_bias"]
+        assert "nodo=rare" not in out["category_bias"]
 
     def test_wrapper(self, tmp_path):
         from types import SimpleNamespace
@@ -2237,16 +2237,16 @@ class TestMetacogV2Remainder:
         import dxrk.memory.metacog_v2 as m2
 
         w = m2.MetacognitionV2(SimpleNamespace())
-        assert str(w._palace_path) == "."
-        palace = SimpleNamespace(_path=str(tmp_path), search=lambda query, wing, n_results: {"results": [{"id": "a"}]})
-        w2 = m2.MetacognitionV2(palace)
+        assert str(w._malla_path) == "."
+        malla = SimpleNamespace(_path=str(tmp_path), search=lambda query, nodo, n_results: {"results": [{"id": "a"}]})
+        w2 = m2.MetacognitionV2(malla)
         pred = w2.predict("hola")
         assert 0.0 <= pred.confidence <= 1.0
-        palace3 = SimpleNamespace(_path=str(tmp_path), search=lambda query, wing, n_results: [1, 2])
-        pred3 = m2.MetacognitionV2(palace3).predict("hola")
+        malla3 = SimpleNamespace(_path=str(tmp_path), search=lambda query, nodo, n_results: [1, 2])
+        pred3 = m2.MetacognitionV2(malla3).predict("hola")
         assert pred3.difficulty == 1.0
-        palace4 = SimpleNamespace(_path=str(tmp_path), search=lambda query, wing, n_results: {"results": "x"})
-        assert m2.MetacognitionV2(palace4).predict("hola").difficulty == 1.0
+        malla4 = SimpleNamespace(_path=str(tmp_path), search=lambda query, nodo, n_results: {"results": "x"})
+        assert m2.MetacognitionV2(malla4).predict("hola").difficulty == 1.0
         out = w2.fit_calibration()
         assert out["n_judgments"] == 0
         assert m2.get_metacog_summary(w2._state)["n_judgments"] == 0

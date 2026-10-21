@@ -104,7 +104,8 @@ def list_tenants() -> list[str]:
 #: ``Path.home()`` is evaluated at import (per spec); callers that
 #: monkeypatch ``HOME`` should reimport or patch :data:`LEGACY_PATHS` directly.
 LEGACY_PATHS: list[tuple[Path, Path]] = [
-    (Path.home() / ".dxrk" / "palace" / "sqlite_palace.db", Path("palace") / "sqlite_palace.db"),
+    (Path.home() / ".dxrk" / "malla" / "sqlite_malla.db", Path("malla") / "malla.db"),
+    (Path.home() / ".dxrk" / "malla" / "malla.db", Path("malla") / "malla.db"),
     (Path.home() / ".dxrk" / "locks", Path("locks")),
     (Path.home() / ".dxrk" / "knowledge_graph.sqlite3", Path("knowledge_graph.sqlite3")),
     (Path.home() / ".dxrk" / "identity.txt", Path("identity.txt")),
@@ -119,14 +120,14 @@ LEGACY_PATHS: list[tuple[Path, Path]] = [
 def ensure_tenant(tenant_id: str) -> Path:
     """Ensure ``~/.dxrk/tenants/{tenant_id}/`` and subdirs exist.
 
-    Creates ``palace/locks/learn/sessions`` with ``0o750`` (files ``0o600``
+    Creates ``malla/locks/learn/sessions`` with ``0o750`` (files ``0o600``
     are handled by callers). Validates ``tenant_id`` via :data:`TENANT_ID_RE`.
     """
     if not _valid_tenant_id(tenant_id):
         raise ValueError(f"invalid tenant id {tenant_id!r}")
     root = tenant_root(tenant_id)
     _ensure_dir(root, 0o750)
-    for sub in ("palace", "locks", "learn", "sessions"):
+    for sub in ("malla", "locks", "learn", "sessions"):
         _ensure_dir(root / sub, 0o750)
     return root
 

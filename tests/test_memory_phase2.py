@@ -30,8 +30,8 @@ DISTINCT_DOCS = [
 ]
 
 
-def _dm(tmp_path: Path, name: str = "palace", **kwargs):  # type: ignore[no-untyped-def]
-    from dxrk.memory.palace import DxrkMemory
+def _dm(tmp_path: Path, name: str = "malla", **kwargs):  # type: ignore[no-untyped-def]
+    from dxrk.memory.malla import DxrkMemory
 
     pal = tmp_path / name
     dm = DxrkMemory(str(pal), **kwargs)
@@ -46,28 +46,28 @@ def _dm(tmp_path: Path, name: str = "palace", **kwargs):  # type: ignore[no-unty
 
 class TestClassifyContentPair:
     def test_identical_is_duplicate(self):
-        from dxrk.memory.palace import classify_content_pair
+        from dxrk.memory.malla import classify_content_pair
 
         assert classify_content_pair(BASE, BASE) == "duplicate"
 
     def test_extension_is_duplicate(self):
-        from dxrk.memory.palace import classify_content_pair
+        from dxrk.memory.malla import classify_content_pair
 
         assert classify_content_pair(BASE_EXTENDED, BASE) == "duplicate"
 
     def test_unrelated_is_distinct(self):
-        from dxrk.memory.palace import classify_content_pair
+        from dxrk.memory.malla import classify_content_pair
 
         assert classify_content_pair(AUTH, DEPLOY) == "distinct"
 
     def test_empty_is_distinct(self):
-        from dxrk.memory.palace import classify_content_pair
+        from dxrk.memory.malla import classify_content_pair
 
         assert classify_content_pair("", AUTH) == "distinct"
         assert classify_content_pair(AUTH, "") == "distinct"
 
     def test_contradiction_branch(self, monkeypatch):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         # Same-topic pair (sim 0.36, overlap ~0.05): unreachable at the real
         # 0.85 bar by construction, so lower the bar to exercise the branch.
@@ -75,26 +75,26 @@ class TestClassifyContentPair:
         assert pal.classify_content_pair(AUTH, DEPLOY) == "contradiction"
 
 
-class TestAddDrawerDedupe:
+class TestAddGlobuloDedupe:
     def test_near_duplicate_updates_existing(self, tmp_path: Path):
         dm = _dm(tmp_path)
         try:
-            first = dm.add_drawer("w", "r", BASE, "/a.txt", 0)
-            second = dm.add_drawer("w", "r", BASE_EXTENDED, "/b.txt", 0)
+            first = dm.add_fragmento("w", "r", BASE, "/a.txt", 0)
+            second = dm.add_fragmento("w", "r", BASE_EXTENDED, "/b.txt", 0)
             assert second == first
             assert dm.count() == 1
-            got = dm.get_drawer(first)
+            got = dm.get_fragmento(first)
             assert got is not None
             assert got["document"] == BASE  # original content kept, no fork
             assert int(got["metadata"].get("seen_count", 0)) >= 1
         finally:
             dm.close()
 
-    def test_same_content_distinct_wings_coexist(self, tmp_path: Path):
+    def test_same_content_distinct_nodos_coexist(self, tmp_path: Path):
         dm = _dm(tmp_path)
         try:
-            id_a = dm.add_drawer("wingA", "r", BASE, "/a.txt", 0)
-            id_b = dm.add_drawer("wingB", "r", BASE, "/a.txt", 0)
+            id_a = dm.add_fragmento("nodoA", "r", BASE, "/a.txt", 0)
+            id_b = dm.add_fragmento("nodoB", "r", BASE, "/a.txt", 0)
             assert id_a != id_b
             assert dm.count() == 2
         finally:
@@ -103,8 +103,8 @@ class TestAddDrawerDedupe:
     def test_distinct_content_inserts(self, tmp_path: Path):
         dm = _dm(tmp_path)
         try:
-            id_a = dm.add_drawer("w", "r", AUTH, "/a.txt", 0)
-            id_b = dm.add_drawer("w", "r", DEPLOY, "/b.txt", 0)
+            id_a = dm.add_fragmento("w", "r", AUTH, "/a.txt", 0)
+            id_b = dm.add_fragmento("w", "r", DEPLOY, "/b.txt", 0)
             assert id_a != id_b
             assert dm.count() == 2
         finally:
@@ -117,11 +117,11 @@ class TestAddDrawerDedupe:
         (proj / "two.md").write_text((BASE + " ") * 5)
         dm = _dm(tmp_path)
         try:
-            res = dm.mine(str(proj), wing="w", room="r")
+            res = dm.mine(str(proj), nodo="w", celda="r")
             assert res["files_mined"] == 2
-            assert int(res["drawers_deduped"]) >= 1
+            assert int(res["fragmentos_deduped"]) >= 1
             # Whichever file mined second collapsed onto the first file's
-            # drawers — exactly one file keeps rows, no divergent copies.
+            # fragmentos — exactly one file keeps rows, no divergent copies.
             col = dm._collection(create=False)
             got_one = col.get(where={"source_file": str(proj / "one.md")})
             got_two = col.get(where={"source_file": str(proj / "two.md")})
@@ -132,7 +132,7 @@ class TestAddDrawerDedupe:
 
 
 # ---------------------------------------------------------------------------
-# B) decay-aware scoring + bounded wings
+# B) decay-aware scoring + bounded nodos
 # ---------------------------------------------------------------------------
 
 
@@ -170,12 +170,12 @@ class TestRankScore:
         assert types_top([quiet, busy], 1)[0].id == "b"
         assert top_by_importance([quiet, busy], 1)[0].id == "b"
 
-    def test_get_drawer_bumps_access(self, tmp_path: Path):
+    def test_get_fragmento_bumps_access(self, tmp_path: Path):
         dm = _dm(tmp_path)
         try:
-            did = dm.add_drawer("w", "r", DISTINCT_DOCS[0], "/a.txt", 0)
-            dm.get_drawer(did)
-            got = dm.get_drawer(did)
+            did = dm.add_fragmento("w", "r", DISTINCT_DOCS[0], "/a.txt", 0)
+            dm.get_fragmento(did)
+            got = dm.get_fragmento(did)
             assert got is not None
             assert int(got["metadata"].get("access_count", 0)) == 2
             assert got["metadata"].get("accessed_at")
@@ -194,64 +194,64 @@ class TestRankScore:
                 documents=["low importance filler " * 10, "HIGH importance filler " * 10, "stale filler " * 10],
                 ids=["d-low", "d-high", "d-stale"],
                 metadatas=[
-                    {"wing": "w", "room": "r", "source_file": "/l.txt", "filed_at": now, "importance": 0.5},
-                    {"wing": "w", "room": "r", "source_file": "/h.txt", "filed_at": now, "importance": 4.5},
-                    {"wing": "w", "room": "r", "source_file": "/s.txt", "filed_at": old, "importance": 0.5},
+                    {"nodo": "w", "celda": "r", "source_file": "/l.txt", "filed_at": now, "importance": 0.5},
+                    {"nodo": "w", "celda": "r", "source_file": "/h.txt", "filed_at": now, "importance": 4.5},
+                    {"nodo": "w", "celda": "r", "source_file": "/s.txt", "filed_at": old, "importance": 0.5},
                 ],
             )
-            out = Layer1(str(tmp_path / "palace")).generate(wing="w")
+            out = Layer1(str(tmp_path / "malla")).generate(nodo="w")
             assert out.index("HIGH importance") < out.index("low importance")
         finally:
             dm.close()
 
 
-class TestWingCap:
+class TestVenaCap:
     def test_cap_bounds_growth(self, tmp_path: Path):
-        dm = _dm(tmp_path, max_entries_per_wing=3)
+        dm = _dm(tmp_path, max_entries_per_nodo=3)
         try:
             for i, doc in enumerate(DISTINCT_DOCS):
-                dm.add_drawer("w", "r", doc, f"/f{i}.txt", 0)
+                dm.add_fragmento("w", "r", doc, f"/f{i}.txt", 0)
             assert dm.count() <= 3
         finally:
             dm.close()
 
     def test_cap_evicts_lowest_rank_first(self, tmp_path: Path):
-        dm = _dm(tmp_path, max_entries_per_wing=3)
+        dm = _dm(tmp_path, max_entries_per_nodo=3)
         try:
             ids = []
             for i, doc in enumerate(DISTINCT_DOCS[:5]):
-                ids.append(dm.add_drawer("w", "r", doc, f"/f{i}.txt", 0, importance=float(i + 1)))
+                ids.append(dm.add_fragmento("w", "r", doc, f"/f{i}.txt", 0, importance=float(i + 1)))
             assert dm.count() <= 3
             # Highest importance (5.0) must survive; lowest (1.0) must be gone.
-            assert dm.get_drawer(ids[4]) is not None
-            assert dm.get_drawer(ids[0]) is None
+            assert dm.get_fragmento(ids[4]) is not None
+            assert dm.get_fragmento(ids[0]) is None
         finally:
             dm.close()
 
     def test_cap_zero_disables(self, tmp_path: Path):
-        dm = _dm(tmp_path, max_entries_per_wing=0)
+        dm = _dm(tmp_path, max_entries_per_nodo=0)
         try:
             for i, doc in enumerate(DISTINCT_DOCS):
-                dm.add_drawer("w", "r", doc, f"/f{i}.txt", 0)
+                dm.add_fragmento("w", "r", doc, f"/f{i}.txt", 0)
             assert dm.count() == len(DISTINCT_DOCS)
         finally:
             dm.close()
 
     def test_massively_over_cap_converges_in_one_call(self, tmp_path: Path):
-        from dxrk.memory.palace import _build_drawer_metadata
+        from dxrk.memory.malla import _build_fragmento_metadata
 
-        dm = _dm(tmp_path, max_entries_per_wing=0)
+        dm = _dm(tmp_path, max_entries_per_nodo=0)
         try:
             col = dm._collection(create=True)
             n = 1500
             ids = [f"cap-row-{i:04d}" for i in range(n)]
             docs = [f"Over-cap filler record {i}: harbor lighthouse quantum sourdough fjord {i}." for i in range(n)]
-            metas = [_build_drawer_metadata("wcap", "r", f"/fill{i}.md", 0, "t", d, None) for i, d in enumerate(docs)]
+            metas = [_build_fragmento_metadata("wcap", "r", f"/fill{i}.md", 0, "t", d, None) for i, d in enumerate(docs)]
             for s in range(0, n, 500):
                 col.upsert(documents=docs[s : s + 500], ids=ids[s : s + 500], metadatas=metas[s : s + 500])
             assert dm.count() == n
-            dm._max_entries_per_wing = 10
-            evicted = dm.enforce_wing_cap("wcap")
+            dm._max_entries_per_nodo = 10
+            evicted = dm.enforce_nodo_cap("wcap")
             assert evicted == n - 10
             assert dm.count() == 10
         finally:
@@ -266,7 +266,7 @@ class TestWingCap:
 def _kg_for(dm, tmp_path: Path):  # type: ignore[no-untyped-def]
     from dxrk.memory.graph import KnowledgeGraph
 
-    return KnowledgeGraph(str(tmp_path / "palace" / "knowledge_graph.sqlite3"))
+    return KnowledgeGraph(str(tmp_path / "malla" / "knowledge_graph.sqlite3"))
 
 
 V1 = "Alice led the redesign. Alice reviewed every pull request. Alice shipped the release. Bob wrote the docs. Bob fixed the tests. Bob closed the tickets."
@@ -280,13 +280,13 @@ class TestKgEpisodes:
         (proj / "notes.md").write_text(V1 + " " + "filler text to reach chunk size " * 20)
         dm = _dm(tmp_path)
         try:
-            res = dm.mine(str(proj), wing="w", room="r")
+            res = dm.mine(str(proj), nodo="w", celda="r")
             assert int(res["kg_triples"]) >= 2
             kg = _kg_for(dm, tmp_path)
             try:
                 current = kg.triples_for_source(str(proj / "notes.md"), current_only=True)
                 assert len(current) >= 2
-                assert all(t["source_drawer_id"] for t in current)
+                assert all(t["source_fragmento_id"] for t in current)
                 subjects = {t["subject"] for t in current}
                 assert "Alice" in subjects and "Bob" in subjects
             finally:
@@ -301,9 +301,9 @@ class TestKgEpisodes:
         target.write_text(V1 + " " + "filler text to reach chunk size " * 20)
         dm = _dm(tmp_path)
         try:
-            dm.mine(str(proj), wing="w", room="r")
+            dm.mine(str(proj), nodo="w", celda="r")
             target.write_text(V2 + " " + "filler text to reach chunk size " * 20)
-            dm.mine(str(proj), wing="w", room="r")
+            dm.mine(str(proj), nodo="w", celda="r")
             kg = _kg_for(dm, tmp_path)
             try:
                 current = kg.triples_for_source(str(target), current_only=True)
@@ -325,8 +325,8 @@ class TestKgEpisodes:
         (proj / "notes.md").write_text(V1 + " " + "filler text to reach chunk size " * 20)
         dm = _dm(tmp_path)
         try:
-            dm.mine(str(proj), wing="w", room="r")
-            res2 = dm.mine(str(proj), wing="w", room="r")
+            dm.mine(str(proj), nodo="w", celda="r")
+            res2 = dm.mine(str(proj), nodo="w", celda="r")
             assert int(res2["kg_triples"]) == 0
             kg = _kg_for(dm, tmp_path)
             try:
@@ -360,18 +360,18 @@ class TestContradiction:
     def test_explicit_supersedes_invalidates_old(self, tmp_path: Path):
         dm = _dm(tmp_path)
         try:
-            old = dm.add_drawer("w", "r", AUTH, "/old.md", 0)
-            new = dm.add_drawer("w", "r", DEPLOY, "/new.md", 0, supersedes=old)
+            old = dm.add_fragmento("w", "r", AUTH, "/old.md", 0)
+            new = dm.add_fragmento("w", "r", DEPLOY, "/new.md", 0, supersedes=old)
             assert new != old
-            old_got = dm.get_drawer(old)
+            old_got = dm.get_fragmento(old)
             assert old_got is not None
             assert old_got["metadata"].get("valid_to")
             assert old_got["metadata"].get("superseded_by") == new
-            new_got = dm.get_drawer(new)
+            new_got = dm.get_fragmento(new)
             assert new_got is not None
             assert new_got["metadata"].get("supersedes") == old
             # Superseded rows never rank: searching the old text finds nothing.
-            res = dm.search("authentication JWT bearer", wing="w")
+            res = dm.search("authentication JWT bearer", nodo="w")
             texts = [str(h.get("text", "")) for h in res.get("results", [])]
             assert all("authentication service issues" not in t for t in texts)
         finally:
@@ -380,42 +380,42 @@ class TestContradiction:
     def test_explicit_supersedes_missing_target_still_inserts(self, tmp_path: Path):
         dm = _dm(tmp_path)
         try:
-            new = dm.add_drawer("w", "r", DEPLOY, "/new.md", 0, supersedes="drawer_missing")
-            got = dm.get_drawer(new)
+            new = dm.add_fragmento("w", "r", DEPLOY, "/new.md", 0, supersedes="fragmento_missing")
+            got = dm.get_fragmento(new)
             assert got is not None
-            assert got["metadata"].get("supersedes") == "drawer_missing"
+            assert got["metadata"].get("supersedes") == "fragmento_missing"
         finally:
             dm.close()
 
     def test_same_id_remine_still_overwrites(self, tmp_path: Path):
         dm = _dm(tmp_path)
         try:
-            id1 = dm.add_drawer("w", "r", "content version one here", "/same.txt", 0)
-            id2 = dm.add_drawer("w", "r", "content version two here", "/same.txt", 0)
+            id1 = dm.add_fragmento("w", "r", "content version one here", "/same.txt", 0)
+            id2 = dm.add_fragmento("w", "r", "content version two here", "/same.txt", 0)
             assert id1 == id2
             assert dm.count() == 1
-            got = dm.get_drawer(id1)
+            got = dm.get_fragmento(id1)
             assert got is not None
             assert got["document"] == "content version two here"
         finally:
             dm.close()
 
-    def test_mcp_add_drawer_supersedes_passthrough(self, tmp_path: Path, monkeypatch):
+    def test_mcp_add_fragmento_supersedes_passthrough(self, tmp_path: Path, monkeypatch):
         from dxrk.memory.mcp_server import _handle_tool
 
-        monkeypatch.setenv("DXRK_MEMORY_PATH", str(tmp_path / "mcp_palace"))
+        monkeypatch.setenv("DXRK_MEMORY_PATH", str(tmp_path / "mcp_malla"))
         first = _handle_tool(
-            "dxrk_memory_add_drawer",
-            {"wing": "w", "room": "r", "content": AUTH, "source_file": "/o.md"},
+            "dxrk_memory_add_fragmento",
+            {"nodo": "w", "celda": "r", "content": AUTH, "source_file": "/o.md"},
         )
         second = _handle_tool(
-            "dxrk_memory_add_drawer",
-            {"wing": "w", "room": "r", "content": DEPLOY, "source_file": "/n.md", "supersedes": first["drawer_id"]},
+            "dxrk_memory_add_fragmento",
+            {"nodo": "w", "celda": "r", "content": DEPLOY, "source_file": "/n.md", "supersedes": first["fragmento_id"]},
         )
-        assert second["drawer_id"] != first["drawer_id"]
-        got = _handle_tool("dxrk_memory_get_drawer", {"drawer_id": first["drawer_id"]})
-        assert got["drawer"]["metadata"].get("valid_to")
-        assert got["drawer"]["metadata"].get("superseded_by") == second["drawer_id"]
+        assert second["fragmento_id"] != first["fragmento_id"]
+        got = _handle_tool("dxrk_memory_get_fragmento", {"fragmento_id": first["fragmento_id"]})
+        assert got["fragmento"]["metadata"].get("valid_to")
+        assert got["fragmento"]["metadata"].get("superseded_by") == second["fragmento_id"]
 
 
 @pytest.mark.skip(reason="documented non-goal: session summaries stay naive concatenation in Phase 2")
@@ -427,18 +427,18 @@ class TestDeadRowLifecycleExclusion:
     def test_readded_content_after_supersede_creates_visible_row(self, tmp_path: Path):
         dm = _dm(tmp_path)
         try:
-            first = dm.add_drawer("w", "r", AUTH, "/old.md", 0)
-            second = dm.add_drawer("w", "r", DEPLOY, "/new.md", 0, supersedes=first)
+            first = dm.add_fragmento("w", "r", AUTH, "/old.md", 0)
+            second = dm.add_fragmento("w", "r", DEPLOY, "/new.md", 0, supersedes=first)
             assert second != first
             # Re-adding the dead row's content from a fresh source must NOT
             # collapse back onto the dead id (which search/L1/L2 filter out).
-            third = dm.add_drawer("w", "r", AUTH, "/readded.md", 0)
+            third = dm.add_fragmento("w", "r", AUTH, "/readded.md", 0)
             assert third != first
-            got = dm.get_drawer(third)
+            got = dm.get_fragmento(third)
             assert got is not None
             assert not got["metadata"].get("valid_to")
             assert not got["metadata"].get("forgotten")
-            res = dm.search("authentication JWT bearer", wing="w")
+            res = dm.search("authentication JWT bearer", nodo="w")
             texts = [str(h.get("text", "")) for h in res.get("results", [])]
             assert any("authentication service issues" in t for t in texts)
         finally:
@@ -447,15 +447,15 @@ class TestDeadRowLifecycleExclusion:
     def test_readded_content_after_forget_creates_visible_row(self, tmp_path: Path):
         dm = _dm(tmp_path)
         try:
-            first = dm.add_drawer("w", "r", AUTH, "/old.md", 0)
-            forgotten = dm.forget(drawer_ids=[first])
+            first = dm.add_fragmento("w", "r", AUTH, "/old.md", 0)
+            forgotten = dm.forget(fragmento_ids=[first])
             assert forgotten["soft_forgotten"] == 1
-            third = dm.add_drawer("w", "r", AUTH, "/readded.md", 0)
+            third = dm.add_fragmento("w", "r", AUTH, "/readded.md", 0)
             assert third != first
-            got = dm.get_drawer(third)
+            got = dm.get_fragmento(third)
             assert got is not None
             assert not got["metadata"].get("valid_to")
-            res = dm.search("authentication JWT bearer", wing="w")
+            res = dm.search("authentication JWT bearer", nodo="w")
             texts = [str(h.get("text", "")) for h in res.get("results", [])]
             assert any("authentication service issues" in t for t in texts)
         finally:

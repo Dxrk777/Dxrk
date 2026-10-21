@@ -541,13 +541,13 @@ class TestAgentBuilderCov100:
 # ===========================================================================
 
 
-def _mk_palace(tmp_path: Path, name: str = "pal") -> Path:
-    from dxrk.memory.palace import DxrkMemory
+def _mk_malla(tmp_path: Path, name: str = "pal") -> Path:
+    from dxrk.memory.malla import DxrkMemory
 
     pal = tmp_path / name
     dm = DxrkMemory(str(pal))
     dm.init()
-    dm.add_drawer("default", "general", "contenido base para busquedas de prueba " * 10, "/base.txt", 0)
+    dm.add_fragmento("default", "general", "contenido base para busquedas de prueba " * 10, "/base.txt", 0)
     try:
         dm.close()
     except Exception:
@@ -556,21 +556,21 @@ def _mk_palace(tmp_path: Path, name: str = "pal") -> Path:
 
 
 class TestMcpServerCov100:
-    def test_resolve_palace_fallback(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_resolve_malla_fallback(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         from dxrk.memory import mcp_server as ms
 
         _iso_home(tmp_path, monkeypatch)
         monkeypatch.delenv("DXRK_MEMORY_PATH", raising=False)
-        monkeypatch.setattr(ms, "DEFAULT_PALACE_PATH", "")
-        got = ms._resolve_palace(None)
+        monkeypatch.setattr(ms, "DEFAULT_MALLA_PATH", "")
+        got = ms._resolve_malla(None)
         assert got.endswith(os.path.join(".dxrk", "memory"))
         explicit = tmp_path / "exp"
-        assert ms._resolve_palace(str(explicit)) == str(explicit.resolve())
+        assert ms._resolve_malla(str(explicit)) == str(explicit.resolve())
 
     def test_project_meta_branches(self) -> None:
         from dxrk.memory.mcp_server import _project_meta_for_mcp
 
-        base = {"wing": "w", "_embedding": [1, 2], "other": 1}
+        base = {"nodo": "w", "_embedding": [1, 2], "other": 1}
         out = _project_meta_for_mcp(base)
         assert "_embedding" not in out and base["_embedding"] == [1, 2]
         out2 = _project_meta_for_mcp({"access_history": [1, 2, 3], "x": 1})
@@ -601,213 +601,213 @@ class TestMcpServerCov100:
         from dxrk.memory.mcp_server import _handle_tool
 
         _iso_home(tmp_path, monkeypatch)
-        pal = _mk_palace(tmp_path, "pal_status")
-        st = _handle_tool("dxrk_memory_status", {"palace": str(pal)})
-        assert st["count"] >= 1 and "palace_path" in st and "merkle_root" in st
+        pal = _mk_malla(tmp_path, "pal_status")
+        st = _handle_tool("dxrk_memory_status", {"malla": str(pal)})
+        assert st["count"] >= 1 and "malla_path" in st and "merkle_root" in st
         se = _handle_tool(
             "dxrk_memory_search",
-            {"palace": str(pal), "query": "contenido base", "wing": "default", "n_results": 2},
+            {"malla": str(pal), "query": "contenido base", "nodo": "default", "n_results": 2},
         )
         assert "result" in se
         se2 = _handle_tool(
             "dxrk_memory_search",
-            {"palace": str(pal), "query": "contenido", "since": "2000-01-01", "before": "2100-01-01"},
+            {"malla": str(pal), "query": "contenido", "since": "2000-01-01", "before": "2100-01-01"},
         )
         assert "result" in se2
         proj = tmp_path / "proj"
         proj.mkdir()
         (proj / "f.txt").write_text("minado mcp contenido " * 30)
-        mi = _handle_tool("dxrk_memory_mine", {"palace": str(pal), "project_dir": str(proj), "dry_run": True})
-        assert "palace_path" in mi
-        mi2 = _handle_tool("dxrk_memory_mine", {"palace": str(pal), "project_dir": str(proj)})
-        assert mi2.get("drawers_added", 0) >= 1
+        mi = _handle_tool("dxrk_memory_mine", {"malla": str(pal), "project_dir": str(proj), "dry_run": True})
+        assert "malla_path" in mi
+        mi2 = _handle_tool("dxrk_memory_mine", {"malla": str(pal), "project_dir": str(proj)})
+        assert mi2.get("fragmentos_added", 0) >= 1
 
-    def test_add_drawer_importance(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_add_fragmento_importance(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         from dxrk.memory.mcp_server import _handle_tool
 
         _iso_home(tmp_path, monkeypatch)
-        pal = _mk_palace(tmp_path, "pal_add")
+        pal = _mk_malla(tmp_path, "pal_add")
         r1 = _handle_tool(
-            "dxrk_memory_add_drawer",
+            "dxrk_memory_add_fragmento",
             {
-                "palace": str(pal),
-                "wing": "w",
-                "room": "r",
+                "malla": str(pal),
+                "nodo": "w",
+                "celda": "r",
                 "content": "texto con importancia " * 5,
                 "source_file": "/a.txt",
                 "importance": 0.9,
                 "supersedes": "old-id",
             },
         )
-        assert "drawer_id" in r1
+        assert "fragmento_id" in r1
         r2 = _handle_tool(
-            "dxrk_memory_add_drawer",
+            "dxrk_memory_add_fragmento",
             {
-                "palace": str(pal),
-                "wing": "w",
-                "room": "r",
+                "malla": str(pal),
+                "nodo": "w",
+                "celda": "r",
                 "content": "sin importancia " * 5,
                 "source_file": "/b.txt",
                 "importance": "no-numero",
             },
         )
-        assert "drawer_id" in r2
+        assert "fragmento_id" in r2
         r3 = _handle_tool(
-            "dxrk_memory_add_drawer",
-            {"palace": str(pal), "wing": "w", "room": "r", "content": "normal " * 5, "source_file": "/c.txt"},
+            "dxrk_memory_add_fragmento",
+            {"malla": str(pal), "nodo": "w", "celda": "r", "content": "normal " * 5, "source_file": "/c.txt"},
         )
-        assert "drawer_id" in r3
+        assert "fragmento_id" in r3
 
-    def test_get_drawer_branches(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_get_fragmento_branches(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         from dxrk.memory.mcp_server import _handle_tool
 
         _iso_home(tmp_path, monkeypatch)
-        pal = _mk_palace(tmp_path, "pal_get")
+        pal = _mk_malla(tmp_path, "pal_get")
         added = _handle_tool(
-            "dxrk_memory_add_drawer",
-            {"palace": str(pal), "wing": "w", "room": "r", "content": "para get drawer " * 8, "source_file": "/g.txt"},
+            "dxrk_memory_add_fragmento",
+            {"malla": str(pal), "nodo": "w", "celda": "r", "content": "para get fragmento " * 8, "source_file": "/g.txt"},
         )
-        did = added["drawer_id"]
-        got = _handle_tool("dxrk_memory_get_drawer", {"palace": str(pal), "drawer_id": did})
-        assert got["drawer"] is not None and got["drawer"]["metadata"]["wing"] == "w"
-        missing = _handle_tool("dxrk_memory_get_drawer", {"palace": str(pal), "drawer_id": "no-existe"})
-        assert missing["drawer"] is None
+        did = added["fragmento_id"]
+        got = _handle_tool("dxrk_memory_get_fragmento", {"malla": str(pal), "fragmento_id": did})
+        assert got["fragmento"] is not None and got["fragmento"]["metadata"]["nodo"] == "w"
+        missing = _handle_tool("dxrk_memory_get_fragmento", {"malla": str(pal), "fragmento_id": "no-existe"})
+        assert missing["fragmento"] is None
 
-    def test_list_drawers_quarantine_doc(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_list_fragmentos_quarantine_doc(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        from dxrk.memory.malla import DxrkMemory
         from dxrk.memory.mcp_server import _handle_tool
-        from dxrk.memory.palace import DxrkMemory
 
         _iso_home(tmp_path, monkeypatch)
-        pal = _mk_palace(tmp_path, "pal_list")
+        pal = _mk_malla(tmp_path, "pal_list")
         dm = DxrkMemory(str(pal))
         dm.init()
-        did = dm.add_drawer("w", "r", "para cuarentena lista " * 6, "/q.txt", 0)
-        dm.quarantine_drawer(did, reason="test")
+        did = dm.add_fragmento("w", "r", "para cuarentena lista " * 6, "/q.txt", 0)
+        dm.quarantine_fragmento(did, reason="test")
         try:
             dm.close()
         except Exception:
             pass
-        out = _handle_tool("dxrk_memory_list_drawers", {"palace": str(pal), "limit": 20})
+        out = _handle_tool("dxrk_memory_list_fragmentos", {"malla": str(pal), "limit": 20})
         assert out["count"] >= 1
         out2 = _handle_tool(
-            "dxrk_memory_list_drawers",
-            {"palace": str(pal), "wing": "w", "room": "r", "limit": 5, "include_quarantined": True},
+            "dxrk_memory_list_fragmentos",
+            {"malla": str(pal), "nodo": "w", "celda": "r", "limit": 5, "include_quarantined": True},
         )
         assert out2["count"] >= 1
-        assert any(d.get("quarantined") for d in out2["drawers"])
-        out3 = _handle_tool("dxrk_memory_list_drawers", {"palace": str(pal), "wing": "", "room": ""})
-        assert "drawers" in out3
+        assert any(d.get("quarantined") for d in out2["fragmentos"])
+        out3 = _handle_tool("dxrk_memory_list_fragmentos", {"malla": str(pal), "nodo": "", "celda": ""})
+        assert "fragmentos" in out3
 
-    def test_update_drawer_all(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_update_fragmento_all(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         from dxrk.memory.mcp_server import _handle_tool
 
         _iso_home(tmp_path, monkeypatch)
-        pal = _mk_palace(tmp_path, "pal_upd")
-        nf = _handle_tool("dxrk_memory_update_drawer", {"palace": str(pal), "drawer_id": "missing"})
+        pal = _mk_malla(tmp_path, "pal_upd")
+        nf = _handle_tool("dxrk_memory_update_fragmento", {"malla": str(pal), "fragmento_id": "missing"})
         assert "not found" in nf.get("error", "")
         added = _handle_tool(
-            "dxrk_memory_add_drawer",
+            "dxrk_memory_add_fragmento",
             {
-                "palace": str(pal),
-                "wing": "w1",
-                "room": "r1",
+                "malla": str(pal),
+                "nodo": "w1",
+                "celda": "r1",
                 "content": "actualizable contenido " * 6,
                 "source_file": "/u.txt",
             },
         )
-        did = added["drawer_id"]
-        # sin cambios (mismo contenido) + cambio de wing/room
-        same = _handle_tool("dxrk_memory_update_drawer", {"palace": str(pal), "drawer_id": did, "wing": "w2"})
+        did = added["fragmento_id"]
+        # sin cambios (mismo contenido) + cambio de nodo/celda
+        same = _handle_tool("dxrk_memory_update_fragmento", {"malla": str(pal), "fragmento_id": did, "nodo": "w2"})
         assert same.get("updated") is True
         ch = _handle_tool(
-            "dxrk_memory_update_drawer",
-            {"palace": str(pal), "drawer_id": did, "room": "r2", "content": "actualizable contenido revisado " * 6},
+            "dxrk_memory_update_fragmento",
+            {"malla": str(pal), "fragmento_id": did, "celda": "r2", "content": "actualizable contenido revisado " * 6},
         )
         assert ch.get("updated") is True
-        got = _handle_tool("dxrk_memory_get_drawer", {"palace": str(pal), "drawer_id": did})
-        assert got["drawer"]["metadata"]["wing"] == "w2"
-        assert got["drawer"]["metadata"]["room"] == "r2"
-        # enforce_wing_cap que falla no rompe el update
-        from dxrk.memory.palace import DxrkMemory
+        got = _handle_tool("dxrk_memory_get_fragmento", {"malla": str(pal), "fragmento_id": did})
+        assert got["fragmento"]["metadata"]["nodo"] == "w2"
+        assert got["fragmento"]["metadata"]["celda"] == "r2"
+        # enforce_nodo_cap que falla no rompe el update
+        from dxrk.memory.malla import DxrkMemory
 
-        orig = DxrkMemory.enforce_wing_cap
-        monkeypatch.setattr(DxrkMemory, "enforce_wing_cap", lambda self, w: (_ for _ in ()).throw(RuntimeError("cap")))
-        ok = _handle_tool("dxrk_memory_update_drawer", {"palace": str(pal), "drawer_id": did, "content": "otro " * 6})
+        orig = DxrkMemory.enforce_nodo_cap
+        monkeypatch.setattr(DxrkMemory, "enforce_nodo_cap", lambda self, w: (_ for _ in ()).throw(RuntimeError("cap")))
+        ok = _handle_tool("dxrk_memory_update_fragmento", {"malla": str(pal), "fragmento_id": did, "content": "otro " * 6})
         assert ok.get("updated") is True
-        monkeypatch.setattr(DxrkMemory, "enforce_wing_cap", orig)
+        monkeypatch.setattr(DxrkMemory, "enforce_nodo_cap", orig)
 
     def test_delete_and_duplicate(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         from dxrk.memory.mcp_server import _handle_tool
 
         _iso_home(tmp_path, monkeypatch)
-        pal = _mk_palace(tmp_path, "pal_dup")
+        pal = _mk_malla(tmp_path, "pal_dup")
         _handle_tool(
-            "dxrk_memory_add_drawer",
+            "dxrk_memory_add_fragmento",
             {
-                "palace": str(pal),
-                "wing": "w",
-                "room": "r",
+                "malla": str(pal),
+                "nodo": "w",
+                "celda": "r",
                 "content": "el zorro marron salta sobre el perro " * 4,
                 "source_file": "/z.txt",
             },
         )
         bad_thr = _handle_tool(
             "dxrk_memory_check_duplicate",
-            {"palace": str(pal), "content": "el zorro marron", "threshold": "mal"},
+            {"malla": str(pal), "content": "el zorro marron", "threshold": "mal"},
         )
         assert bad_thr["duplicate"] is True
-        empty = _handle_tool("dxrk_memory_check_duplicate", {"palace": str(pal), "content": ""})
+        empty = _handle_tool("dxrk_memory_check_duplicate", {"malla": str(pal), "content": ""})
         assert empty["duplicate"] is False and empty.get("reason") == "empty query"
         dup = _handle_tool(
             "dxrk_memory_check_duplicate",
-            {"palace": str(pal), "content": "el zorro marron salta sobre el perro"},
+            {"malla": str(pal), "content": "el zorro marron salta sobre el perro"},
         )
         assert dup["duplicate"] is True
         fresh = _handle_tool(
             "dxrk_memory_check_duplicate",
-            {"palace": str(pal), "content": "vortex cuantico cebra totalmente distinto xyz"},
+            {"malla": str(pal), "content": "vortex cuantico cebra totalmente distinto xyz"},
         )
         assert fresh["duplicate"] is False
         added = _handle_tool(
-            "dxrk_memory_add_drawer",
-            {"palace": str(pal), "wing": "w", "room": "r", "content": "para borrar " * 5, "source_file": "/d.txt"},
+            "dxrk_memory_add_fragmento",
+            {"malla": str(pal), "nodo": "w", "celda": "r", "content": "para borrar " * 5, "source_file": "/d.txt"},
         )
-        dl = _handle_tool("dxrk_memory_delete_drawer", {"palace": str(pal), "drawer_id": added["drawer_id"]})
-        assert dl["deleted"] == added["drawer_id"]
+        dl = _handle_tool("dxrk_memory_delete_fragmento", {"malla": str(pal), "fragmento_id": added["fragmento_id"]})
+        assert dl["deleted"] == added["fragmento_id"]
 
     def test_duplicate_nonlist_hits(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         from dxrk.memory import mcp_server as ms
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
         _iso_home(tmp_path, monkeypatch)
-        pal = _mk_palace(tmp_path, "pal_dup2")
+        pal = _mk_malla(tmp_path, "pal_dup2")
         monkeypatch.setattr(DxrkMemory, "search", lambda self, *a, **k: {"results": "no-lista"})
-        out = ms._handle_tool("dxrk_memory_check_duplicate", {"palace": str(pal), "content": "algo con contenido"})
+        out = ms._handle_tool("dxrk_memory_check_duplicate", {"malla": str(pal), "content": "algo con contenido"})
         assert out["duplicate"] is False
         monkeypatch.setattr(
             DxrkMemory,
             "search",
             lambda self, *a, **k: {"results": [{"text": 123}, {"text": ""}, "no-dict"]},  # type: ignore[dict-item]
         )
-        out2 = ms._handle_tool("dxrk_memory_check_duplicate", {"palace": str(pal), "content": "algo con contenido"})
+        out2 = ms._handle_tool("dxrk_memory_check_duplicate", {"malla": str(pal), "content": "algo con contenido"})
         assert out2["duplicate"] is False
 
-    def test_wings_rooms_taxonomy_graph(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_nodos_celdas_taxonomy_graph(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         from dxrk.memory.mcp_server import _handle_tool
 
         _iso_home(tmp_path, monkeypatch)
-        pal = _mk_palace(tmp_path, "pal_tax")
-        assert "default" in _handle_tool("dxrk_memory_list_wings", {"palace": str(pal)})["wings"]
-        rooms = _handle_tool("dxrk_memory_list_rooms", {"palace": str(pal), "wing": "default"})
-        assert "general" in rooms["rooms"]
-        rooms2 = _handle_tool("dxrk_memory_list_rooms", {"palace": str(pal)})
-        assert isinstance(rooms2["rooms"], list)
-        rooms3 = _handle_tool("dxrk_memory_list_rooms", {"palace": str(pal), "wing": 123})
-        assert isinstance(rooms3["rooms"], list)
-        tax = _handle_tool("dxrk_memory_taxonomy", {"palace": str(pal)})
+        pal = _mk_malla(tmp_path, "pal_tax")
+        assert "default" in _handle_tool("dxrk_memory_list_nodos", {"malla": str(pal)})["nodos"]
+        celdas = _handle_tool("dxrk_memory_list_celdas", {"malla": str(pal), "nodo": "default"})
+        assert "general" in celdas["celdas"]
+        celdas2 = _handle_tool("dxrk_memory_list_celdas", {"malla": str(pal)})
+        assert isinstance(celdas2["celdas"], list)
+        celdas3 = _handle_tool("dxrk_memory_list_celdas", {"malla": str(pal), "nodo": 123})
+        assert isinstance(celdas3["celdas"], list)
+        tax = _handle_tool("dxrk_memory_taxonomy", {"malla": str(pal)})
         assert "default" in tax["taxonomy"]
-        gs = _handle_tool("dxrk_memory_graph_stats", {"palace": str(pal)})
-        assert gs["total_drawers"] >= 1 and gs["wings"] >= 1
+        gs = _handle_tool("dxrk_memory_graph_stats", {"malla": str(pal)})
+        assert gs["total_fragmentos"] >= 1 and gs["nodos"] >= 1
 
     def test_kg_timeline_none_and_traverse(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         from dxrk.memory.mcp_server import _handle_tool
@@ -848,85 +848,85 @@ class TestMcpServerCov100:
         from dxrk.memory.mcp_server import _handle_tool
 
         _iso_home(tmp_path, monkeypatch)
-        pal = _mk_palace(tmp_path, "pal_cf")
+        pal = _mk_malla(tmp_path, "pal_cf")
         d1 = _handle_tool(
-            "dxrk_memory_add_drawer",
+            "dxrk_memory_add_fragmento",
             {
-                "palace": str(pal),
-                "wing": "w",
-                "room": "r",
+                "malla": str(pal),
+                "nodo": "w",
+                "celda": "r",
                 "content": "consolidar uno contenido " * 6,
                 "source_file": "/1.txt",
             },
-        )["drawer_id"]
+        )["fragmento_id"]
         d2 = _handle_tool(
-            "dxrk_memory_add_drawer",
+            "dxrk_memory_add_fragmento",
             {
-                "palace": str(pal),
-                "wing": "w",
-                "room": "r",
+                "malla": str(pal),
+                "nodo": "w",
+                "celda": "r",
                 "content": "consolidar dos contenido " * 6,
                 "source_file": "/2.txt",
             },
-        )["drawer_id"]
+        )["fragmento_id"]
         co = _handle_tool(
-            "dxrk_memory_consolidate", {"palace": str(pal), "drawer_ids": [d1, d2], "wing": "w", "room": "r"}
+            "dxrk_memory_consolidate", {"malla": str(pal), "fragmento_ids": [d1, d2], "nodo": "w", "celda": "r"}
         )
-        assert "palace_path" in co
-        co2 = _handle_tool("dxrk_memory_consolidate", {"palace": str(pal), "drawer_ids": "no-lista"})
-        assert "palace_path" in co2
-        fg = _handle_tool("dxrk_memory_forget", {"palace": str(pal), "drawer_ids": [d1], "hard": False})
-        assert "palace_path" in fg
-        fg2 = _handle_tool("dxrk_memory_forget", {"palace": str(pal), "wing": "w", "before": "2100-01-01"})
-        assert "palace_path" in fg2
-        fg3 = _handle_tool("dxrk_memory_forget", {"palace": str(pal)})
-        assert "palace_path" in fg3
+        assert "malla_path" in co
+        co2 = _handle_tool("dxrk_memory_consolidate", {"malla": str(pal), "fragmento_ids": "no-lista"})
+        assert "malla_path" in co2
+        fg = _handle_tool("dxrk_memory_forget", {"malla": str(pal), "fragmento_ids": [d1], "hard": False})
+        assert "malla_path" in fg
+        fg2 = _handle_tool("dxrk_memory_forget", {"malla": str(pal), "nodo": "w", "before": "2100-01-01"})
+        assert "malla_path" in fg2
+        fg3 = _handle_tool("dxrk_memory_forget", {"malla": str(pal)})
+        assert "malla_path" in fg3
 
     def test_pin_timeline_quarantine(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         from dxrk.memory.mcp_server import _handle_tool
 
         _iso_home(tmp_path, monkeypatch)
-        pal = _mk_palace(tmp_path, "pal_ptq")
+        pal = _mk_malla(tmp_path, "pal_ptq")
         did = _handle_tool(
-            "dxrk_memory_add_drawer",
+            "dxrk_memory_add_fragmento",
             {
-                "palace": str(pal),
-                "wing": "w",
-                "room": "r",
+                "malla": str(pal),
+                "nodo": "w",
+                "celda": "r",
                 "content": "pineable contenido " * 6,
                 "source_file": "/p.txt",
             },
-        )["drawer_id"]
-        assert _handle_tool("dxrk_memory_pin", {"palace": str(pal)})["error"].startswith("drawer_id")
-        assert "not found" in _handle_tool("dxrk_memory_pin", {"palace": str(pal), "drawer_id": "missing"})["error"]
-        assert _handle_tool("dxrk_memory_pin", {"palace": str(pal), "drawer_id": did, "pinned": True})["pinned"] is True
+        )["fragmento_id"]
+        assert _handle_tool("dxrk_memory_pin", {"malla": str(pal)})["error"].startswith("fragmento_id")
+        assert "not found" in _handle_tool("dxrk_memory_pin", {"malla": str(pal), "fragmento_id": "missing"})["error"]
+        assert _handle_tool("dxrk_memory_pin", {"malla": str(pal), "fragmento_id": did, "pinned": True})["pinned"] is True
         assert (
-            _handle_tool("dxrk_memory_pin", {"palace": str(pal), "drawer_id": did, "pinned": False})["pinned"] is False
+            _handle_tool("dxrk_memory_pin", {"malla": str(pal), "fragmento_id": did, "pinned": False})["pinned"] is False
         )
-        ident = _handle_tool("dxrk_memory_pin", {"palace": str(pal), "scope": "identity", "pinned": True})
-        assert "palace_path" in ident
-        unident = _handle_tool("dxrk_memory_pin", {"palace": str(pal), "scope": "identity", "pinned": False})
-        assert "palace_path" in unident
-        tl = _handle_tool("dxrk_memory_timeline", {"palace": str(pal), "limit": 10})
+        ident = _handle_tool("dxrk_memory_pin", {"malla": str(pal), "scope": "identity", "pinned": True})
+        assert "malla_path" in ident
+        unident = _handle_tool("dxrk_memory_pin", {"malla": str(pal), "scope": "identity", "pinned": False})
+        assert "malla_path" in unident
+        tl = _handle_tool("dxrk_memory_timeline", {"malla": str(pal), "limit": 10})
         assert tl["count"] >= 0
         tl2 = _handle_tool(
             "dxrk_memory_timeline",
-            {"palace": str(pal), "limit": "mal", "since": "2000-01-01", "before": "2100-01-01", "wing": "default"},
+            {"malla": str(pal), "limit": "mal", "since": "2000-01-01", "before": "2100-01-01", "nodo": "default"},
         )
         assert "entries" in tl2
-        assert _handle_tool("dxrk_memory_quarantine", {"palace": str(pal)})["error"] == "drawer_id required"
+        assert _handle_tool("dxrk_memory_quarantine", {"malla": str(pal)})["error"] == "fragmento_id required"
         assert (
-            "not found" in _handle_tool("dxrk_memory_quarantine", {"palace": str(pal), "drawer_id": "missing"})["error"]
+            "not found" in _handle_tool("dxrk_memory_quarantine", {"malla": str(pal), "fragmento_id": "missing"})["error"]
         )
         assert (
             "not found"
             in _handle_tool(
-                "dxrk_memory_quarantine", {"palace": str(pal), "drawer_id": "missing", "unquarantine": True}
+                "dxrk_memory_quarantine", {"malla": str(pal), "fragmento_id": "missing", "unquarantine": True}
             )["error"]
         )
-        q = _handle_tool("dxrk_memory_quarantine", {"palace": str(pal), "drawer_id": did, "reason": "r"})
+        q = _handle_tool("dxrk_memory_quarantine", {"malla": str(pal), "fragmento_id": did, "reason": "r"})
         assert q.get("quarantined") is True
-        uq = _handle_tool("dxrk_memory_quarantine", {"palace": str(pal), "drawer_id": did, "unquarantine": True})
+        uq = _handle_tool("dxrk_memory_quarantine", {"malla": str(pal), "fragmento_id": did, "unquarantine": True})
         assert uq.get("quarantined") is False
 
     def test_fase2_eval(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -934,40 +934,40 @@ class TestMcpServerCov100:
 
         _iso_home(tmp_path, monkeypatch)
         pal = tmp_path / "pal_eval"
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
         dm = DxrkMemory(str(pal))
         dm.init()
         for i in range(4):
-            dm.add_drawer("evalw", "general", f"contenido evaluable numero {i} alpha beta gamma " * 8, f"/e{i}.txt", i)
+            dm.add_fragmento("evalw", "general", f"contenido evaluable numero {i} alpha beta gamma " * 8, f"/e{i}.txt", i)
         try:
             dm.close()
         except Exception:
             pass
-        rep = _handle_tool("dxrk_memory_eval_run", {"palace": str(pal), "wing": "evalw", "n_queries": 2})
-        assert "report" in rep and rep["report"]["wing"] == "evalw"
-        syn = _handle_tool("dxrk_memory_eval_synthetic", {"palace": str(pal), "wing": "evalw", "n": 2})
+        rep = _handle_tool("dxrk_memory_eval_run", {"malla": str(pal), "nodo": "evalw", "n_queries": 2})
+        assert "report" in rep and rep["report"]["nodo"] == "evalw"
+        syn = _handle_tool("dxrk_memory_eval_synthetic", {"malla": str(pal), "nodo": "evalw", "n": 2})
         assert "queries" in syn and len(syn["queries"]) <= 2
 
     def test_fase2_metacog_calibrate(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         from dxrk.memory.mcp_server import _handle_tool
 
         _iso_home(tmp_path, monkeypatch)
-        pal = _mk_palace(tmp_path, "pal_meta")
+        pal = _mk_malla(tmp_path, "pal_meta")
         pr = _handle_tool(
-            "dxrk_memory_metacog_predict", {"palace": str(pal), "query": "contenido base", "wing": "default"}
+            "dxrk_memory_metacog_predict", {"malla": str(pal), "query": "contenido base", "nodo": "default"}
         )
         assert "confidence" in pr and "difficulty" in pr
-        cf = _handle_tool("dxrk_memory_calibrate_fit", {"palace": str(pal), "wing": "default", "method": "temperature"})
+        cf = _handle_tool("dxrk_memory_calibrate_fit", {"malla": str(pal), "nodo": "default", "method": "temperature"})
         assert cf["method"] == "temperature" and "params" in cf
-        cf2 = _handle_tool("dxrk_memory_calibrate_fit", {"palace": str(pal), "wing": "default", "method": "isotonic"})
+        cf2 = _handle_tool("dxrk_memory_calibrate_fit", {"malla": str(pal), "nodo": "default", "method": "isotonic"})
         assert cf2["method"] == "isotonic"
         ct = _handle_tool(
             "dxrk_memory_calibrate_tenant",
             {
-                "palace": str(pal),
+                "malla": str(pal),
                 "tenant": "acme",
-                "wing": "default",
+                "nodo": "default",
                 "a": 1.0,
                 "b": 0.0,
                 "c": 1.0,
@@ -976,31 +976,31 @@ class TestMcpServerCov100:
             },
         )
         assert ct["saved"] is True and ct["params"]["score"] == 0.7
-        ch = _handle_tool("dxrk_memory_calibrate_chain", {"palace": str(pal), "tenant": "acme", "wing": "default"})
+        ch = _handle_tool("dxrk_memory_calibrate_chain", {"malla": str(pal), "tenant": "acme", "nodo": "default"})
         assert "chain" in ch and len(ch["chain"]) >= 1
 
     def test_fase2_production_judge(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         from dxrk.memory.mcp_server import _handle_tool
 
         _iso_home(tmp_path, monkeypatch)
-        pal = _mk_palace(tmp_path, "pal_prod")
-        cb = _handle_tool("dxrk_memory_circuit_breaker_status", {"palace": str(pal)})
+        pal = _mk_malla(tmp_path, "pal_prod")
+        cb = _handle_tool("dxrk_memory_circuit_breaker_status", {"malla": str(pal)})
         assert "breakers" in cb
-        slo = _handle_tool("dxrk_memory_slo_check", {"palace": str(pal), "wing": "default"})
+        slo = _handle_tool("dxrk_memory_slo_check", {"malla": str(pal), "nodo": "default"})
         assert "compliant" in slo
-        rb = _handle_tool("dxrk_memory_rollback_check", {"palace": str(pal), "wing": "default"})
+        rb = _handle_tool("dxrk_memory_rollback_check", {"malla": str(pal), "nodo": "default"})
         assert "should_rollback" in rb
-        js = _handle_tool("dxrk_memory_judge_status", {"palace": str(pal)})
+        js = _handle_tool("dxrk_memory_judge_status", {"malla": str(pal)})
         assert "consecutive_passes" in js
-        jr = _handle_tool("dxrk_memory_judge_run", {"palace": str(pal)})
+        jr = _handle_tool("dxrk_memory_judge_run", {"malla": str(pal)})
         assert "verdict" in jr and "passed" in jr["verdict"]
 
     def test_duplicate_overlap_loop(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         from dxrk.memory import mcp_server as ms
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
         _iso_home(tmp_path, monkeypatch)
-        pal = _mk_palace(tmp_path, "pal_overlap")
+        pal = _mk_malla(tmp_path, "pal_overlap")
         # dos hits: el primero con bajo overlap sigue el loop, el segundo dispara overlap
         monkeypatch.setattr(
             DxrkMemory,
@@ -1014,7 +1014,7 @@ class TestMcpServerCov100:
         )
         out = ms._handle_tool(
             "dxrk_memory_check_duplicate",
-            {"palace": str(pal), "content": "contenido base para busquedas de prueba adicional"},
+            {"malla": str(pal), "content": "contenido base para busquedas de prueba adicional"},
         )
         assert out["duplicate"] is True
         # sin tokens (una letra) + varios hits → loop sin break por overlap
@@ -1023,7 +1023,7 @@ class TestMcpServerCov100:
             "search",
             lambda self, *a, **k: {"results": [{"text": "zzz"}, {"text": "yyy"}]},
         )
-        out2 = ms._handle_tool("dxrk_memory_check_duplicate", {"palace": str(pal), "content": "a b c d e f"})
+        out2 = ms._handle_tool("dxrk_memory_check_duplicate", {"malla": str(pal), "content": "a b c d e f"})
         assert out2["duplicate"] is False
 
     def test_main_guard(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1042,10 +1042,10 @@ class TestMcpServerCov100:
 
         _iso_home(tmp_path, monkeypatch)
         pal = tmp_path / "pal_err"
-        unk = _handle_tool("no_existe_tool", {"palace": str(pal)})
+        unk = _handle_tool("no_existe_tool", {"malla": str(pal)})
         assert "unknown tool" in unk["error"]
         # excepción interna (falta project_dir) → error con traceback
-        err = _handle_tool("dxrk_memory_mine", {"palace": str(pal)})
+        err = _handle_tool("dxrk_memory_mine", {"malla": str(pal)})
         assert "error" in err and "traceback" in err
 
     def test_dispatch_notifications(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1068,7 +1068,7 @@ class TestMcpServerCov100:
         unk2 = _dispatch({"method": "tools/call", "id": 7, "params": {"name": "unknown_tool", "arguments": {}}})
         assert "error" in unk2
 
-    def test_main_palace_batch(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_main_malla_batch(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         import sys as _sys
 
         from dxrk.memory import mcp_server as ms
@@ -1088,7 +1088,7 @@ class TestMcpServerCov100:
         out = io.StringIO()
         monkeypatch.setattr(_sys, "stdin", inp)
         monkeypatch.setattr(_sys, "stdout", out)
-        assert ms.main(["--palace", pal]) == 0
+        assert ms.main(["--malla", pal]) == 0
         assert os.environ.get("DXRK_MEMORY_PATH") == str(Path(pal).resolve())
         txt = out.getvalue()
         assert '"tools"' in txt and "Parse error" in txt
@@ -1202,12 +1202,12 @@ class TestTenantSwitcherCov100:
         monkeypatch.setitem(_sys.modules, "dxrk.tenant.migration", None)
         info6 = _get_tenant_details("acme")
         assert "acme" in info6.path
-        # DxrkMemory que falla → drawer_count 0
-        import dxrk.memory.palace as palace_mod
+        # DxrkMemory que falla → fragmento_count 0
+        import dxrk.memory.malla as malla_mod
 
-        monkeypatch.setattr(palace_mod, "DxrkMemory", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
+        monkeypatch.setattr(malla_mod, "DxrkMemory", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
         info7 = _get_tenant_details("acme")
-        assert info7.drawer_count == 0
+        assert info7.fragmento_count == 0
         _ = home
 
     def test_cards_compose_pilot(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1222,7 +1222,7 @@ class TestTenantSwitcherCov100:
             path=str(Path.home() / ".dxrk" / "tenants" / "a"),
             role="admin",
             is_current=True,
-            drawer_count=3,
+            fragmento_count=3,
             size_mb=1.5,
             last_accessed="ayer",
         )
@@ -1474,7 +1474,7 @@ class TestTenantSwitcherCov100:
         s2._filtered = ["a"]
         s2.cursor = 0
         s2._details = {
-            "a": {"id": "a", "path": "/tmp/a", "role": "dev", "is_current": True, "drawer_count": 1, "size_mb": 0.0}
+            "a": {"id": "a", "path": "/tmp/a", "role": "dev", "is_current": True, "fragmento_count": 1, "size_mb": 0.0}
         }
 
         def boom_nm(*a: Any, **k: Any) -> Any:
@@ -1484,7 +1484,7 @@ class TestTenantSwitcherCov100:
         s2._update_preview()
         # dict format en _filtered
         s2._filtered = [
-            {"id": "a", "path": "/tmp/a", "role": "dev", "is_current": False, "drawer_count": 0, "size_mb": 0.0}
+            {"id": "a", "path": "/tmp/a", "role": "dev", "is_current": False, "fragmento_count": 0, "size_mb": 0.0}
         ]  # type: ignore[list-item]
         s2._update_preview()
         # vacío → preview None
@@ -1806,7 +1806,7 @@ class TestTenantSwitcherCov100:
                         path="/tmp/externo-x",
                         role="readonly",
                         is_current=False,
-                        drawer_count=1,
+                        fragmento_count=1,
                         size_mb=3.0,
                         last_accessed="hoy",
                     ),
@@ -1823,13 +1823,13 @@ class TestTenantSwitcherCov100:
                     path=str(Path.home() / "t" / "acme"),
                     role="admin",
                     is_current=True,
-                    drawer_count=2,
+                    fragmento_count=2,
                     size_mb=1.5,
                     last_accessed="ayer",
                 )
             )
             preview.update_preview(
-                TenantInfo(id="e", path="/tmp/externo", role="readonly", is_current=False, drawer_count=0, size_mb=0.0)
+                TenantInfo(id="e", path="/tmp/externo", role="readonly", is_current=False, fragmento_count=0, size_mb=0.0)
             )
             preview.update_preview(None)
             assert preview.current_info is None

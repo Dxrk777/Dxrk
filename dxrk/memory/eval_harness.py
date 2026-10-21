@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
-from .palace import DxrkMemory
+from .malla import DxrkMemory
 
 
 @dataclass(frozen=True)
@@ -19,8 +19,8 @@ class EvalQuery:
     """Single evaluation query with ground truth."""
 
     query: str
-    expected_drawer_ids: list[str]
-    wing: str
+    expected_fragmento_ids: list[str]
+    nodo: str
     difficulty: float = 5.0
     tags: tuple[str, ...] = ()
 
@@ -41,7 +41,7 @@ class EvalResult:
 class EvalReport:
     """Aggregated evaluation report."""
 
-    wing: str
+    nodo: str
     num_queries: int
     recall_at_k: dict[int, float]
     mrr: float
@@ -67,8 +67,8 @@ def load_eval_dataset(path: Path) -> list[EvalQuery]:
             queries.append(
                 EvalQuery(
                     query=data["query"],
-                    expected_drawer_ids=data["expected_drawer_ids"],
-                    wing=data["wing"],
+                    expected_fragmento_ids=data["expected_fragmento_ids"],
+                    nodo=data["nodo"],
                     difficulty=data.get("difficulty", 5.0),
                     tags=tuple(data.get("tags", [])),
                 )
@@ -85,8 +85,8 @@ def save_eval_dataset(path: Path, queries: list[EvalQuery]) -> None:
                 json.dumps(
                     {
                         "query": q.query,
-                        "expected_drawer_ids": q.expected_drawer_ids,
-                        "wing": q.wing,
+                        "expected_fragmento_ids": q.expected_fragmento_ids,
+                        "nodo": q.nodo,
                         "difficulty": q.difficulty,
                         "tags": list(q.tags),
                     }
@@ -95,15 +95,15 @@ def save_eval_dataset(path: Path, queries: list[EvalQuery]) -> None:
             )
 
 
-def generate_synthetic_queries(palace: DxrkMemory, wing: str, n: int = 50) -> list[EvalQuery]:
-    """Generate synthetic eval queries from palace content (for bootstrapping)."""
-    drawers = palace.list_drawers(wing=wing, limit=n * 2, include_quarantined=False)
-    if len(drawers) < 2:
+def generate_synthetic_queries(malla: DxrkMemory, nodo: str, n: int = 50) -> list[EvalQuery]:
+    """Generate synthetic eval queries from malla content (for bootstrapping)."""
+    fragmentos = malla.list_fragmentos(nodo=nodo, limit=n * 2, include_quarantined=False)
+    if len(fragmentos) < 2:
         return []
 
     queries: list[EvalQuery] = []
     for _ in range(n):
-        target = random.choice(drawers)
+        target = random.choice(fragmentos)
         meta: dict[str, Any] = cast(Any, target.get("metadata", {}) or {})
         doc = str(target.get("document", ""))
         if not doc:
@@ -118,8 +118,8 @@ def generate_synthetic_queries(palace: DxrkMemory, wing: str, n: int = 50) -> li
         queries.append(
             EvalQuery(
                 query=query,
-                expected_drawer_ids=[str(target["id"])],
-                wing=wing,
+                expected_fragmento_ids=[str(target["id"])],
+                nodo=nodo,
                 difficulty=float(meta.get("D", 5.0)),
                 tags=("synthetic",),
             )
@@ -162,11 +162,11 @@ def ndcg_score(retrieved: list[str], expected: list[str], k: int) -> float:
     return dcg / idcg if idcg > 0 else 0.0
 
 
-def evaluate_query(palace: DxrkMemory, query: EvalQuery, k: int = 20) -> EvalResult:
-    """Evaluate a single query against the palace."""
+def evaluate_query(malla: DxrkMemory, query: EvalQuery, k: int = 20) -> EvalResult:
+    """Evaluate a single query against the malla."""
     start = datetime.now(UTC)
 
-    hits = palace.search(query=query.query, wing=query.wing, n_results=k)
+    hits = malla.search(query=query.query, nodo=query.nodo, n_results=k)
     results_raw = hits.get("results", [])
     results_list: list[Any] = results_raw if isinstance(results_raw, list) else []
     retrieved: list[str] = [str(h["id"]) for h in results_list if isinstance(h, dict) and "id" in h]
@@ -177,24 +177,24 @@ def evaluate_query(palace: DxrkMemory, query: EvalQuery, k: int = 20) -> EvalRes
         query=query,
         retrieved=retrieved,
         recall_at_k={
-            k_val: recall_at_k(retrieved, query.expected_drawer_ids, k_val) for k_val in [1, 3, 5, 10, 20] if k_val <= k
+            k_val: recall_at_k(retrieved, query.expected_fragmento_ids, k_val) for k_val in [1, 3, 5, 10, 20] if k_val <= k
         },
-        mrr=mrr_score(retrieved, query.expected_drawer_ids),
-        ndcg=ndcg_score(retrieved, query.expected_drawer_ids, k),
+        mrr=mrr_score(retrieved, query.expected_fragmento_ids),
+        ndcg=ndcg_score(retrieved, query.expected_fragmento_ids, k),
         latency_ms=latency_ms,
     )
 
 
-def evaluate_dataset(palace: DxrkMemory, queries: list[EvalQuery], k: int = 20) -> list[EvalResult]:
+def evaluate_dataset(malla: DxrkMemory, queries: list[EvalQuery], k: int = 20) -> list[EvalResult]:
     """Evaluate all queries."""
-    return [evaluate_query(palace, q, k) for q in queries]
+    return [evaluate_query(malla, q, k) for q in queries]
 
 
-def aggregate_results(results: list[EvalResult], wing: str) -> EvalReport:
+def aggregate_results(results: list[EvalResult], nodo: str) -> EvalReport:
     """Aggregate individual results into a report."""
     if not results:
         return EvalReport(
-            wing=wing,
+            nodo=nodo,
             num_queries=0,
             recall_at_k={},
             mrr=0.0,
@@ -225,7 +225,7 @@ def aggregate_results(results: list[EvalResult], wing: str) -> EvalReport:
     ece = 0.0
 
     return EvalReport(
-        wing=wing,
+        nodo=nodo,
         num_queries=len(results),
         recall_at_k=recall_at_k,
         mrr=mrr,
@@ -252,7 +252,7 @@ def compute_ece(results: list[EvalResult], n_bins: int = 10) -> float:
         bin_counts[bin_idx] += 1
         bin_conf[bin_idx] += conf
         # Correct if top-1 matches expected
-        if r.retrieved and r.retrieved[0] in r.query.expected_drawer_ids:
+        if r.retrieved and r.retrieved[0] in r.query.expected_fragmento_ids:
             bin_correct[bin_idx] += 1
 
     ece = 0.0
@@ -267,26 +267,26 @@ def compute_ece(results: list[EvalResult], n_bins: int = 10) -> float:
 
 
 class EvalHarness:
-    """Main evaluation harness for a wing."""
+    """Main evaluation harness for a nodo."""
 
-    def __init__(self, palace: DxrkMemory, eval_dir: Path):
-        self.palace = palace
+    def __init__(self, malla: DxrkMemory, eval_dir: Path):
+        self.malla = malla
         self.eval_dir = eval_dir
         self.eval_dir.mkdir(parents=True, exist_ok=True)
 
-    def run(self, wing: str, k: int = 20, queries: list[EvalQuery] | None = None) -> EvalReport:
-        """Run evaluation for a wing."""
+    def run(self, nodo: str, k: int = 20, queries: list[EvalQuery] | None = None) -> EvalReport:
+        """Run evaluation for a nodo."""
         if queries is None:
             # Load from file or generate synthetic
-            path = self.eval_dir / f"{wing}.jsonl"
+            path = self.eval_dir / f"{nodo}.jsonl"
             queries = load_eval_dataset(path)
             if not queries:
-                queries = generate_synthetic_queries(self.palace, wing, n=100)
+                queries = generate_synthetic_queries(self.malla, nodo, n=100)
 
-        results = evaluate_dataset(self.palace, queries, k)
-        report = aggregate_results(results, wing)
+        results = evaluate_dataset(self.malla, queries, k)
+        report = aggregate_results(results, nodo)
         report = EvalReport(
-            wing=report.wing,
+            nodo=report.nodo,
             num_queries=report.num_queries,
             recall_at_k=report.recall_at_k,
             mrr=report.mrr,
@@ -299,13 +299,13 @@ class EvalHarness:
         )
 
         # Save report
-        report_path = self.eval_dir / f"{wing}_report_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.json"
+        report_path = self.eval_dir / f"{nodo}_report_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.json"
         report_path.write_text(json.dumps(asdict(report), indent=2))
 
         return report
 
     def calibrate_by_ece(
-        self, wing: str, param_ranges: dict[str, tuple[float, float]], n_iter: int = 50
+        self, nodo: str, param_ranges: dict[str, tuple[float, float]], n_iter: int = 50
     ) -> dict[str, float]:
         """
         Calibrate parameters to minimize ECE.

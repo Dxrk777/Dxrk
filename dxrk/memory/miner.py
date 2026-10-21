@@ -11,8 +11,8 @@ import re
 import stat
 from pathlib import Path
 
-from .palace import CHUNK_OVERLAP, CHUNK_SIZE, MAX_FILE_SIZE, MIN_CHUNK_SIZE
-from .palace import chunk_text as _chunk_text
+from .malla import CHUNK_OVERLAP, CHUNK_SIZE, MAX_FILE_SIZE, MIN_CHUNK_SIZE
+from .malla import chunk_text as _chunk_text
 
 logger = logging.getLogger("dxrk.memory.miner")
 
@@ -46,7 +46,7 @@ SKIP_FILENAMES: frozenset[str] = frozenset(
     {"package-lock.json", "pnpm-lock.yaml", "yarn.lock", ".gitignore", "dxrk.yaml", "dxrk.yml"}
 )
 
-# Canonical skip-dirs (dxrk/memory/palace.py no longer keeps a duplicate copy).
+# Canonical skip-dirs (dxrk/memory/malla.py no longer keeps a duplicate copy).
 SKIP_DIRS: frozenset[str] = frozenset(
     {
         ".git",
@@ -372,10 +372,10 @@ def normalize_content(content: str) -> str:
 
 def scan_and_chunk(
     project_dir: str | Path,
-    wing: str = "default",
-    room: str = "general",
+    nodo: str = "default",
+    celda: str = "general",
 ) -> list[tuple[Path, list[dict[str, object]]]]:
-    """Scan project and chunk each file — helper for Palace ingestion."""
+    """Scan project and chunk each file — helper for Malla ingestion."""
     project_path = Path(project_dir).expanduser().resolve()
     out: list[tuple[Path, list[dict[str, object]]]] = []
     for fp in scan_project(project_dir):

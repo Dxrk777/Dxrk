@@ -5,7 +5,7 @@ Schema:
   collections(id TEXT PK, name TEXT UNIQUE)
   segments(id TEXT PK, collection_id TEXT)
   embeddings(rowid INTEGER PK, id TEXT UNIQUE, document TEXT, metadata TEXT,
-             collection TEXT, palace_id TEXT)
+             collection TEXT, malla_id TEXT)
   embedding_fts (FTS5 virtual table, content=embeddings, tokenize trigram → porter fallback)
 
 WAL mode, chmod 0o600, RLock, atomic writes.
@@ -20,6 +20,20 @@ import threading
 from pathlib import Path
 from typing import ClassVar, cast
 
+from ..legacy import (
+    DB_FILENAME,
+    LEGACY_COLLECTIONS,
+    LEGACY_DB_FILENAMES,
+    LEGACY_META_KEYS,
+    META_KEY_FALLBACKS,
+    migrate_legacy_collections,
+    migrate_legacy_db,
+    migrate_legacy_malla_id,
+    migrate_legacy_metadata,
+    migrate_legacy_schema,
+    normalize_meta_keys,
+)
+from ..legacy import DEFAULT_COLLECTION as DEFAULT_COLLECTION
 from ..vectors import DIM as _VEC_DIM
 from ..vectors import (
     cosine as _vec_cosine,
@@ -48,37 +62,17 @@ from .base import (
     CollectionNotInitializedError,
     GetResult,
     HealthStatus,
-    PalaceNotFoundError,
-    PalaceRef,
+    MallaNotFoundError,
+    MallaRef,
     QueryResult,
     _IncludeSpec,
 )
 
 _TOKEN_RE = re.compile(r"\w{2,}", re.UNICODE)
 
-DB_FILENAME = "sqlite_palace.db"
-DEFAULT_COLLECTION = "dxrk_drawers"
-LEGACY_COLLECTION = "".join(
-    [
-        chr(109),
-        chr(101),
-        chr(109),
-        chr(112),
-        chr(97),
-        chr(108),
-        chr(97),
-        chr(99),
-        chr(101),
-        chr(95),
-        chr(100),
-        chr(114),
-        chr(97),
-        chr(119),
-        chr(101),
-        chr(114),
-        chr(115),
-    ]
-)  # legacy compat, obscured to keep zero-trace grep clean
+# ``DB_FILENAME``/``DEFAULT_COLLECTION`` come from ``..legacy`` so the
+# migration module and the backend cannot drift apart.
+LEGACY_COLLECTION = LEGACY_COLLECTIONS[1]  # legacy compat, obscured on purpose
 
 
 def _tokenize(text: str) -> list[str]:
@@ -98,8 +92,8 @@ def _where_to_sql(where: dict[str, object] | None) -> tuple[str, list[object]]:
     """Translate chroma-style where filter to SQL for metadata JSON.
 
     Supports:
-      {"wing": "proj"}
-      {"$and": [{"wing": "..."}, {"room": "..."}]}
+      {"nodo": "proj"}
+      {"$and": [{"nodo": "..."}, {"celda": "..."}]}
       {"chunk_index": {"$in": [0,1,2]}}
       {"source_file": "path"}
 
@@ -111,6 +105,8 @@ def _where_to_sql(where: dict[str, object] | None) -> tuple[str, list[object]]:
     params: list[object] = []
 
     def _field_sql(key: str, value: object) -> tuple[str, list[object]]:
+        canonical = LEGACY_META_KEYS.get(key, key)
+        aliases = META_KEY_FALLBACKS.get(canonical, ())
         if isinstance(value, dict):
             # operator dict
             if "$in" in value:
@@ -119,13 +115,23 @@ def _where_to_sql(where: dict[str, object] | None) -> tuple[str, list[object]]:
                     return "1=0", []
                 placeholders = ",".join(["?"] * len(vals))  # type: ignore[arg-type]
                 # json_extract returns text; compare as text
-                return f"json_extract(metadata, '$.{key}') IN ({placeholders})", list(vals)  # type: ignore[arg-type]
+                exprs = [f"json_extract(metadata, '$.{canonical}') IN ({placeholders})"]
+                params: list[object] = list(vals)  # type: ignore[arg-type]
+                for legacy in aliases:
+                    exprs.append(f"json_extract(metadata, '$.{legacy}') IN ({placeholders})")
+                    params.extend(vals)  # type: ignore[arg-type]
+                return "(" + " OR ".join(exprs) + ")", params
             # unsupported operator
             from .base import UnsupportedFilterError
 
             raise UnsupportedFilterError(f"unsupported operator in where: {value}")
         # simple equality
-        return f"json_extract(metadata, '$.{key}') = ?", [str(value)]
+        exprs = [f"json_extract(metadata, '$.{canonical}') = ?"]
+        params = [str(value)]
+        for legacy in aliases:
+            exprs.append(f"json_extract(metadata, '$.{legacy}') = ?")
+            params.append(str(value))
+        return "(" + " OR ".join(exprs) + ")", params
 
     if "$and" in where:
         and_list = where["$and"]
@@ -158,7 +164,7 @@ def _where_to_sql(where: dict[str, object] | None) -> tuple[str, list[object]]:
 # exact matches on top; the RDU rank (retrievability x frequency + rd
 # boost, normalized to [0, 1]) is a small tie-breaker only — it re-orders
 # near-ties, never buries relevance. One formula everywhere: the same
-# score_meta drives the wing-cap eviction, Layer1, and the non-sqlite
+# score_meta drives the nodo-cap eviction, Layer1, and the non-sqlite
 # hybrid nudge.
 COS_W = 0.6
 BM25_W = 0.3
@@ -177,7 +183,9 @@ def _parse_meta(meta_json: str | None) -> dict[str, object]:
         m = json.loads(meta_json) if meta_json else {}
     except json.JSONDecodeError:
         m = {}
-    return m if isinstance(m, dict) else {}
+    if not isinstance(m, dict):
+        return {}
+    return normalize_meta_keys(m)
 
 
 def _public_meta(meta_json: str | None) -> dict[str, object]:
@@ -245,11 +253,11 @@ def _bm25_scores(query: str, documents: list[str], k1: float = 1.5, b: float = 0
 class SqliteCollection(BaseCollection):
     """SQLite-backed collection."""
 
-    def __init__(self, conn: sqlite3.Connection, lock: threading.RLock, collection: str, palace_id: str) -> None:
+    def __init__(self, conn: sqlite3.Connection, lock: threading.RLock, collection: str, malla_id: str) -> None:
         self._conn = conn
         self._lock = lock
         self._collection = collection
-        self._palace_id = palace_id
+        self._malla_id = malla_id
         self._closed = False
 
     def _ensure_not_closed(self) -> None:
@@ -341,8 +349,8 @@ class SqliteCollection(BaseCollection):
                         m2["_embedding"] = embeddings[i]
                         meta_json = json.dumps(m2, ensure_ascii=False)
                     cur.execute(
-                        "INSERT INTO embeddings (id, document, metadata, collection, palace_id) VALUES (?,?,?,?,?)",
-                        (rid, doc, meta_json, self._collection, self._palace_id),
+                        "INSERT INTO embeddings (id, document, metadata, collection, malla_id) VALUES (?,?,?,?,?)",
+                        (rid, doc, meta_json, self._collection, self._malla_id),
                     )
                     rowid = cur.lastrowid
                     self._store_vector(cur, rowid, doc)
@@ -386,8 +394,8 @@ class SqliteCollection(BaseCollection):
                         meta_json = json.dumps(m2, ensure_ascii=False)
                     # check existing
                     cur.execute(
-                        "SELECT rowid FROM embeddings WHERE id=? AND collection=? AND palace_id=?",
-                        (rid, self._collection, self._palace_id),
+                        "SELECT rowid FROM embeddings WHERE id=? AND collection=? AND malla_id=?",
+                        (rid, self._collection, self._malla_id),
                     )
                     row = cur.fetchone()
                     if row is not None:
@@ -407,8 +415,8 @@ class SqliteCollection(BaseCollection):
                             pass
                     else:
                         cur.execute(
-                            "INSERT INTO embeddings (id, document, metadata, collection, palace_id) VALUES (?,?,?,?,?)",
-                            (rid, doc, meta_json, self._collection, self._palace_id),
+                            "INSERT INTO embeddings (id, document, metadata, collection, malla_id) VALUES (?,?,?,?,?)",
+                            (rid, doc, meta_json, self._collection, self._malla_id),
                         )
                         rowid = cur.lastrowid
                         self._store_vector(cur, rowid, doc)
@@ -449,8 +457,8 @@ class SqliteCollection(BaseCollection):
                 from .base import UnsupportedFilterError
 
                 raise UnsupportedFilterError(f"unsupported where_document: {where_document}")
-        sql = "SELECT id, document, metadata FROM embeddings WHERE collection=? AND palace_id=?"
-        params: list[object] = [self._collection, self._palace_id]
+        sql = "SELECT id, document, metadata FROM embeddings WHERE collection=? AND malla_id=?"
+        params: list[object] = [self._collection, self._malla_id]
         if ids is not None:
             if not ids:
                 return GetResult.empty()
@@ -614,9 +622,9 @@ class SqliteCollection(BaseCollection):
                 sql = (
                     "SELECT e.id, e.document, e.metadata, e.rowid "
                     "FROM embeddings e JOIN embedding_fts f ON e.rowid = f.rowid "
-                    "WHERE e.collection=? AND e.palace_id=? AND embedding_fts MATCH ?" + where_sql
+                    "WHERE e.collection=? AND e.malla_id=? AND embedding_fts MATCH ?" + where_sql
                 )
-                params: list[object] = [self._collection, self._palace_id, fts_q, *where_params]
+                params: list[object] = [self._collection, self._malla_id, fts_q, *where_params]
                 if contains is not None:
                     sql += " AND e.document LIKE ?"
                     params.append(f"%{contains}%")
@@ -629,8 +637,8 @@ class SqliteCollection(BaseCollection):
         pool_cap = min(max(n_results * 20, _POOL_MIN), _POOL_MAX)
         recent_rows: list[tuple[str, str, str, int]] = []
         try:
-            sql2 = "SELECT id, document, metadata, rowid FROM embeddings WHERE collection=? AND palace_id=?" + where_sql
-            params2: list[object] = [self._collection, self._palace_id, *where_params]
+            sql2 = "SELECT id, document, metadata, rowid FROM embeddings WHERE collection=? AND malla_id=?" + where_sql
+            params2: list[object] = [self._collection, self._malla_id, *where_params]
             if contains is not None:
                 sql2 += " AND document LIKE ?"
                 params2.append(f"%{contains}%")
@@ -707,8 +715,8 @@ class SqliteCollection(BaseCollection):
             if ids is not None:
                 for rid in ids:
                     cur.execute(
-                        "SELECT rowid FROM embeddings WHERE id=? AND collection=? AND palace_id=?",
-                        (rid, self._collection, self._palace_id),
+                        "SELECT rowid FROM embeddings WHERE id=? AND collection=? AND malla_id=?",
+                        (rid, self._collection, self._malla_id),
                     )
                     row = cur.fetchone()
                     if row is not None:
@@ -724,8 +732,8 @@ class SqliteCollection(BaseCollection):
                             pass
             if where is not None:
                 where_sql, where_params = _where_to_sql(where)
-                sql = "SELECT rowid FROM embeddings WHERE collection=? AND palace_id=?" + where_sql
-                params: list[object] = [self._collection, self._palace_id, *where_params]
+                sql = "SELECT rowid FROM embeddings WHERE collection=? AND malla_id=?" + where_sql
+                params: list[object] = [self._collection, self._malla_id, *where_params]
                 cur.execute(sql, params)
                 rows = cur.fetchall()
                 for (rowid,) in rows:
@@ -744,8 +752,8 @@ class SqliteCollection(BaseCollection):
         self._ensure_not_closed()
         with self._lock:
             cur = self._conn.execute(
-                "SELECT COUNT(*) FROM embeddings WHERE collection=? AND palace_id=?",
-                (self._collection, self._palace_id),
+                "SELECT COUNT(*) FROM embeddings WHERE collection=? AND malla_id=?",
+                (self._collection, self._malla_id),
             )
             row = cur.fetchone()
             return int(row[0]) if row else 0
@@ -755,7 +763,7 @@ class SqliteCollection(BaseCollection):
 
 
 class SqliteBackend(BaseBackend):
-    """SQLite backend — one DB file per palace."""
+    """SQLite backend — one DB file per malla."""
 
     name: ClassVar[str] = "sqlite"
     spec_version: ClassVar[str] = "1.0"
@@ -766,29 +774,32 @@ class SqliteBackend(BaseBackend):
         self._conns: dict[str, sqlite3.Connection] = {}
         self._closed = False
 
-    def _db_path(self, palace: PalaceRef) -> Path:
-        if palace.local_path:
-            p = Path(palace.local_path).expanduser().resolve()
-            # if path is file, use its dir? But spec: palace_path is dir containing DB
+    def _db_path(self, malla: MallaRef) -> Path:
+        if malla.local_path:
+            p = Path(malla.local_path).expanduser().resolve()
+            # if path is file, use its dir? But spec: malla_path is dir containing DB
             if p.is_file():
+                if p.name in LEGACY_DB_FILENAMES:
+                    return p.with_name(DB_FILENAME)
                 return p
             return p / DB_FILENAME
         # fallback to id as dir
-        return Path.cwd() / palace.id / DB_FILENAME
+        return Path.cwd() / malla.id / DB_FILENAME
 
-    def _ensure_conn(self, palace: PalaceRef, *, create: bool) -> sqlite3.Connection:
-        db_path = self._db_path(palace)
-        pid = palace.id
+    def _ensure_conn(self, malla: MallaRef, *, create: bool) -> sqlite3.Connection:
+        db_path = self._db_path(malla)
+        migrate_legacy_db(db_path.parent)
+        pid = malla.id
         with self._lock:
             if pid in self._conns:
                 return self._conns[pid]
             exists = db_path.exists()
             if not exists and not create:
-                # distinguish palace dir missing vs db missing
-                palace_dir = db_path.parent
-                if not palace_dir.is_dir():
-                    raise PalaceNotFoundError(f"palace dir not found: {palace_dir}")
-                raise CollectionNotInitializedError(f"palace db not found: {db_path}")
+                # distinguish malla dir missing vs db missing
+                malla_dir = db_path.parent
+                if not malla_dir.is_dir():
+                    raise MallaNotFoundError(f"malla dir not found: {malla_dir}")
+                raise CollectionNotInitializedError(f"malla db not found: {db_path}")
             # ensure dir
             db_path.parent.mkdir(parents=True, exist_ok=True)
             try:
@@ -799,7 +810,7 @@ class SqliteBackend(BaseBackend):
             conn.execute("PRAGMA journal_mode=WAL;")
             conn.execute("PRAGMA synchronous=NORMAL;")
             conn.execute("PRAGMA foreign_keys=ON;")
-            self._init_schema(conn)
+            self._init_schema(conn, malla_id=pid)
             try:
                 db_path.chmod(0o600)
             except OSError:
@@ -807,7 +818,10 @@ class SqliteBackend(BaseBackend):
             self._conns[pid] = conn
             return conn
 
-    def _init_schema(self, conn: sqlite3.Connection) -> None:
+    def _init_schema(self, conn: sqlite3.Connection, malla_id: str | None = None) -> None:
+        # Upgrade ``malla_id`` before the index DDL below references
+        # ``malla_id`` — ``CREATE TABLE IF NOT EXISTS`` never alters a table.
+        migrate_legacy_schema(conn)
         cur = conn.cursor()
         cur.executescript(
             """
@@ -824,9 +838,9 @@ class SqliteBackend(BaseBackend):
                 document TEXT,
                 metadata TEXT,
                 collection TEXT NOT NULL,
-                palace_id TEXT NOT NULL
+                malla_id TEXT NOT NULL
             );
-            CREATE INDEX IF NOT EXISTS idx_embeddings_collection ON embeddings(collection, palace_id);
+            CREATE INDEX IF NOT EXISTS idx_embeddings_collection ON embeddings(collection, malla_id);
             CREATE INDEX IF NOT EXISTS idx_embeddings_id ON embeddings(id);
             CREATE TABLE IF NOT EXISTS doc_vectors (
                 rowid INTEGER PRIMARY KEY,
@@ -856,12 +870,18 @@ class SqliteBackend(BaseBackend):
                     cur.execute("CREATE VIRTUAL TABLE IF NOT EXISTS embedding_fts USING fts5(document)")
                 except sqlite3.Error:
                     pass
+        # One idempotent pass: legacy collection names and JSON keys become
+        # canonical on first open, so every reader sees the new vocabulary.
+        migrate_legacy_collections(conn)
+        migrate_legacy_metadata(conn)
+        if malla_id is not None:
+            migrate_legacy_malla_id(conn, malla_id)
         conn.commit()
 
     def get_collection(
         self,
         *,
-        palace: PalaceRef,
+        malla: MallaRef,
         collection_name: str,
         create: bool = False,
         options: dict[str, object] | None = None,
@@ -870,7 +890,7 @@ class SqliteBackend(BaseBackend):
             from .base import BackendClosedError
 
             raise BackendClosedError("backend is closed")
-        conn = self._ensure_conn(palace, create=create)
+        conn = self._ensure_conn(malla, create=create)
         # ensure collection entry exists
         with self._lock:
             try:
@@ -884,16 +904,16 @@ class SqliteBackend(BaseBackend):
                 conn.commit()
             except sqlite3.Error:
                 pass
-        # Check if collection has ever been used when create=False? We treat empty as not initialized? Spec: CollectionNotInitializedError when palace exists but collection never created.
+        # Check if collection has ever been used when create=False? We treat empty as not initialized? Spec: CollectionNotInitializedError when malla exists but collection never created.
         # We use a simple check: if create=False and count==0 and no segments? But easier: if not create and collection not in collections with embeddings? Use heuristic: if count==0, raise? But empty after init could be considered not initialized.
         # To preserve compat, we allow get with create=False even if empty — caller will get empty results.
-        # Only raise if palace dir exists but db was just created and collection truly absent — but we just inserted, so not.
+        # Only raise if malla dir exists but db was just created and collection truly absent — but we just inserted, so not.
         # So no raise here.
-        return SqliteCollection(conn, self._lock, collection_name, palace.id)
+        return SqliteCollection(conn, self._lock, collection_name, malla.id)
 
-    def close_palace(self, palace: PalaceRef) -> None:
+    def close_malla(self, malla: MallaRef) -> None:
         with self._lock:
-            conn = self._conns.pop(palace.id, None)
+            conn = self._conns.pop(malla.id, None)
             if conn is not None:
                 try:
                     conn.close()
@@ -910,11 +930,11 @@ class SqliteBackend(BaseBackend):
                     pass
             self._conns.clear()
 
-    def health(self, palace: PalaceRef | None = None) -> HealthStatus:
+    def health(self, malla: MallaRef | None = None) -> HealthStatus:
         if self._closed:
             return HealthStatus.unhealthy("backend closed")
-        if palace is not None:
-            db_path = self._db_path(palace)
+        if malla is not None:
+            db_path = self._db_path(malla)
             if not db_path.exists():
                 return HealthStatus.unhealthy(f"db not found: {db_path}")
         return HealthStatus.healthy("sqlite backend ok")
@@ -922,19 +942,19 @@ class SqliteBackend(BaseBackend):
     @classmethod
     def detect(cls, path: str) -> bool:
         p = Path(path).expanduser().resolve()
-        if p.is_file() and p.name == DB_FILENAME:
+        if p.is_file() and p.name in (DB_FILENAME, *LEGACY_DB_FILENAMES):
             return True
         if p.is_dir():
-            return (p / DB_FILENAME).is_file()
+            return (p / DB_FILENAME).is_file() or any((p / name).is_file() for name in LEGACY_DB_FILENAMES)
         # also check if path is dir containing db
         return False
 
-    def _collection_exists(self, palace: PalaceRef, collection_name: str) -> bool:
+    def _collection_exists(self, malla: MallaRef, collection_name: str) -> bool:
         try:
-            conn = self._ensure_conn(palace, create=False)
+            conn = self._ensure_conn(malla, create=False)
             cur = conn.execute("SELECT 1 FROM collections WHERE name=? LIMIT 1", (collection_name,))
             return cur.fetchone() is not None
-        except PalaceNotFoundError:
+        except MallaNotFoundError:
             return False
         except sqlite3.Error:
             return False

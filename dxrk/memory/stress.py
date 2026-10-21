@@ -8,17 +8,17 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
-from dxrk.memory.palace import DxrkMemory
+from dxrk.memory.malla import DxrkMemory
 
 
 @dataclass(frozen=True)
 class StressState:
-    """Global stress state of the palace."""
+    """Global stress state of the malla."""
 
     level: float = 0.0  # [0, 1] current stress
     last_computed: str = ""  # ISO timestamp
     defenses_active: bool = False  # whether cooperative masking is active
-    density: float = 0.0  # drawer density (count/cap)
+    density: float = 0.0  # fragmento density (count/cap)
     avg_inv_stability: float = 0.0  # mean 1/S
     recent_quarantines: int = 0  # quarantines in last 7 days
 
@@ -37,7 +37,7 @@ def clamp(x: float, lo: float = 0.0, hi: float = 1.0) -> float:
     return max(lo, min(hi, x))
 
 
-def compute_system_stress(palace: DxrkMemory) -> StressState:
+def compute_system_stress(malla: DxrkMemory) -> StressState:
     """
     Compute system stress level (ZenBrain cooperative masking).
 
@@ -45,21 +45,21 @@ def compute_system_stress(palace: DxrkMemory) -> StressState:
 
     High stress → activate defensive mechanisms (TripleCopy full, shorter reconsolidation, etc.)
     """
-    wings = palace.list_wings()
-    total_drawers = 0
+    nodos = malla.list_nodos()
+    total_fragmentos = 0
     total_cap = 0
     inv_stabilities = []
     recent_q = 0
     cutoff = datetime.now(UTC)
 
-    col = palace._collection(create=False)
-    for wing in wings:
-        usage = palace.wing_usage(wing)
-        total_drawers += int(cast(Any, usage.get("count", 0)))
+    col = malla._collection(create=False)
+    for nodo in nodos:
+        usage = malla.nodo_usage(nodo)
+        total_fragmentos += int(cast(Any, usage.get("count", 0)))
         total_cap += int(cast(Any, usage.get("budget", 0)))
-        # Query drawers in this wing
+        # Query fragmentos in this nodo
         got = col.get(
-            where={"wing": {"$in": [wing]}},
+            where={"nodo": {"$in": [nodo]}},
             include=["metadatas"],
             limit=2000,
         )
@@ -83,14 +83,14 @@ def compute_system_stress(palace: DxrkMemory) -> StressState:
                 except Exception:
                     pass
 
-    density = total_drawers / total_cap if total_cap > 0 else 0.0
+    density = total_fragmentos / total_cap if total_cap > 0 else 0.0
     avg_inv_s = sum(inv_stabilities) / len(inv_stabilities) if inv_stabilities else 0.0
     quarantine_rate = min(recent_q / QUARANTINE_NORMALIZER, 1.0)
 
     stress_level = 0.4 * density + 0.4 * clamp(avg_inv_s) + 0.2 * quarantine_rate
 
     # Load previous state to check hysteresis
-    prev = load_stress_state(Path(palace.palace_path))
+    prev = load_stress_state(Path(malla.malla_path))
 
     # Hysteresis: activate at 0.6, deactivate at 0.4
     if prev.defenses_active:
@@ -107,7 +107,7 @@ def compute_system_stress(palace: DxrkMemory) -> StressState:
         recent_quarantines=recent_q,
     )
 
-    save_stress_state(Path(palace.palace_path), state)
+    save_stress_state(Path(malla.malla_path), state)
     return state
 
 
@@ -141,9 +141,9 @@ def get_defense_params(stress_state: StressState) -> dict:
     }
 
 
-def load_stress_state(palace_path: Path) -> StressState:
+def load_stress_state(malla_path: Path) -> StressState:
     """Load stress state from sidecar JSON."""
-    path = palace_path / ".stress_state.json"
+    path = malla_path / ".stress_state.json"
     if not path.exists():
         return StressState()
     try:
@@ -162,11 +162,11 @@ def load_stress_state(palace_path: Path) -> StressState:
         return StressState()
 
 
-def save_stress_state(palace_path: Path, state: StressState) -> None:
+def save_stress_state(malla_path: Path, state: StressState) -> None:
     """Persist stress state to sidecar JSON."""
     import json
 
-    path = palace_path / ".stress_state.json"
+    path = malla_path / ".stress_state.json"
     path.write_text(
         json.dumps(
             {

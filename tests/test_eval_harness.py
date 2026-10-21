@@ -81,7 +81,7 @@ class TestEvalHarness:
 
         assert len(loaded) == 2
         assert loaded[0].query == "query 1"
-        assert loaded[0].expected_drawer_ids == ["d1", "d2"]
+        assert loaded[0].expected_fragmento_ids == ["d1", "d2"]
         assert loaded[0].difficulty == 3.0
         assert loaded[0].tags == ("tag1",)
         assert loaded[1].tags == ("tag2", "tag3")
@@ -92,20 +92,20 @@ class TestEvalHarness:
         assert loaded == []
 
     def test_generate_synthetic_queries(self, tmp_path: Path) -> None:
-        """Generate synthetic queries from palace."""
-        from dxrk.memory.palace import DxrkMemory
+        """Generate synthetic queries from malla."""
+        from dxrk.memory.malla import DxrkMemory
 
-        dm = DxrkMemory(str(tmp_path / "palace"))
+        dm = DxrkMemory(str(tmp_path / "malla"))
         dm.init()
         try:
             for i in range(10):
                 content = f"{uuid.uuid4()} unique content about topic {i} with random words {uuid.uuid4()}"
-                dm.add_drawer("w", "r", content, f"/f{i}.md", 0)
+                dm.add_fragmento("w", "r", content, f"/f{i}.md", 0)
 
             queries = generate_synthetic_queries(dm, "w", n=20)
             assert len(queries) > 0
-            assert all(q.wing == "w" for q in queries)
-            assert all(q.expected_drawer_ids for q in queries)
+            assert all(q.nodo == "w" for q in queries)
+            assert all(q.expected_fragmento_ids for q in queries)
         finally:
             dm.close()
 
@@ -129,9 +129,9 @@ class TestEvalHarness:
 
 class TestEvalIntegration:
     def test_evaluate_query_mock(self) -> None:
-        """Evaluate query with mock palace."""
-        palace = Mock()
-        palace.search.return_value = {
+        """Evaluate query with mock malla."""
+        malla = Mock()
+        malla.search.return_value = {
             "results": [
                 {"id": "d1", "similarity": 0.9},
                 {"id": "d2", "similarity": 0.8},
@@ -140,7 +140,7 @@ class TestEvalIntegration:
         }
 
         query = EvalQuery("test query", ["d1", "d3"], "w")
-        result = evaluate_query(palace, query, k=5)
+        result = evaluate_query(malla, query, k=5)
 
         assert result.query == query
         assert result.retrieved == ["d1", "d2", "d3"]
@@ -151,9 +151,9 @@ class TestEvalIntegration:
 
     def test_evaluate_dataset(self) -> None:
         """Evaluate multiple queries."""
-        palace = Mock()
+        malla = Mock()
         # First query returns d1, second returns d2
-        palace.search.side_effect = [
+        malla.search.side_effect = [
             {"results": [{"id": "d1", "similarity": 0.9}, {"id": "d2", "similarity": 0.8}]},
             {"results": [{"id": "d2", "similarity": 0.9}, {"id": "d1", "similarity": 0.8}]},
         ]
@@ -163,7 +163,7 @@ class TestEvalIntegration:
             EvalQuery("q2", ["d2"], "w"),
         ]
 
-        results = evaluate_dataset(palace, queries, k=5)
+        results = evaluate_dataset(malla, queries, k=5)
         assert len(results) == 2
         assert results[0].recall_at_k[1] == 1.0
         assert results[1].recall_at_k[1] == 1.0
@@ -190,7 +190,7 @@ class TestEvalIntegration:
         ]
 
         report = aggregate_results(results, "w")
-        assert report.wing == "w"
+        assert report.nodo == "w"
         assert report.num_queries == 2
         assert report.recall_at_k[1] == 0.5  # (1.0 + 0.0) / 2
         assert report.recall_at_k[3] == 1.0
@@ -226,23 +226,23 @@ class TestEvalIntegration:
         assert 0.0 <= ece <= 1.0
 
     def test_eval_harness_run(self, tmp_path: Path) -> None:
-        """Full harness run with mock palace."""
+        """Full harness run with mock malla."""
         import uuid
 
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
-        dm = DxrkMemory(str(tmp_path / "palace"))
+        dm = DxrkMemory(str(tmp_path / "malla"))
         dm.init()
         try:
             # Use distinct content with UUIDs to avoid deduplication
             for i in range(5):
                 content = f"{uuid.uuid4()} unique content about topic {i} with random words {uuid.uuid4()}"
-                dm.add_drawer("w", "r", content, f"/f{i}.md", 0)
+                dm.add_fragmento("w", "r", content, f"/f{i}.md", 0)
 
             harness = EvalHarness(dm, tmp_path / "eval")
             report = harness.run("w", k=10)
 
-            assert report.wing == "w"
+            assert report.nodo == "w"
             assert report.num_queries > 0
             assert 0.0 <= report.recall_at_k.get(1, 0.0) <= 1.0
             assert report.evaluated_at != ""
@@ -253,14 +253,14 @@ class TestEvalIntegration:
         """Harness with synthetic queries."""
         import uuid
 
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
-        dm = DxrkMemory(str(tmp_path / "palace"))
+        dm = DxrkMemory(str(tmp_path / "malla"))
         dm.init()
         try:
             for i in range(10):
                 content = f"{uuid.uuid4()} topic {i} unique distinct content details {uuid.uuid4()}"
-                dm.add_drawer("w", "r", content, f"/f{i}.md", 0)
+                dm.add_fragmento("w", "r", content, f"/f{i}.md", 0)
 
             harness = EvalHarness(dm, tmp_path / "eval")
             # Force synthetic by not having a dataset file

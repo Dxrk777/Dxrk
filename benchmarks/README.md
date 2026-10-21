@@ -8,15 +8,15 @@
 
 | Benchmark | Qué hace | Métricas |
 |---|---|---|
-| `search BM25 hybrid` | `Palace.search` híbrido BM25 (`k1=1.5 b=0.75`) + FTS5 trigram→porter, pool 3×/15×, `closet boost 0.40→0.04` | p50/p95/p99 (ms), throughput ops/s |
+| `search BM25 hybrid` | `Malla.search` híbrido BM25 (`k1=1.5 b=0.75`) + FTS5 trigram→porter, pool 3×/15×, `closet boost 0.40→0.04` | p50/p95/p99 (ms), throughput ops/s |
 | `search+window` | mismo + `since`/`before` sobre `filed_at` wall-clock (`date_window`) | p50/p95 |
-| `mine throughput` | `Palace.mine` con `O_NONBLOCK`+`S_ISREG`, WAL `0o600`, locks `~/.dxrk/locks` | drawers/s, elapsed |
+| `mine throughput` | `Malla.mine` con `O_NONBLOCK`+`S_ISREG`, WAL `0o600`, locks `~/.dxrk/locks` | fragmentos/s, elapsed |
 | `graph traverse` | `KnowledgeGraph.traverse(depth=2)` BFS sobre 500 triples WAL temporal | p50/p95 (ms) |
 | `dialect AAAK compress` | `Dialect.compress` single-doc ~800 chars | p50 (µs), ops/s |
 | `wake_up L0+L1` | `MemoryStack.wake_up()` 600–900 tok | p50/p95 (ms) |
-| `cold import proxy` | `import dxrk.memory.palace` proxy | p50 (µs) |
+| `cold import proxy` | `import dxrk.memory.malla` proxy | p50 (µs) |
 
-Corpus sintético 1k/10k drawers (aislado `tempfile.TemporaryDirectory`), queries `QUERY_SET` 8 términos, warmup 5 queries antes de medir.
+Corpus sintético 1k/10k fragmentos (aislado `tempfile.TemporaryDirectory`), queries `QUERY_SET` 8 términos, warmup 5 queries antes de medir.
 
 ### `bench_http.py` — `dxrk/utils/http`
 
@@ -37,7 +37,7 @@ Todo stdlib `time.perf_counter` + `statistics`, tmp isolation, no deps externas.
 uv run python benchmarks/bench_memory.py --quick
 uv run python benchmarks/bench_http.py --quick
 
-# corrida completa (1k + 10k drawers, 100 runs search)
+# corrida completa (1k + 10k fragmentos, 100 runs search)
 uv run python benchmarks/bench_memory.py
 uv run python benchmarks/bench_http.py
 
@@ -75,7 +75,7 @@ Fallback: si `pytest-benchmark` no está instalado, `benchmarks/test_bench_basel
 
 ## Baseline esperado v0.2.0 (estimado)
 
-> Laptop M3 / Ubuntu 22.04 · Python 3.13 · WAL `0o600` · FTS5 trigram→porter→unicode61 · `mine_palace_lock` 900s
+> Laptop M3 / Ubuntu 22.04 · Python 3.13 · WAL `0o600` · FTS5 trigram→porter→unicode61 · `mine_malla_lock` 900s
 
 ### DxrkMemory
 
@@ -84,10 +84,10 @@ Fallback: si `pytest-benchmark` no está instalado, `benchmarks/test_bench_basel
 | search BM25 hybrid | 1 000 | 100 | 35 | 55 | 38 | ~2600 ops/s |
 | search BM25 hybrid | 10 000 | 100 | 68 | 110 | 75 | ~1300 ops/s |
 | search+window BM25 | 1 000 | 50 | 42 | 65 | 45 | ~2200 ops/s |
-| mine throughput | ~400 drawers | 200 files | 320 ms total | — | — | ~1200 drawers/s |
+| mine throughput | ~400 fragmentos | 200 files | 320 ms total | — | — | ~1200 fragmentos/s |
 | graph traverse depth2 | 500 triples | 50 | 8 | 14 | 9 | ~110k ops/s |
 | dialect AAAK compress | 1 000 docs | 1 000 | 0.08 | 0.15 | 0.09 | ~11k ops/s |
-| wake_up L0+L1 | 200 drawers | 20 | 32 | 48 | 35 | ~28 ops/s |
+| wake_up L0+L1 | 200 fragmentos | 20 | 32 | 48 | 35 | ~28 ops/s |
 | cold import proxy | 1 | 10 | 0.15 | 0.30 | 0.18 | — |
 
 Chroma referencia (misma máquina, HNSW in-mem, no stdlib): 12 ms (1k) / 18 ms (10k) — gana 2.9× latencia pura pero pierde `install size` 420× y `cold start` 7.5×; trade-off documentado en `docs/adr/ADR-003-hybrid-vs-stdlib.md`.
@@ -161,6 +161,6 @@ Sin el grupo, `pytest benchmarks/ -q` corre igual (fallback stdlib).
 
 ## Troubleshooting
 
-- `RuntimeError: palace … is held by another writer` → otro `bench_memory.py` concurrente con mismo `palace_path` tmp; reintentar (usa `TemporaryDirectory` aislado, no debería pasar).
+- `RuntimeError: malla … is held by another writer` → otro `bench_memory.py` concurrente con mismo `malla_path` tmp; reintentar (usa `TemporaryDirectory` aislado, no debería pasar).
 - `mypy benchmarks` con `too many errors` → benchmarks tiene `type: ignore` para `dxrk.utils.http` re-exports ya tipados; si falla, correr `uv run mypy benchmarks --python-version 3.13 --ignore-missing-imports`.
 - `ruff check benchmarks` → debe dar `All checks passed`; imports ordenados con `isort` (I).

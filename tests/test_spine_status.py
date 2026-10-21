@@ -9,9 +9,9 @@ from types import SimpleNamespace
 
 
 def _dm(tmp_path: Path, **kwargs):  # type: ignore[no-untyped-def]
-    from dxrk.memory.palace import DxrkMemory
+    from dxrk.memory.malla import DxrkMemory
 
-    dm = DxrkMemory(str(tmp_path / "palace"), **kwargs)
+    dm = DxrkMemory(str(tmp_path / "malla"), **kwargs)
     dm.init()
     return dm
 
@@ -32,16 +32,16 @@ class TestLayer1Rdu:
                 ids=["d-stale", "d-fresh"],
                 metadatas=[
                     {
-                        "wing": "w",
-                        "room": "r",
+                        "nodo": "w",
+                        "celda": "r",
                         "source_file": "/s.txt",
                         "filed_at": _iso_days_ago(60),
                         "accessed_at": _iso_days_ago(60),
                         "importance": 4.5,
                     },
                     {
-                        "wing": "w",
-                        "room": "r",
+                        "nodo": "w",
+                        "celda": "r",
                         "source_file": "/f.txt",
                         "filed_at": _iso_days_ago(0),
                         "accessed_at": _iso_days_ago(0),
@@ -49,7 +49,7 @@ class TestLayer1Rdu:
                     },
                 ],
             )
-            out = Layer1(str(tmp_path / "palace")).generate(wing="w")
+            out = Layer1(str(tmp_path / "malla")).generate(nodo="w")
             assert out.index("fresh filler") < out.index("stale filler")
         finally:
             dm.close()
@@ -66,8 +66,8 @@ class TestHybridRankNudge:
 
     def _stale_meta(self) -> dict[str, object]:
         return {
-            "wing": "w",
-            "room": "r",
+            "nodo": "w",
+            "celda": "r",
             "source_file": "/s.txt",
             "filed_at": _iso_days_ago(400),
             "schema_version": 2,
@@ -81,8 +81,8 @@ class TestHybridRankNudge:
 
     def _fresh_meta(self) -> dict[str, object]:
         return {
-            "wing": "w",
-            "room": "r",
+            "nodo": "w",
+            "celda": "r",
             "source_file": "/f.txt",
             "filed_at": _iso_days_ago(0),
             "schema_version": 2,
@@ -120,13 +120,13 @@ class TestHybridRankNudge:
         assert hits[0]["source_file"] == "f.txt"
 
     def test_sqlite_backend_order_unchanged_without_nudge(self, tmp_path: Path) -> None:
-        from dxrk.memory.backend import PalaceRef, SqliteBackend
+        from dxrk.memory.backend import MallaRef, SqliteBackend
         from dxrk.memory.search import hybrid_search
 
         be = SqliteBackend()
         try:
-            ref = PalaceRef(id=str(tmp_path), local_path=str(tmp_path))
-            col = be.get_collection(palace=ref, collection_name="nounudge", create=True)
+            ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
+            col = be.get_collection(malla=ref, collection_name="nounudge", create=True)
             col.add(
                 documents=["apples ledger reconciliation", "apples ledger reconciliation"],
                 ids=["a", "b"],
@@ -141,16 +141,16 @@ class TestHybridRankNudge:
 
 class TestPublicMeta:
     def test_query_hides_raw_access_history(self, tmp_path: Path) -> None:
-        from dxrk.memory.backend import PalaceRef, SqliteBackend
+        from dxrk.memory.backend import MallaRef, SqliteBackend
 
         be = SqliteBackend()
         try:
-            ref = PalaceRef(id=str(tmp_path), local_path=str(tmp_path))
-            col = be.get_collection(palace=ref, collection_name="pubmeta", create=True)
+            ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
+            col = be.get_collection(malla=ref, collection_name="pubmeta", create=True)
             col.add(
                 documents=["history hiding body text here."],
                 ids=["h1"],
-                metadatas=[{"wing": "w", "access_history": ["2026-01-01T00:00:00+00:00"] * 3}],
+                metadatas=[{"nodo": "w", "access_history": ["2026-01-01T00:00:00+00:00"] * 3}],
             )
             q = col.query(query_texts=["history hiding"], n_results=5)
             meta = q.metadatas[0][0]
@@ -167,9 +167,9 @@ class TestSpineStatus:
 
         dm = _dm(tmp_path)
         try:
-            d1 = dm.add_drawer("w", "r", "Status alpha drawer body text here.", "/a.md", 0)
-            d2 = dm.add_drawer("w", "r", "Status beta drawer body text here.", "/b.md", 0)
-            assert dm.quarantine_drawer(d2, reason="status check") is True
+            d1 = dm.add_fragmento("w", "r", "Status alpha fragmento body text here.", "/a.md", 0)
+            d2 = dm.add_fragmento("w", "r", "Beta entry covers unrelated deployment notes.", "/b.md", 0)
+            assert dm.quarantine_fragmento(d2, reason="status check") is True
             st = dm.status()
             assert st["count"] == 2
             assert st["quarantined"] == 1
@@ -186,7 +186,7 @@ class TestSpineStatus:
                 if isinstance(m, dict)
             )
             assert st["merkle_root"] == hashlib.sha256("".join(shas).encode()).hexdigest()
-            usage = dm.wing_usage("w")
+            usage = dm.nodo_usage("w")
             assert usage["quarantined"] == 1
             assert usage["needs_rehash"] == 0
             assert dm.budgets()["w"]["quarantined"] == 1
@@ -196,10 +196,10 @@ class TestSpineStatus:
     def test_timeline_skips_quarantined(self, tmp_path: Path) -> None:
         dm = _dm(tmp_path)
         try:
-            did = dm.add_drawer("w", "r", "Pinned but quarantined drawer body.", "/p.md", 0)
-            assert dm.pin_drawer(did) is True
+            did = dm.add_fragmento("w", "r", "Pinned but quarantined fragmento body.", "/p.md", 0)
+            assert dm.pin_fragmento(did) is True
             assert any(e["ref"] == did for e in dm.timeline())
-            assert dm.quarantine_drawer(did, reason="timeline check") is True
+            assert dm.quarantine_fragmento(did, reason="timeline check") is True
             assert all(e["ref"] != did for e in dm.timeline())
         finally:
             dm.close()

@@ -115,13 +115,13 @@ def _hybrid_rank(
     return results
 
 
-def build_where_filter(wing: str | None = None, room: str | None = None) -> dict[str, object]:
-    if wing and room:
-        return {"$and": [{"wing": wing}, {"room": room}]}
-    if wing:
-        return {"wing": wing}
-    if room:
-        return {"room": room}
+def build_where_filter(nodo: str | None = None, celda: str | None = None) -> dict[str, object]:
+    if nodo and celda:
+        return {"$and": [{"nodo": nodo}, {"celda": celda}]}
+    if nodo:
+        return {"nodo": nodo}
+    if celda:
+        return {"celda": celda}
     return {}
 
 
@@ -143,11 +143,11 @@ def hybrid_search(
     """Hybrid BM25 + optional closet boost search.
 
     Returns dict with keys: query, filters, total_before_filter, results.
-    Each result: text, wing, room, source_file, distance, similarity, etc.
+    Each result: text, nodo, celda, source_file, distance, similarity, etc.
     since/before are inclusive/exclusive ISO date bounds on filed_at
     (stdlib-only date windowing, inclusive since / exclusive before).
     """
-    from .palace import _is_dead_meta
+    from .malla import _is_dead_meta
 
     # Parse date window first — invalid bounds are caller errors identical
     # whether or not the index is healthy (mirrors upstream pre-probe parse).
@@ -164,7 +164,7 @@ def hybrid_search(
         if before is not None:
             filt["before"] = before
         return {"query": query, "filters": filt, "total_before_filter": 0, "results": []}
-    # drawer search: over-fetch for rerank; widen when date window active
+    # fragmento search: over-fetch for rerank; widen when date window active
     pool_size = _candidate_pool_size(n_results, date_window_active)
     dkwargs: dict[str, object] = {
         "query_texts": [q],
@@ -173,14 +173,14 @@ def hybrid_search(
     }
     if where:
         dkwargs["where"] = where
-    drawer_results = collection.query(**dkwargs)  # type: ignore[arg-type]
+    fragmento_results = collection.query(**dkwargs)  # type: ignore[arg-type]
 
     # extract first query outer list
     try:
-        ids = drawer_results.ids[0] if drawer_results.ids else []
-        docs = drawer_results.documents[0] if drawer_results.documents else []
-        metas = drawer_results.metadatas[0] if drawer_results.metadatas else []
-        dists = drawer_results.distances[0] if drawer_results.distances else []
+        ids = fragmento_results.ids[0] if fragmento_results.ids else []
+        docs = fragmento_results.documents[0] if fragmento_results.documents else []
+        metas = fragmento_results.metadatas[0] if fragmento_results.metadatas else []
+        dists = fragmento_results.distances[0] if fragmento_results.distances else []
     except (IndexError, AttributeError):
         ids, docs, metas, dists = [], [], [], []
 
@@ -213,11 +213,11 @@ def hybrid_search(
 
     scored: list[dict[str, object]] = []
     for i, (doc, meta, dist) in enumerate(zip(docs, metas, dists)):
-        drawer_id = ids[i] if i < len(ids) else ""
+        fragmento_id = ids[i] if i < len(ids) else ""
         meta = meta or {}
         if not isinstance(meta, dict):
             meta = {}
-        # Dead drawers (superseded / forgotten / quarantined) stay on disk
+        # Dead fragmentos (superseded / forgotten / quarantined) stay on disk
         # for history but never rank — the live revision carries on.
         if _is_dead_meta(meta):
             continue
@@ -233,19 +233,19 @@ def hybrid_search(
             dist_f = 1.0
         source = str(meta.get("source_file", "")) if isinstance(meta.get("source_file"), str) else ""
         boost = 0.0
-        matched_via = "drawer"
+        matched_via = "fragmento"
         if source in boost_by_source:
             rank, cdist, _preview = boost_by_source[source]
             if cdist <= CLOSET_DISTANCE_CAP and rank < len(CLOSET_RANK_BOOSTS):
                 boost = CLOSET_RANK_BOOSTS[rank]
-                matched_via = "drawer+closet"
+                matched_via = "fragmento+closet"
         eff = max(0.0, min(2.0, dist_f - boost))
         scored.append(
             {
-                "id": drawer_id,
+                "id": fragmento_id,
                 "text": doc_str,
-                "wing": str(meta.get("wing", "unknown")),
-                "room": str(meta.get("room", "unknown")),
+                "nodo": str(meta.get("nodo", "unknown")),
+                "celda": str(meta.get("celda", "unknown")),
                 "source_file": Path(source).name if source else "?",
                 "created_at": str(meta.get("filed_at", "unknown")),
                 "similarity": round(max(0.0, 1 - eff), 3),

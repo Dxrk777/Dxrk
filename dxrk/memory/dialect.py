@@ -298,12 +298,12 @@ class Dialect:
         flags = self._detect_flags(text)
         flag_str = "+".join(flags) if flags else ""
         source = str(metadata.get("source_file", "")) if metadata.get("source_file") else ""
-        wing = str(metadata.get("wing", "")) if metadata.get("wing") else ""
-        room = str(metadata.get("room", "")) if metadata.get("room") else ""
+        nodo = str(metadata.get("nodo", "")) if metadata.get("nodo") else ""
+        celda = str(metadata.get("celda", "")) if metadata.get("celda") else ""
         date_s = str(metadata.get("date", "")) if metadata.get("date") else ""
         lines: list[str] = []
-        if source or wing:
-            lines.append("|".join([wing or "?", room or "?", date_s or "?", Path(source).stem if source else "?"]))
+        if source or nodo:
+            lines.append("|".join([nodo or "?", celda or "?", date_s or "?", Path(source).stem if source else "?"]))
         parts: list[str] = [f"0:{entity_str}", topic_str]
         if quote_part:
             parts.append(quote_part)

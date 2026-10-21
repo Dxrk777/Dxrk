@@ -66,7 +66,7 @@ def test_ensure_tenant_creates_subdirs(tmp_path, monkeypatch):
     monkeypatch.setattr(m, "_tenants_root", lambda: tmp_path / ".dxrk" / "tenants")
     root = m.ensure_tenant("mytenant")
     assert root.exists()
-    for sub in ("palace", "locks", "learn", "sessions"):
+    for sub in ("malla", "locks", "learn", "sessions"):
         assert (root / sub).exists()
 
 
@@ -87,8 +87,8 @@ def test_migrate_legacy_dry_run(tmp_path, monkeypatch):
     fake_dxrk = fake_home / ".dxrk"
     fake_dxrk.mkdir(parents=True)
     (fake_dxrk / "identity.txt").write_text("hello")
-    (fake_dxrk / "palace").mkdir()
-    (fake_dxrk / "palace" / "sqlite_palace.db").write_text("db")
+    (fake_dxrk / "malla").mkdir()
+    (fake_dxrk / "malla" / "malla.db").write_text("db")
     # patch _dxrk_home and LEGACY_PATHS to use fake_home
     monkeypatch.setattr(m, "_dxrk_home", lambda: fake_dxrk)
     monkeypatch.setattr(m, "_tenants_root", lambda: fake_dxrk / "tenants")
@@ -99,7 +99,7 @@ def test_migrate_legacy_dry_run(tmp_path, monkeypatch):
         "LEGACY_PATHS",
         [
             (fake_dxrk / "identity.txt", Path("identity.txt")),
-            (fake_dxrk / "palace" / "sqlite_palace.db", Path("palace/sqlite_palace.db")),
+            (fake_dxrk / "malla" / "malla.db", Path("malla/malla.db")),
             (fake_dxrk / "nonexistent.txt", Path("nonexistent.txt")),
         ],
     )
@@ -479,8 +479,8 @@ def test_hooks_cli_helpers(tmp_path, monkeypatch):
     # _pid_alive
     assert hc._pid_alive(os.getpid()) is True
     assert hc._pid_alive(999999) is False
-    # _wing_from_transcript_path
-    w = hc._wing_from_transcript_path("")
+    # _nodo_from_transcript_path
+    w = hc._nodo_from_transcript_path("")
     assert isinstance(w, str)
     # ensure_hook_configs idempotent
     # patch home to tmp

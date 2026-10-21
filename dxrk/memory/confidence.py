@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Bayesian Confidence Propagation (McGaugh 2004) — no palace dependency."""
+"""Bayesian Confidence Propagation (McGaugh 2004) — no malla dependency."""
 
 from __future__ import annotations
 
@@ -7,24 +7,24 @@ from dataclasses import dataclass
 from typing import Protocol
 
 
-class DrawerLike(Protocol):
-    """Minimal drawer protocol for confidence propagation."""
+class FragmentoLike(Protocol):
+    """Minimal fragmento protocol for confidence propagation."""
 
     id: str
     metadata: dict
     quarantined: bool
 
 
-class DrawerIterator(Protocol):
-    """Protocol for iterating drawers."""
+class FragmentoIterator(Protocol):
+    """Protocol for iterating fragmentos."""
 
-    def __call__(self) -> list[DrawerLike]: ...
+    def __call__(self) -> list[FragmentoLike]: ...
 
 
-class DrawerGetter(Protocol):
-    """Protocol for getting a single drawer by ID."""
+class FragmentoGetter(Protocol):
+    """Protocol for getting a single fragmento by ID."""
 
-    def __call__(self, drawer_id: str) -> DrawerLike | None: ...
+    def __call__(self, fragmento_id: str) -> FragmentoLike | None: ...
 
 
 @dataclass(frozen=True)
@@ -36,20 +36,20 @@ class ConfidencePropagation:
     related_count: int
 
 
-def find_related_drawers(
-    get_drawer: DrawerGetter,
-    iter_drawers: DrawerIterator,
-    drawer_id: str,
+def find_related_fragmentos(
+    get_fragmento: FragmentoGetter,
+    iter_fragmentos: FragmentoIterator,
+    fragmento_id: str,
     max_related: int = 10,
     min_similarity: float = 0.3,
 ) -> list[tuple[str, float]]:
     """
-    Find related drawers by wing/room and embedding similarity.
+    Find related fragmentos by nodo/celda and embedding similarity.
 
-    Returns: list of (drawer_id, similarity) sorted by similarity desc.
+    Returns: list of (fragmento_id, similarity) sorted by similarity desc.
     """
-    # Get the source drawer to find its wing/room
-    source = get_drawer(drawer_id)
+    # Get the source fragmento to find its nodo/celda
+    source = get_fragmento(fragmento_id)
     if not source:
         return []
 
@@ -59,23 +59,23 @@ def find_related_drawers(
         return d.get(key, default)
 
     source_meta = _get(source, "metadata", {})
-    wing = source_meta.get("wing", "")
-    room = source_meta.get("room", "")
+    nodo = source_meta.get("nodo", "")
+    celda = source_meta.get("celda", "")
 
-    # Find drawers in same wing/room (structural similarity)
+    # Find fragmentos in same nodo/celda (structural similarity)
     related = []
-    for other in iter_drawers():
-        if _get(other, "id") == drawer_id:
+    for other in iter_fragmentos():
+        if _get(other, "id") == fragmento_id:
             continue
         if _get(other, "quarantined"):
             continue
 
         other_meta = _get(other, "metadata", {})
-        # Wing match
+        # Nodo match
         sim = 0.0
-        if other_meta.get("wing") == wing:
+        if other_meta.get("nodo") == nodo:
             sim += 0.5
-        if other_meta.get("room") == room:
+        if other_meta.get("celda") == celda:
             sim += 0.3
 
         # Embedding similarity if available (would need embeddings access)
@@ -89,25 +89,25 @@ def find_related_drawers(
 
 
 def propagate_confidence(
-    get_drawer: DrawerGetter,
-    iter_drawers: DrawerIterator,
-    drawer_id: str,
+    get_fragmento: FragmentoGetter,
+    iter_fragmentos: FragmentoIterator,
+    fragmento_id: str,
     base_confidence: float,
     max_depth: int = 2,
     decay_per_depth: float = 0.5,
     min_similarity: float = 0.3,
 ) -> ConfidencePropagation:
     """
-    Propagate confidence from a drawer to related drawers (Bayesian propagation).
+    Propagate confidence from a fragmento to related fragmentos (Bayesian propagation).
 
     Confidence propagates through the graph:
     confidence(d) = base_conf(d) * Π(1 + sim * related_conf * decay) for depth levels
 
     Args:
-        get_drawer: callable(drawer_id) -> drawer or None
-        iter_drawers: callable() -> list of drawers
-        drawer_id: starting drawer
-        base_confidence: confidence of source drawer
+        get_fragmento: callable(fragmento_id) -> fragmento or None
+        iter_fragmentos: callable() -> list of fragmentos
+        fragmento_id: starting fragmento
+        base_confidence: confidence of source fragmento
         max_depth: max propagation depth
         decay_per_depth: multiplicative decay per depth level
         min_similarity: minimum similarity to propagate
@@ -119,8 +119,8 @@ def propagate_confidence(
         return ConfidencePropagation(base_confidence, 0, 0)
 
     # BFS propagation
-    visited = {drawer_id}
-    queue = [(drawer_id, base_confidence, 0)]
+    visited = {fragmento_id}
+    queue = [(fragmento_id, base_confidence, 0)]
     total_propagated = 0.0
     related_count = 0
     max_depth_reached = 0
@@ -131,8 +131,8 @@ def propagate_confidence(
         if depth >= max_depth:
             continue
 
-        # Find related drawers
-        related = find_related_drawers(get_drawer, iter_drawers, current_id, min_similarity=min_similarity)
+        # Find related fragmentos
+        related = find_related_fragmentos(get_fragmento, iter_fragmentos, current_id, min_similarity=min_similarity)
         related_count += len(related)
 
         for rel_id, sim in related:
@@ -172,7 +172,7 @@ def adjusted_uncertainty(rd: float, t_days: float, confidence: float) -> float:
 
 
 def confidence_from_retrievability(meta: dict) -> float:
-    """Estimate confidence from drawer's retrievability and stability."""
+    """Estimate confidence from fragmento's retrievability and stability."""
     S = float(meta.get("S", 1.0))
     D = float(meta.get("D", 5.0))
     rd = float(meta.get("rd", 350.0))

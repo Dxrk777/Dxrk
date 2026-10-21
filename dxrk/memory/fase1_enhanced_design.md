@@ -56,7 +56,7 @@ mecanismos testeables sin ML):
 ```
 
 **No implementamos**: capas 4-7 de ZenBrain (percepción, acción, etc.) —
-fuera de alcance para memoria de drawers.
+fuera de alcance para memoria de fragmentos.
 
 ---
 
@@ -75,7 +75,7 @@ FSRS puro asume que cada access es igual. La neurociencia dice:
 
 donde:
   pre  = actividad pre-synaptic (relevancia del query)
-  post = actividad post-synaptic (hit/miss del drawer)
+  post = actividad post-synaptic (hit/miss del fragmento)
   m(t) = neuromodulador (0..1, función de recencia del reward)
 ```
 
@@ -186,7 +186,7 @@ El estado neuromodulador global modula la **tasa de aprendizaje** (η en STDP):
 Cuando ACh está alto (modo encode), el sistema aprende más lento pero
 consolida mejor. Cuando 5HT está alto (modo sleep), consolida.
 
-**Persistencia**: `neuromod_state.json` en el palace (sidecar, como pins.json).
+**Persistencia**: `neuromod_state.json` en la malla (sidecar, como pins.json).
 
 ---
 
@@ -275,10 +275,10 @@ def triple_copy_retrievability(tc: TripleCopy, t_days: float) -> float:
 
 ### 5.3 Integración
 
-En Fase 0, cada drawer tiene un S. En Fase 1, el drawer almacena:
+En Fase 0, cada fragmento tiene un S. En Fase 1, el fragmento almacena:
 
 ```python
-# metadata del drawer
+# metadata del fragmento
 {
     "S": 10.0,           # estabilidad principal (media copia)
     "S_fast": 2.5,       # S/4
@@ -288,13 +288,13 @@ En Fase 0, cada drawer tiene un S. En Fase 1, el drawer almacena:
 ```
 
 El scoring usa `triple_copy_retrievability` en vez de `R_fsrs(t,S)` simple.
-Efecto: drawers viejos con S bajo aún recuperan vía copia profunda
+Efecto: fragmentos viejos con S bajo aún recuperan vía copia profunda
 (esquema semántico), evitando el "olvido total" que FSRS puro predice.
 
 ### 5.4 Validación
 
 ```
-Drawer S=10, t=100 días:
+Fragmento S=10, t=100 días:
   FSRS puro:  R = (1+19/81·100/10)^-0.5 = 0.31
   TripleCopy: R = max(0.09, 0.31, 0.71) = 0.71  ← esquema persiste
 ```
@@ -317,24 +317,24 @@ prediction error, no en recencia.
 
 @dataclass
 class SleepCandidate:
-    drawer_id: str
+    fragmento_id: str
     priority: float      # score de selección
     reason: str          # "pe_high" | "stale" | "contradiction" | "near_dup"
 
-def select_sleep_candidates(palace, limit: int = 50) -> list[SleepCandidate]:
+def select_sleep_candidates(malla, limit: int = 50) -> list[SleepCandidate]:
     """
     Selección tipo CA3 replay: prioriza prediction error alto,
     no solo recencia.
     """
     candidates = []
-    for drawer in palace.iter_drawers():
-        if is_protected(drawer):  # pinned, quarantined, fresh valid_to
+    for fragmento in malla.iter_fragmentos():
+        if is_protected(fragmento):  # pinned, quarantined, fresh valid_to
             continue
         
         # Score de selección (Simulation-Selection)
-        pe_avg = avg_prediction_error(drawer)  # del ledger
-        staleness = age_days(drawer["filed_at"])
-        contradiction = count_supersedes(drawer)
+        pe_avg = avg_prediction_error(fragmento)  # del ledger
+        staleness = age_days(fragmento["filed_at"])
+        contradiction = count_supersedes(fragmento)
         
         priority = (
             2.0 * pe_avg +           # prediction error dominante
@@ -343,29 +343,29 @@ def select_sleep_candidates(palace, limit: int = 50) -> list[SleepCandidate]:
         )
         
         if priority > THRESHOLD:
-            candidates.append(SleepCandidate(drawer["id"], priority, classify_reason(pe_avg, staleness, contradiction)))
+            candidates.append(SleepCandidate(fragmento["id"], priority, classify_reason(pe_avg, staleness, contradiction)))
     
     return sorted(candidates, key=lambda c: -c.priority)[:limit]
 
-def consolidate_candidate(palace, candidate: SleepCandidate) -> dict:
+def consolidate_candidate(malla, candidate: SleepCandidate) -> dict:
     """
     Consolidación CA3→CA1:
-    1. Replay: re-evaluar el drawer contra corpus actual
+    1. Replay: re-evaluar el fragmento contra corpus actual
     2. Integrate: actualizar S/D con PE
     3. Prune: si near-duplicate, merge
     """
-    drawer = palace.get_drawer(candidate.drawer_id)
+    fragmento = malla.get_fragmento(candidate.fragmento_id)
     
     # NREM phase: replay (re-evaluar)
-    pe = replay_evaluation(drawer)
+    pe = replay_evaluation(fragmento)
     
     # REM phase: reorganizar representación
     if candidate.reason == "near_dup":
-        merged = merge_near_duplicates(drawer)
+        merged = merge_near_duplicates(fragmento)
         return merged
     
     # Aplicar consolidación
-    updated = apply_consolidation(drawer, pe)
+    updated = apply_consolidation(fragmento, pe)
     append_ledger(updated, reason="sleep_consolidation", pe=pe)
     return updated
 ```
@@ -374,7 +374,7 @@ def consolidate_candidate(palace, candidate: SleepCandidate) -> dict:
 
 | Fase | Función | En Dxrk |
 |------|---------|---------|
-| NREM | Consolidación selectiva (slow waves) | Replay de drawers seleccionados |
+| NREM | Consolidación selectiva (slow waves) | Replay de fragmentos seleccionados |
 | REM | Reorganización (dreaming) | Merge de near-duplicates, re-mapping |
 
 Implementamos ambas como fases del mismo sleep cycle:
@@ -403,40 +403,40 @@ actualizada o debilitada. Si no se reconsolida, se pierde.
 ### 7.2 Implementación
 
 ```python
-# En metadata del drawer
+# En metadata del fragmento
 {
     "labile_until": "",   # ISO, vacío = estable
     "reconsolidation_count": 0
 }
 
-def mark_labile(drawer: dict) -> dict:
-    """Al recall (get_drawer), el drawer entra en estado lábil por 6h."""
-    return replace(drawer, labile_until=now_iso() + 6h)
+def mark_labile(fragmento: dict) -> dict:
+    """Al recall (get_fragmento), el fragmento entra en estado lábil por 6h."""
+    return replace(fragmento, labile_until=now_iso() + 6h)
 
-def reconsolidate(drawer: dict, outcome: float) -> dict:
+def reconsolidate(fragmento: dict, outcome: float) -> dict:
     """
     Si outcome bueno → fortalece (S sube extra).
     Si outcome malo → debilita (S baja, como lapse suave).
     Si no reconsolida en 6h → S decae 10% (forgetting del labile).
     """
-    if now() > drawer["labile_until"]:
+    if now() > fragmento["labile_until"]:
         # Ventana cerrada: decay suave
-        drawer["S"] *= 0.9
-        return drawer
+        fragmento["S"] *= 0.9
+        return fragmento
     
     if outcome >= 0.7:
-        drawer["S"] *= 1.1  # fortalecimiento post-recall
+        fragmento["S"] *= 1.1  # fortalecimiento post-recall
     else:
-        drawer["S"] *= 0.85  # debilitamiento
+        fragmento["S"] *= 0.85  # debilitamiento
     
-    drawer["reconsolidation_count"] += 1
-    drawer["labile_until"] = ""  # sale del estado lábil
-    return drawer
+    fragmento["reconsolidation_count"] += 1
+    fragmento["labile_until"] = ""  # sale del estado lábil
+    return fragmento
 ```
 
 ### 7.3 Efecto
 
-Los drawers accedidos frecuentemente entran y salen de estado lábil.
+Los fragmentos accedidos frecuentemente entran y salen de estado lábil.
 Esto crea un **ciclo de reconsolidación** que:
 - Fortalece memorias útiles (outcome bueno)
 - Debilita memorias que se recallan pero no se usan (outcome malo)
@@ -604,9 +604,9 @@ def qieo_optimize(objective_fn, bounds: list, n_iter: int = 100, pop_size: int =
 ### 9.3 Uso en calibración
 
 ```python
-# Calibrar parámetros FSRS por wing
-def calibrate_wing(palace, wing: str):
-    history = load_query_history(wing)  # queries con outcomes
+# Calibrar parámetros FSRS por nodo
+def calibrate_nodo(malla, nodo: str):
+    history = load_query_history(nodo)  # queries con outcomes
     
     def objective(params):
         a, b, c, lam = params
@@ -615,7 +615,7 @@ def calibrate_wing(palace, wing: str):
     bounds = [(0.5, 3.0), (0.05, 0.5), (0.5, 2.0), (0.0, 0.5)]  # a,b,c,λ
     best_params, best_score = qieo_optimize(objective, bounds, n_iter=50)
     
-    save_calibration(wing, {
+    save_calibration(nodo, {
         "a": best_params[0], "b": best_params[1],
         "c": best_params[2], "pe_lambda": best_params[3],
         "score": best_score,
@@ -635,7 +635,7 @@ es la misma que en el diseño v1. Solo cambia el optimizador: grid search
 ### 10.1 Hallazgo (arXiv:2603.21180)
 
 ALMAB-DC usa Gaussian Process + Thompson Sampling para elegir qué
-consultas evaluar. En nuestro contexto: **qué drawers re-evaluar**
+consultas evaluar. En nuestro contexto: **qué fragmentos re-evaluar**
 para mejorar la calibración con mínimo costo.
 
 ### 10.2 Implementación
@@ -643,26 +643,26 @@ para mejorar la calibración con mínimo costo.
 ```python
 # dxrk/memory/active_learning.py
 
-def select_evaluation_candidates(palace, n: int = 10) -> list[str]:
+def select_evaluation_candidates(malla, n: int = 10) -> list[str]:
     """
-    Thompson Sampling sobre incertidumbre de drawers.
+    Thompson Sampling sobre incertidumbre de fragmentos.
     
-    Para cada drawer, muestreamos θ ~ Beta(α, β) donde:
+    Para cada fragmento, muestreamos θ ~ Beta(α, β) donde:
       α = hits + 1
       β = misses + 1
     
     Elegimos los n con mayor θ muestreado (exploración + explotación).
     """
     candidates = []
-    for drawer in palace.iter_drawers():
-        hits = drawer.get("irt_hits", 0)
-        misses = drawer.get("irt_misses", 0)
+    for fragmento in malla.iter_fragmentos():
+        hits = fragmento.get("irt_hits", 0)
+        misses = fragmento.get("irt_misses", 0)
         # Thompson sample
         theta = random.betavariate(hits + 1, misses + 1)
         # Bonus por incertidumbre (varianza de Beta)
         uncertainty = (hits + 1) * (misses + 1) / ((hits + misses + 2)**2 * (hits + misses + 3))
         score = theta + 0.5 * uncertainty
-        candidates.append((drawer["id"], score))
+        candidates.append((fragmento["id"], score))
     
     return [cid for cid, _ in sorted(candidates, key=lambda x: -x[1])[:n]]
 ```
@@ -670,15 +670,15 @@ def select_evaluation_candidates(palace, n: int = 10) -> list[str]:
 ### 10.3 Flujo
 
 ```
-calibrate_wing():
-    1. active_learning.select_evaluation_candidates() → 10 drawers
+calibrate_nodo():
+    1. active_learning.select_evaluation_candidates() → 10 fragmentos
     2. Para cada uno: replay query history → outcome real
     3. QIEO.optimize(objective con esos outcomes)
     4. Persistir parámetros
     5. Metacog.record_judgment(predicted, actual)
 ```
 
-Thompson Sampling asegura que evaluamos drawers donde la incertidumbre
+Thompson Sampling asegura que evaluamos fragmentos donde la incertidumbre
 es alta (aprendemos más por evaluación), no solo los más accedidos.
 
 ---
@@ -696,22 +696,22 @@ Si A es confiable y A→B, entonces B gana confianza. Esto es
 ```python
 # dxrk/memory/confidence.py
 
-def propagate_confidence(palace, drawer_id: str, depth: int = 2) -> float:
+def propagate_confidence(malla, fragmento_id: str, depth: int = 2) -> float:
     """
-    Propaga confianza desde un drawer a sus relacionados.
+    Propaga confianza desde un fragmento a sus relacionados.
     
     confidence(d) = base_conf(d) * Π(1 + related_conf) para depth niveles
     """
-    drawer = palace.get_drawer(drawer_id)
-    base = drawer.get("confidence", 0.5)
+    fragmento = malla.get_fragmento(fragmento_id)
+    base = fragmento.get("confidence", 0.5)
     
     if depth == 0:
         return base
     
-    related = find_related(palace, drawer_id)  # por wing, tags, embeddings
+    related = find_related(malla, fragmento_id)  # por nodo, tags, embeddings
     propagated = base
     for rel_id, sim in related:
-        rel_conf = propagate_confidence(palace, rel_id, depth - 1)
+        rel_conf = propagate_confidence(malla, rel_id, depth - 1)
         propagated *= (1 + sim * rel_conf * 0.1)
     
     return min(propagated, 1.0)
@@ -725,8 +725,8 @@ La confianza propagada modula el `rd` (uncertainty) en RDU:
 rd_effective = rd * (1 - propagated_confidence)
 ```
 
-Drawers en wings confiables (muchos hits, buena calibración) tienen
-menor uncertainty → menos explore bonus. Drawers aislados mantienen
+Fragmentos en nodos confiables (muchos hits, buena calibración) tienen
+menor uncertainty → menos explore bonus. Fragmentos aislados mantienen
 alta uncertainty → se exploran más.
 
 ---
@@ -739,8 +739,8 @@ ZenBrain encontró que los mecanismos de memoria aparecen **gratuitos**
 bajo carga moderada pero se vuelven **críticos bajo estrés** (decay
 0.25/día). Esto significa:
 
-- Con pocos drawers, RDU puro funciona bien
-- Con muchos drawers + decay alto, los mecanismos extras (TripleCopy,
+- Con pocos fragmentos, RDU puro funciona bien
+- Con muchos fragmentos + decay alto, los mecanismos extras (TripleCopy,
   Reconsolidation, Neuromod) son los que evitan el colapso
 
 ### 12.2 Stress Detection
@@ -748,19 +748,19 @@ bajo carga moderada pero se vuelven **críticos bajo estrés** (decay
 ```python
 # dxrk/memory/stress.py
 
-def compute_system_stress(palace) -> float:
+def compute_system_stress(malla) -> float:
     """
     Estrés = función de:
-    - Densidad de drawers (n / cap)
+    - Densidad de fragmentos (n / cap)
     - Tasa de decay promedio (1/S promedio)
     - Tasa de quarantine reciente
     """
-    stats = palace.wing_usage()
+    stats = malla.nodo_usage()
     density = sum(w.count for w in stats) / sum(w.cap for w in stats)
     
-    avg_inv_s = mean(1.0 / d["S"] for d in palace.iter_drawers() if d.get("S", 1) > 0)
+    avg_inv_s = mean(1.0 / d["S"] for d in malla.iter_fragmentos() if d.get("S", 1) > 0)
     
-    recent_quarantines = count_quarantines_last(palace, days=7)
+    recent_quarantines = count_quarantines_last(malla, days=7)
     
     stress = 0.4 * density + 0.4 * avg_inv_s + 0.2 * min(recent_quarantines / 10, 1.0)
     return clamp(stress, 0.0, 1.0)
@@ -775,7 +775,7 @@ def should_activate_defenses(stress: float) -> bool:
 Cuando `stress > 0.6`:
 - TripleCopy se activa (S_deep protege esquema)
 - Reconsolidation window se acorta a 2h (consolidar rápido)
-- Sleep priority threshold baja (consolidar más drawers)
+- Sleep priority threshold baja (consolidar más fragmentos)
 - Neuromod NE base sube a 0.3 (alerta constante)
 
 Esto es **adaptativo**: el sistema es ligero cuando puede, robusto cuando debe.
@@ -785,14 +785,14 @@ Esto es **adaptativo**: el sistema es ligero cuando puede, robusto cuando debe.
 ## 13. Flujo Integrado (Cómo todo conecta)
 
 ```
-USUARIO ACCEDE (get_drawer):
-  1. get_drawer → RDU scoring (Fase 0)
-  2. mark_labile(drawer)  ← Reconsolidation (§7)
+USUARIO ACCEDE (get_fragmento):
+  1. get_fragmento → RDU scoring (Fase 0)
+  2. mark_labile(fragmento)  ← Reconsolidation (§7)
   3. encode_mode(neuromod)  ← ACh up (§3)
   4. stdp_update(pre=query_sim, post=hit, dt)  ← Two-Factor (§2)
   5. TripleCopy update (S_fast decae, S_deep crece)  ← §5
-  6. confidence = propagate_confidence(drawer)  ← §11
-  7. return drawer + adjusted_confidence  ← Metacog (§8)
+  6. confidence = propagate_confidence(fragmento)  ← §11
+  7. return fragmento + adjusted_confidence  ← Metacog (§8)
 
 JUEZ EXTERNO (judge.verify_change):
   1. Evaluar antes/después con eval harness
@@ -807,14 +807,14 @@ SLEEP CONSOLIDATION (sleep.cycle):
   3. candidates = select_sleep_candidates()  ← Sim-Selection (§6)
   4. NREM: consolidate 70% (replay + PE update)  ← §6
   5. REM: reorganize 30% (merge near-dups)  ← §6
-  6. reconsolidate(labile drawers)  ← §7
+  6. reconsolidate(labile fragmentos)  ← §7
   7. Si stress > 0.6: activar TripleCopy completo  ← §12
 
-CALIBRACIÓN (calibrate.wing):
+CALIBRACIÓN (calibrate.nodo):
   1. candidates = thompson_sampling_select()  ← §10
   2. Replay outcomes para candidatos
   3. qieo_optimize(recall@k objective)  ← §9
-  4. Persistir params por wing
+  4. Persistir params por nodo
   5. metacog.update_calibration()  ← §8
 ```
 
@@ -823,7 +823,7 @@ CALIBRACIÓN (calibrate.wing):
 ## 14. Esquema de Metadata (Delta vs Fase 0)
 
 ```python
-# Nuevas claves en drawer metadata
+# Nuevas claves en fragmento metadata
 {
     # ... Fase 0 keys (S, D, rd, score_ledger, etc.)
     
@@ -847,14 +847,14 @@ CALIBRACIÓN (calibrate.wing):
     "predicted_r_history": [],     # cap 50, para ECE
     
     # Calibration (§9)
-    "calibration_params": null,    # o {a, b, c, pe_lambda} por drawer (Fase 2)
+    "calibration_params": null,    # o {a, b, c, pe_lambda} por fragmento (Fase 2)
 }
 
 # Sidecars nuevos
-palace/.neuromod_state.json       # estado global DA/NE/5HT/ACh
-palace/.metacog_state.json        # ECE, bias, history
-palace/.calibration/{wing}.json   # params QIEO por wing
-palace/.stress_state.json         # stress level cache
+malla/.neuromod_state.json       # estado global DA/NE/5HT/ACh
+malla/.metacog_state.json        # ECE, bias, history
+malla/.calibration/{nodo}.json   # params QIEO por nodo
+malla/.stress_state.json         # stress level cache
 ```
 
 ---
@@ -866,7 +866,7 @@ palace/.stress_state.json         # stress level cache
 1. **Synapse core** — `synapse.py` con stdp_update + tests (LTP/LTD, ventana temporal, modulación neuromod)
 2. **Neuromod engine** — `neuromod.py` con 4 canales + decay + tests (reward/alert/consolidate/encode)
 3. **TripleCopy** — `triplecopy.py` con 3 copias + retrievability max + tests (cola pesada vs FSRS puro)
-4. **Reconsolidation** — mark_labile/reconsolidate en palace + tests (ventana 6h, fortalece/debilita, decay)
+4. **Reconsolidation** — mark_labile/reconsolidate en malla + tests (ventana 6h, fortalece/debilita, decay)
 5. **Metacog monitor** — `metacog.py` con ECE + bias tracking + tests (calibración, corrección)
 
 ### Bloque 2: Integración (tareas 6-10)
@@ -888,7 +888,7 @@ palace/.stress_state.json         # stress level cache
 
 15. **QIEO optimizer** — `qieo.py` con qubits + rotation + tests (converge en funciones benchmark)
 16. **Thompson Sampling** — active_learning.py + tests (exploración/explotación balance)
-17. **Calibrate wing** — calibrate_wing() con QIEO + TS + persistencia + tests
+17. **Calibrate nodo** — calibrate_nodo() con QIEO + TS + persistencia + tests
 
 ### Bloque 5: Exposición (tarea 18)
 
@@ -906,7 +906,7 @@ palace/.stress_state.json         # stress level cache
 | Stress false positives | Media | Umbral conservador 0.6, histéresis (activa >0.6, desactiva <0.4) |
 | PE amplifica ruido | Media | λ=0.1 pequeño, clamp PE a [-0.5, 0.5] |
 | Metacog ECE con pocos datos | Alta | ECE solo con n>30 juicios, sino usa prior |
-| Near-dup merge incorrecto | Baja | Similitud >0.85 + mismo wing + revisión en ledger |
+| Near-dup merge incorrecto | Baja | Similitud >0.85 + mismo nodo + revisión en ledger |
 
 ---
 
@@ -914,7 +914,7 @@ palace/.stress_state.json         # stress level cache
 
 | Mecanismo ZenBrain | Por qué no |
 |--------------------|-----------|
-| Capas 4-7 (percepción, acción) | Fuera de alcance: memoria de drawers, no agente completo |
+| Capas 4-7 (percepción, acción) | Fuera de alcance: memoria de fragmentos, no agente completo |
 | PMA completo (6 components) | Implementamos los 6 en versiones simplificadas (Neuromod, Reconsolidation, TripleCopy, PriorityMap→stress, StabilityProtector→checksum, MetacogMonitor) |
 | Entrenamiento real de parámetros FSRS | Fase 1 usa QIEO con defaults fijos; entrenamiento completo requiere harness de eval masivo (Fase 2) |
 | Quantum computing real | QIEO es "quantum-inspired" (clásico), no necesita hardware cuántico |

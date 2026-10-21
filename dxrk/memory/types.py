@@ -2,8 +2,8 @@
 """Enriched memory types for DxrkMemory 2.0.
 
 Keeps backward compatibility with the original 3-value MemoryType
-(SEMANTIC=0, EPISODIC=1, PROCEDURAL=2) while exposing palace-native
-records (DrawerRecord, ClosetRecord) used by the wings/rooms/drawers
+(SEMANTIC=0, EPISODIC=1, PROCEDURAL=2) while exposing malla-native
+records (FragmentoRecord, ClosetRecord) used by the nodos/celdas/fragmentos
 hierarchy.
 """
 
@@ -40,14 +40,14 @@ class MemoryEntry:
     importance: float = 0.0
     project_id: str = ""
     session_id: str = ""
-    # Enriched palace fields (additive, default empty so old JSON still loads)
+    # Enriched malla fields (additive, default empty so old JSON still loads)
     title: str = ""
     scope: str = ""
     topic_key: str = ""
-    wing: str = ""
-    room: str = ""
-    drawer_id: str = ""
-    palace_path: str = ""
+    nodo: str = ""
+    celda: str = ""
+    fragmento_id: str = ""
+    malla_path: str = ""
 
 
 @dataclass
@@ -75,42 +75,42 @@ def top_by_importance(entries: list[MemoryEntry], limit: int) -> list[MemoryEntr
 
 
 @dataclass(frozen=True, slots=True)
-class DrawerRecord:
-    """Immutable palace drawer — verbatim chunk."""
+class FragmentoRecord:
+    """Immutable malla fragmento — verbatim chunk."""
 
-    drawer_id: str
-    wing: str
-    room: str
+    fragmento_id: str
+    nodo: str
+    celda: str
     content: str
     source_file: str
     chunk_index: int
-    palace_path: str
+    malla_path: str
     hall: str = "general"
     entities: str = ""
     filed_at: str = ""
     normalize_version: int = 2
 
     @staticmethod
-    def make_id(wing: str, room: str, source_file: str, chunk_index: int) -> str:
+    def make_id(nodo: str, celda: str, source_file: str, chunk_index: int) -> str:
         h = hashlib.sha256(f"{source_file}{chunk_index}".encode()).hexdigest()[:24]
-        return f"drawer_{wing}_{room}_{h}"
+        return f"fragmento_{nodo}_{celda}_{h}"
 
 
 @dataclass(frozen=True, slots=True)
 class ClosetRecord:
-    """Immutable closet — compact AAAK pointer to drawers."""
+    """Immutable closet — compact AAAK pointer to fragmentos."""
 
     closet_id: str
-    wing: str
-    room: str
+    nodo: str
+    celda: str
     source_file: str
     content: str
-    drawer_ids: tuple[str, ...]
-    palace_path: str
+    fragmento_ids: tuple[str, ...]
+    malla_path: str
     filed_at: str = ""
     normalize_version: int = 2
 
     @staticmethod
-    def make_base_id(wing: str, room: str, source_file: str) -> str:
+    def make_base_id(nodo: str, celda: str, source_file: str) -> str:
         h = hashlib.sha256(source_file.encode()).hexdigest()[:24]
-        return f"closet_{wing}_{room}_{h}"
+        return f"closet_{nodo}_{celda}_{h}"

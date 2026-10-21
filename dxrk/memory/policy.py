@@ -1,16 +1,16 @@
 # SPDX-License-Identifier: MIT
-"""Palace policy engine — RBAC-gated background triggers (Fase 0 tanda 2).
+"""Malla policy engine — RBAC-gated background triggers (Fase 0 tanda 2).
 
-``PolicyEngine(palace).maybe_run(trigger)`` runs hygiene triggers that
+``PolicyEngine(malla).maybe_run(trigger)`` runs hygiene triggers that
 write paths cannot afford inline:
 
-- ``write``    -> ``over_budget`` only (wing.count > cap -> enforce_wing_cap).
+- ``write``    -> ``over_budget`` only (nodo.count > cap -> enforce_nodo_cap).
 - ``periodic`` -> ``rescore_stale`` + ``checksum_sweep`` + ``quarantine_sweep``,
   each at most once per ``min_interval_seconds`` (default 15 min), tracked
-  in the ``<palace>/.policy_state.json`` sidecar (``last_run`` per trigger
+  in the ``<malla>/.policy_state.json`` sidecar (``last_run`` per trigger
   plus the sweep rotation ``cursor``).
 
-Every trigger runs as the effective tenant under the palace lock and
+Every trigger runs as the effective tenant under the malla lock and
 requires the ``memory.maintain`` cap via
 ``require_op(tenant, "system:policy", "memory.maintain")`` — without an
 explicit grant it aborts with ``PermissionError("RBAC_DENIED: ...")``.
@@ -59,18 +59,18 @@ def _is_dead(meta: object) -> bool:
 
 
 class PolicyEngine:
-    """Hygiene triggers for one palace; see module docstring."""
+    """Hygiene triggers for one malla; see module docstring."""
 
     def __init__(
         self,
-        palace: Any,
+        malla: Any,
         *,
         sweep_window: int = CHECKSUM_SWEEP_WINDOW,
         stale_days: float = RESCORE_STALE_DAYS,
         min_interval_seconds: float = POLICY_MIN_INTERVAL_SECONDS,
         scan_limit: int = POLICY_SCAN_LIMIT,
     ) -> None:
-        self._palace = palace
+        self._malla = malla
         try:
             self._sweep_window = max(1, int(sweep_window))
         except (TypeError, ValueError):
@@ -99,14 +99,14 @@ class PolicyEngine:
         """
         from dxrk.security.enforcement import require_op
 
-        from .palace import mine_palace_lock
+        from .malla import mine_malla_lock
 
         if trigger not in (TRIGGER_WRITE, TRIGGER_PERIODIC):
             raise ValueError(f"invalid policy trigger {trigger!r} (expected 'write' | 'periodic')")
-        tenant = (getattr(self._palace, "tenant_id", "") or os.environ.get("DXRK_TENANT", "") or "").strip()
+        tenant = (getattr(self._malla, "tenant_id", "") or os.environ.get("DXRK_TENANT", "") or "").strip()
         require_op(tenant, "system:policy", "memory.maintain")
-        palace_path = str(getattr(self._palace, "palace_path", "") or "")
-        with mine_palace_lock(palace_path, tenant_id=tenant or None):
+        malla_path = str(getattr(self._malla, "malla_path", "") or "")
+        with mine_malla_lock(malla_path, tenant_id=tenant or None):
             if trigger == TRIGGER_WRITE:
                 return {
                     "ok": True,
@@ -138,32 +138,32 @@ class PolicyEngine:
     # -- triggers -------------------------------------------------------
 
     def _run_over_budget(self) -> dict[str, object]:
-        wings_over: list[str] = []
+        nodos_over: list[str] = []
         evicted = 0
         try:
-            wings = self._palace.list_wings()
+            nodos = self._malla.list_nodos()
         except Exception:
-            logger.debug("Policy over_budget list_wings failed", exc_info=True)
-            return {"wings_over": wings_over, "evicted": evicted}
-        for wing in wings:
+            logger.debug("Policy over_budget list_nodos failed", exc_info=True)
+            return {"nodos_over": nodos_over, "evicted": evicted}
+        for nodo in nodos:
             try:
-                usage = self._palace.wing_usage(str(wing))
+                usage = self._malla.nodo_usage(str(nodo))
             except Exception:
-                logger.debug("Policy over_budget wing_usage failed for %s", wing, exc_info=True)
+                logger.debug("Policy over_budget nodo_usage failed for %s", nodo, exc_info=True)
                 continue
             if isinstance(usage, dict) and usage.get("over"):
-                wings_over.append(str(wing))
+                nodos_over.append(str(nodo))
                 try:
-                    evicted += int(self._palace.enforce_wing_cap(str(wing)))
+                    evicted += int(self._malla.enforce_nodo_cap(str(nodo)))
                 except Exception:
-                    logger.debug("Policy over_budget eviction failed for %s", wing, exc_info=True)
-        return {"wings_over": sorted(wings_over), "evicted": evicted}
+                    logger.debug("Policy over_budget eviction failed for %s", nodo, exc_info=True)
+        return {"nodos_over": sorted(nodos_over), "evicted": evicted}
 
     def _run_rescore_stale(self) -> dict[str, object]:
         from .migrate import ensure_spine_defaults, ledger_append
         from .scoring import parse_dt, score_meta
 
-        col = self._palace._collection(create=False)
+        col = self._malla._collection(create=False)
         try:
             got = col.get(include=["metadatas"], limit=self._scan_limit)
         except Exception:
@@ -202,7 +202,7 @@ class PolicyEngine:
     def _run_checksum_sweep(self) -> dict[str, object]:
         from .migrate import content_sha256_of
 
-        col = self._palace._collection(create=False)
+        col = self._malla._collection(create=False)
         try:
             all_got = col.get(include=["metadatas"], limit=self._scan_limit)
         except Exception:
@@ -253,7 +253,7 @@ class PolicyEngine:
     def _run_quarantine_sweep(self) -> dict[str, object]:
         from .migrate import content_sha256_of
 
-        col = self._palace._collection(create=False)
+        col = self._malla._collection(create=False)
         try:
             got = col.get(include=["documents", "metadatas"], limit=self._scan_limit)
         except Exception:
@@ -279,7 +279,7 @@ class PolicyEngine:
             if not reason:
                 continue
             try:
-                if self._palace.quarantine_drawer(rid, reason=reason):
+                if self._malla.quarantine_fragmento(rid, reason=reason):
                     quarantined.append(rid)
                     reasons[rid] = reason
             except Exception:
@@ -289,11 +289,11 @@ class PolicyEngine:
     # -- sidecar state --------------------------------------------------
 
     def _state_path(self) -> Path | None:
-        palace_path = str(getattr(self._palace, "palace_path", "") or "")
-        if not palace_path or palace_path in ("memory-only",):
+        malla_path = str(getattr(self._malla, "malla_path", "") or "")
+        if not malla_path or malla_path in ("memory-only",):
             return None
         try:
-            return Path(palace_path) / POLICY_STATE_FILE
+            return Path(malla_path) / POLICY_STATE_FILE
         except Exception:
             return None
 

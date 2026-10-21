@@ -68,7 +68,7 @@ def _repoint_legacy_paths(monkeypatch: pytest.MonkeyPatch, home: Path) -> None:
         migration,
         "LEGACY_PATHS",
         [
-            (dxrk_dir / "palace" / "sqlite_palace.db", Path("palace") / "sqlite_palace.db"),
+            (dxrk_dir / "malla" / "malla.db", Path("malla") / "malla.db"),
             (dxrk_dir / "locks", Path("locks")),
             (dxrk_dir / "knowledge_graph.sqlite3", Path("knowledge_graph.sqlite3")),
             (dxrk_dir / "identity.txt", Path("identity.txt")),
@@ -201,10 +201,10 @@ class TestMigration:
     @staticmethod
     def _seed_legacy(home: Path) -> dict[str, str]:
         dxrk_dir = home / ".dxrk"
-        (dxrk_dir / "palace").mkdir(parents=True, exist_ok=True)
+        (dxrk_dir / "malla").mkdir(parents=True, exist_ok=True)
         (dxrk_dir / "locks").mkdir(parents=True, exist_ok=True)
         seeds = {
-            str(dxrk_dir / "palace" / "sqlite_palace.db"): "fake-db-bytes",
+            str(dxrk_dir / "malla" / "malla.db"): "fake-db-bytes",
             str(dxrk_dir / "locks" / "a.lock"): "locked",
             str(dxrk_dir / "identity.txt"): "legacy identity",
             str(dxrk_dir / "config.yaml"): "key: value\n",
@@ -224,7 +224,7 @@ class TestMigration:
         assert is_migrated() is True
 
         default_root = home / ".dxrk" / "tenants" / "default"
-        assert (default_root / "palace" / "sqlite_palace.db").read_text(encoding="utf-8") == "fake-db-bytes"
+        assert (default_root / "malla" / "malla.db").read_text(encoding="utf-8") == "fake-db-bytes"
         assert (default_root / "locks" / "a.lock").read_text(encoding="utf-8") == "locked"
         assert (default_root / "identity.txt").read_text(encoding="utf-8") == "legacy identity"
         assert (default_root / "config.yaml").read_text(encoding="utf-8") == "key: value\n"

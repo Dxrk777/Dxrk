@@ -16,7 +16,7 @@ CONFIDENCE_HISTORY_CAP = 100
 
 @dataclass
 class MetacogState:
-    """Global metacognitive state (one per palace)."""
+    """Global metacognitive state (one per malla)."""
 
     calibration_error: float = 0.0  # Current ECE
     bias_direction: float = 0.0  # >0 over-confident, <0 under-confident
@@ -107,9 +107,9 @@ def get_bias_category(state: MetacogState) -> str:
     return "well_calibrated"
 
 
-def load_metacog_state(palace_path: Path) -> MetacogState:
+def load_metacog_state(malla_path: Path) -> MetacogState:
     """Load metacognitive state from sidecar JSON."""
-    path = palace_path / ".metacog_state.json"
+    path = malla_path / ".metacog_state.json"
     if not path.exists():
         return MetacogState()
     try:
@@ -125,9 +125,9 @@ def load_metacog_state(palace_path: Path) -> MetacogState:
         return MetacogState()
 
 
-def save_metacog_state(palace_path: Path, state: MetacogState) -> None:
+def save_metacog_state(malla_path: Path, state: MetacogState) -> None:
     """Persist metacognitive state to sidecar JSON (0o600)."""
-    path = palace_path / ".metacog_state.json"
+    path = malla_path / ".metacog_state.json"
     # Convert tuple list to list of lists for JSON
     data = asdict(state)
     data["confidence_history"] = [list(pair) for pair in state.confidence_history]

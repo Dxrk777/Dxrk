@@ -146,7 +146,7 @@ class KnowledgeGraph:
                 confidence REAL DEFAULT 1.0,
                 source_closet TEXT,
                 source_file TEXT,
-                source_drawer_id TEXT,
+                source_fragmento_id TEXT,
                 adapter_name TEXT,
                 extracted_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (subject) REFERENCES entities(id),
@@ -161,8 +161,8 @@ class KnowledgeGraph:
         # migrate older schema: add missing columns
         try:
             cols = {r[1] for r in conn.execute("PRAGMA table_info(triples)").fetchall()}
-            if "source_drawer_id" not in cols:
-                conn.execute("ALTER TABLE triples ADD COLUMN source_drawer_id TEXT")
+            if "source_fragmento_id" not in cols:
+                conn.execute("ALTER TABLE triples ADD COLUMN source_fragmento_id TEXT")
             if "adapter_name" not in cols:
                 conn.execute("ALTER TABLE triples ADD COLUMN adapter_name TEXT")
         except sqlite3.Error:
@@ -221,7 +221,7 @@ class KnowledgeGraph:
         confidence: float = 1.0,
         source_closet: str | None = None,
         source_file: str | None = None,
-        source_drawer_id: str | None = None,
+        source_fragmento_id: str | None = None,
         adapter_name: str | None = None,
     ) -> str:
         valid_from = _sanitize_iso(valid_from, "valid_from")
@@ -248,7 +248,7 @@ class KnowledgeGraph:
                     return str(existing["id"])
                 tid = f"t_{sub_id}_{pred}_{obj_id}_{hashlib.sha256(f'{valid_from}{datetime.now(UTC).isoformat()}'.encode()).hexdigest()[:12]}"
                 conn.execute(
-                    "INSERT INTO triples (id, subject, predicate, object, valid_from, valid_to, confidence, source_closet, source_file, source_drawer_id, adapter_name) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                    "INSERT INTO triples (id, subject, predicate, object, valid_from, valid_to, confidence, source_closet, source_file, source_fragmento_id, adapter_name) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
                     (
                         tid,
                         sub_id,
@@ -259,7 +259,7 @@ class KnowledgeGraph:
                         confidence,
                         source_closet,
                         source_file,
-                        source_drawer_id,
+                        source_fragmento_id,
                         adapter_name,
                     ),
                 )
@@ -314,7 +314,7 @@ class KnowledgeGraph:
                 "valid_to": r["valid_to"],
                 "confidence": r["confidence"],
                 "source_file": r["source_file"],
-                "source_drawer_id": r["source_drawer_id"],
+                "source_fragmento_id": r["source_fragmento_id"],
                 "current": r["valid_to"] is None,
             }
             for r in rows
@@ -366,7 +366,7 @@ class KnowledgeGraph:
                 "valid_to": r["valid_to"],
                 "extracted_at": r["extracted_at"],
                 "source_file": r["source_file"],
-                "source_drawer_id": r["source_drawer_id"],
+                "source_fragmento_id": r["source_fragmento_id"],
                 "current": r["valid_to"] is None,
             }
             for r in rows

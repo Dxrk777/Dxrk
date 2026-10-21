@@ -11,7 +11,7 @@ from pathlib import Path
 
 @dataclass(frozen=True)
 class NeuromodState:
-    """Global neuromodulator state (one per palace)."""
+    """Global neuromodulator state (one per malla)."""
 
     da: float = 0.0  # Dopamine: reward prediction error, potentiates LTP
     ne: float = 0.0  # Noradrenaline: arousal/salience, resets consolidation
@@ -83,9 +83,9 @@ def stress_mode(state: NeuromodState) -> NeuromodState:
     return replace(state, ne=clamp(state.ne + 0.3), last_update=_now_iso())
 
 
-def load_neuromod_state(palace_path: Path) -> NeuromodState:
+def load_neuromod_state(malla_path: Path) -> NeuromodState:
     """Load neuromodulator state from sidecar JSON."""
-    path = palace_path / ".neuromod_state.json"
+    path = malla_path / ".neuromod_state.json"
     if not path.exists():
         return NeuromodState()
     try:
@@ -101,9 +101,9 @@ def load_neuromod_state(palace_path: Path) -> NeuromodState:
         return NeuromodState()
 
 
-def save_neuromod_state(palace_path: Path, state: NeuromodState) -> None:
+def save_neuromod_state(malla_path: Path, state: NeuromodState) -> None:
     """Persist neuromodulator state to sidecar JSON (0o600)."""
-    path = palace_path / ".neuromod_state.json"
+    path = malla_path / ".neuromod_state.json"
     path.write_text(json.dumps(asdict(state), indent=2))
     path.chmod(0o600)
 

@@ -14,7 +14,7 @@ detallado en `adr/ADR-002-memory-separation.md`, roadmap §3.3).
 │   ├── _registry.json        # {"tenants": [{"id", "display_name", ...}]}
 │   ├── _active               # id del tenant activo (texto plano)
 │   └── {id}/
-│       ├── palace/           # DxrkMemory 2.0 (sqlite FTS5, WAL 0o600)
+│       ├── malla/            # DxrkMemory 2.0 (sqlite FTS5, WAL 0o600)
 │       ├── locks/            # locks de minería
 │       ├── learn/            # datos del learner
 │       └── sessions/         # sesiones del tenant
@@ -54,7 +54,7 @@ dxrk-py --tenant acme <comando>     # cualquier comando bajo ese tenant
 
 ## Aislamiento verificado
 
-- **Palace/vault/JWT/RBAC/CLI**: `tests/test_tenant_e2e.py` (9 tests).
+- **Malla/vault/JWT/RBAC/CLI**: `tests/test_tenant_e2e.py` (9 tests).
 - **RBAC por rol**: `tests/test_enterprise_rbac_matrix.py` (25 tests).
 - **JWT `tid` + vault HKDF**: `tests/test_enterprise_jwt_vault.py` (18 tests).
 - **CLI + migración + switcher TUI**: `tests/test_enterprise_cli_migration.py`
@@ -65,7 +65,7 @@ dxrk-py --tenant acme <comando>     # cualquier comando bajo ese tenant
 ```python
 from dxrk.tenant import tenant_root, ensure_tenant, list_tenants, is_migrated
 
-root = ensure_tenant("acme")   # crea skeleton palace/locks/learn/sessions
+root = ensure_tenant("acme")   # crea skeleton malla/locks/learn/sessions
 ```
 
 ## Vault por tenant

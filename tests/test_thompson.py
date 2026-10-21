@@ -8,7 +8,7 @@ from dxrk.memory.thompson import (
     select_evaluation_candidates,
     thompson_sample,
     thompson_select,
-    thompson_select_drawers,
+    thompson_select_fragmentos,
     update_beta_prior,
 )
 
@@ -81,19 +81,19 @@ class TestThompsonSampling:
         assert alpha == 6.7
         assert beta == 4.3
 
-    def test_thompson_select_drawers(self) -> None:
-        """Integration test with mock palace."""
+    def test_thompson_select_fragmentos(self) -> None:
+        """Integration test with mock malla."""
         from unittest.mock import Mock
 
-        drawers = [
+        fragmentos = [
             {"id": "d1", "metadata": {"access_count_total": 10, "irt_hits": 8, "irt_misses": 2}},
             {"id": "d2", "metadata": {"access_count_total": 5, "irt_hits": 1, "irt_misses": 4}},
             {"id": "d3", "metadata": {"access_count_total": 0, "irt_hits": 0, "irt_misses": 0, "quarantined": True}},
         ]
-        palace = Mock()
-        palace.iter_drawers.return_value = drawers
+        malla = Mock()
+        malla.iter_fragmentos.return_value = fragmentos
 
-        selected = thompson_select_drawers(palace, n=2)
+        selected = thompson_select_fragmentos(malla, n=2)
         assert len(selected) == 2
         assert "d3" not in selected  # quarantined excluded
 
@@ -101,16 +101,16 @@ class TestThompsonSampling:
         """Select evaluation candidates with config."""
         from unittest.mock import Mock
 
-        drawers = [
+        fragmentos = [
             {"id": "d1", "metadata": {"access_count_total": 10, "irt_hits": 8, "irt_misses": 2}},
             {"id": "d2", "metadata": {"access_count_total": 5, "irt_hits": 1, "irt_misses": 4}},
             {"id": "d3", "metadata": {"access_count_total": 0, "irt_hits": 0, "irt_misses": 0}},
         ]
-        palace = Mock()
-        palace.iter_drawers.return_value = drawers
+        malla = Mock()
+        malla.iter_fragmentos.return_value = fragmentos
 
         config = ThompsonConfig(alpha_prior=1.0, beta_prior=1.0, exploration_bonus=0.5)
-        selected = select_evaluation_candidates(palace, n=2, config=config)
+        selected = select_evaluation_candidates(malla, n=2, config=config)
         assert len(selected) == 2
 
     def test_thompson_config_defaults(self) -> None:

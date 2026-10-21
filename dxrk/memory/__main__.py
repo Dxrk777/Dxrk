@@ -9,11 +9,11 @@ import sys
 from pathlib import Path
 
 
-def _palace_dir_for_cli() -> Path:
-    """Palace dir que respeta DXRK_TENANT (mine/search tenant-aware).
+def _malla_dir_for_cli() -> Path:
+    """Malla dir que respeta DXRK_TENANT (mine/search tenant-aware).
 
-    - Con tenant -> ``~/.dxrk/tenants/{tid}/palace`` (igual que
-      ``dxrk.memory.palace._resolve_tenant_path``).
+    - Con tenant -> ``~/.dxrk/tenants/{tid}/malla`` (igual que
+      ``dxrk.memory.malla._resolve_tenant_path``).
     - Sin tenant -> legacy global ``~/.dxrk/memory`` (no se cambia el
       default para no huerfanar datos ya minados ahi).
     """
@@ -21,28 +21,28 @@ def _palace_dir_for_cli() -> Path:
     if tid:
         from dxrk.tenant.migration import tenant_root
 
-        return tenant_root(tid) / "palace"
+        return tenant_root(tid) / "malla"
     return Path.home() / ".dxrk" / "memory"
 
 
 def _cmd_mine(args: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="dxrk.memory mine")
     parser.add_argument("path", help="project dir to ingest")
-    parser.add_argument("--wing", default="default", help="wing name")
-    parser.add_argument("--room", default="", help="room name (auto if empty)")
+    parser.add_argument("--nodo", default="default", help="nodo name")
+    parser.add_argument("--celda", default="", help="celda name (auto if empty)")
     parser.add_argument("--dry-run", action="store_true")
     ns = parser.parse_args(args)
     try:
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
         from dxrk.security.enforcement import require_op, resolve_user
 
-        # R12: mine mutates palace state -> readonly denied (RBAC_DENIED).
+        # R12: mine mutates malla state -> readonly denied (RBAC_DENIED).
         # require_op valida el tenant antes de que tenant_root lo use.
         user = resolve_user()
         require_op(os.environ.get("DXRK_TENANT", ""), user, "mine")
-        dm = DxrkMemory(_palace_dir_for_cli(), agent=user)
+        dm = DxrkMemory(_malla_dir_for_cli(), agent=user)
         dm.init()
-        result = dm.mine(ns.path, wing=ns.wing, room=ns.room or "general", dry_run=ns.dry_run)
+        result = dm.mine(ns.path, nodo=ns.nodo, celda=ns.celda or "general", dry_run=ns.dry_run)
         print(f"mine: {result}", file=sys.stderr)
         return 0
     except Exception as e:
@@ -59,7 +59,7 @@ def _cmd_hooks(args: list[str]) -> int:
 def _cmd_search(args: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="dxrk.memory search")
     parser.add_argument("query", help="search query")
-    parser.add_argument("--wing", default="")
+    parser.add_argument("--nodo", default="")
     parser.add_argument("--n", type=int, default=5)
     ns = parser.parse_args(args)
     try:
@@ -73,10 +73,10 @@ def _cmd_search(args: list[str]) -> int:
         return 1
     from dxrk.memory import AgentMemory
 
-    # mismo palace que _cmd_mine (tenant-aware): sin path, AgentMemory queda
+    # mismo malla que _cmd_mine (tenant-aware): sin path, AgentMemory queda
     # en modo solo-memoria y search siempre devuelve [] aunque haya datos.
-    mem = AgentMemory(_palace_dir_for_cli())
-    res = mem.search(project_id=ns.wing or "default", query=ns.query, limit=ns.n)
+    mem = AgentMemory(_malla_dir_for_cli())
+    res = mem.search(project_id=ns.nodo or "default", query=ns.query, limit=ns.n)
     import json
 
     for e in res:

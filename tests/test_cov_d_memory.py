@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Coverage D — sqlite / palace / layers / miner gap tests (stdlib only)."""
+"""Coverage D — sqlite / malla / layers / miner gap tests (stdlib only)."""
 
 from __future__ import annotations
 
@@ -16,11 +16,11 @@ from unittest import mock
 
 import pytest
 
-from dxrk.memory.backend import PalaceRef, SqliteBackend
+from dxrk.memory.backend import MallaRef, SqliteBackend
 from dxrk.memory.backend.base import (
     BackendClosedError,
     CollectionNotInitializedError,
-    PalaceNotFoundError,
+    MallaNotFoundError,
     UnsupportedFilterError,
 )
 from dxrk.memory.layers import Layer0, Layer1, Layer2, Layer3, MemoryStack
@@ -34,15 +34,15 @@ def _isolate_home(monkeypatch, tmp_path):
     yield
 
 
-def _ref(tmp_path: Path, name: str = "pal") -> PalaceRef:
+def _ref(tmp_path: Path, name: str = "pal") -> MallaRef:
     p = tmp_path / name
-    return PalaceRef(id=str(p), local_path=str(p))
+    return MallaRef(id=str(p), local_path=str(p))
 
 
 def _col(tmp_path: Path, name: str = "c", cname: str = "col"):
     be = SqliteBackend()
     ref = _ref(tmp_path, name)
-    col = be.get_collection(palace=ref, collection_name=cname, create=True)
+    col = be.get_collection(malla=ref, collection_name=cname, create=True)
     return be, ref, col
 
 
@@ -63,7 +63,7 @@ class TestSqliteHelpers:
     def test_where_in_empty_returns_no_rows(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "w1")
         try:
-            col.add(documents=["hello"], ids=["i1"], metadatas=[{"wing": "w"}])
+            col.add(documents=["hello"], ids=["i1"], metadatas=[{"nodo": "w"}])
             got = col.get(where={"chunk_index": {"$in": []}})
             assert got.ids == []
         finally:
@@ -72,7 +72,7 @@ class TestSqliteHelpers:
     def test_where_and_not_list_ignored(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "w2")
         try:
-            col.add(documents=["hello"], ids=["i1"], metadatas=[{"wing": "w"}])
+            col.add(documents=["hello"], ids=["i1"], metadatas=[{"nodo": "w"}])
             got = col.get(where={"$and": "oops"})  # type: ignore[dict-item]
             assert got.ids == ["i1"]
         finally:
@@ -81,8 +81,8 @@ class TestSqliteHelpers:
     def test_where_and_skip_non_dict(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "w3")
         try:
-            col.add(documents=["hello"], ids=["i1"], metadatas=[{"wing": "w"}])
-            got = col.get(where={"$and": ["nope", {"wing": "w"}]})  # type: ignore[list-item]
+            col.add(documents=["hello"], ids=["i1"], metadatas=[{"nodo": "w"}])
+            got = col.get(where={"$and": ["nope", {"nodo": "w"}]})  # type: ignore[list-item]
             assert got.ids == ["i1"]
         finally:
             be.close()
@@ -90,7 +90,7 @@ class TestSqliteHelpers:
     def test_where_and_empty_list(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "w4")
         try:
-            col.add(documents=["hello"], ids=["i1"], metadatas=[{"wing": "w"}])
+            col.add(documents=["hello"], ids=["i1"], metadatas=[{"nodo": "w"}])
             got = col.get(where={"$and": []})
             assert got.ids == ["i1"]
         finally:
@@ -100,7 +100,7 @@ class TestSqliteHelpers:
         be, _, col = _col(tmp_path, "w5")
         try:
             with pytest.raises(UnsupportedFilterError):
-                col.get(where={"$or": [{"wing": "w"}]})
+                col.get(where={"$or": [{"nodo": "w"}]})
         finally:
             be.close()
 
@@ -108,7 +108,7 @@ class TestSqliteHelpers:
         be, _, col = _col(tmp_path, "w6")
         try:
             with pytest.raises(UnsupportedFilterError):
-                col.get(where={"wing": {"$gt": 1}})
+                col.get(where={"nodo": {"$gt": 1}})
         finally:
             be.close()
 
@@ -149,7 +149,7 @@ class TestSqliteHelpers:
             col._conn.commit()  # type: ignore[attr-defined]
             assert col._ft5_available() is False  # type: ignore[attr-defined]
             # query still works via fallback
-            col.add(documents=["hello fallback"], ids=["f1"], metadatas=[{"wing": "w"}])
+            col.add(documents=["hello fallback"], ids=["f1"], metadatas=[{"nodo": "w"}])
             q = col.query(query_texts=["hello"], n_results=5)
             assert "f1" in q.ids[0]
         finally:
@@ -173,7 +173,7 @@ class TestSqliteHelpers:
             col.add(
                 documents=["doc emb"],
                 ids=["e1"],
-                metadatas=[{"wing": "w"}],
+                metadatas=[{"nodo": "w"}],
                 embeddings=[[0.1, 0.2, 0.3]],
             )
             got = col.get(ids=["e1"], include=["documents", "metadatas", "embeddings"])
@@ -192,7 +192,7 @@ class TestSqliteHelpers:
         try:
             col._conn.execute("DROP TABLE IF EXISTS embedding_fts")  # type: ignore[attr-defined]
             col._conn.commit()  # type: ignore[attr-defined]
-            col.add(documents=["no fts"], ids=["n1"], metadatas=[{"wing": "w"}])
+            col.add(documents=["no fts"], ids=["n1"], metadatas=[{"nodo": "w"}])
             assert col.count() == 1
         finally:
             be.close()
@@ -200,9 +200,9 @@ class TestSqliteHelpers:
     def test_add_duplicate_raises(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "dup")
         try:
-            col.add(documents=["a"], ids=["d1"], metadatas=[{"wing": "w"}])
+            col.add(documents=["a"], ids=["d1"], metadatas=[{"nodo": "w"}])
             with pytest.raises(ValueError, match="duplicate id"):
-                col.add(documents=["b"], ids=["d1"], metadatas=[{"wing": "w"}])
+                col.add(documents=["b"], ids=["d1"], metadatas=[{"nodo": "w"}])
         finally:
             be.close()
 
@@ -222,7 +222,7 @@ class TestSqliteHelpers:
             col.upsert(
                 documents=["u1"],
                 ids=["u1"],
-                metadatas=[{"wing": "w"}],
+                metadatas=[{"nodo": "w"}],
                 embeddings=[[1.0, 2.0]],
             )
             got = col.get(ids=["u1"], include=["documents", "metadatas", "embeddings"])
@@ -236,7 +236,7 @@ class TestSqliteHelpers:
         try:
             col._conn.execute("DROP TABLE IF EXISTS embedding_fts")  # type: ignore[attr-defined]
             col._conn.commit()  # type: ignore[attr-defined]
-            col.upsert(documents=["fresh"], ids=["fresh1"], metadatas=[{"wing": "w"}])
+            col.upsert(documents=["fresh"], ids=["fresh1"], metadatas=[{"nodo": "w"}])
             assert col.count() == 1
         finally:
             be.close()
@@ -252,7 +252,7 @@ class TestSqliteHelpers:
             bad_conn.cursor.return_value = bad_cur
             col._conn = bad_conn  # type: ignore[attr-defined]
             with pytest.raises(sqlite3.Error):
-                col.upsert(documents=["x"], ids=["x1"], metadatas=[{"wing": "w"}])
+                col.upsert(documents=["x"], ids=["x1"], metadatas=[{"nodo": "w"}])
             col._conn = real_conn  # type: ignore[attr-defined]
         finally:
             be.close()
@@ -260,8 +260,8 @@ class TestSqliteHelpers:
     def test_get_where_document_branches(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "wdoc")
         try:
-            col.add(documents=["hello world"], ids=["a"], metadatas=[{"wing": "w"}])
-            col.add(documents=["goodbye"], ids=["b"], metadatas=[{"wing": "w"}])
+            col.add(documents=["hello world"], ids=["a"], metadatas=[{"nodo": "w"}])
+            col.add(documents=["goodbye"], ids=["b"], metadatas=[{"nodo": "w"}])
             got = col.get(where_document={"$contains": "hello"})
             assert got.ids == ["a"]
             with pytest.raises(UnsupportedFilterError):
@@ -273,7 +273,7 @@ class TestSqliteHelpers:
         be, _, col = _col(tmp_path, "off")
         try:
             for i in range(3):
-                col.add(documents=[f"doc {i}"], ids=[f"id{i}"], metadatas=[{"wing": "w"}])
+                col.add(documents=[f"doc {i}"], ids=[f"id{i}"], metadatas=[{"nodo": "w"}])
             got = col.get(offset=1)
             assert [r for r in got.ids] == ["id1", "id2"]
             got2 = col.get(limit=1, offset=1)
@@ -284,7 +284,7 @@ class TestSqliteHelpers:
     def test_get_bad_json_and_include_variants(self, tmp_path: Path):
         be, ref, col = _col(tmp_path, "badjson")
         try:
-            col.add(documents=["ok"], ids=["ok1"], metadatas=[{"wing": "w"}])
+            col.add(documents=["ok"], ids=["ok1"], metadatas=[{"nodo": "w"}])
             # corrupt metadata directly
             col._conn.execute(  # type: ignore[attr-defined]
                 "UPDATE embeddings SET metadata=? WHERE id=?", ("{bad json", "ok1")
@@ -306,7 +306,7 @@ class TestSqliteHelpers:
     def test_query_embeddings_only_neutral(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "qemb")
         try:
-            col.add(documents=["alpha beta"], ids=["q1"], metadatas=[{"wing": "w"}])
+            col.add(documents=["alpha beta"], ids=["q1"], metadatas=[{"nodo": "w"}])
             q = col.query(query_embeddings=[[0.1, 0.2]], n_results=5)
             assert "q1" in q.ids[0]
             assert q.distances[0][0] == 0.5
@@ -316,8 +316,8 @@ class TestSqliteHelpers:
     def test_query_where_document_contains_fts_and_fallback(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "qwdoc")
         try:
-            col.add(documents=["hello mars"], ids=["m1"], metadatas=[{"wing": "w"}])
-            col.add(documents=["hello venus"], ids=["m2"], metadatas=[{"wing": "w"}])
+            col.add(documents=["hello mars"], ids=["m1"], metadatas=[{"nodo": "w"}])
+            col.add(documents=["hello venus"], ids=["m2"], metadatas=[{"nodo": "w"}])
             q = col.query(
                 query_texts=["hello"],
                 n_results=5,
@@ -339,7 +339,7 @@ class TestSqliteHelpers:
     def test_query_fts_error_falls_back(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "qerr")
         try:
-            col.add(documents=["hello world"], ids=["e1"], metadatas=[{"wing": "w"}])
+            col.add(documents=["hello world"], ids=["e1"], metadatas=[{"nodo": "w"}])
             col._conn.execute("DROP TABLE IF EXISTS embedding_fts")  # type: ignore[attr-defined]
             col._conn.commit()  # type: ignore[attr-defined]
             with mock.patch.object(col, "_ft5_available", return_value=True):  # type: ignore[attr-defined]
@@ -354,7 +354,7 @@ class TestSqliteHelpers:
             col.add(
                 documents=["hello include"],
                 ids=["k1"],
-                metadatas=[{"wing": "w"}],
+                metadatas=[{"nodo": "w"}],
                 embeddings=[[9.0]],
             )
             # corrupt one row to hit JSON error branches in query output
@@ -385,7 +385,7 @@ class TestSqliteHelpers:
         try:
             with pytest.raises(ValueError, match="delete requires"):
                 col.delete()
-            col.add(documents=["x"], ids=["x1"], metadatas=[{"wing": "w"}])
+            col.add(documents=["x"], ids=["x1"], metadatas=[{"nodo": "w"}])
             col.delete(ids=["nope"])
             assert col.count() == 1
             col.delete(ids=["x1"])
@@ -396,13 +396,13 @@ class TestSqliteHelpers:
     def test_delete_fts_missing_ok(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "delfts")
         try:
-            col.add(documents=["a"], ids=["a1"], metadatas=[{"wing": "del"}])
+            col.add(documents=["a"], ids=["a1"], metadatas=[{"nodo": "del"}])
             col._conn.execute("DROP TABLE IF EXISTS embedding_fts")  # type: ignore[attr-defined]
             col._conn.commit()  # type: ignore[attr-defined]
             col.delete(ids=["a1"])
             assert col.count() == 0
-            col.add(documents=["b"], ids=["b1"], metadatas=[{"wing": "del"}])
-            col.delete(where={"wing": "del"})
+            col.add(documents=["b"], ids=["b1"], metadatas=[{"nodo": "del"}])
+            col.delete(where={"nodo": "del"})
             assert col.count() == 0
         finally:
             be.close()
@@ -411,17 +411,17 @@ class TestSqliteHelpers:
         be = SqliteBackend()
         try:
             # dir path
-            ref_dir = PalaceRef(id="x", local_path=str(tmp_path / "p1"))
-            assert be._db_path(ref_dir).name == "sqlite_palace.db"  # type: ignore[attr-defined]
+            ref_dir = MallaRef(id="x", local_path=str(tmp_path / "p1"))
+            assert be._db_path(ref_dir).name == "malla.db"  # type: ignore[attr-defined]
             # file path
             f = tmp_path / "custom.db"
             f.write_text("x")
-            ref_file = PalaceRef(id="y", local_path=str(f))
+            ref_file = MallaRef(id="y", local_path=str(f))
             assert be._db_path(ref_file) == f.resolve()  # type: ignore[attr-defined]
             # no local_path fallback to cwd/id
-            ref_none = PalaceRef(id="someid123", local_path=None)
+            ref_none = MallaRef(id="someid123", local_path=None)
             p = be._db_path(ref_none)  # type: ignore[attr-defined]
-            assert p.name == "sqlite_palace.db"
+            assert p.name == "malla.db"
             assert "someid123" in str(p)
         finally:
             be.close()
@@ -429,14 +429,14 @@ class TestSqliteHelpers:
     def test_ensure_conn_errors(self, tmp_path: Path):
         be = SqliteBackend()
         try:
-            # missing palace dir entirely
-            ref = PalaceRef(id="nope", local_path=str(tmp_path / "nodir_xyz" / "sub"))
-            with pytest.raises(PalaceNotFoundError):
+            # missing malla dir entirely
+            ref = MallaRef(id="nope", local_path=str(tmp_path / "nodir_xyz" / "sub"))
+            with pytest.raises(MallaNotFoundError):
                 be._ensure_conn(ref, create=False)  # type: ignore[attr-defined]
             # dir exists but db missing -> CollectionNotInitializedError
             d = tmp_path / "emptydir"
             d.mkdir()
-            ref2 = PalaceRef(id="e2", local_path=str(d))
+            ref2 = MallaRef(id="e2", local_path=str(d))
             with pytest.raises(CollectionNotInitializedError):
                 be._ensure_conn(ref2, create=False)  # type: ignore[attr-defined]
             # create=True then reuse cached conn
@@ -449,10 +449,10 @@ class TestSqliteHelpers:
     def test_ensure_conn_chmod_fail_ignored(self, tmp_path: Path, monkeypatch):
         be = SqliteBackend()
         try:
-            ref = PalaceRef(id="chmod1", local_path=str(tmp_path / "chmod1"))
+            ref = MallaRef(id="chmod1", local_path=str(tmp_path / "chmod1"))
             monkeypatch.setattr(Path, "chmod", lambda self, *a, **k: (_ for _ in ()).throw(OSError("ro")))
             monkeypatch.setattr("sqlite3.connect", sqlite3.connect)
-            col = be.get_collection(palace=ref, collection_name="c", create=True)
+            col = be.get_collection(malla=ref, collection_name="c", create=True)
             assert col.count() == 0
         finally:
             be.close()
@@ -460,8 +460,8 @@ class TestSqliteHelpers:
     def test_init_schema_existing_and_fallback(self, tmp_path: Path):
         be = SqliteBackend()
         try:
-            ref = PalaceRef(id="sch", local_path=str(tmp_path / "sch"))
-            be.get_collection(palace=ref, collection_name="c", create=True)
+            ref = MallaRef(id="sch", local_path=str(tmp_path / "sch"))
+            be.get_collection(malla=ref, collection_name="c", create=True)
             conn = be._ensure_conn(ref, create=True)  # type: ignore[attr-defined]
             be._init_schema(conn)  # type: ignore[attr-defined]
             conn.execute("DROP TABLE IF EXISTS embedding_fts")
@@ -490,13 +490,13 @@ class TestSqliteHelpers:
         be2 = SqliteBackend()
         try:
             ref2 = _ref(tmp_path, "gcie2")
-            col = be2.get_collection(palace=ref2, collection_name="c", create=True)
+            col = be2.get_collection(malla=ref2, collection_name="c", create=True)
             assert col.count() == 0
             real_conn = be2._conns[ref2.id]  # type: ignore[attr-defined]
             bad_conn = mock.MagicMock()
             bad_conn.execute.side_effect = sqlite3.OperationalError("boom")
             be2._conns[ref2.id] = bad_conn  # type: ignore[attr-defined]
-            col2 = be2.get_collection(palace=ref2, collection_name="c", create=True)
+            col2 = be2.get_collection(malla=ref2, collection_name="c", create=True)
             assert col2 is not None
             be2._conns[ref2.id] = real_conn  # type: ignore[attr-defined]
             be2.close()
@@ -512,17 +512,17 @@ class TestSqliteHelpers:
             assert be.health(None).ok is True
             ref = _ref(tmp_path, "h1")
             assert be.health(ref).ok is False
-            col = be.get_collection(palace=ref, collection_name="c", create=True)
+            col = be.get_collection(malla=ref, collection_name="c", create=True)
             assert col.count() == 0
             assert be.health(ref).ok is True
-            # close_palace twice ok
-            be.close_palace(ref)
-            be.close_palace(ref)
+            # close_malla twice ok
+            be.close_malla(ref)
+            be.close_malla(ref)
             # health after close
             be.close()
             assert be.health(None).ok is False
             with pytest.raises(BackendClosedError):
-                be.get_collection(palace=ref, collection_name="c2", create=True)
+                be.get_collection(malla=ref, collection_name="c2", create=True)
         finally:
             try:
                 be.close()
@@ -536,10 +536,10 @@ class TestSqliteHelpers:
         assert SqliteBackend.detect(str(d)) is False
         be = SqliteBackend()
         try:
-            ref = PalaceRef(id=str(d), local_path=str(d))
-            be.get_collection(palace=ref, collection_name="c", create=True)
+            ref = MallaRef(id=str(d), local_path=str(d))
+            be.get_collection(malla=ref, collection_name="c", create=True)
             assert SqliteBackend.detect(str(d)) is True
-            dbf = d / "sqlite_palace.db"
+            dbf = d / "malla.db"
             assert SqliteBackend.detect(str(dbf)) is True
         finally:
             be.close()
@@ -549,11 +549,11 @@ class TestSqliteHelpers:
         try:
             d = tmp_path / "ex"
             d.mkdir()
-            ref = PalaceRef(id="ex1", local_path=str(d))
-            be.get_collection(palace=ref, collection_name="present", create=True)
+            ref = MallaRef(id="ex1", local_path=str(d))
+            be.get_collection(malla=ref, collection_name="present", create=True)
             assert be._collection_exists(ref, "present") is True  # type: ignore[attr-defined]
             assert be._collection_exists(ref, "absent_xyz") is False  # type: ignore[attr-defined]
-            ref_missing = PalaceRef(id="zzz", local_path=str(tmp_path / "nodir_q"))
+            ref_missing = MallaRef(id="zzz", local_path=str(tmp_path / "nodir_q"))
             assert be._collection_exists(ref_missing, "x") is False  # type: ignore[attr-defined]
             with mock.patch.object(be, "_ensure_conn", side_effect=sqlite3.OperationalError("boom")):
                 assert be._collection_exists(ref, "present") is False  # type: ignore[attr-defined]
@@ -561,12 +561,12 @@ class TestSqliteHelpers:
             be.close()
 
 
-# ─── palace helpers ──────────────────────────────────────────────────────────
+# ─── malla helpers ──────────────────────────────────────────────────────────
 
 
-class TestPalaceHelpers:
+class TestSangreHelpers:
     def test_shutdown_handler_raises(self):
-        from dxrk.memory.palace import _install_shutdown_signal_handlers
+        from dxrk.memory.malla import _install_shutdown_signal_handlers
 
         _install_shutdown_signal_handlers()
         h = signal.getsignal(signal.SIGTERM)
@@ -575,18 +575,18 @@ class TestPalaceHelpers:
             h(signal.SIGTERM, None)
 
     def test_path_within_root_false(self, tmp_path: Path):
-        from dxrk.memory.palace import _path_within_root
+        from dxrk.memory.malla import _path_within_root
 
         assert _path_within_root(tmp_path / "a", tmp_path) is True
         assert _path_within_root(Path("/etc/passwd"), tmp_path) is False
 
     def test_read_no_follow_outside_root(self, tmp_path: Path):
-        from dxrk.memory.palace import _read_text_no_follow_palace
+        from dxrk.memory.malla import _read_text_no_follow_malla
 
-        assert _read_text_no_follow_palace(Path("/etc/passwd"), tmp_path) is None
+        assert _read_text_no_follow_malla(Path("/etc/passwd"), tmp_path) is None
 
     def test_read_no_follow_eagain_retry(self, tmp_path: Path, monkeypatch):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         f = tmp_path / "r.txt"
         f.write_text("retry content")
@@ -606,12 +606,12 @@ class TestPalaceHelpers:
 
         monkeypatch.setattr(os, "open", _fake_open)
         monkeypatch.setattr(os, "lstat", _fake_lstat)
-        out = pal._read_text_no_follow_palace(f, tmp_path)
+        out = pal._read_text_no_follow_malla(f, tmp_path)
         assert out is not None
         assert out[0] == "retry content"
 
     def test_read_no_follow_eagain_nonreg_none(self, tmp_path: Path, monkeypatch):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         f = tmp_path / "x.txt"
         f.write_text("hi")
@@ -626,25 +626,25 @@ class TestPalaceHelpers:
 
         monkeypatch.setattr(os, "open", _boom)
         monkeypatch.setattr(os, "lstat", _fifo_lstat)
-        assert pal._read_text_no_follow_palace(f, tmp_path) is None
+        assert pal._read_text_no_follow_malla(f, tmp_path) is None
 
     def test_read_no_follow_nonreg_and_too_large(self, tmp_path: Path, monkeypatch):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         f = tmp_path / "ok.txt"
         f.write_text("hello world here and more")
         # non-regular via fstat mock
         real_fdopen = os.fdopen
         monkeypatch.setattr(pal, "MAX_FILE_SIZE", 5)
-        assert pal._read_text_no_follow_palace(f, tmp_path) is None
+        assert pal._read_text_no_follow_malla(f, tmp_path) is None
         monkeypatch.setattr(pal, "MAX_FILE_SIZE", 500 * 1024 * 1024)
         # OSError on open other errno
         monkeypatch.setattr(os, "open", lambda *a, **k: (_ for _ in ()).throw(OSError(errno.ENOENT, "nf")))
-        assert pal._read_text_no_follow_palace(f, tmp_path) is None
+        assert pal._read_text_no_follow_malla(f, tmp_path) is None
         assert real_fdopen is not None
 
     def test_is_regular_file_branches(self, tmp_path: Path):
-        from dxrk.memory.palace import _is_regular_file
+        from dxrk.memory.malla import _is_regular_file
 
         f = tmp_path / "a.txt"
         f.write_text("hi")
@@ -652,7 +652,7 @@ class TestPalaceHelpers:
         assert _is_regular_file(tmp_path / "missing_xyz") is False
 
     def test_effective_tenant_branches(self, tmp_path: Path, monkeypatch):
-        from dxrk.memory.palace import _effective_tenant_id
+        from dxrk.memory.malla import _effective_tenant_id
 
         assert _effective_tenant_id("  t1  ") == "t1"
         monkeypatch.setenv("DXRK_TENANT", " envt ")
@@ -669,7 +669,7 @@ class TestPalaceHelpers:
         assert _effective_tenant_id(None) == ""
 
     def test_resolve_tenant_path_branches(self, tmp_path: Path, monkeypatch):
-        from dxrk.memory.palace import _resolve_tenant_path
+        from dxrk.memory.malla import _resolve_tenant_path
 
         assert str(_resolve_tenant_path(None, "memory-only")) == "memory-only"
         assert str(_resolve_tenant_path(None, "")) == "" or "memory" in str(_resolve_tenant_path(None, ""))
@@ -685,7 +685,7 @@ class TestPalaceHelpers:
             assert ".dxrk" in str(fallback)
 
     def test_lock_dir_and_mine_path(self, tmp_path: Path, monkeypatch):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         monkeypatch.setattr("dxrk.tenant.migration.tenant_root", lambda tid: (_ for _ in ()).throw(OSError("ro")))
         assert str(pal._dxrk_lock_dir("t")).endswith("locks")
@@ -699,7 +699,7 @@ class TestPalaceHelpers:
         sys.platform == "win32", reason="flock re-entrada misma-handle es POSIX-only (msvcrt la rechaza)"
     )
     def test_mine_lock_file_ops(self, tmp_path: Path):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         lp = str(tmp_path / "t.lock")
         lf = pal._open_mine_lock_file(lp, create=True)
@@ -723,7 +723,7 @@ class TestPalaceHelpers:
         assert pal._mine_lock_file_is_current(lf2, str(tmp_path / "missing2.lock")) is False
 
     def test_lock_nonblocking_and_cleanup(self, tmp_path: Path):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         lp = str(tmp_path / "nb.lock")
         lf = pal._open_mine_lock_file(lp, create=True)
@@ -738,7 +738,7 @@ class TestPalaceHelpers:
         pal._cleanup_dxrk_lock_file(str(tmp_path / "never2.lock"))
 
     def test_cleanup_held_not_removed(self, tmp_path: Path):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         lp = str(tmp_path / "held.lock")
         lf = pal._open_mine_lock_file(lp, create=True)
@@ -755,7 +755,7 @@ class TestPalaceHelpers:
         assert not Path(lp).exists()
 
     def test_reap_and_maybe_reap(self, tmp_path: Path, monkeypatch):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         monkeypatch.setattr(pal, "_dxrk_lock_dir", lambda tenant_id=None: tmp_path / "locks")
         ld = tmp_path / "locks"
@@ -766,7 +766,7 @@ class TestPalaceHelpers:
         os.utime(stale, (old, old))
         fresh = ld / "fresh123.lock"
         fresh.write_text("y")
-        skipped_name = ld / "mine_palace_abc.lock"
+        skipped_name = ld / "mine_malla_abc.lock"
         skipped_name.write_text("z")
         os.utime(skipped_name, (old, old))
         reaped, skipped = pal.reap_stale_dxrk_locks(min_age_seconds=3600)
@@ -787,41 +787,41 @@ class TestPalaceHelpers:
         assert pal.reap_stale_dxrk_locks(min_age_seconds=3600) is not None
 
     def test_mine_lock_context(self, tmp_path: Path, monkeypatch):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         monkeypatch.setattr(pal, "_dxrk_lock_dir", lambda tenant_id=None: tmp_path / "locks2")
         with pal.mine_lock("src-a", tenant_id=None):
             assert True
 
-    def test_mine_palace_lock_reentrant_and_conflict(self, tmp_path: Path, monkeypatch):
-        import dxrk.memory.palace as pal
+    def test_mine_malla_lock_reentrant_and_conflict(self, tmp_path: Path, monkeypatch):
+        import dxrk.memory.malla as pal
 
         monkeypatch.setattr(pal, "_dxrk_lock_dir", lambda tenant_id=None: tmp_path / "plocks")
         pp = str(tmp_path / "pal1")
         Path(pp).mkdir(parents=True, exist_ok=True)
-        with pal.mine_palace_lock(pp):
-            with pal.mine_palace_lock(pp):
+        with pal.mine_malla_lock(pp):
+            with pal.mine_malla_lock(pp):
                 assert True
-        with pal.mine_palace_lock(pp):
+        with pal.mine_malla_lock(pp):
             assert True
         # conflict via mocked flock raising
         fcntl = pytest.importorskip("fcntl")
 
         real_flock = fcntl.flock
-        with pal.mine_palace_lock(pp):
+        with pal.mine_malla_lock(pp):
             pass
         # hold lock in one handle, second acquire should raise
         pp2 = str(tmp_path / "pal2")
         Path(pp2).mkdir(parents=True, exist_ok=True)
         with mock.patch.object(fcntl, "flock", side_effect=BlockingIOError("busy")):
             with pytest.raises(RuntimeError, match="held by another"):
-                with pal.mine_palace_lock(pp2):
+                with pal.mine_malla_lock(pp2):
                     pass
         assert real_flock is not None
-        assert pal.mine_global_lock is pal.mine_palace_lock
+        assert pal.mine_global_lock is pal.mine_malla_lock
 
     def test_chunk_text_branches(self):
-        from dxrk.memory.palace import chunk_text
+        from dxrk.memory.malla import chunk_text
 
         with pytest.raises(ValueError, match="chunk_size"):
             chunk_text("hi", chunk_size=0)
@@ -843,7 +843,7 @@ class TestPalaceHelpers:
         assert len(chunks2) >= 1
 
     def test_detect_hall_and_entities(self):
-        from dxrk.memory.palace import _detect_hall, _extract_entities
+        from dxrk.memory.malla import _detect_hall, _extract_entities
 
         assert _detect_hall("I feel love and hope today") == "emotional"
         assert _detect_hall("the api server deploy config") == "technical"
@@ -854,28 +854,28 @@ class TestPalaceHelpers:
         assert "The" not in _extract_entities("The The The Alice Alice")
         assert _extract_entities("short") == ""
 
-    def test_build_drawer_metadata_variants(self):
-        from dxrk.memory.palace import _build_drawer_metadata
+    def test_build_fragmento_metadata_variants(self):
+        from dxrk.memory.malla import _build_fragmento_metadata
 
-        m1 = _build_drawer_metadata("w", "r", "/a.txt", 0, "dxrk", "hello Alice Alice", 123.0, chunk_total=3)
-        assert m1["wing"] == "w"
+        m1 = _build_fragmento_metadata("w", "r", "/a.txt", 0, "dxrk", "hello Alice Alice", 123.0, chunk_total=3)
+        assert m1["nodo"] == "w"
         assert m1["source_mtime"] == 123.0
         assert m1["chunk_total"] == 3
-        m2 = _build_drawer_metadata("w", "r", "/a.txt", 0, "dxrk", "short hi", None)
+        m2 = _build_fragmento_metadata("w", "r", "/a.txt", 0, "dxrk", "short hi", None)
         assert "source_mtime" not in m2
         assert "chunk_total" not in m2
 
     def test_dxrk_memory_init_variants(self, tmp_path: Path, monkeypatch):
-        from dxrk.memory.palace import DxrkMemory, Palace, PalaceConfig
+        from dxrk.memory.malla import DxrkMemory, Malla, MallaConfig
 
-        cfg = PalaceConfig(palace_path=str(tmp_path), wing="w")
-        assert cfg.wing == "w"
-        assert Palace is DxrkMemory
+        cfg = MallaConfig(malla_path=str(tmp_path), nodo="w")
+        assert cfg.nodo == "w"
+        assert Malla is DxrkMemory
         # memory-only sentinel respected
         dm = DxrkMemory("memory-only")
-        assert dm.palace_path == "memory-only"
+        assert dm.malla_path == "memory-only"
         dm2 = DxrkMemory("")
-        assert dm2.palace_path == "" or ".dxrk" in dm2.palace_path
+        assert dm2.malla_path == "" or ".dxrk" in dm2.malla_path
         # explicit path
         dm3 = DxrkMemory(str(tmp_path / "p1"))
         dm3.init()
@@ -887,22 +887,22 @@ class TestPalaceHelpers:
         assert (tmp_path / "p2").is_dir()
         dm3.close()
 
-    def test_add_drawer_missing_source(self, tmp_path: Path):
-        from dxrk.memory.palace import DxrkMemory
+    def test_add_fragmento_missing_source(self, tmp_path: Path):
+        from dxrk.memory.malla import DxrkMemory
 
         dm = DxrkMemory(str(tmp_path / "padd"))
         dm.init()
         try:
-            did = dm.add_drawer("w", "r", "content here", "/nonexistent_xyz/file.txt", 0)
-            assert did.startswith("drawer_")
-            got = dm.get_drawer(did)
+            did = dm.add_fragmento("w", "r", "content here", "/nonexistent_xyz/file.txt", 0)
+            assert did.startswith("fragmento_")
+            got = dm.get_fragmento(did)
             assert got is not None
-            assert dm.get_drawer("missing_xyz") is None
+            assert dm.get_fragmento("missing_xyz") is None
         finally:
             dm.close()
 
     def test_mine_branches(self, tmp_path: Path, monkeypatch):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         monkeypatch.setattr(pal, "_dxrk_lock_dir", lambda tenant_id=None: tmp_path / "mlocks")
         proj = tmp_path / "proj"
@@ -930,7 +930,7 @@ class TestPalaceHelpers:
             dm.close()
 
     def test_mine_partial_failure_cleans(self, tmp_path: Path, monkeypatch):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         monkeypatch.setattr(pal, "_dxrk_lock_dir", lambda tenant_id=None: tmp_path / "plocks2")
         proj = tmp_path / "proj2"
@@ -965,7 +965,7 @@ class TestPalaceHelpers:
         keeps its document and loses valid_to/superseded_by. A merge-update
         rollback would resurrect the popped keys and fail this test.
         """
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         monkeypatch.setattr(pal, "_dxrk_lock_dir", lambda tenant_id=None: tmp_path / "rlocks")
         proj = tmp_path / "rproj"
@@ -974,8 +974,8 @@ class TestPalaceHelpers:
         dm = pal.DxrkMemory(str(tmp_path / "rpal"))
         dm.init()
         try:
-            old_content = "victim drawer original text " * 40
-            old_id = dm.add_drawer("w", "r", old_content, "/victim.md", 0)
+            old_content = "victim fragmento original text " * 40
+            old_id = dm.add_fragmento("w", "r", old_content, "/victim.md", 0)
             col = dm._collection(create=True)
 
             def _snapshot() -> dict[str, tuple[str, dict[str, object]]]:
@@ -1010,7 +1010,7 @@ class TestPalaceHelpers:
             with mock.patch.object(col, "upsert", side_effect=_boom_on_batch):
                 with mock.patch.object(dm, "_collection", return_value=col):
                     with pytest.raises(RuntimeError, match="batch upsert boom"):
-                        dm.mine(str(proj), wing="w", room="r")
+                        dm.mine(str(proj), nodo="w", celda="r")
             assert calls["batch"] >= 1
             after = _snapshot()
             assert after == before
@@ -1020,28 +1020,28 @@ class TestPalaceHelpers:
             dm.close()
 
     def test_list_and_health(self, tmp_path: Path):
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
         dm = DxrkMemory(str(tmp_path / "lpal"))
         dm.init()
         try:
-            dm.add_drawer("w1", "r1", "c1 hello", "/a1.txt", 0)
-            dm.add_drawer("w1", "r2", "c2 hello", "/a2.txt", 0)
-            dm.add_drawer("w2", "r1", "c3 hello", "/a3.txt", 0)
-            assert set(dm.list_wings()) == {"w1", "w2"}
-            assert set(dm.list_rooms("w1")) == {"r1", "r2"}
-            assert set(dm.list_rooms()) == {"r1", "r2"}
+            dm.add_fragmento("w1", "r1", "c1 hello", "/a1.txt", 0)
+            dm.add_fragmento("w1", "r2", "c2 hello", "/a2.txt", 0)
+            dm.add_fragmento("w2", "r1", "c3 hello", "/a3.txt", 0)
+            assert set(dm.list_nodos()) == {"w1", "w2"}
+            assert set(dm.list_celdas("w1")) == {"r1", "r2"}
+            assert set(dm.list_celdas()) == {"r1", "r2"}
             h = dm.health()
             assert h["ok"] is True
             assert dm.count() == 3
-            # wing filter with non-str room ignored
+            # nodo filter with non-str celda ignored
             col = dm._collection(create=False)
             col.upsert(
                 documents=["weird"],
                 ids=["weird1"],
-                metadatas=[{"wing": "w1", "room": 123}],
+                metadatas=[{"nodo": "w1", "celda": 123}],
             )
-            assert "r1" in dm.list_rooms("w1")
+            assert "r1" in dm.list_celdas("w1")
         finally:
             dm.close()
 
@@ -1067,18 +1067,18 @@ class TestLayersCov:
         )
         assert ly._effective_tenant_id(None) == ""
 
-    def test_resolve_palace_and_identity(self, tmp_path: Path, monkeypatch):
+    def test_resolve_malla_and_identity(self, tmp_path: Path, monkeypatch):
         import dxrk.memory.layers as ly
 
-        assert ly._resolve_palace_path(None, "memory-only") == "memory-only"
-        assert ly._resolve_palace_path(None, "") == ""
-        assert ly._resolve_palace_path(None, str(tmp_path / "p")) == str(tmp_path / "p")
+        assert ly._resolve_malla_path(None, "memory-only") == "memory-only"
+        assert ly._resolve_malla_path(None, "") == ""
+        assert ly._resolve_malla_path(None, str(tmp_path / "p")) == str(tmp_path / "p")
         monkeypatch.setenv("DXRK_TENANT", "t1")
-        assert "t1" in ly._resolve_palace_path(None, None) or ".dxrk" in ly._resolve_palace_path(None, None)
+        assert "t1" in ly._resolve_malla_path(None, None) or ".dxrk" in ly._resolve_malla_path(None, None)
         monkeypatch.delenv("DXRK_TENANT")
         monkeypatch.setattr("dxrk.tenant.migration.is_migrated", lambda: True)
         with mock.patch("dxrk.tenant.migration.tenant_root", side_effect=OSError("ro")):
-            assert ".dxrk" in ly._resolve_palace_path(None, None)
+            assert ".dxrk" in ly._resolve_malla_path(None, None)
         # identity
         assert ly._resolve_identity_path(None, str(tmp_path / "id.txt")) == str(tmp_path / "id.txt")
         assert ly._resolve_identity_path(None, "   ") == ""
@@ -1101,20 +1101,20 @@ class TestLayersCov:
     def test_layer1_pagination_and_meta_variants(self, tmp_path: Path, monkeypatch):
         import dxrk.memory.layers as ly
 
-        # empty palace -> No memories
+        # empty malla -> No memories
         pal = tmp_path / "l1empty"
         pal.mkdir()
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
         dm = DxrkMemory(str(pal))
         dm.init()
         dm.close()
-        assert "No memories" in Layer1(str(pal)).generate() or "No palace" in Layer1(str(pal)).generate()
-        # missing palace
-        assert "No palace" in Layer1(str(tmp_path / "nodir_xyz")).generate()
+        assert "No memories" in Layer1(str(pal)).generate() or "No malla" in Layer1(str(pal)).generate()
+        # missing malla
+        assert "No malla" in Layer1(str(tmp_path / "nodir_xyz")).generate()
         # get exception -> break -> No memories
         with mock.patch.object(ly, "_get_collection", side_effect=RuntimeError("boom")):
-            assert "No palace" in Layer1(str(pal)).generate()
+            assert "No malla" in Layer1(str(pal)).generate()
 
         # pagination: fake collection returning two batches
         class _FakeRes:
@@ -1123,9 +1123,9 @@ class TestLayersCov:
                 self.metadatas = metas
 
         batch1_docs = [f"doc {i} " * 10 for i in range(500)]
-        batch1_metas = [{"room": "r", "source_file": f"/f{i}.txt", "importance": "bad"} for i in range(500)]
+        batch1_metas = [{"celda": "r", "source_file": f"/f{i}.txt", "importance": "bad"} for i in range(500)]
         batch2_docs = ["final doc hello"]
-        batch2_metas = [{"room": "r", "source_file": "/final.txt", "importance": 9.0}]
+        batch2_metas = [{"celda": "r", "source_file": "/final.txt", "importance": 9.0}]
 
         class _FakeCol:
             def __init__(self):
@@ -1148,7 +1148,7 @@ class TestLayersCov:
             def get(self, include=None, limit=None, offset=None):
                 return _FakeRes(
                     ["x" * 500, "short"],
-                    ["notadict", {"room": 123, "importance": 2.5}],
+                    ["notadict", {"celda": 123, "importance": 2.5}],
                 )
 
         with mock.patch.object(ly, "_get_collection", return_value=_FakeCol2()):
@@ -1159,7 +1159,7 @@ class TestLayersCov:
         class _FakeCol3:
             def get(self, include=None, limit=None, offset=None):
                 docs = [("long content word " * 30 + str(i)) for i in range(15)]
-                metas = [{"room": "r", "source_file": "/a.txt", "importance": 5.0} for _ in range(15)]
+                metas = [{"celda": "r", "source_file": "/a.txt", "importance": 5.0} for _ in range(15)]
                 return _FakeRes(docs, metas)
 
         with mock.patch.object(ly, "_get_collection", return_value=_FakeCol3()):
@@ -1170,22 +1170,22 @@ class TestLayersCov:
 
     def test_layer2_all_branches(self, tmp_path: Path):
         import dxrk.memory.layers as ly
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
         pal = tmp_path / "l2pal"
         dm = DxrkMemory(str(pal))
         dm.init()
         try:
-            dm.add_drawer("wingA", "room1", "unique l2 alpha " * 5, "/a.md", 0)
-            assert "unique l2 alpha" in Layer2(str(pal)).retrieve(wing="wingA", room="room1")
-            assert "L2" in Layer2(str(pal)).retrieve(wing="wingA")
-            assert "L2" in Layer2(str(pal)).retrieve(room="room1")
+            dm.add_fragmento("nodoA", "celda1", "unique l2 alpha " * 5, "/a.md", 0)
+            assert "unique l2 alpha" in Layer2(str(pal)).retrieve(nodo="nodoA", celda="celda1")
+            assert "L2" in Layer2(str(pal)).retrieve(nodo="nodoA")
+            assert "L2" in Layer2(str(pal)).retrieve(celda="celda1")
             assert "L2" in Layer2(str(pal)).retrieve()
-            assert "No drawers" in Layer2(str(pal)).retrieve(wing="nowhere_xyz")
-            assert "room=" in Layer2(str(pal)).retrieve(room="nowhere_xyz")
+            assert "No fragmentos" in Layer2(str(pal)).retrieve(nodo="nowhere_xyz")
+            assert "celda=" in Layer2(str(pal)).retrieve(celda="nowhere_xyz")
             # retrieval error
             with mock.patch.object(ly, "_get_collection", side_effect=RuntimeError("x")):
-                assert "No palace" in Layer2(str(pal)).retrieve()
+                assert "No malla" in Layer2(str(pal)).retrieve()
             col = dm._collection(create=False)
             with mock.patch.object(col, "get", side_effect=RuntimeError("qfail")):
                 with mock.patch.object(ly, "_get_collection", return_value=col):
@@ -1194,7 +1194,7 @@ class TestLayersCov:
             col.upsert(
                 documents=["z " * 200],
                 ids=["z1"],
-                metadatas=[{"wing": "w", "room": "r", "source_file": "/s.txt"}],
+                metadatas=[{"nodo": "w", "celda": "r", "source_file": "/s.txt"}],
             )
             out = Layer2(str(pal)).retrieve()
             assert "L2" in out
@@ -1203,26 +1203,26 @@ class TestLayersCov:
 
     def test_layer3_all_branches(self, tmp_path: Path):
         import dxrk.memory.layers as ly
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
         pal = tmp_path / "l3pal"
         dm = DxrkMemory(str(pal))
         dm.init()
         try:
-            dm.add_drawer("w", "r", "deep hello search " * 5, "/a.md", 0)
+            dm.add_fragmento("w", "r", "deep hello search " * 5, "/a.md", 0)
             assert "hello" in Layer3(str(pal)).search("hello").lower() or "SEARCH" in Layer3(str(pal)).search("hello")
-            from dxrk.memory.palace import DxrkMemory as _DM
+            from dxrk.memory.malla import DxrkMemory as _DM
 
             _empty = tmp_path / "l3empty_xyz"
             _dm0 = _DM(str(_empty))
             _dm0.init()
             _dm0.close()
             assert "No results" in Layer3(str(_empty)).search("zzz_no_match_xyz_123")
-            assert "SEARCH" in Layer3(str(pal)).search("hello", wing="w")
-            assert "SEARCH" in Layer3(str(pal)).search("hello", room="r")
-            assert "SEARCH" in Layer3(str(pal)).search("hello", wing="w", room="r")
+            assert "SEARCH" in Layer3(str(pal)).search("hello", nodo="w")
+            assert "SEARCH" in Layer3(str(pal)).search("hello", celda="r")
+            assert "SEARCH" in Layer3(str(pal)).search("hello", nodo="w", celda="r")
             with mock.patch.object(ly, "_get_collection", side_effect=RuntimeError("x")):
-                assert "No palace" in Layer3(str(pal)).search("hello")
+                assert "No malla" in Layer3(str(pal)).search("hello")
         finally:
             dm.close()
         # hit not dict skipped
@@ -1242,13 +1242,13 @@ class TestLayersCov:
         with mock.patch.object(ly2, "_get_collection", return_value=_FakeCol()):
             with mock.patch(
                 "dxrk.memory.search.hybrid_search",
-                return_value={"results": ["bad", {"wing": "w", "room": "r", "text": "t" * 400, "similarity": 1.0}]},
+                return_value={"results": ["bad", {"nodo": "w", "celda": "r", "text": "t" * 400, "similarity": 1.0}]},
             ):
                 out = Layer3(str(pal)).search("hi")
                 assert "SEARCH" in out
 
     def test_stack_wake_recall_search_status(self, tmp_path: Path):
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
         pal = tmp_path / "stack"
         ident = tmp_path / "ident.txt"
@@ -1256,17 +1256,17 @@ class TestLayersCov:
         dm = DxrkMemory(str(pal))
         dm.init()
         try:
-            dm.add_drawer("w", "r", "stack content hello " * 5, "/a.md", 0)
-            ms = MemoryStack(palace_path=str(pal), identity_path=str(ident))
+            dm.add_fragmento("w", "r", "stack content hello " * 5, "/a.md", 0)
+            ms = MemoryStack(malla_path=str(pal), identity_path=str(ident))
             assert "stack identity" in ms.wake_up()
-            assert "ESSENTIAL" in ms.wake_up(wing="w")
-            assert "L2" in ms.recall(wing="w")
+            assert "ESSENTIAL" in ms.wake_up(nodo="w")
+            assert "L2" in ms.recall(nodo="w")
             assert "SEARCH" in ms.search("hello") or "No results" in ms.search("hello")
             st = ms.status()
-            assert st["total_drawers"] == 1
+            assert st["total_fragmentos"] == 1
             assert st["L0_identity"]["exists"] is True
-            ms2 = MemoryStack(palace_path=str(tmp_path / "missing_xyz"), identity_path=str(tmp_path / "noid"))
-            assert ms2.status()["total_drawers"] == 0
+            ms2 = MemoryStack(malla_path=str(tmp_path / "missing_xyz"), identity_path=str(tmp_path / "noid"))
+            assert ms2.status()["total_fragmentos"] == 0
         finally:
             dm.close()
 
@@ -1338,8 +1338,8 @@ class TestMinerCov:
         monkeypatch.setattr(mn, "MAX_FILE_SIZE", 500 * 1024 * 1024)
 
     def test_miner_chunk_wrapper(self):
+        from dxrk.memory.malla import chunk_text as pchunk
         from dxrk.memory.miner import chunk_text as mchunk
-        from dxrk.memory.palace import chunk_text as pchunk
 
         assert mchunk("hello world " * 20) == pchunk("hello world " * 20)
         with pytest.raises(ValueError):
@@ -1503,10 +1503,10 @@ class TestMinerCov:
         with mock.patch.object(mn, "_read_text_no_follow", return_value=("hi", 1.0)):
             assert mn.scan_and_chunk(proj) == []
 
-    def test_palace_config_and_alias(self):
-        from dxrk.memory.palace import DxrkPalace, Palace
+    def test_malla_config_and_alias(self):
+        from dxrk.memory.malla import DxrkMalla, Malla
 
-        assert DxrkPalace is Palace
+        assert DxrkMalla is Malla
         h = hashlib.sha256(b"x").hexdigest()[:16]
         assert len(h) == 16
 
@@ -1518,8 +1518,8 @@ class TestSqliteExtra:
     def test_where_in_nonempty(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "ine")
         try:
-            col.add(documents=["a"], ids=["a1"], metadatas=[{"wing": "w1", "chunk_index": 0}])
-            col.add(documents=["b"], ids=["b1"], metadatas=[{"wing": "w1", "chunk_index": 1}])
+            col.add(documents=["a"], ids=["a1"], metadatas=[{"nodo": "w1", "chunk_index": 0}])
+            col.add(documents=["b"], ids=["b1"], metadatas=[{"nodo": "w1", "chunk_index": 1}])
             got = col.get(where={"chunk_index": {"$in": [0]}})
             assert got.ids == ["a1"]
         finally:
@@ -1528,8 +1528,8 @@ class TestSqliteExtra:
     def test_upsert_update_existing(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "updup")
         try:
-            col.add(documents=["first"], ids=["u1"], metadatas=[{"wing": "w"}])
-            col.upsert(documents=["second"], ids=["u1"], metadatas=[{"wing": "w2"}])
+            col.add(documents=["first"], ids=["u1"], metadatas=[{"nodo": "w"}])
+            col.upsert(documents=["second"], ids=["u1"], metadatas=[{"nodo": "w2"}])
             assert col.get(ids=["u1"]).documents[0] == "second"
             assert col.count() == 1
         finally:
@@ -1545,7 +1545,7 @@ class TestSqliteExtra:
     def test_query_both_none_neutral(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "bothnone")
         try:
-            col.add(documents=["hello"], ids=["n1"], metadatas=[{"wing": "w"}])
+            col.add(documents=["hello"], ids=["n1"], metadatas=[{"nodo": "w"}])
             q = col.query(n_results=5)
             assert "n1" in q.ids[0]
         finally:
@@ -1554,7 +1554,7 @@ class TestSqliteExtra:
     def test_query_where_document_empty_dict(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "wempty")
         try:
-            col.add(documents=["hello world"], ids=["w1"], metadatas=[{"wing": "w"}])
+            col.add(documents=["hello world"], ids=["w1"], metadatas=[{"nodo": "w"}])
             q = col.query(query_texts=["hello"], n_results=5, where_document={})
             assert "w1" in q.ids[0]
         finally:
@@ -1563,7 +1563,7 @@ class TestSqliteExtra:
     def test_query_non_dict_meta(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "nondict")
         try:
-            col.add(documents=["hello"], ids=["d1"], metadatas=[{"wing": "w"}])
+            col.add(documents=["hello"], ids=["d1"], metadatas=[{"nodo": "w"}])
             col._conn.execute(  # type: ignore[attr-defined]
                 "UPDATE embeddings SET metadata=? WHERE id=?", ('"juststring"', "d1")
             )
@@ -1581,7 +1581,7 @@ class TestSqliteExtra:
             bad = mock.MagicMock()
             bad.close.side_effect = sqlite3.OperationalError("boom")
             be._conns[ref.id] = bad  # type: ignore[attr-defined]
-            be.close_palace(ref)
+            be.close_malla(ref)
             be._conns[ref.id] = real  # type: ignore[attr-defined]
             bad2 = mock.MagicMock()
             bad2.close.side_effect = sqlite3.OperationalError("boom")
@@ -1596,8 +1596,8 @@ class TestSqliteExtra:
     def test_init_fallback_all_fail(self, tmp_path: Path):
         be = SqliteBackend()
         try:
-            ref = PalaceRef(id="fb", local_path=str(tmp_path / "fb"))
-            be.get_collection(palace=ref, collection_name="c", create=True)
+            ref = MallaRef(id="fb", local_path=str(tmp_path / "fb"))
+            be.get_collection(malla=ref, collection_name="c", create=True)
             conn = be._ensure_conn(ref, create=True)  # type: ignore[attr-defined]
             conn.execute("DROP TABLE IF EXISTS embedding_fts")
             conn.commit()
@@ -1618,9 +1618,9 @@ class TestSqliteExtra:
             be.close()
 
 
-class TestPalaceExtraA:
+class TestSangreExtraA:
     def test_signal_missing_and_error(self, monkeypatch):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         monkeypatch.setattr(signal, "SIGHUP", None, raising=False)
         pal._install_shutdown_signal_handlers()
@@ -1628,16 +1628,16 @@ class TestPalaceExtraA:
         pal._install_shutdown_signal_handlers()
 
     def test_read_close_error(self, tmp_path: Path, monkeypatch):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         f = tmp_path / "c.txt"
         f.write_text("close fail content here")
         monkeypatch.setattr(os, "close", lambda fd: (_ for _ in ()).throw(OSError("boom")))
-        out = pal._read_text_no_follow_palace(f, tmp_path)
+        out = pal._read_text_no_follow_malla(f, tmp_path)
         assert out is not None
 
     def test_resolve_tenant_tid_oserror(self, tmp_path: Path, monkeypatch):
-        from dxrk.memory.palace import _resolve_tenant_path
+        from dxrk.memory.malla import _resolve_tenant_path
 
         monkeypatch.setenv("DXRK_TENANT", "tX")
         with mock.patch("dxrk.tenant.migration.tenant_root", side_effect=OSError("ro")):
@@ -1646,7 +1646,7 @@ class TestPalaceExtraA:
         monkeypatch.delenv("DXRK_TENANT")
 
     def test_mine_lock_chmod_fail(self, tmp_path: Path, monkeypatch):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         monkeypatch.setattr(pal, "_dxrk_lock_dir", lambda tenant_id=None: tmp_path / "chmodlocks")
         monkeypatch.setattr(Path, "chmod", lambda self, *a, **k: (_ for _ in ()).throw(OSError("ro")))
@@ -1656,7 +1656,7 @@ class TestPalaceExtraA:
     def test_lock_blocking_variants(self, tmp_path: Path):
         fcntl = pytest.importorskip("fcntl")
 
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         lp = str(tmp_path / "blk.lock")
         lf = pal._open_mine_lock_file(lp, create=True)
@@ -1669,7 +1669,7 @@ class TestPalaceExtraA:
             lf.close()
 
     def test_acquire_stale_unlock_fail(self, tmp_path: Path, monkeypatch):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         lp = str(tmp_path / "stale.lock")
         lf = pal._open_mine_lock_file(lp, create=True)
@@ -1681,7 +1681,7 @@ class TestPalaceExtraA:
             lf.close()
 
     def test_acquire_mine_except(self, tmp_path: Path, monkeypatch):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         monkeypatch.setattr(pal, "_dxrk_lock_dir", lambda tenant_id=None: tmp_path / "ae")
         lp = pal._mine_lock_path("src-ae", tenant_id=None)
@@ -1690,13 +1690,13 @@ class TestPalaceExtraA:
                 pal._acquire_mine_lock_file(lp)
 
     def test_cleanup_open_oserror(self, tmp_path: Path):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         with mock.patch.object(pal, "_open_mine_lock_file", side_effect=OSError("open boom")):
             pal._cleanup_mine_lock_file(str(tmp_path / "x.lock"))
 
     def test_cleanup_acquire_oserror(self, tmp_path: Path):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         lp = str(tmp_path / "ca.lock")
         Path(lp).write_text("x")
@@ -1705,7 +1705,7 @@ class TestPalaceExtraA:
             assert Path(lp).exists()
 
     def test_cleanup_not_current(self, tmp_path: Path, monkeypatch):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         lp = str(tmp_path / "nc.lock")
         Path(lp).write_text("x")
@@ -1714,7 +1714,7 @@ class TestPalaceExtraA:
         assert Path(lp).exists()
 
     def test_cleanup_remove_oserror(self, tmp_path: Path, monkeypatch):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         lp = str(tmp_path / "rm.lock")
         Path(lp).write_text("x")
@@ -1723,7 +1723,7 @@ class TestPalaceExtraA:
         assert Path(lp).exists()
 
     def test_reap_ghost_and_held(self, tmp_path: Path, monkeypatch):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         ld = tmp_path / "reaplocks"
         ld.mkdir(parents=True, exist_ok=True)
@@ -1745,7 +1745,7 @@ class TestPalaceExtraA:
             lf.close()
 
     def test_maybe_reap_chmod_utime_fail(self, tmp_path: Path, monkeypatch):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         ld = tmp_path / "mr"
         ld.mkdir(parents=True, exist_ok=True)
@@ -1762,28 +1762,28 @@ class TestPalaceExtraA:
         pal._maybe_reap_stale_mine_locks()
 
     def test_mine_lock_release_fail(self, tmp_path: Path, monkeypatch):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         monkeypatch.setattr(pal, "_dxrk_lock_dir", lambda tenant_id=None: tmp_path / "rlocks")
         with mock.patch.object(pal, "_unlock_mine_lock_file", side_effect=RuntimeError("u")):
             with pal.mine_lock("src-rel", tenant_id=None):
                 assert True
 
-    def test_mine_palace_zeroarg_and_chmod(self, tmp_path: Path, monkeypatch):
-        import dxrk.memory.palace as pal
+    def test_mine_malla_zeroarg_and_chmod(self, tmp_path: Path, monkeypatch):
+        import dxrk.memory.malla as pal
 
         monkeypatch.setattr(pal, "_dxrk_lock_dir", lambda: tmp_path / "pz")
         pp = str(tmp_path / "pzpal")
         Path(pp).mkdir(parents=True, exist_ok=True)
-        with pal.mine_palace_lock(pp):
+        with pal.mine_malla_lock(pp):
             assert True
         monkeypatch.setattr(pal, "_dxrk_lock_dir", lambda tenant_id=None: tmp_path / "pz2")
         monkeypatch.setattr(Path, "chmod", lambda self, *a, **k: (_ for _ in ()).throw(OSError("ro")))
-        with pal.mine_palace_lock(pp):
+        with pal.mine_malla_lock(pp):
             assert True
 
-    def test_mine_palace_exists_race(self, tmp_path: Path, monkeypatch):
-        import dxrk.memory.palace as pal
+    def test_mine_malla_exists_race(self, tmp_path: Path, monkeypatch):
+        import dxrk.memory.malla as pal
 
         monkeypatch.setattr(pal, "_dxrk_lock_dir", lambda tenant_id=None: tmp_path / "race")
         pp = str(tmp_path / "racepal")
@@ -1792,7 +1792,7 @@ class TestPalaceExtraA:
         real_open = os.open
 
         def _fake_exists(self):
-            if self.name.startswith("mine_palace_"):
+            if self.name.startswith("mine_malla_"):
                 return False
             return real_exists(self)
 
@@ -1807,13 +1807,13 @@ class TestPalaceExtraA:
 
         monkeypatch.setattr(Path, "exists", _fake_exists)
         monkeypatch.setattr(os, "open", _fake_open)
-        with pal.mine_palace_lock(pp):
+        with pal.mine_malla_lock(pp):
             assert True
 
-    def test_mine_palace_unlock_fail_ignored(self, tmp_path: Path, monkeypatch):
+    def test_mine_malla_unlock_fail_ignored(self, tmp_path: Path, monkeypatch):
         fcntl = pytest.importorskip("fcntl")
 
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         monkeypatch.setattr(pal, "_dxrk_lock_dir", lambda tenant_id=None: tmp_path / "ulf")
         pp = str(tmp_path / "ulfpal")
@@ -1826,13 +1826,13 @@ class TestPalaceExtraA:
             return real_flock(fd, op)
 
         with mock.patch.object(fcntl, "flock", side_effect=_boom):
-            with pal.mine_palace_lock(pp):
+            with pal.mine_malla_lock(pp):
                 assert True
 
     def test_nt_branches(self, tmp_path: Path, monkeypatch):
         import types
 
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         fake = types.ModuleType("msvcrt")
         fake.LK_LOCK = 1  # type: ignore[attr-defined]
@@ -1856,7 +1856,7 @@ class TestPalaceExtraA:
     def test_nt_lock_fail(self, tmp_path: Path, monkeypatch):
         import types
 
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         fake = types.ModuleType("msvcrt")
         fake.LK_LOCK = 1  # type: ignore[attr-defined]
@@ -1880,21 +1880,21 @@ class TestPalaceExtraA:
         monkeypatch.setattr(os, "name", "posix")
 
     def test_chunk_double_newline_branch(self):
-        from dxrk.memory.palace import chunk_text
+        from dxrk.memory.malla import chunk_text
 
         content = "x" * 250 + "\n\n" + "y" * 500 + "\n" + "z" * 500
         chunks = chunk_text(content, chunk_size=400, chunk_overlap=20, min_chunk_size=10)
         assert len(chunks) >= 2
 
     def test_dxrk_resolve_except(self, tmp_path: Path):
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
         with mock.patch.object(Path, "resolve", side_effect=OSError("res fail")):
             dm = DxrkMemory(str(tmp_path / "resfail"))
-            assert "resfail" in dm.palace_path or ".dxrk" in dm.palace_path
+            assert "resfail" in dm.malla_path or ".dxrk" in dm.malla_path
 
     def test_mine_read_none_and_empty_chunks(self, tmp_path: Path, monkeypatch):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         monkeypatch.setattr(pal, "_dxrk_lock_dir", lambda tenant_id=None: tmp_path / "rnlocks")
         proj = tmp_path / "rnproj"
@@ -1903,18 +1903,18 @@ class TestPalaceExtraA:
         dm = pal.DxrkMemory(str(tmp_path / "rnpal"))
         dm.init()
         try:
-            with mock.patch.object(pal, "_read_text_no_follow_palace", return_value=None):
+            with mock.patch.object(pal, "_read_text_no_follow_malla", return_value=None):
                 r = dm.mine(str(proj))
                 assert r["files_skipped"] >= 1
             with mock.patch.object(pal, "chunk_text", return_value=[]):
-                with mock.patch.object(pal, "_read_text_no_follow_palace", return_value=("hello world " * 30, 1.0)):
+                with mock.patch.object(pal, "_read_text_no_follow_malla", return_value=("hello world " * 30, 1.0)):
                     r2 = dm.mine(str(proj))
                     assert r2["files_skipped"] >= 1
         finally:
             dm.close()
 
     def test_mine_closets_and_search(self, tmp_path: Path, monkeypatch):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         monkeypatch.setattr(pal, "_dxrk_lock_dir", lambda tenant_id=None: tmp_path / "cslocks")
         proj = tmp_path / "csproj"
@@ -1930,13 +1930,13 @@ class TestPalaceExtraA:
             s = dm.search("closet")
             assert "results" in s
             col = dm._collection(create=False)
-            col.upsert(documents=["weirdw"], ids=["ww1"], metadatas=[{"wing": 123, "room": "r"}])
-            assert isinstance(dm.list_wings(), list)
+            col.upsert(documents=["weirdw"], ids=["ww1"], metadatas=[{"nodo": 123, "celda": "r"}])
+            assert isinstance(dm.list_nodos(), list)
         finally:
             dm.close()
 
     def test_mine_partial_with_closets_warn(self, tmp_path: Path, monkeypatch):
-        import dxrk.memory.palace as pal
+        import dxrk.memory.malla as pal
 
         monkeypatch.setattr(pal, "_dxrk_lock_dir", lambda tenant_id=None: tmp_path / "pwlocks")
         proj = tmp_path / "pwproj"
@@ -1966,7 +1966,7 @@ class TestLayersMinerExtra:
 
         monkeypatch.setenv("DXRK_TENANT", "tZ")
         with mock.patch("dxrk.tenant.migration.tenant_root", side_effect=OSError("ro")):
-            assert ".dxrk" in ly._resolve_palace_path(None, None)
+            assert ".dxrk" in ly._resolve_malla_path(None, None)
             assert ".dxrk" in ly._resolve_identity_path(None, None)
         monkeypatch.delenv("DXRK_TENANT")
 
@@ -1981,13 +1981,13 @@ class TestLayersMinerExtra:
             assert "No memories" in ly.Layer1("whatever").generate()
 
     def test_layer1_token_estimate(self, tmp_path: Path):
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
         pal = tmp_path / "tokpal"
         dm = DxrkMemory(str(pal))
         dm.init()
         try:
-            dm.add_drawer("w", "r", "token hello " * 20, "/a.md", 0)
+            dm.add_fragmento("w", "r", "token hello " * 20, "/a.md", 0)
             l1 = Layer1(str(pal))
             assert l1.token_estimate() == len(l1.generate()) // 4
         finally:
@@ -1999,7 +1999,7 @@ class TestLayersMinerExtra:
         class _FakeRes:
             def __init__(self):
                 self.documents = ["doc hello", "x" * 500]
-                self.metadatas = ["notadict", {"room": "r"}]
+                self.metadatas = ["notadict", {"celda": "r"}]
 
         class _FakeCol:
             def get(self, **k):

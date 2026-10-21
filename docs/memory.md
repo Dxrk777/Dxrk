@@ -23,9 +23,9 @@ Metacognition, QIEO, Thompson Sampling, Stress/Cooperative Masking).
 | 25 | `sleep.py` | Sim-Selection sleep (NREM/REM, Lee & Jung 2025) | Lee & Jung 2025 |
 | 26 | `qieo.py` | Quantum-Inspired Evolutionary Optimization | QIEO 2609.30938 |
 | 27 | `thompson.py` | Thompson Sampling active learning (ALMAB-DC) | ALMAB-DC 2603.21180 |
-| 28 | `calibrate.py` | Integración QIEO + Thompson para calibrar FSRS por wing | — |
+| 28 | `calibrate.py` | Integración QIEO + Thompson para calibrar FSRS por nodo | — |
 
-### Nuevas claves en metadata del drawer (schema_version=3)
+### Nuevas claves en metadata del fragmento (schema_version=3)
 
 ```python
 {
@@ -42,19 +42,19 @@ Metacognition, QIEO, Thompson Sampling, Stress/Cooperative Masking).
 - `.neuromod_state.json` — estado global DA/NE/5HT/ACh
 - `.sleep_state.json` — estado sleep engine
 - `.stress_state.json` — nivel estrés + `defenses_active`
-- `.calibration/{wing}.json` — parámetros FSRS calibrados por wing
+- `.calibration/{nodo}.json` — parámetros FSRS calibrados por nodo
 
 ### Flujo integrado
 
 ```
-USUARIO ACCEDE (get_drawer):
+USUARIO ACCEDE (get_fragmento):
   1. RDU scoring (Fase 0)
-  2. mark_labile(drawer)              ← Reconsolidation
+  2. mark_labile(fragmento)          ← Reconsolidation
   3. encode_mode(neuromod)            ← ACh up
   4. stdp_update(pre, post, dt)       ← Two-Factor
   5. TripleCopy update (S_fast/S_deep)← 3 copias
   6. confidence = propagate()          ← Bayesian
-  7. return drawer + adjusted_conf
+  7. return fragmento + adjusted_conf
 
 JUEZ EXTERNO (judge.verify_change):
   1. Eval harness recall@k
@@ -68,9 +68,9 @@ SLEEP CONSOLIDATION (sleep.cycle):
   3. candidates = select_sleep()       ← Sim-Selection por PE
   4. NREM: consolidate 70% (replay + PE)
   5. REM: reorganize 30% (merge near-dups)
-  6. reconsolidate(labile drawers)     ← 6h window
+  6. reconsolidate(labile fragmentos) ← 6h window
 
-CALIBRACIÓN (calibrate.wing):
+CALIBRACIÓN (calibrate.nodo):
   1. candidates = thompson_select()    ← Active learning
   2. replay outcomes para candidatos
   3. qieo_optimize(recall@k)           ← QIEO
@@ -109,7 +109,7 @@ Mecanismos neuro se activan **solo bajo estrés** (densidad + 1/S + quarantine r
 
 ```bash
 # Calibración
-dxrk memory calibrate --wing dxrk --samples 30 --iter 50
+dxrk memory calibrate --nodo dxrk --samples 30 --iter 50
 
 # Sleep consolidation
 dxrk memory sleep --once --limit 50
@@ -123,17 +123,17 @@ dxrk memory stress --defenses-status
 dxrk memory qieo --objective recall --bounds "0.5,3.0 0.05,0.5 0.5,2.0 0.0,0.5"
 
 # Ver estado
-dxrk memory status --wing dxrk
+dxrk memory status --nodo dxrk
 ```
 
 ### MCP Tools Fase 1 (requieren cap `memory.maintain`)
 
 | Tool | Tipo | Input |
 |------|------|-------|
-| `dxrk_memory_calibrate` | write | `wing`, `samples`, `iter` |
+| `dxrk_memory_calibrate` | write | `nodo`, `samples`, `iter` |
 | `dxrk_memory_sleep` | write | `once`/`daemon`, `limit` |
-| `dxrk_memory_stress` | read | `wing` |
-| `dxrk_memory_calibration_get` | read | `wing` |
+| `dxrk_memory_stress` | read | `nodo` |
+| `dxrk_memory_calibration_get` | read | `nodo` |
 
 ### Riesgos mitigados
 
@@ -173,7 +173,7 @@ Segunda oleada de módulos (`eval_harness`, `metacog_v2`, `calibrate_v2`,
 |--------|----------|
 | `eval_harness.py` | recall@k, MRR, NDCG, ECE + queries sintéticas para bootstrap |
 | `metacog_v2.py` | temperature scaling, isotonic regression, bias detection; wrapper `MetacognitionV2` (`predict` / `fit_calibration`) |
-| `calibrate_v2.py` | calibración por tenant+wing con fallback (tenant+wing → global → default) |
+| `calibrate_v2.py` | calibración por tenant+nodo con fallback (tenant+nodo → global → default) |
 | `production.py` | SLO monitoring, circuit breaker, `AutoRollbackManager.check_regression` (método real, sin monkey-patch) |
 | `judge_continuous.py` | verificación continua 24h con auto-rollback ante regresión crítica |
 

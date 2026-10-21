@@ -83,7 +83,6 @@ class TestDiscoveryBranches:
     def test_adapter_none_skipped(self):
         from dxrk.agents.discovery import discover_installed
         from dxrk.agents.registry import Registry
-        from dxrk.models import AgentID
 
         reg = Registry()
         from dxrk.agents.claude.adapter import ClaudeAdapter
@@ -290,9 +289,9 @@ class TestRetryLegacy:
         assert policy_is_retryable(inst, 404) is False
 
     def test_no_method_raises(self):
-        from dxrk.utils.http.retry import policy_is_retryable
-
         import pytest
+
+        from dxrk.utils.http.retry import policy_is_retryable
 
         class _None:
             is_retryable = None
@@ -314,9 +313,9 @@ class TestTransportErrors:
             assert t._proxy_url_of(object()) is None
 
     def test_proxy_tls_missing_raise(self):
-        from dxrk.utils.http import transport as t
-
         import pytest
+
+        from dxrk.utils.http import transport as t
 
         class _Empty:
             pass

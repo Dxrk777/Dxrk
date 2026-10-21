@@ -8,26 +8,26 @@ from pathlib import Path
 
 
 def _dm(tmp_path: Path, **kwargs):  # type: ignore[no-untyped-def]
-    from dxrk.memory.palace import DxrkMemory
+    from dxrk.memory.malla import DxrkMemory
 
-    dm = DxrkMemory(str(tmp_path / "palace"), **kwargs)
+    dm = DxrkMemory(str(tmp_path / "malla"), **kwargs)
     dm.init()
     return dm
 
 
-DOC = "The checksum drawer holds exactly this text for integrity tests."
+DOC = "The checksum fragmento holds exactly this text for integrity tests."
 
 
 class TestSpineChecksum:
-    def test_new_drawer_sha_matches_document(self, tmp_path: Path) -> None:
+    def test_new_fragmento_sha_matches_document(self, tmp_path: Path) -> None:
         dm = _dm(tmp_path)
         try:
-            did = dm.add_drawer("w", "r", DOC, "/c.md", 0)
-            got = dm.get_drawer(did)
+            did = dm.add_fragmento("w", "r", DOC, "/c.md", 0)
+            got = dm.get_fragmento(did)
             assert got is not None and "document" in got
             assert got["metadata"]["content_sha256"] == hashlib.sha256(DOC.encode()).hexdigest()
             # Stable across reads (no rehash churn, no quarantine).
-            again = dm.get_drawer(did)
+            again = dm.get_fragmento(did)
             assert again is not None and "document" in again
             assert again.get("quarantined") is None
             assert again["metadata"]["content_sha256"] == hashlib.sha256(DOC.encode()).hexdigest()
@@ -41,10 +41,10 @@ class TestSpineChecksum:
             col = dm._collection(create=True)
             col.upsert(
                 documents=[body],
-                ids=["drawer_w_r_1000000000000000000001"],
-                metadatas=[{"wing": "w", "room": "r", "source_file": "/l.md", "filed_at": "2020-01-01T00:00:00+00:00"}],
+                ids=["fragmento_w_r_1000000000000000000001"],
+                metadatas=[{"nodo": "w", "celda": "r", "source_file": "/l.md", "filed_at": "2020-01-01T00:00:00+00:00"}],
             )
-            got = dm.get_drawer("drawer_w_r_1000000000000000000001")
+            got = dm.get_fragmento("fragmento_w_r_1000000000000000000001")
             assert got is not None and "document" in got
             assert got.get("quarantined") is None
             assert got["metadata"]["content_sha256"] == hashlib.sha256(body.encode()).hexdigest()
@@ -54,7 +54,7 @@ class TestSpineChecksum:
     def test_tampered_document_auto_quarantines_fail_closed(self, tmp_path: Path) -> None:
         dm = _dm(tmp_path)
         try:
-            did = dm.add_drawer("w", "r", DOC, "/c.md", 0)
+            did = dm.add_fragmento("w", "r", DOC, "/c.md", 0)
             col = dm._collection(create=False)
             # Tamper the document behind the metadata's back.
             raw = col.get(ids=[did], include=["documents", "metadatas"])
@@ -63,7 +63,7 @@ class TestSpineChecksum:
                 documents=["TAMPERED body, checksum no longer matches."], ids=[did], metadatas=[raw.metadatas[0]]
             )
             before = int(dm.spine_counters().get("checksum_mismatches", 0))  # type: ignore[arg-type]
-            got = dm.get_drawer(did)
+            got = dm.get_fragmento(did)
             assert got is not None
             assert "document" not in got  # fail-closed: no document
             assert got.get("quarantined") is True
@@ -72,7 +72,7 @@ class TestSpineChecksum:
             after = int(dm.spine_counters().get("checksum_mismatches", 0))  # type: ignore[arg-type]
             assert after == before + 1
             # Persisted: a second read stays fail-closed without double counting.
-            again = dm.get_drawer(did)
+            again = dm.get_fragmento(did)
             assert again is not None and "document" not in again
             assert int(dm.spine_counters().get("checksum_mismatches", 0)) == after  # type: ignore[arg-type]
         finally:

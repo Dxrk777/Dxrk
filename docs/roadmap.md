@@ -1,7 +1,7 @@
 # Roadmap Dxrk v0.2.0 → v1.0.0 — Matriz Impacto/Esfuerzo & Plan Priorizado
 
 > **Estado:** v1.0.0 GA Done (salvo R14 diferido a v2.0) · **Fecha:** 2026-09-08 · **Versión:** 1.0.0-done  
-> **Alcance:** Deuda Fase1 + Enterprise multi-tenant Fase2 + DX Top1 Fase4 → GA v1.0.0. **Sin tocar `dxrk/memory/`** salvo via `palace_path` per-tenant (ADR-002).  
+> **Alcance:** Deuda Fase1 + Enterprise multi-tenant Fase2 + DX Top1 Fase4 → GA v1.0.0. **Sin tocar `dxrk/memory/`** salvo via `malla_path` per-tenant (ADR-002).
 > **Contexto flagship:** DxrkMemory 2.0 cerrado — 14 módulos `dxrk/memory` + `backend/` (6303 LOC stdlib-only `sqlite3` FTS5 trigram→porter→unicode61, WAL `0o600`/`0o750`, 141 tests en `tests/test_memory*.py`, 2760+ totales), ADR-002 (aislamiento Memory/Learner/RAG) y ADR-003 (stdlib-only vs hybrid BM25 0.72 vs HNSW 0.88, 0 vs 420MB, P5 vence). Ver `docs/memory.md:1`, `docs/dx.md:1`, `docs/adr/ADR-002-memory-separation.md:1`, `docs/adr/ADR-003-hybrid-vs-stdlib.md:1`, `docs/MIGRATION_3.3.5_3.7.1.md:1`.  
 > **Nota 2026-10:** sin PyPI por diseño (`.github/workflows/publish.yml:26-29`, commits `a396a00` y `3b1d235`). Las menciones a publish PyPI abajo son históricas del plan 0.2.0 y quedan sustituidas por release vía git + GitHub Releases; no ejecutar publish a PyPI.
 > **Versiones anteriores:** `pyproject.toml:7` `0.1.2` → `0.2.0` (DX + flagship docs) → `0.3.0`/`0.5.0` enterprise beta → `1.0.0` GA multi-tenant. Commits base: `4c4ab3f` flagship 4652 LOC `979` replaces, `bf0d106` coverage 141 + ADR-002 + hooks `stdio`. `git status` clean tras `bf0d106` salvo untracked `docs/dx.md` (535L) + `docs/adr/ADR-003-hybrid-vs-stdlib.md` (76L) — este roadmap los integra.
@@ -90,25 +90,25 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 
 ## 2. Tabla priorizada — 15 iniciativas (ordenadas por Prioridad desc)
 
-> **Owner convención:** `DX` = docs/readme/mkdocs, `Memory/Core` = `dxrk/memory/*` (solo `palace_path` wiring, no tocar internals), `Config` = `dxrk/config/*`, `TUI` = `dxrk/tui/*`, `Security` = `dxrk/security/*` + `dxrk/vault/*`, `CLI` = `dxrk/commands/*` + `dxrk/__main__.py`, `Release` = `pyproject.toml` + `.github/workflows/*`.
+> **Owner convención:** `DX` = docs/readme/mkdocs, `Memory/Core` = `dxrk/memory/*` (solo `malla_path` wiring, no tocar internals), `Config` = `dxrk/config/*`, `TUI` = `dxrk/tui/*`, `Security` = `dxrk/security/*` + `dxrk/vault/*`, `CLI` = `dxrk/commands/*` + `dxrk/__main__.py`, `Release` = `pyproject.toml` + `.github/workflows/*`.
 
 | # | Iniciativa | Descripción 1-línea | Impacto | Esfuerzo | **Prioridad I/E** | Cuadrante | Owner | Dependencias | Estado base |
 |---|------------|---------------------|---------|----------|-------------------|-----------|-------|--------------|-------------|
 | **R01** | **DX hero README** | Badges (tests 2760, coverage 80%, mypy, Release GitHub sin PyPI), tagline `Memory local-first en 30s`, quickstart `uv tool install git+https://github.com/Dxrk777/Dxrk.git && dxrk-py install && dxrk-py query`, demo.gif caption 30s, tabla benchmarks teaser → README 169L→~220L | **5** | **1** | **5.00** | Quick Win | DX | benchmarks stub R04 | `README.md:1` 169L sin hero §2; `docs/dx.md:78` snippet listo |
 | **R02** | **ADR docs hygiene** | `mkdocs.yml:27` nav añadir `adr/ADR-003` + `dx.md`, fix `plugins.mkdocstrings.default →` config válida (sin `default:`), `docs/dx.md` + `docs/roadmap.md` visibles; `uv run mkdocs build` 0 warnings | **3** | **1** | **3.00** | Fill-in/Quick Win | DX | — | `mkdocs.yml:48` warning `Unrecognised configuration name: default`; `build` warns `pages not in nav: dx.md, ADR-003` |
 | **R03** | **Release 0.2.0 vía git (sin PyPI)** | `pyproject.toml:7` bump `0.1.2→0.2.0` (minor SemVer), `CHANGELOG.md` cliff `[0.2.0]`, `readme/license/classifiers` check, `uv build` smoke + `uv tool install --from sdist` smoke, `git tag v0.2.0` → `publish.yml` (build smoke + changelog + GitHub release, sin PyPI), verify `github.com/Dxrk777/Dxrk/releases/tag/v0.2.0` | **5** | **2** | **2.50** | Quick Win | Release | R01, R02, R05/R06 coverage gate | `pyproject.toml:7` en 0.1.2; `docs/dx.md:274` checklist §5 (vía git, sin PyPI) |
-| **R04** | **Migration idempotente multi-tenant** | `~/.dxrk/palace/sqlite_palace.db` → `~/.dxrk/tenants/default/sqlite_palace.db` copy-on-first-run idempotente, `~/.dxrk/locks` → `~/.dxrk/tenants/{id}/locks`, `~/.dxrk/knowledge_graph.sqlite3` → per-tenant o shared con `tenant_id` col, rollback si `palace_path` custom | **5** | **2** | **2.50** | Quick Win | Memory/Core | R09 tenant isolation spec | `dxrk/memory/palace.py:40` `~/.dxrk/locks` 900s; `MIGRATION_3.3.5_3.7.1.md:58` locks migration precedente |
+| **R04** | **Migration idempotente multi-tenant** | `~/.dxrk/malla/malla.db` → `~/.dxrk/tenants/default/malla/malla.db` copy-on-first-run idempotente, `~/.dxrk/locks` → `~/.dxrk/tenants/{id}/locks`, `~/.dxrk/knowledge_graph.sqlite3` → per-tenant o shared con `tenant_id` col, rollback si `malla_path` custom | **5** | **2** | **2.50** | Quick Win | Memory/Core | R09 tenant isolation spec | `dxrk/memory/malla.py:40` `~/.dxrk/locks` 900s; `MIGRATION_3.3.5_3.7.1.md:58` locks migration precedente |
 | **R05** | **Coverage 62→80% (non-Windows gate)** | `dxrk/utils/http.py:1` 1945L 62% → 80% `cov-fail-under=80` (non-Windows), branches `httpx.Timeout`/`Headers`, `tests/test_utils_http*.py` +130 tests, `ci.yml:48` gate solo `ubuntu-latest` con `skipif(win32)` | **4** | **2** | **2.00** | Quick Win | Core | R08 http split facilita pero no bloquea | `AGENTS.md` utils/http 1945L 62% min coverage; `ci.yml:36` gate 80% only non-Windows |
 | **R06** | **Benchmarks reproducibles** | `docs/benchmarks.md` + `benchmarks/bench_memory.py --corpus 1k --runs 100` tabla honesta §1 `dx.md:25` (BM25 0.72 vs HNSW 0.88, <50ms cold, 0 vs 420MB, 35 vs 12ms), artefacto `benchmarks/results/{date}_bench.json` versionado, link README hero | **4** | **2** | **2.00** | Quick Win | DX/Memory | — (standalone, referencia ADR-003) | `docs/dx.md:22` tabla lista, pero `docs/benchmarks.md` no existe; `ADR-003:32` métricas base |
 | **R07** | **CLI --tenant flag** | `dxrk/__main__.py` + `dxrk/commands/registry.py` `--tenant <id>` global flag, `DXRK_TENANT` env fallback, `CommandContext.tenant_id` wiring, validación `^[a-z0-9-]{1,32}$`, error `tenant not found → E_TENANT_404` | **4** | **2** | **2.00** | Quick Win | CLI | R09 | Fase2 spec `CLI --tenant` |
-| **R08** | **JWT tid claim** | `dxrk/security/jwt.py:2` `tid` claim injection/validation, `session_ingress` + `tid` → `palace_path` resolver, middleware `401 if tid missing` en MCP/`mcp_server.py`, tests `tests/test_jwt_tid.py` | **4** | **2** | **2.00** | Quick Win | Security | R09 + R07 | `dxrk/security/jwt.py:21` `SESSION_INGRESS` sin `tid` hoy |
+| **R08** | **JWT tid claim** | `dxrk/security/jwt.py:2` `tid` claim injection/validation, `session_ingress` + `tid` → `malla_path` resolver, middleware `401 if tid missing` en MCP/`mcp_server.py`, tests `tests/test_jwt_tid.py` | **4** | **2** | **2.00** | Quick Win | Security | R09 + R07 | `dxrk/security/jwt.py:21` `SESSION_INGRESS` sin `tid` hoy |
 | **R09** | **Vault per-tenant HKDF** | `dxrk/vault/__init__.py:162` HKDF per-tenant (`master_key → HKDF(salt=tenant_id) → tenant_key`), `~/.dxrk/tenants/{id}/vault.enc` `chmod 0o600`, `VaultConfig.path` template `{tenant}`, tests `test_vault_tenant_isolation.py` | **5** | **3** | **1.67** | Major Project | Security | R10 (filesystem) | `dxrk/config/config.py:681` `VaultConfig(path=".dxrk/vault.enc")` single-tenant hoy |
-| **R10** | **Tenant isolation filesystem** | `~/.dxrk/tenants/{id}/` (`palace/sqlite_palace.db` WAL `0o600`, `knowledge_graph.sqlite3`, `locks/` `0o750`, `config.json`, `memories.json` per-tenant), `pathlib` + `chmod` hardening, `RLock` per-tenant, `mine_palace_lock` namespaced `mine_palace_{tenant}_{sha16}` | **5** | **3** | **1.67** | Major Project | Memory/Core/Config | R12 config unify (opcional) | `palace.py:628` `chmod 0o600` single DB; ADR-002 R5 multi-tenant ready |
-| **R11** | **TUI STATE→context DI** | `dxrk/tui/shared.py:15` `class AppState` + `STATE = AppState()` global → `AppContext(tenant_id, palace, config, vault)` inyectado vía `App.__init__(context)`, elimina `from dxrk.tui.shared import STATE` en `dxrk/tui/app.py:40,101,204` (~18 usos), tests `test_tui_context.py` | **4** | **3** | **1.33** | Major Project | TUI | — | `tui/app.py:15` `STATE` global 946L `app.py` + `shared.py:34` singleton |
-| **R12** | **RBAC 3 roles** | `dxrk/security/permissions.py` + `dxrk/config/featureflags.py` roles `admin` (read+write+mine+manage tenants) / `dev` (read+write+mine) / `readonly` (search/recall only), `tenant_roles.json` matrix, enforcement en `Palace.mine/search` + `CLI` + `MCP`, tests `test_rbac_matrix.py` 12 combos | **4** | **3** | **1.33** | Major Project | Security | R09 + R10 | Fase2 spec RBAC 3 roles |
+| **R10** | **Tenant isolation filesystem** | `~/.dxrk/tenants/{id}/` (`malla/malla.db` WAL `0o600`, `knowledge_graph.sqlite3`, `locks/` `0o750`, `config.json`, `memories.json` per-tenant), `pathlib` + `chmod` hardening, `RLock` per-tenant, `mine_malla_lock` namespaced `mine_malla_{tenant}_{sha16}` | **5** | **3** | **1.67** | Major Project | Memory/Core/Config | R12 config unify (opcional) | `malla.py:628` `chmod 0o600` single DB; ADR-002 R5 multi-tenant ready |
+| **R11** | **TUI STATE→context DI** | `dxrk/tui/shared.py:15` `class AppState` + `STATE = AppState()` global → `AppContext(tenant_id, malla, config, vault)` inyectado vía `App.__init__(context)`, elimina `from dxrk.tui.shared import STATE` en `dxrk/tui/app.py:40,101,204` (~18 usos), tests `test_tui_context.py` | **4** | **3** | **1.33** | Major Project | TUI | — | `tui/app.py:15` `STATE` global 946L `app.py` + `shared.py:34` singleton |
+| **R12** | **RBAC 3 roles** | `dxrk/security/permissions.py` + `dxrk/config/featureflags.py` roles `admin` (read+write+mine+manage tenants) / `dev` (read+write+mine) / `readonly` (search/recall only), `tenant_roles.json` matrix, enforcement en `Malla.mine/search` + `CLI` + `MCP`, tests `test_rbac_matrix.py` 12 combos | **4** | **3** | **1.33** | Major Project | Security | R09 + R10 | Fase2 spec RBAC 3 roles |
 | **R13** | **http.py split 1945L→10 submódulos** | `dxrk/utils/http.py` 1945L (192 defs) → `dxrk/utils/http/{client,pool,retry,auth,headers,timeout,stream,errors,compat,__init__}.py` p90 ~195L, `compat` httpx.Timeout/Headers quirks (`AGENTS.md` gotchas), `__init__.py` re-export API estable, sin breaking `from dxrk.utils.http import` | **5** | **4** | **1.25** | Major Project | Core | R05 (coverage base) | `utils/http.py` 1945L max file, 62% coverage min; `image.py` 1157L 96% OK |
 | **R14** | **Config unify dual Hierarchical vs SettingsManager** | `dxrk/config/config.py:91` `HierarchicalConfig` + `ConfigManager` vs `dxrk/config/settings.py:??` `SettingsManager`/`NewSettingsManager` dual → unificar a `SettingsManager` canónico con adapter `HierarchicalConfig→Settings` compat `Merge()`/`Config()`, migra `dxrk/config/load.py:108` vault wiring, docs `docs/config.md` | **4** | **4** | **1.00** | Major Project | Config | — | `config/config.py` 744L `HierarchicalConfig` + `settings.py` 223L dualidad debt Fase1 |
-| **R15** | **TUI switcher tenant selector** | `dxrk/tui/app.py` `TenantSwitcher` screen (`Ctrl+T`), `~/.dxrk/tenants/*/config.json` discovery, `palace_path` switch sin restart, `STATE.tenant` → `context.tenant_id` post-R11, breadcrumb `tenant: <id> · wing: dxrk` | **3** | **3** | **1.00** | Major Project (pospuesto si no R11) | TUI | **R11** + R10 | Fase2 spec `TUI switcher` |
+| **R15** | **TUI switcher tenant selector** | `dxrk/tui/app.py` `TenantSwitcher` screen (`Ctrl+T`), `~/.dxrk/tenants/*/config.json` discovery, `malla_path` switch sin restart, `STATE.tenant` → `context.tenant_id` post-R11, breadcrumb `tenant: <id> · nodo: dxrk` | **3** | **3** | **1.00** | Major Project (pospuesto si no R11) | TUI | **R11** + R10 | Fase2 spec `TUI switcher` |
 
 > **Orden de ejecución sugerido por Prioridad:** `R01 → R02 → R03/R04 → R05/R06/R07/R08 → R09/R10 → R11/R12 → R13/R14 → R15`. Priorizar `I/E` alto primero respeta cadencia Quick Wins → Major Projects.
 
@@ -151,11 +151,11 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 
 | Área | Entregables | Detalles | Dependencias |
 |------|-------------|----------|--------------|
-| **Tenant isolation** | `~/.dxrk/tenants/{id}/` FS layout (`palace/`, `locks/`, `graph/`, `config.json`), `dxrk/memory/palace.py` `palace_path` resolver per-tenant, `chmod 0o600/0o750`, `RLock` per-tenant, `mine_palace_lock` namespaced | `Palace("/tmp/palace")` sigue funcionando; `Palace(tenant="acme")` → `~/.dxrk/tenants/acme/palace` | R14 config unify |
+| **Tenant isolation** | `~/.dxrk/tenants/{id}/` FS layout (`malla/`, `locks/`, `graph/`, `config.json`), `dxrk/memory/malla.py` `malla_path` resolver per-tenant, `chmod 0o600/0o750`, `RLock` per-tenant, `mine_malla_lock` namespaced | `Malla("/tmp/malla")` sigue funcionando; `Malla(tenant="acme")` → `~/.dxrk/tenants/acme/malla` | R14 config unify |
 | **Vault per-tenant HKDF** | `dxrk/vault/__init__.py:162` `HKDF-SHA256(salt=tenant_id, info=b"dxrk-vault-v1")`, `VaultConfig.path` templating, `cryptography>=43` `HKDFExpand`, tests `test_vault_tenant_isolation.py` (cross-tenant decrypt debe fallar) | `master_key_env=DXRK_MASTER_KEY` → derived `tenant_key` nunca en disco | R10 |
-| **CLI --tenant** | `dxrk/__main__.py` global `--tenant` + `DXRK_TENANT` env, `Registry.execute(argv, tenant_id)` wiring, validación regex, help `dxrk --help` muestra `--tenant` | `dxrk --tenant acme memory mine --wing acme --room code` | R10 |
+| **CLI --tenant** | `dxrk/__main__.py` global `--tenant` + `DXRK_TENANT` env, `Registry.execute(argv, tenant_id)` wiring, validación regex, help `dxrk --help` muestra `--tenant` | `dxrk --tenant acme memory mine --nodo acme --celda code` | R10 |
 | **JWT tid** | `dxrk/security/jwt.py` `tid` claim, `mcp_server.py` + `hooks_cli.py` `tid → tenant_id` middleware, `tests/test_jwt_tid.py` 8 tests (`missing tid → 401`, `wrong tid → 403`) | MCP stdio transport ya `dxrk/mcp/__init__.py:17` más simple que Go sidecar | R10 + R07 |
-| **Migration beta** | `dxrk/memory/migration.py` `migrate_to_tenants(dry_run, backup)` idempotente (`~/.dxrk/palace` → `~/.dxrk/tenants/default/`), `~/.dxrk/migration.json` marker, `dxrk migrate --check` dry-run | Si falla, rollback `mv tenants/default/palace → palace` | R10 |
+| **Migration beta** | `dxrk/memory/migration.py` `migrate_to_tenants(dry_run, backup)` idempotente (`~/.dxrk/malla` → `~/.dxrk/tenants/default/`), `~/.dxrk/migration.json` marker, `dxrk migrate --check` dry-run | Si falla, rollback `mv tenants/default/malla → malla` | R10 |
 
 **Docs beta:** `docs/tenants.md` + `docs/security.md` tenant chapter + `CHANGELOG.md` `[0.5.0-beta]`.
 
@@ -167,8 +167,8 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 
 | Área | Entregables | Detalles | Dependencias |
 |------|-------------|----------|--------------|
-| **RBAC** | `admin/dev/readonly` enforcement en `Palace.mine` (write), `Palace.search` (read), `CLI` dispatch, `tenant_roles.json` (`{tenant, user, role}`), `403 RBAC_DENIED` | `admin` puede `tenant create/delete`, `dev` no | R09 + R10 |
-| **TUI switcher** | `dxrk/tui/app.py` `TenantSwitcher` (`Ctrl+T`), discovery `~/.dxrk/tenants/*/config.json`, live switch `palace_path`, tests `test_tui_switcher.py` (no necesita `STATE` global gracias a R11) | Breadcrumb `tenant: acme · 42 agents` | **R11** + R10 |
+| **RBAC** | `admin/dev/readonly` enforcement en `Malla.mine` (write), `Malla.search` (read), `CLI` dispatch, `tenant_roles.json` (`{tenant, user, role}`), `403 RBAC_DENIED` | `admin` puede `tenant create/delete`, `dev` no | R09 + R10 |
+| **TUI switcher** | `dxrk/tui/app.py` `TenantSwitcher` (`Ctrl+T`), discovery `~/.dxrk/tenants/*/config.json`, live switch `malla_path`, tests `test_tui_switcher.py` (no necesita `STATE` global gracias a R11) | Breadcrumb `tenant: acme · 42 agents` | **R11** + R10 |
 | **Hardening GA** | `uv audit` 0 vulns, `OSSF Scorecard` ≥8.5 stdlib-only, `mypy` 218+ files 0 errors, `ruff` 0, `pytest --cov --cov-fail-under=80` (o 85% si v0.5.0 sube), `trace0` `grep -rn engram|mempal --include="*.py" →0` | `cryptography` única dep nativa auditada | todos |
 | **Docs GA** | `docs/tenants.md` GA, `docs/rbac.md`, `docs/migration-0.5-to-1.0.md`, `README.md` sección enterprise (`dxrk --tenant` + RBAC matrix), `mkdocs.yml` `mike` versioning opcional | `site_url` + `social` cards OG | R01 + R02 |
 | **Release GA** | `pyproject.toml` `1.0.0` (`Development Status :: 5 - Production/Stable`), `CHANGELOG.md` `[1.0.0] - 2026-12-18` `compare/v0.5.0...v1.0.0`, `git tag v1.0.0` → `publish.yml` + `gh release` notes, bump `SECURITY.md` `Supported: 1.0.x ✅` | `cliff.toml` `feat/fix/docs…` ya configurado | todos |
@@ -260,7 +260,7 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 |--------|------|---------|------------|
 | Filesystem isolation `chmod 0o600` falla en Windows ACL | A | Alto | `pathlib.chmod` + `try/except NotImplementedError` + test `skipif(win32)` para perms; en Windows, `vault` fallback `0o600` simulado vía `icacls` doc (no gate) |
 | HKDF per-tenant derived key pierde `master_key` rotación | M | Alto | `HKDF(salt=tenant_id, info=b"dxrk-vault-v1")` versionado `info` v1; `vault.enc` header `{"hkdf_version":1, "tenant":tid}`; doc rotación `dxrk vault rekey --tenant` |
-| Migration `~/.dxrk/palace → tenants/default/` no idempotente (doble copy) | M | Alto | Marker `~/.dxrk/migration.json` `{"migrated":true, "at":"2026-11-20T00:00:00Z"}`; `migrate --check` dry-run + `backup ~/.dxrk.pre-0.5/`; tests `test_migration_idempotent.py` (run twice → same hash) |
+| Migration `~/.dxrk/malla → tenants/default/` no idempotente (doble copy) | M | Alto | Marker `~/.dxrk/migration.json` `{"migrated":true, "at":"2026-11-20T00:00:00Z"}`; `migrate --check` dry-run + `backup ~/.dxrk.pre-0.5/`; tests `test_migration_idempotent.py` (run twice → same hash) |
 | JWT `tid` trusted sin verify rompe `stdio` MCP transport | B | Alto | `jwt.py` `decode_payload` sin verify solo para `tid` extraction, verify separado `verify_tid(claims, expected_tenant)`; `401` si `tid` missing, `403` si `tid != tenant` |
 | Early adopters beta escriben en `tenants/default` y `tenants/acme` diverge | M | Medio | `docs/tenants.md` warning `beta: do not use in prod`; `dxrk --tenant` default `default` si env missing → explicit; `migration` copia no mueve (copy, no move) en beta |
 
@@ -268,7 +268,7 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 
 | Riesgo | Prob | Impacto | Mitigación |
 |--------|------|---------|------------|
-| RBAC matrix 12 combos sin tests → privilege escalation `readonly → mine` | M | Crítico | `tests/test_rbac_matrix.py` 12 combos (`3 roles × 4 ops`) + fuzz `hypothesis` roles; `Palace.mine` check `if role=="readonly": raise PermissionError("RBAC_DENIED")` early |
+| RBAC matrix 12 combos sin tests → privilege escalation `readonly → mine` | M | Crítico | `tests/test_rbac_matrix.py` 12 combos (`3 roles × 4 ops`) + fuzz `hypothesis` roles; `Malla.mine` check `if role=="readonly": raise PermissionError("RBAC_DENIED")` early |
 | TUI switcher sin DI (R11) → race `STATE.tenant` global entre screens | A si no R11 | Alto | Gate: **R15 bloqueado hasta R11 Done** (ver Gantt crítico `R11→R15`); si R11 falla, ship TUI switcher como `v1.1.0` no GA blocker |
 | `vector plugin` presión “recall -16pp bloquea enterprise” | B | Medio | ADR-003 ya mitiga: `benchmarks.md` reproduce recall 0.72 vs 0.88 + disclaimer + `pool 15×` <8pp loss <10k corpus; vector plugin `dxrk/memory/backend/vector.py` extra opcional vía git post-v1.0 — no GA blocker |
 | `1.0.0` stable API promise rompe `HierarchicalConfig` compat | M | Alto | SemVer: `HierarchicalConfig` deprecated en v0.3.0 pero soportado hasta `2.0.0`; `1.0.0` mantiene adapter, removal solo `2.0.0` con ADR |
@@ -289,9 +289,9 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 | **Trace0** | `grep -rn "engram\|mempal" --include="*.py" \| wc -l` | **0** global; `grep -rn "engram\|mempal" dxrk/memory →0` (LEGACY `chr-join` permitido) | `docs/memory.md:205` verify; CI opcional `grep` step |
 | **Docs build** | `uv run mkdocs build` | **0 warnings** (`pages not in nav` 0, `Unrecognised configuration` 0) | `mkdocs.yml` nav incluye `dx.md`+`ADR-003`+`roadmap.md` post-v0.2.0 |
 | **Audit** | `uv audit` | **0 vulns** | `ci.yml:28` `ubuntu-latest` |
-| **No `dxrk/memory/` touch** | `git diff --stat main...HEAD -- dxrk/memory/ \| wc -l` | **0** (salvo `palace_path` wiring per-tenant vía param, no internals) | PR diffstat gate |
+| **No `dxrk/memory/` touch** | `git diff --stat main...HEAD -- dxrk/memory/ \| wc -l` | **0** (salvo `malla_path` wiring per-tenant vía param, no internals) | PR diffstat gate |
 
-> **Regla Fase1 deuda:** ningún PR toca `dxrk/memory/` internals (Fidelity 3.7.1 `979` replaces + `1654cd2`/`759b8f1`/`db29959`/`27212e5`/`5036e3c` + `WAL` + `FTS5` locks). Solo `palace_path` per-tenant wiring.
+> **Regla Fase1 deuda:** ningún PR toca `dxrk/memory/` internals (Fidelity 3.7.1 `979` replaces + `1654cd2`/`759b8f1`/`db29959`/`27212e5`/`5036e3c` + `WAL` + `FTS5` locks). Solo `malla_path` per-tenant wiring.
 
 ### 6.2 DoD por versión (checklist mergeable)
 
@@ -318,23 +318,23 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 
 #### v0.5.0 Done (Enterprise Beta) — 6 semanas
 
-- [x] `~/.dxrk/tenants/{id}/` FS isolation `Palace` per-tenant — `tests/test_tenant_e2e.py` 9 tests + `tests/test_enterprise_cli_migration.py` 42 tests
+- [x] `~/.dxrk/tenants/{id}/` FS isolation `Malla` per-tenant — `tests/test_tenant_e2e.py` 9 tests + `tests/test_enterprise_cli_migration.py` 42 tests
 - [x] `dxrk/vault` HKDF per-tenant — `tests/test_enterprise_jwt_vault.py` cross-tenant decrypt fail, `VaultConfig.path` templating `tenants/{id}/vault.enc`
 - [x] `CLI --tenant` + `DXRK_TENANT` env — `tests/test_enterprise_cli_migration.py` (flag, env fallback, ids inválidos), `dxrk --help` muestra flag
 - [x] `JWT tid` claim — `tests/test_enterprise_jwt_vault.py` (`missing tid`, `mismatch 403`, roundtrip firmado), middleware en `mcp_server.py`
-- [x] `dxrk/tenant/migration.py` idempotente `palace → tenants/default/` — segunda corrida `copied == []`, `dxrk tenant migrate` + dry-run
+- [x] `dxrk/tenant/migration.py` idempotente `malla → tenants/default/` — segunda corrida `copied == []`, `dxrk tenant migrate` + dry-run
 - [x] `docs/tenants.md` + `docs/rbac.md` + `docs/migration.md` + `CHANGELOG.md` — `mkdocs build` 0 warnings
 - [x] Releases enterprise vía tags `v0.2.3`/`v0.2.4` (colapsado: sin tag beta intermedio, release directo a `1.0.0` GA)
 - [x] Gates universales §6.1 verdes + `uv audit` 0
 
 #### v1.0.0 Done (GA) — 4 semanas
 
-- [x] `RBAC` 3 roles `admin/dev/readonly` matrix — `tests/test_enterprise_rbac_matrix.py` 25 + `tests/test_rbac_enforcement.py` 32 + `tests/test_memory_rbac.py` 30 + enforcement `Palace.mine/search` + `CLI` + `MCP` 403 `RBAC_DENIED`
+- [x] `RBAC` 3 roles `admin/dev/readonly` matrix — `tests/test_enterprise_rbac_matrix.py` 25 + `tests/test_rbac_enforcement.py` 32 + `tests/test_memory_rbac.py` 30 + enforcement `Malla.mine/search` + `CLI` + `MCP` 403 `RBAC_DENIED`
 - [x] `TUI switcher` `TenantSwitcher` — pilot TUI live switch (`tests/test_enterprise_cli_migration.py`), breadcrumb tenant, sin `STATE` global (R11 Done)
 - [x] Hardening GA: `mypy` 0, `ruff` 0, `pytest --cov-fail-under=80` ✅ (85%+), `trace0` 0, `uv audit` 0, `site/assets/demo_tenant.gif` ✅ (30s, 327KB) + `OSSF Scorecard` **7.0 real** (target ≥8.5 no alcanzado: techo honesto — sin PR-required por decisión usuario, 1 contribuidor, repo <90 días, sin CII/fuzzing; ver §9 nota)
 - [x] Docs GA: `docs/tenants.md` ✅, `docs/rbac.md` ✅, `docs/migration-0.5-to-1.0.md` ✅, `README.md` enterprise ✅, `mike` `latest→1.0` ✅, `social` cards OG ✅ (plugin genera PNGs por página)
 - [x] `pyproject.toml` `1.0.0` `Development Status :: 5 - Production/Stable` + `CHANGELOG.md` cliff + `git tag v1.0.0` → `publish.yml` GA + `gh release` notes + `SECURITY.md` `Supported: 1.0.x ✅, 0.2.x ✅`
-- [x] Manual smoke GA: `uv tool install git+https://github.com/Dxrk777/Dxrk.git --force` (1.0.0 vía git) + tenant create/whoami/list OK — encontró y arregló 3 bugs reales (search fresco `[]`, contaminación palace por `DEFAULT_PALACE_PATH` import-time, post-filtro frase contigua → token-AND)
+- [x] Manual smoke GA: `uv tool install git+https://github.com/Dxrk777/Dxrk.git --force` (1.0.0 vía git) + tenant create/whoami/list OK — encontró y arregló 3 bugs reales (search fresco `[]`, contaminación malla por `DEFAULT_MALLA_PATH` import-time, post-filtro frase contigua → token-AND)
 - [x] Gates universales §6.1 verdes en `main` tag `v1.0.0` (se re-verifican en gates finales)
 
 #### v1.1.0 Done (Cortex + Autonomous + Enterprise) — release menor
@@ -375,15 +375,15 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 
 ## 8. Referencias y trazabilidad
 
-- **Flagship:** [`docs/memory.md`](memory.md) — 13 módulos 4652 LOC (14 con `backend/`, 6303 LOC con `engine.py`/`__main__` per `AGENTS.md` total), FTS5 `trigram`+WAL, Palace locks `~/.dxrk/locks` 900s, BM25 `k1=1.5 b=0.75`, Graph `valid_from/valid_to`, AAAK `compress/decode`, Layers L0-L3 600–900 tok, miner `GitignoreMatcher` + `O_NONBLOCK`/`S_ISREG` `db29959` + `MAX_FILE_SIZE 500MiB`.
+- **Flagship:** [`docs/memory.md`](memory.md) — 13 módulos 4652 LOC (14 con `backend/`, 6303 LOC con `engine.py`/`__main__` per `AGENTS.md` total), FTS5 `trigram`+WAL, Malla locks `~/.dxrk/locks` 900s, BM25 `k1=1.5 b=0.75`, Graph `valid_from/valid_to`, AAAK `compress/decode`, Layers L0-L3 600–900 tok, miner `GitignoreMatcher` + `O_NONBLOCK`/`S_ISREG` `db29959` + `MAX_FILE_SIZE 500MiB`.
 - **Migración:** [`docs/MIGRATION_3.3.5_3.7.1.md`](MIGRATION_3.3.5_3.7.1.md) — delta 388 files 50+ commits `359c579`, 6 parches portados (`1654cd2`/`759b8f1`/`db29959`/`27212e5`/`5036e3c`/SIGTERM), no-portados `HNSW`/`numpy2`/`chroma cache`/`onnx` justificados stdlib-only.
-- **Separación:** [`docs/adr/ADR-002-memory-separation.md`](adr/ADR-002-memory-separation.md) — 3 sistemas aislados `memory` (Palace/WAL) vs `learner` (`.dxrk/memories.json`) vs `rag` (`VectorStore` dict), reglas R1–R6, puentes `hooks export` + `rag enrichment` sin storage coupling.
+- **Separación:** [`docs/adr/ADR-002-memory-separation.md`](adr/ADR-002-memory-separation.md) — 3 sistemas aislados `memory` (Malla/WAL) vs `learner` (`.dxrk/memories.json`) vs `rag` (`VectorStore` dict), reglas R1–R6, puentes `hooks export` + `rag enrichment` sin storage coupling.
 - **Stdlib vs Hybrid:** [`docs/adr/ADR-003-hybrid-vs-stdlib.md`](adr/ADR-003-hybrid-vs-stdlib.md) — P5 mandato, benchmarks 0.72 vs 0.88 recall, 0 vs 420MB, stdlib-only vence; `backend/vector.py` plugin extra opcional vía git post-v1.0.
 - **DX plan:** [`docs/dx.md`](dx.md) — 535L Top1 plan, benchmarks tabla §1, hero §2 (badges+30s quickstart), nav fix §3.2/§3.3, community §4, release checklist §5.2 (vía git, sin PyPI), star tactics §6, métricas §7, 30/60/90 days §8.
 - **Config deuda:** `dxrk/config/config.py:91` `HierarchicalConfig` 744L + `dxrk/config/settings.py:??` `SettingsManager` 223L dual, `dxrk/config/load.py:108` vault wiring.
 - **TUI deuda:** `dxrk/tui/shared.py:15` `AppState`/`STATE=AppState()` singleton + `dxrk/tui/app.py:40` 946L `STATE` 18 usos global.
 - **Http deuda:** `dxrk/utils/http.py:1` 1945L 192 defs 62% coverage min, `utils/image.py:1` 1157L 96% contraste.
-- **Enterprise spec Fase2:** `~/.dxrk/tenants/{id}/` + `vault HKDF` + `RBAC admin/dev/readonly` + `CLI --tenant` + `TUI switcher` + `JWT tid` + `migration idempotente` (filesystem isolation `0o600/0o750` ya probado `palace.py:628` + `vault/__init__.py:162`).
+- **Enterprise spec Fase2:** `~/.dxrk/tenants/{id}/` + `vault HKDF` + `RBAC admin/dev/readonly` + `CLI --tenant` + `TUI switcher` + `JWT tid` + `migration idempotente` (filesystem isolation `0o600/0o750` ya probado `malla.py:628` + `vault/__init__.py:162`).
 - **Tooling:** `pyproject.toml:7` `0.1.2→0.2.0→0.5.0→1.0.0`, `mkdocs.yml:48` `mkdocstrings.default` bug, `ci.yml:36` `cov-fail-under=80` non-Windows, `CONTRIBUTING.md:36` gate 80%, `CHANGELOG.md` cliff.
 
 ---
@@ -415,7 +415,7 @@ git -c user.name='Dxrk System' -c user.email='dxrk@local' commit -m "chore(relea
 git tag -a v0.2.0 -m "v0.2.0 DxrkMemory 2.0 flagship + Top1 DX" && git push origin main --follow-tags
 ```
 
-> **No tocar `dxrk/memory/`** — verificación pre-merge: `git diff --stat origin/main...HEAD -- dxrk/memory/ | wc -l` debe ser 0 para todo PR v0.2.0–v1.0.0 salvo `palace_path` wiring documentado.
+> **No tocar `dxrk/memory/`** — verificación pre-merge: `git diff --stat origin/main...HEAD -- dxrk/memory/ | wc -l` debe ser 0 para todo PR v0.2.0–v1.0.0 salvo `malla_path` wiring documentado.
 
 ---
 

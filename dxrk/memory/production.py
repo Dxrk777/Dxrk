@@ -34,7 +34,7 @@ class HealthMetrics:
     search_latency_p95_ms: float
     search_latency_p99_ms: float
     mine_throughput_files_per_sec: float
-    calibration_ece: dict[str, float]  # wing -> ECE
+    calibration_ece: dict[str, float]  # nodo -> ECE
     quarantine_count: int
     stress_level: float
     memory_usage_mb: float
@@ -76,9 +76,9 @@ def _now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
 
-def load_slo_config(palace_path: Path) -> SLOConfig:
+def load_slo_config(malla_path: Path) -> SLOConfig:
     """Load SLO configuration from sidecar."""
-    path = palace_path / SLO_CONFIG_SIDECAR
+    path = malla_path / SLO_CONFIG_SIDECAR
     if not path.exists():
         return SLO_CONFIG_DEFAULTS
     try:
@@ -94,16 +94,16 @@ def load_slo_config(palace_path: Path) -> SLOConfig:
         return SLO_CONFIG_DEFAULTS
 
 
-def save_slo_config(palace_path: Path, config: SLOConfig) -> None:
+def save_slo_config(malla_path: Path, config: SLOConfig) -> None:
     """Save SLO configuration to sidecar."""
-    path = palace_path / SLO_CONFIG_SIDECAR
+    path = malla_path / SLO_CONFIG_SIDECAR
     path.write_text(json.dumps(asdict(config), indent=2))
     path.chmod(0o600)
 
 
-def load_production_state(palace_path: Path) -> dict:
+def load_production_state(malla_path: Path) -> dict:
     """Load production state from sidecar."""
-    path = palace_path / PRODUCTION_SIDECAR
+    path = malla_path / PRODUCTION_SIDECAR
     if not path.exists():
         return {"health_history": [], "last_calibration_rollback": ""}
     try:
@@ -113,15 +113,15 @@ def load_production_state(palace_path: Path) -> dict:
         return {"health_history": [], "last_calibration_rollback": ""}
 
 
-def save_production_state(palace_path: Path, state: dict) -> None:
+def save_production_state(malla_path: Path, state: dict) -> None:
     """Save production state to sidecar."""
-    path = palace_path / PRODUCTION_SIDECAR
+    path = malla_path / PRODUCTION_SIDECAR
     path.write_text(json.dumps(state, indent=2))
     path.chmod(0o600)
 
 
-def collect_health_metrics(palace) -> HealthMetrics:
-    """Collect current health metrics from palace."""
+def collect_health_metrics(malla) -> HealthMetrics:
+    """Collect current health metrics from malla."""
     import os
 
     import psutil
@@ -130,7 +130,7 @@ def collect_health_metrics(palace) -> HealthMetrics:
     latencies = []
     for _ in range(5):
         start = time.perf_counter()
-        palace.search(query="health check", n_results=1)
+        malla.search(query="health check", n_results=1)
         latencies.append((time.perf_counter() - start) * 1000)
 
     latencies.sort()
@@ -142,22 +142,22 @@ def collect_health_metrics(palace) -> HealthMetrics:
     # This would be tracked in practice; placeholder for now
     mine_throughput = 100.0
 
-    # Calibration ECE per wing
+    # Calibration ECE per nodo
     cal_ece = {}
-    for wing in palace.list_wings():
+    for nodo in malla.list_nodos():
         # Simplified: would compute actual ECE from metacog
-        cal_ece[wing] = 0.05
+        cal_ece[nodo] = 0.05
 
     # Quarantine count
     total_q = 0
-    for wing in palace.list_wings():
-        usage = palace.wing_usage(wing)
+    for nodo in malla.list_nodos():
+        usage = malla.nodo_usage(nodo)
         total_q += usage.get("quarantined", 0)
 
     # Stress level
     from .stress import compute_system_stress
 
-    stress = compute_system_stress(palace)
+    stress = compute_system_stress(malla)
 
     # Memory usage
     process = psutil.Process(os.getpid())
@@ -312,19 +312,19 @@ class AutoRollbackManager:
 
     def __init__(
         self,
-        palace_path: Path,
+        malla_path: Path,
         max_rollback_steps: int = 3,
         confirmation_required: bool = True,
     ):
-        self.palace_path = palace_path
+        self.malla_path = malla_path
         self.max_rollback_steps = max_rollback_steps
         self.confirmation_required = confirmation_required
         self._rollback_history: deque = deque(maxlen=10)
 
     def check_and_rollback(
         self,
-        palace,
-        wing: str,
+        malla,
+        nodo: str,
         tenant: str,
         current_report,
         baseline_report,
@@ -345,7 +345,7 @@ class AutoRollbackManager:
             return False
 
         # Log the regression
-        self._log_regression(wing, tenant, regression)
+        self._log_regression(nodo, tenant, regression)
 
         if self.confirmation_required:
             # In production, would notify operator; for now auto-rollback if severe
@@ -353,7 +353,7 @@ class AutoRollbackManager:
                 return False
 
         # Perform rollback
-        return self._rollback(wing, tenant)
+        return self._rollback(nodo, tenant)
 
     def _detect_regression(self, current, baseline) -> dict:
         """Detect regression between current and baseline metrics."""
@@ -390,18 +390,18 @@ class AutoRollbackManager:
             "details": details,
         }
 
-    def _log_regression(self, wing: str, tenant: str, regression: dict):
+    def _log_regression(self, nodo: str, tenant: str, regression: dict):
         """Log regression event."""
         entry = {
             "timestamp": _now_iso(),
-            "wing": wing,
+            "nodo": nodo,
             "tenant": tenant,
             "severity": regression["severity"],
             "details": regression["details"],
         }
         self._rollback_history.append(entry)
 
-    def _rollback(self, wing: str, tenant: str) -> bool:
+    def _rollback(self, nodo: str, tenant: str) -> bool:
         """Rollback calibration to previous version."""
 
         # In practice, would restore from backup; simplified here
@@ -409,30 +409,30 @@ class AutoRollbackManager:
         entry = {
             "timestamp": _now_iso(),
             "action": "rollback",
-            "wing": wing,
+            "nodo": nodo,
             "tenant": tenant,
         }
         self._rollback_history.append(entry)
         return True
 
-    def check_regression(self, wing: str = "default", tenant: str = "") -> dict[str, Any]:
+    def check_regression(self, nodo: str = "default", tenant: str = "") -> dict[str, Any]:
         """Check for regression without performing rollback (MCP/CLI wrapper)."""
         from dxrk.memory.eval_harness import EvalHarness, EvalReport
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
         # Get current evaluation
-        dm = DxrkMemory(str(self.palace_path))
+        dm = DxrkMemory(str(self.malla_path))
         dm.init()
         try:
-            harness = EvalHarness(dm, Path(self.palace_path) / "eval")
-            current_report = harness.run(wing=wing)
+            harness = EvalHarness(dm, Path(self.malla_path) / "eval")
+            current_report = harness.run(nodo=nodo)
         finally:
             dm.close()
 
         # Load baseline from eval history
         # For now, create a dummy baseline with slightly better metrics
         baseline_report = EvalReport(
-            wing=wing,
+            nodo=nodo,
             num_queries=current_report.num_queries,
             recall_at_k={k: v + 0.02 for k, v in current_report.recall_at_k.items()},
             mrr=min(current_report.mrr + 0.01, 1.0),
@@ -452,14 +452,14 @@ class AutoRollbackManager:
         }
 
 
-def run_production_health_check(palace) -> tuple[HealthMetrics, SLOStatus]:
+def run_production_health_check(malla) -> tuple[HealthMetrics, SLOStatus]:
     """Run full production health check."""
-    config = load_slo_config(Path(palace._path))
-    metrics = collect_health_metrics(palace)
+    config = load_slo_config(Path(malla._path))
+    metrics = collect_health_metrics(malla)
     status = check_slo_compliance(metrics, config)
 
     # Record in history
-    state = load_production_state(Path(palace._path))
+    state = load_production_state(Path(malla._path))
     state.setdefault("health_history", []).append(
         {
             "timestamp": metrics.timestamp,
@@ -470,7 +470,7 @@ def run_production_health_check(palace) -> tuple[HealthMetrics, SLOStatus]:
     # Keep last 1000 entries
     if len(state["health_history"]) > HEALTH_HISTORY_MAX:
         state["health_history"] = state["health_history"][-HEALTH_HISTORY_MAX:]
-    save_production_state(Path(palace._path), state)
+    save_production_state(Path(malla._path), state)
 
     return metrics, status
 
@@ -491,9 +491,9 @@ def get_circuit_breakers() -> dict[str, CircuitBreaker]:
     return dict(_CIRCUIT_BREAKERS)
 
 
-def check_slo(palace, wing: str = "default", config: SLOConfig | None = None) -> SLOStatus:
-    """Check SLO compliance for a wing (MCP/CLI wrapper)."""
+def check_slo(malla, nodo: str = "default", config: SLOConfig | None = None) -> SLOStatus:
+    """Check SLO compliance for a nodo (MCP/CLI wrapper)."""
     if config is None:
-        config = load_slo_config(Path(palace._path))
-    metrics = collect_health_metrics(palace)
+        config = load_slo_config(Path(malla._path))
+    metrics = collect_health_metrics(malla)
     return check_slo_compliance(metrics, config)

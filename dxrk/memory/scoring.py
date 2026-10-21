@@ -6,7 +6,7 @@ Single ranking signal combining three decay-aware inputs:
 - explicit ``importance`` (caller-stamped; 0.0 when unknown),
 - ``access_count`` recency (``log1p``-compressed frequency + ``accessed_at``
   half-life so a burst of old reads does not outrank fresh signals forever),
-- ``filed_at`` half-life (exponential decay so stale drawers sink).
+- ``filed_at`` half-life (exponential decay so stale fragmentos sink).
 
 Deterministic, dependency-free. ``rank_score`` is the uniform entry point
 used by ``top_by_importance`` (both ``types`` and ``__init__`` copies),
@@ -27,7 +27,7 @@ from .triplecopy import create_triple_copy, triple_copy_retrievability
 # pre-existing recency prior (exp decay, half-life ~125-180d) so the fused
 # ranker and this scorer agree on what "stale" means.
 HALF_LIFE_DAYS = 180.0
-# Accessed-at decays faster: a drawer read a month ago keeps half its
+# Accessed-at decays faster: a fragmento read a month ago keeps half its
 # access boost; after ~4 months the boost is ~1/16.
 ACCESSED_HALF_LIFE_DAYS = 30.0
 # Weight of the log-compressed access frequency against raw importance.
@@ -175,7 +175,7 @@ def effective_rd(rd: object, t_days: object) -> float:
 
 
 def update_success(stability: object, difficulty: object, rd: object, retrievability: object) -> tuple[float, float]:
-    """Success outcome (drawer read / search-hit used): stability grows, rd shrinks.
+    """Success outcome (fragmento read / search-hit used): stability grows, rd shrinks.
 
     ``S' = S * (1 + e^1.5 * (11-D) * S^-0.2 * (e^(1-R) - 1))`` capped at 365;
     ``rd' = max(30, rd * 0.9)``. Returns ``(S', rd')`` — difficulty is
@@ -256,7 +256,7 @@ def score_meta(
     default_importance: float = 1.0,
     now: datetime | None = None,
 ) -> float:
-    """Rank a drawer metadata dict with the enhanced RDU model (Fase 1).
+    """Rank a fragmento metadata dict with the enhanced RDU model (Fase 1).
 
     ``rank = R_triple(t, S) * freq(n) + 0.05 * (rd_eff / 350) + 0.15 * (synapse_w - 0.5) + tiebreak`` with
 

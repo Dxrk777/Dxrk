@@ -10,9 +10,9 @@ Base: Fase 1 completada (5021 tests, 86% coverage)
 
 | Objetivo | Descripción |
 |----------|-------------|
-| **Eval Harness Real** | Calibración con queries reales + ground truth, ECE por wing |
+| **Eval Harness Real** | Calibración con queries reales + ground truth, ECE por nodo |
 | **Metacognición Avanzada** | Introspección, confidence calibration, bias detection |
-| **Multi-Tenant** | Parámetros FSRS por tenant/wing con aislamiento |
+| **Multi-Tenant** | Parámetros FSRS por tenant/nodo con aislamiento |
 | **Production Hardening** | Monitoring, alertas, rollback automático, SLOs |
 | **Judge Externo Continuo** | Verificación continua de cambios, no solo one-shot |
 
@@ -25,8 +25,8 @@ Base: Fase 1 completada (5021 tests, 86% coverage)
 @dataclass(frozen=True)
 class EvalQuery:
     query: str
-    expected_drawer_ids: list[str]  # ground truth
-    wing: str
+    expected_fragmento_ids: list[str]  # ground truth
+    nodo: str
     difficulty: float  # 1-10, estimado
     tags: list[str]
 
@@ -40,7 +40,7 @@ class EvalResult:
     latency_ms: float
 ```
 
-### 1.2 Métricas por Wing
+### 1.2 Métricas por Nodo
 - **Recall@k** (k=1,3,5,10,20)
 - **MRR** (Mean Reciprocal Rank)
 - **NDCG@k**
@@ -54,9 +54,9 @@ ECE = Σ |accuracy(bin) - confidence(bin)| * weight(bin)
 Optimizar parámetros FSRS para minimizar ECE + maximizar recall@10.
 
 ### 1.4 Dataset Curado
-- `eval/queries/{wing}.jsonl` — queries con ground truth
+- `eval/queries/{nodo}.jsonl` — queries con ground truth
 - Generado desde: historial de `mine()`, `search()`, feedback usuario
-- Mínimo 100 queries/wing para significancia estadística
+- Mínimo 100 queries/nodo para significancia estadística
 
 ---
 
@@ -81,7 +81,7 @@ class MetacogState:
 ### 2.3 Bias Detection
 - **Overconfidence**: ECE > 0.1 sistemáticamente
 - **Underconfidence**: bias negativo persistente
-- **Category Bias**: bias por wing/room/topic
+- **Category Bias**: bias por nodo/celda/topic
 
 ### 2.4 Auto-Corrección
 ```python
@@ -98,24 +98,24 @@ def calibrate_confidence(self, raw_conf: float, context: dict) -> float:
 
 ### 3.1 Aislamiento por Tenant
 ```
-palace_path/
+malla_path/
 ├── .calibration/
-│   ├── {tenant}_{wing}.json    # params por tenant+wing
-│   └── global_{wing}.json      # fallback global
+│   ├── {tenant}_{nodo}.json    # params por tenant+nodo
+│   └── global_{nodo}.json      # fallback global
 ```
 
 ### 3.2 Jerarquía de Parámetros
-1. **Tenant+Wing específico** — si hay datos suficientes (>500 queries)
-2. **Tenant global** — promedio ponderado por wing del tenant
-3. **Global por wing** — default entrenado en todos los tenants
+1. **Tenant+Nodo específico** — si hay datos suficientes (>500 queries)
+2. **Tenant global** — promedio ponderado por nodo del tenant
+3. **Global por nodo** — default entrenado en todos los tenants
 2. **Default hardcoded** — Fase 1 defaults
 
 ### 3.3 Transfer Learning
 ```python
-def get_calibration(tenant: str, wing: str) -> CalibrationParams:
-    # 1. Intentar tenant+wing
-    # 2. Fallback tenant_global[wing]
-    # 3. Fallback global[wing]
+def get_calibration(tenant: str, nodo: str) -> CalibrationParams:
+    # 1. Intentar tenant+nodo
+    # 2. Fallback tenant_global[nodo]
+    # 3. Fallback global[nodo]
     # 4. Default
 ```
 Con regularización: `θ_tenant = α * θ_tenant + (1-α) * θ_global`
@@ -141,7 +141,7 @@ class HealthMetrics:
     search_latency_p50: float
     search_latency_p99: float
     mine_throughput: float
-    calibration_ece: dict[str, float]  # por wing
+    calibration_ece: dict[str, float]  # por nodo
     quarantine_count: int
     stress_level: float
     memory_usage_mb: float
@@ -182,8 +182,8 @@ class CircuitBreaker:
 ### 5.1 Verificación Continua
 ```python
 class ContinuousJudge:
-    def __init__(self, palace, eval_harness, interval_hours: int = 24):
-        self.palace = palace
+    def __init__(self, malla, eval_harness, interval_hours: int = 24):
+        self.malla = malla
         self.eval = eval_harness
         self.interval = interval_hours
     
@@ -228,7 +228,7 @@ def _auto_rollback_if_needed(self):
 ```python
 {
     # ... Fase 1 keys ...
-    "eval_metrics": {           # métricas de eval por wing
+    "eval_metrics": {           # métricas de eval por nodo
         "recall_at_10": 0.73,
         "mrr": 0.45,
         "ece": 0.04,
@@ -249,7 +249,7 @@ def _auto_rollback_if_needed(self):
 1. `EvalQuery`/`EvalResult` + dataset loader + tests
 2. `evaluate_recall_at_k` + MRR/NDCG + tests
 3. `compute_ece` + temperature scaling + tests
-4. Dataset curation script + `eval/queries/{wing}.jsonl` + tests
+4. Dataset curation script + `eval/queries/{nodo}.jsonl` + tests
 5. `EvalHarness` class + run + report + tests
 6. Calibración por ECE + integration test
 
@@ -281,7 +281,7 @@ def _auto_rollback_if_needed(self):
 
 | Riesgo | Probabilidad | Mitigación |
 |--------|--------------|------------|
-| Eval dataset sesgado | Alta | Curar dataset diverso, mínimo 100 queries/wing |
+| Eval dataset sesgado | Alta | Curar dataset diverso, mínimo 100 queries/nodo |
 | ECE no converge | Media | Temperature scaling como fallback simple |
 | Multi-tenant data leak | Crítica | Aislamiento estricto path + tests de aislamiento |
 | Rollback false positive | Media | Confirmación manual para rollbacks > 1 |
@@ -293,7 +293,7 @@ def _auto_rollback_if_needed(self):
 ## 9. Definición de "Done" Fase 2
 
 - [ ] Eval harness corre con dataset real, genera reportes
-- [ ] ECE < 0.05 en al menos 3 wings
+- [ ] ECE < 0.05 en al menos 3 nodos
 - [ ] Metacognición corrige bias automáticamente
 - [ ] Multi-tenant aislamiento verificado (tests)
 - [ ] SLOs definidos, alertas funcionando

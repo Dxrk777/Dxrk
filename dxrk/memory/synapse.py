@@ -10,7 +10,7 @@ from datetime import UTC
 
 @dataclass(frozen=True)
 class SynapseState:
-    """State of a synaptic connection (one drawer's synaptic weight)."""
+    """State of a synaptic connection (one fragmento's synaptic weight)."""
 
     weight: float = 0.5  # [0, 1], initial neutral
     last_stdp: str = ""  # ISO timestamp of last STDP event

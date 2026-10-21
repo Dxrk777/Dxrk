@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Calibrate wing tests."""
+"""Calibrate nodo tests."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from dxrk.memory.calibrate import (
     DEFAULT_PARAMS,
     CalibrationParams,
     get_calibration_params,
-    list_calibrated_wings,
+    list_calibrated_nodos,
     load_calibration,
     save_calibration,
 )
@@ -36,8 +36,8 @@ class TestCalibrate:
         params = CalibrationParams(
             a=2.0, b=0.3, c=1.5, pe_lambda=0.2, score=0.85, method="qieo", calibrated_at="2024-01-01T00:00:00+00:00"
         )
-        save_calibration(tmp_path, "test_wing", params)
-        loaded = load_calibration(tmp_path, "test_wing")
+        save_calibration(tmp_path, "test_nodo", params)
+        loaded = load_calibration(tmp_path, "test_nodo")
         assert loaded.a == 2.0
         assert loaded.b == 0.3
         assert loaded.c == 1.5
@@ -57,65 +57,65 @@ class TestCalibrate:
         """Corrupted JSON returns defaults."""
         cal_dir = tmp_path / ".calibration"
         cal_dir.mkdir()
-        (cal_dir / "test_wing.json").write_text("not json")
-        loaded = load_calibration(tmp_path, "test_wing")
+        (cal_dir / "test_nodo.json").write_text("not json")
+        loaded = load_calibration(tmp_path, "test_nodo")
         assert loaded.a == DEFAULT_PARAMS.a
 
     @pytest.mark.skipif(sys.platform == "win32", reason="POSIX-only file permissions")
     def test_save_creates_dir_and_0o600(self, tmp_path: Path) -> None:
         """Save creates .calibration dir and sets 0o600."""
         params = CalibrationParams()
-        save_calibration(tmp_path, "wing1", params)
+        save_calibration(tmp_path, "nodo1", params)
         cal_dir = tmp_path / ".calibration"
         assert cal_dir.exists()
-        path = cal_dir / "wing1.json"
+        path = cal_dir / "nodo1.json"
         assert path.exists()
         assert path.stat().st_mode & 0o777 == 0o600
 
     def test_get_calibration_params(self, tmp_path: Path) -> None:
-        """get_calibration_params loads from palace path."""
+        """get_calibration_params loads from malla path."""
         params = CalibrationParams(a=1.23)
-        save_calibration(tmp_path, "wing1", params)
-        loaded = get_calibration_params(tmp_path, "wing1")
+        save_calibration(tmp_path, "nodo1", params)
+        loaded = get_calibration_params(tmp_path, "nodo1")
         assert loaded.a == 1.23
 
-    def test_list_calibrated_wings(self, tmp_path: Path) -> None:
-        """List calibrated wings."""
-        save_calibration(tmp_path, "wing_a", CalibrationParams())
-        save_calibration(tmp_path, "wing_b", CalibrationParams())
-        wings = list_calibrated_wings(tmp_path)
-        assert "wing_a" in wings
-        assert "wing_b" in wings
-        assert len(wings) == 2
+    def test_list_calibrated_nodos(self, tmp_path: Path) -> None:
+        """List calibrated nodos."""
+        save_calibration(tmp_path, "nodo_a", CalibrationParams())
+        save_calibration(tmp_path, "nodo_b", CalibrationParams())
+        nodos = list_calibrated_nodos(tmp_path)
+        assert "nodo_a" in nodos
+        assert "nodo_b" in nodos
+        assert len(nodos) == 2
 
-    def test_list_calibrated_wings_empty(self, tmp_path: Path) -> None:
+    def test_list_calibrated_nodos_empty(self, tmp_path: Path) -> None:
         """Empty dir returns empty list."""
-        wings = list_calibrated_wings(tmp_path)
-        assert wings == []
+        nodos = list_calibrated_nodos(tmp_path)
+        assert nodos == []
 
-    def test_calibrate_wing_no_candidates(self, tmp_path: Path) -> None:
+    def test_calibrate_nodo_no_candidates(self, tmp_path: Path) -> None:
         """Calibrate returns defaults when no candidates."""
-        from dxrk.memory.calibrate import calibrate_wing
+        from dxrk.memory.calibrate import calibrate_nodo
 
-        palace = Mock()
-        palace.iter_drawers.return_value = []
-        palace._path = str(tmp_path)
+        malla = Mock()
+        malla.iter_fragmentos.return_value = []
+        malla._path = str(tmp_path)
 
-        result = calibrate_wing(palace, "empty_wing")
+        result = calibrate_nodo(malla, "empty_nodo")
         assert result.a == DEFAULT_PARAMS.a
 
-    def test_calibrate_wing_runs(self, tmp_path: Path) -> None:
-        """Calibrate runs and saves file (mock palace)."""
-        from dxrk.memory.calibrate import calibrate_wing
+    def test_calibrate_nodo_runs(self, tmp_path: Path) -> None:
+        """Calibrate runs and saves file (mock malla)."""
+        from dxrk.memory.calibrate import calibrate_nodo
 
-        # Create drawers with enough data
-        drawers = []
+        # Create fragmentos with enough data
+        fragmentos = []
         for i in range(10):
-            drawers.append(
+            fragmentos.append(
                 {
                     "id": f"d{i}",
                     "metadata": {
-                        "wing": "test",
+                        "nodo": "test",
                         "access_count_total": i * 2,
                         "irt_hits": i,
                         "irt_misses": max(0, 5 - i),
@@ -126,14 +126,14 @@ class TestCalibrate:
                     "document": f"content {i}",
                 }
             )
-        palace = Mock()
-        palace.iter_drawers.return_value = drawers
-        palace._path = str(tmp_path)
+        malla = Mock()
+        malla.iter_fragmentos.return_value = fragmentos
+        malla._path = str(tmp_path)
 
         qieo_config = QIEOConfig(pop_size=10, n_iter=5)
         thompson_config = ThompsonConfig()
 
-        result = calibrate_wing(palace, "test", qieo_config, thompson_config)
+        result = calibrate_nodo(malla, "test", qieo_config, thompson_config)
 
         # Should have run and saved
         assert result.schema_version == 2

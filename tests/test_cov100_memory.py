@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Coverage 100 — dxrk/memory/ real behavior gaps (palace/backend/search/vectors/graph/policy/engine).
+"""Coverage 100 — dxrk/memory/ real behavior gaps (malla/backend/search/vectors/graph/policy/engine).
 
 Stdlib + sqlite temporal only (tmp_path pattern). Every test asserts
 observable behavior; no `assert True`, no coverage pragmas.
@@ -15,8 +15,8 @@ from unittest import mock
 
 import pytest
 
-import dxrk.memory.palace as pal
-from dxrk.memory.backend import PalaceRef, SqliteBackend
+import dxrk.memory.malla as pal
+from dxrk.memory.backend import MallaRef, SqliteBackend
 from dxrk.memory.backend.base import (
     BackendError,
     BaseBackend,
@@ -43,19 +43,19 @@ def _isolate_home(monkeypatch, tmp_path):
     yield
 
 
-def _ref(tmp_path: Path, name: str = "pal") -> PalaceRef:
+def _ref(tmp_path: Path, name: str = "pal") -> MallaRef:
     p = tmp_path / name
-    return PalaceRef(id=str(p), local_path=str(p))
+    return MallaRef(id=str(p), local_path=str(p))
 
 
 def _col(tmp_path: Path, name: str = "c", cname: str = "col"):
     be = SqliteBackend()
     ref = _ref(tmp_path, name)
-    col = be.get_collection(palace=ref, collection_name=cname, create=True)
+    col = be.get_collection(malla=ref, collection_name=cname, create=True)
     return be, ref, col
 
 
-def _dm(tmp_path: Path, name: str = "palace", **kw):
+def _dm(tmp_path: Path, name: str = "malla", **kw):
     dm = pal.DxrkMemory(str(tmp_path / name), **kw)
     dm.init()
     return dm
@@ -149,7 +149,7 @@ class _MemCol(BaseCollection):
 class _MemBackend(BaseBackend):
     name = "mem-test-only"  # type: ignore[assignment]
 
-    def get_collection(self, *, palace, collection_name, create=False, options=None) -> BaseCollection:
+    def get_collection(self, *, malla, collection_name, create=False, options=None) -> BaseCollection:
         return _MemCol()
 
 
@@ -180,7 +180,7 @@ class TestBaseContract:
 
     def test_collection_defaults(self):
         col = _MemCol()
-        col.add(documents=["doc one"], ids=["a"], metadatas=[{"wing": "w"}])
+        col.add(documents=["doc one"], ids=["a"], metadatas=[{"nodo": "w"}])
         assert col.estimated_count() == 1
         assert col.close() is None
         assert col.health().ok is True
@@ -206,30 +206,30 @@ class TestBaseContract:
 
     def test_update_merges_documents_only(self):
         col = _MemCol()
-        col.add(documents=["old doc"], ids=["a"], metadatas=[{"wing": "w", "k": 1}])
+        col.add(documents=["old doc"], ids=["a"], metadatas=[{"nodo": "w", "k": 1}])
         col.update(ids=["a"], documents=["new doc"])
         got = col.get(ids=["a"])
         assert got.documents == ["new doc"]
-        assert got.metadatas[0]["wing"] == "w"
+        assert got.metadatas[0]["nodo"] == "w"
 
     def test_update_merges_metadatas_and_creates_missing(self):
         col = _MemCol()
-        col.add(documents=["d"], ids=["a"], metadatas=[{"wing": "w"}])
-        col.update(ids=["a", "ghost"], metadatas=[{"room": "r"}, {"wing": "g"}])
+        col.add(documents=["d"], ids=["a"], metadatas=[{"nodo": "w"}])
+        col.update(ids=["a", "ghost"], metadatas=[{"celda": "r"}, {"nodo": "g"}])
         got = col.get(ids=["a", "ghost"])
-        assert got.metadatas[0] == {"wing": "w", "room": "r"}
+        assert got.metadatas[0] == {"nodo": "w", "celda": "r"}
         assert got.documents[1] == ""
-        assert got.metadatas[1] == {"wing": "g"}
+        assert got.metadatas[1] == {"nodo": "g"}
 
     def test_backend_defaults_and_detect(self):
         be = _MemBackend()
-        ref = PalaceRef(id="x")
+        ref = MallaRef(id="x")
         try:
-            assert be.close_palace(ref) is None
+            assert be.close_malla(ref) is None
             assert be.close() is None
             assert be.health(ref).ok is True
             assert _MemBackend.detect("/whatever") is False
-            assert BaseBackend.get_collection(be, palace=ref, collection_name="c") is None
+            assert BaseBackend.get_collection(be, malla=ref, collection_name="c") is None
         finally:
             be.close()
 
@@ -291,7 +291,7 @@ class TestSqliteGaps:
     def test_query_bad_embedding_values_fall_back_neutral(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "qbad")
         try:
-            col.add(documents=["alpha beta gamma"], ids=["e1"], metadatas=[{"wing": "w"}])
+            col.add(documents=["alpha beta gamma"], ids=["e1"], metadatas=[{"nodo": "w"}])
             q = col.query(query_embeddings=[["oops"] * VEC_DIM], n_results=5)
             assert q.ids[0] == ["e1"]
             assert q.distances[0] == [0.5]
@@ -301,7 +301,7 @@ class TestSqliteGaps:
     def test_fetch_pool_recent_rows_error_keeps_fts(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "recent")
         try:
-            col.add(documents=["hello mars"], ids=["e1"], metadatas=[{"wing": "w"}])
+            col.add(documents=["hello mars"], ids=["e1"], metadatas=[{"nodo": "w"}])
             real = col._conn  # type: ignore[attr-defined]
 
             class _Wrap:
@@ -328,7 +328,7 @@ class TestSqliteGaps:
     def test_rank_pool_no_signal_zero_cosine(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "rank0")
         try:
-            col.add(documents=["hello world"], ids=["e1"], metadatas=[{"wing": "w"}])
+            col.add(documents=["hello world"], ids=["e1"], metadatas=[{"nodo": "w"}])
             assert col._rank_pool([], "", None) == []  # type: ignore[attr-defined]
             pool = col._fetch_pool("hello", "", [], None, 5)  # type: ignore[attr-defined]
             ranked = col._rank_pool(pool, "", None)  # type: ignore[attr-defined]
@@ -341,13 +341,13 @@ class TestSqliteGaps:
     def test_delete_missing_doc_vectors_ok(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "delvec")
         try:
-            col.add(documents=["doc one here"], ids=["a1"], metadatas=[{"wing": "w"}])
-            col.add(documents=["doc two here"], ids=["a2"], metadatas=[{"wing": "w"}])
+            col.add(documents=["doc one here"], ids=["a1"], metadatas=[{"nodo": "w"}])
+            col.add(documents=["doc two here"], ids=["a2"], metadatas=[{"nodo": "w"}])
             col._conn.execute("DROP TABLE IF EXISTS doc_vectors")  # type: ignore[attr-defined]
             col._conn.commit()  # type: ignore[attr-defined]
             col.delete(ids=["a1"])
             assert col.count() == 1
-            col.delete(where={"wing": "w"})
+            col.delete(where={"nodo": "w"})
             assert col.count() == 0
         finally:
             be.close()
@@ -388,7 +388,7 @@ class TestVectorsGaps:
 # ─── search gaps ──────────────────────────────────────────────────────────
 
 
-class _FakeDrawerCol(BaseCollection):
+class _FakeGlobuloCol(BaseCollection):
     def __init__(self, docs, metas, dists, ids=None):
         self._docs = docs
         self._metas = metas
@@ -424,7 +424,7 @@ class _FakeDrawerCol(BaseCollection):
         return len(self._ids)
 
 
-class _BrokenResultCol(_FakeDrawerCol):
+class _BrokenResultCol(_FakeGlobuloCol):
     class _Broken:
         @property
         def ids(self):
@@ -438,13 +438,13 @@ class _BrokenResultCol(_FakeDrawerCol):
         return _BrokenResultCol._Broken()
 
 
-class _BoomQueryCol(_FakeDrawerCol):
+class _BoomQueryCol(_FakeGlobuloCol):
     def query(self, **kw) -> QueryResult:
         raise RuntimeError("closet down")
 
 
 def _meta(src: str) -> dict[str, object]:
-    return {"wing": "w", "room": "r", "source_file": src}
+    return {"nodo": "w", "celda": "r", "source_file": src}
 
 
 class TestSearchGaps:
@@ -486,10 +486,10 @@ class TestSearchGaps:
 
         be, _, col = _col(tmp_path, "se")
         try:
-            out = hybrid_search(col, "   ", where={"wing": "w"}, since="2024-01-01", before="2024-02-01")
+            out = hybrid_search(col, "   ", where={"nodo": "w"}, since="2024-01-01", before="2024-02-01")
             assert out["results"] == []
             assert out["total_before_filter"] == 0
-            assert out["filters"] == {"wing": "w", "since": "2024-01-01", "before": "2024-02-01"}
+            assert out["filters"] == {"nodo": "w", "since": "2024-01-01", "before": "2024-02-01"}
             out2 = hybrid_search(col, "")
             assert out2["filters"] == {}
         finally:
@@ -505,64 +505,64 @@ class TestSearchGaps:
     def test_hybrid_search_forwards_where_to_closet(self):
         from dxrk.memory.search import hybrid_search
 
-        drawer = _FakeDrawerCol(["hello world"], [_meta("/p/a.md")], [0.5], ids=["d0"])
-        closet = _FakeDrawerCol(["other"], [_meta("/p/b.md")], [0.9], ids=["c0"])
-        out = hybrid_search(drawer, "hello", where={"wing": "w"}, closet_collection=closet)
-        assert closet.seen_kwargs and closet.seen_kwargs[0]["where"] == {"wing": "w"}
+        fragmento = _FakeGlobuloCol(["hello world"], [_meta("/p/a.md")], [0.5], ids=["d0"])
+        closet = _FakeGlobuloCol(["other"], [_meta("/p/b.md")], [0.9], ids=["c0"])
+        out = hybrid_search(fragmento, "hello", where={"nodo": "w"}, closet_collection=closet)
+        assert closet.seen_kwargs and closet.seen_kwargs[0]["where"] == {"nodo": "w"}
         assert len(out["results"]) == 1
 
     def test_hybrid_search_bad_closet_distance_ignored(self):
         from dxrk.memory.search import hybrid_search
 
-        drawer = _FakeDrawerCol(["hello world"], [_meta("/p/a.md")], [0.5], ids=["d0"])
-        closet = _FakeDrawerCol(["hello there"], [_meta("/p/a.md")], ["bad"], ids=["c0"])
-        out = hybrid_search(drawer, "hello", closet_collection=closet)
-        assert out["results"][0]["matched_via"] == "drawer"
+        fragmento = _FakeGlobuloCol(["hello world"], [_meta("/p/a.md")], [0.5], ids=["d0"])
+        closet = _FakeGlobuloCol(["hello there"], [_meta("/p/a.md")], ["bad"], ids=["c0"])
+        out = hybrid_search(fragmento, "hello", closet_collection=closet)
+        assert out["results"][0]["matched_via"] == "fragmento"
         assert out["results"][0]["closet_boost"] == 0.0
 
     def test_hybrid_search_closet_failure_still_returns(self):
         from dxrk.memory.search import hybrid_search
 
-        drawer = _FakeDrawerCol(["hello world"], [_meta("/p/a.md")], [0.5], ids=["d0"])
-        out = hybrid_search(drawer, "hello", closet_collection=_BoomQueryCol([], [], []))
+        fragmento = _FakeGlobuloCol(["hello world"], [_meta("/p/a.md")], [0.5], ids=["d0"])
+        out = hybrid_search(fragmento, "hello", closet_collection=_BoomQueryCol([], [], []))
         assert len(out["results"]) == 1
 
     def test_hybrid_search_non_dict_meta_tolerated(self):
         from dxrk.memory.search import hybrid_search
 
-        drawer = _FakeDrawerCol(["hello world"], ["notadict"], [0.5], ids=["d0"])  # type: ignore[list-item]
-        out = hybrid_search(drawer, "hello")
-        assert out["results"][0]["wing"] == "unknown"
+        fragmento = _FakeGlobuloCol(["hello world"], ["notadict"], [0.5], ids=["d0"])  # type: ignore[list-item]
+        out = hybrid_search(fragmento, "hello")
+        assert out["results"][0]["nodo"] == "unknown"
 
     def test_hybrid_search_bad_distance_defaults(self):
         from dxrk.memory.search import hybrid_search
 
-        drawer = _FakeDrawerCol(["hello world"], [_meta("/p/a.md")], ["bad"], ids=["d0"])
-        out = hybrid_search(drawer, "hello")
+        fragmento = _FakeGlobuloCol(["hello world"], [_meta("/p/a.md")], ["bad"], ids=["d0"])
+        out = hybrid_search(fragmento, "hello")
         assert out["results"][0]["distance"] == 1.0
         assert out["results"][0]["similarity"] == 0.0
 
     def test_hybrid_search_closet_boost_applied(self):
         from dxrk.memory.search import CLOSET_RANK_BOOSTS, hybrid_search
 
-        drawer = _FakeDrawerCol(["hello world"], [_meta("/p/a.md")], [0.5], ids=["d0"])
-        closet = _FakeDrawerCol(["hello again"], [_meta("/p/a.md")], [0.1], ids=["c0"])
-        out = hybrid_search(drawer, "hello", closet_collection=closet)
+        fragmento = _FakeGlobuloCol(["hello world"], [_meta("/p/a.md")], [0.5], ids=["d0"])
+        closet = _FakeGlobuloCol(["hello again"], [_meta("/p/a.md")], [0.1], ids=["c0"])
+        out = hybrid_search(fragmento, "hello", closet_collection=closet)
         hit = out["results"][0]
-        assert hit["matched_via"] == "drawer+closet"
+        assert hit["matched_via"] == "fragmento+closet"
         assert hit["closet_boost"] == round(CLOSET_RANK_BOOSTS[0], 3)
         assert hit["effective_distance"] == pytest.approx(0.1)
 
     def test_hybrid_search_non_sqlite_nudge_path(self):
         from dxrk.memory.search import hybrid_search
 
-        drawer = _FakeDrawerCol(
+        fragmento = _FakeGlobuloCol(
             ["alpha beta gamma", "delta epsilon zeta"],
             [_meta("/p/a.md"), _meta("/p/b.md")],
             [0.4, 0.6],
             ids=["d0", "d1"],
         )
-        out = hybrid_search(drawer, "alpha", n_results=2)
+        out = hybrid_search(fragmento, "alpha", n_results=2)
         assert [h["id"] for h in out["results"]] == ["d0", "d1"]
 
     def test_hybrid_search_date_truncation_flag(self, tmp_path: Path):
@@ -572,7 +572,7 @@ class TestSearchGaps:
         try:
             for i in range(20):
                 col.add(
-                    documents=[f"unique vocab alpha beta {i} gamma delta"], ids=[f"t{i}"], metadatas=[{"wing": "w"}]
+                    documents=[f"unique vocab alpha beta {i} gamma delta"], ids=[f"t{i}"], metadatas=[{"nodo": "w"}]
                 )
             out = hybrid_search(col, "alpha", n_results=1, since="2020-01-01", before="2030-01-01")
             assert out.get("date_filter_pool_truncated") is True
@@ -666,9 +666,9 @@ class TestGraphGaps:
         conn.close()
         kg = KnowledgeGraph(str(db))
         try:
-            tid = kg.add_triple("Alice", "mentioned_in", "a.md", source_file="/p/a.md", source_drawer_id="d1")
+            tid = kg.add_triple("Alice", "mentioned_in", "a.md", source_file="/p/a.md", source_fragmento_id="d1")
             rows = kg.triples_for_source("/p/a.md")
-            assert any(r["id"] == tid and r["source_drawer_id"] == "d1" for r in rows)
+            assert any(r["id"] == tid and r["source_fragmento_id"] == "d1" for r in rows)
         finally:
             kg.close()
 
@@ -769,21 +769,21 @@ class TestPolicyGaps:
         finally:
             dm.close()
 
-    def test_over_budget_list_wings_failure(self, tmp_path):
+    def test_over_budget_list_nodos_failure(self, tmp_path):
         dm = _dm(tmp_path, name="pob")
         try:
             boom = mock.MagicMock()
-            boom.list_wings.side_effect = RuntimeError("boom")
-            assert PolicyEngine(boom)._run_over_budget() == {"wings_over": [], "evicted": 0}
+            boom.list_nodos.side_effect = RuntimeError("boom")
+            assert PolicyEngine(boom)._run_over_budget() == {"nodos_over": [], "evicted": 0}
             partial = mock.MagicMock()
-            partial.list_wings.return_value = ["w"]
-            partial.wing_usage.side_effect = RuntimeError("boom")
-            assert PolicyEngine(partial)._run_over_budget() == {"wings_over": [], "evicted": 0}
+            partial.list_nodos.return_value = ["w"]
+            partial.nodo_usage.side_effect = RuntimeError("boom")
+            assert PolicyEngine(partial)._run_over_budget() == {"nodos_over": [], "evicted": 0}
             over = mock.MagicMock()
-            over.list_wings.return_value = ["w"]
-            over.wing_usage.return_value = {"over": True}
-            over.enforce_wing_cap.side_effect = RuntimeError("boom")
-            assert PolicyEngine(over)._run_over_budget() == {"wings_over": ["w"], "evicted": 0}
+            over.list_nodos.return_value = ["w"]
+            over.nodo_usage.return_value = {"over": True}
+            over.enforce_nodo_cap.side_effect = RuntimeError("boom")
+            assert PolicyEngine(over)._run_over_budget() == {"nodos_over": ["w"], "evicted": 0}
         finally:
             dm.close()
 
@@ -802,11 +802,11 @@ class TestPolicyGaps:
     def test_rescore_skips_and_coercions(self, tmp_path):
         dm = _dm(tmp_path, name="prsc")
         try:
-            d1 = dm.add_drawer("w", "r", _content("live stale drawer alpha"), "/s1.md", 0)
-            d2 = dm.add_drawer("w", "r", _content("dead drawer beta"), "/s2.md", 0)
-            d3 = dm.add_drawer("w", "r", _content("untouched drawer gamma"), "/s3.md", 0)
-            d4 = dm.add_drawer("w", "r", _content("ledger drawer delta"), "/s4.md", 0)
-            d5 = dm.add_drawer("w", "r", _content("coercion drawer epsilon"), "/s5.md", 0)
+            d1 = dm.add_fragmento("w", "r", _content("live stale fragmento alpha"), "/s1.md", 0)
+            d2 = dm.add_fragmento("w", "r", _content("dead fragmento beta"), "/s2.md", 0)
+            d3 = dm.add_fragmento("w", "r", _content("untouched fragmento gamma"), "/s3.md", 0)
+            d4 = dm.add_fragmento("w", "r", _content("ledger fragmento delta"), "/s4.md", 0)
+            d5 = dm.add_fragmento("w", "r", _content("coercion fragmento epsilon"), "/s5.md", 0)
             col = dm._collection(create=False)
             old = _stale(40)
             col.update(ids=[d1], metadatas=[{"filed_at": old, "score_ledger": [], "score_ledger_dropped": 0}])
@@ -837,7 +837,7 @@ class TestPolicyGaps:
     def test_rescore_persist_failure(self, tmp_path):
         dm = _dm(tmp_path, name="prp")
         try:
-            did = dm.add_drawer("w", "r", _content("stale persist alpha"), "/p.md", 0)
+            did = dm.add_fragmento("w", "r", _content("stale persist alpha"), "/p.md", 0)
             col = dm._collection(create=False)
             col.update(ids=[did], metadatas=[{"filed_at": _stale(40), "score_ledger": [], "score_ledger_dropped": 0}])
             with (
@@ -869,10 +869,10 @@ class TestPolicyGaps:
     def test_checksum_rehash_and_mismatch(self, tmp_path):
         dm = _dm(tmp_path, name="pcr")
         try:
-            d1 = dm.add_drawer("w", "r", _content("checksum alpha keeper"), "/c1.md", 0)
+            d1 = dm.add_fragmento("w", "r", _content("checksum alpha keeper"), "/c1.md", 0)
             col = dm._collection(create=False)
             col.upsert(
-                documents=[_content("legacy row no checksum")], ids=["leg1"], metadatas=[{"wing": "w", "room": "r"}]
+                documents=[_content("legacy row no checksum")], ids=["leg1"], metadatas=[{"nodo": "w", "celda": "r"}]
             )
             out = PolicyEngine(dm)._run_checksum_sweep()
             assert out["checked"] == 2
@@ -891,8 +891,8 @@ class TestPolicyGaps:
     def test_checksum_bad_cursor_falls_back(self, tmp_path):
         dm = _dm(tmp_path, name="pcb")
         try:
-            dm.add_drawer("w", "r", _content("cursor alpha keeper"), "/c1.md", 0)
-            (Path(dm.palace_path) / ".policy_state.json").write_text('{"cursor": "bad"}')
+            dm.add_fragmento("w", "r", _content("cursor alpha keeper"), "/c1.md", 0)
+            (Path(dm.malla_path) / ".policy_state.json").write_text('{"cursor": "bad"}')
             out = PolicyEngine(dm)._run_checksum_sweep()
             assert out["checked"] == 1
         finally:
@@ -901,7 +901,7 @@ class TestPolicyGaps:
     def test_checksum_window_fetch_failure(self, tmp_path):
         dm = _dm(tmp_path, name="pcw")
         try:
-            dm.add_drawer("w", "r", _content("window alpha keeper"), "/c1.md", 0)
+            dm.add_fragmento("w", "r", _content("window alpha keeper"), "/c1.md", 0)
             col = dm._collection(create=False)
             orig = col.get
 
@@ -920,7 +920,7 @@ class TestPolicyGaps:
         dm = _dm(tmp_path, name="pch")
         try:
             col = dm._collection(create=False)
-            col.upsert(documents=[_content("legacy rehash fail")], ids=["leg1"], metadatas=[{"wing": "w"}])
+            col.upsert(documents=[_content("legacy rehash fail")], ids=["leg1"], metadatas=[{"nodo": "w"}])
             with (
                 mock.patch.object(col, "update", side_effect=RuntimeError("boom")),
                 mock.patch.object(dm, "_collection", return_value=col),
@@ -946,16 +946,16 @@ class TestPolicyGaps:
     def test_quarantine_sweep_reasons(self, tmp_path):
         dm = _dm(tmp_path, name="pqr")
         try:
-            did = dm.add_drawer("w", "r", _content("quarantine alpha keeper"), "/q1.md", 0)
+            did = dm.add_fragmento("w", "r", _content("quarantine alpha keeper"), "/q1.md", 0)
             col = dm._collection(create=False)
-            col.upsert(documents=[""], ids=["empty1"], metadatas=[{"wing": "w"}])
+            col.upsert(documents=[""], ids=["empty1"], metadatas=[{"nodo": "w"}])
             out = PolicyEngine(dm)._run_quarantine_sweep()
             assert out["scanned"] == 2
             assert out["quarantined"] == ["empty1"]
             assert out["reasons"] == {"empty1": "empty_document"}
             out2 = PolicyEngine(dm)._run_quarantine_sweep()
             assert out2["quarantined"] == []
-            assert dm.quarantine_drawer(did) is True
+            assert dm.quarantine_fragmento(did) is True
             out3 = PolicyEngine(dm)._run_quarantine_sweep()
             assert did not in out3["quarantined"]
         finally:
@@ -990,7 +990,7 @@ class TestPolicyGaps:
 
             with (
                 mock.patch.object(dm, "_collection", return_value=_EmptyCol()),
-                mock.patch.object(dm, "quarantine_drawer", side_effect=RuntimeError("boom")),
+                mock.patch.object(dm, "quarantine_fragmento", side_effect=RuntimeError("boom")),
             ):
                 out = PolicyEngine(dm)._run_quarantine_sweep()
             assert out == {"scanned": 1, "quarantined": [], "reasons": {}}
@@ -1015,9 +1015,9 @@ class TestPolicyGaps:
     def test_read_state_bad_json(self, tmp_path):
         dm = _dm(tmp_path, name="psr")
         try:
-            (Path(dm.palace_path) / ".policy_state.json").write_text("{bad json")
+            (Path(dm.malla_path) / ".policy_state.json").write_text("{bad json")
             assert PolicyEngine(dm)._read_state() == {}
-            (Path(dm.palace_path) / ".policy_state.json").write_text("[1, 2]")
+            (Path(dm.malla_path) / ".policy_state.json").write_text("[1, 2]")
             assert PolicyEngine(dm)._read_state() == {}
         finally:
             dm.close()
@@ -1060,10 +1060,10 @@ class TestPolicyGaps:
             dm.close()
 
 
-# ─── palace helpers ─────────────────────────────────────────────────────────
+# ─── malla helpers ─────────────────────────────────────────────────────────
 
 
-class TestPalaceHelpers:
+class TestSangreHelpers:
     def test_read_text_oserror_and_close_error(self, tmp_path):
         root = tmp_path / "proj"
         root.mkdir()
@@ -1073,7 +1073,7 @@ class TestPalaceHelpers:
             mock.patch("os.fdopen", side_effect=OSError("fdopen boom")),
             mock.patch("os.close", side_effect=OSError("close boom")),
         ):
-            assert pal._read_text_no_follow_palace(f, root) is None
+            assert pal._read_text_no_follow_malla(f, root) is None
 
     def test_resolve_tenant_path_migrated(self, tmp_path, monkeypatch):
         # tid is empty only while not migrated; the default-tenant fallback
@@ -1086,24 +1086,24 @@ class TestPalaceHelpers:
 
         monkeypatch.setattr("dxrk.tenant.migration.is_migrated", _flip)
         monkeypatch.setattr("dxrk.tenant.migration.tenant_root", lambda tid: tmp_path / "ten" / tid)
-        assert str(pal._resolve_tenant_path(None, None)) == str(tmp_path / "ten" / "default" / "palace")
+        assert str(pal._resolve_tenant_path(None, None)) == str(tmp_path / "ten" / "default" / "malla")
 
     def test_resolve_tenant_path_not_migrated(self, monkeypatch):
         monkeypatch.setattr("dxrk.tenant.migration.is_migrated", lambda: False)
-        assert str(pal._resolve_tenant_path(None, None)).endswith(os.path.join(".dxrk", "palace"))
+        assert str(pal._resolve_tenant_path(None, None)).endswith(os.path.join(".dxrk", "malla"))
 
     def test_resolve_tenant_path_oserror_fallback(self, monkeypatch):
         monkeypatch.setattr(
             "dxrk.tenant.migration.is_migrated",
             lambda: (_ for _ in ()).throw(OSError("ro")),
         )
-        assert str(pal._resolve_tenant_path(None, None)).endswith(os.path.join(".dxrk", "palace"))
+        assert str(pal._resolve_tenant_path(None, None)).endswith(os.path.join(".dxrk", "malla"))
 
     def test_acquire_mine_lock_file_releases_on_error(self, tmp_path):
         lf = mock.MagicMock()
         with (
-            mock.patch("dxrk.memory.palace._open_mine_lock_file", return_value=lf),
-            mock.patch("dxrk.memory.palace._acquire_open_mine_lock_file", side_effect=RuntimeError("boom")),
+            mock.patch("dxrk.memory.malla._open_mine_lock_file", return_value=lf),
+            mock.patch("dxrk.memory.malla._acquire_open_mine_lock_file", side_effect=RuntimeError("boom")),
         ):
             with pytest.raises(RuntimeError, match="boom"):
                 pal._acquire_mine_lock_file(str(tmp_path / "a.lock"))
@@ -1112,8 +1112,8 @@ class TestPalaceHelpers:
     def test_acquire_mine_lock_file_retries_stale(self, tmp_path):
         lf = mock.MagicMock()
         with (
-            mock.patch("dxrk.memory.palace._open_mine_lock_file", return_value=lf),
-            mock.patch("dxrk.memory.palace._acquire_open_mine_lock_file", side_effect=[False, True]),
+            mock.patch("dxrk.memory.malla._open_mine_lock_file", return_value=lf),
+            mock.patch("dxrk.memory.malla._acquire_open_mine_lock_file", side_effect=[False, True]),
         ):
             assert pal._acquire_mine_lock_file(str(tmp_path / "b.lock")) is lf
         assert lf.close.call_count == 1
@@ -1132,7 +1132,7 @@ class TestPalaceHelpers:
 
     def test_maybe_reap_failure_ignored(self, tmp_path, monkeypatch):
         monkeypatch.setattr(pal, "_dxrk_lock_dir", lambda tenant_id=None: tmp_path / "locks")
-        with mock.patch("dxrk.memory.palace.reap_stale_dxrk_locks", side_effect=RuntimeError("boom")):
+        with mock.patch("dxrk.memory.malla.reap_stale_dxrk_locks", side_effect=RuntimeError("boom")):
             pal._maybe_reap_stale_mine_locks()
             pal._maybe_reap_stale_mine_locks(tenant_id="t")
 
@@ -1141,20 +1141,20 @@ class TestPalaceHelpers:
         lf = mock.MagicMock()
         lf.close.side_effect = OSError("boom")
         with (
-            mock.patch("dxrk.memory.palace._acquire_mine_lock_file", return_value=lf),
-            mock.patch("dxrk.memory.palace._cleanup_mine_lock_file", return_value=None),
-            mock.patch("dxrk.memory.palace._maybe_reap_stale_mine_locks", return_value=None),
-            mock.patch("dxrk.memory.palace._mine_lock_path", return_value=str(tmp_path / "x.lock")),
+            mock.patch("dxrk.memory.malla._acquire_mine_lock_file", return_value=lf),
+            mock.patch("dxrk.memory.malla._cleanup_mine_lock_file", return_value=None),
+            mock.patch("dxrk.memory.malla._maybe_reap_stale_mine_locks", return_value=None),
+            mock.patch("dxrk.memory.malla._mine_lock_path", return_value=str(tmp_path / "x.lock")),
         ):
             with pal.mine_lock("src-a"):
                 pass
 
-    def test_build_drawer_metadata_bad_importance(self):
-        meta = pal._build_drawer_metadata(
+    def test_build_fragmento_metadata_bad_importance(self):
+        meta = pal._build_fragmento_metadata(
             "w", "r", "/a.txt", 0, "dxrk", _content("hello world"), None, importance="bad"
         )  # type: ignore[arg-type]
         assert "importance" not in meta
-        meta2 = pal._build_drawer_metadata("w", "r", "/a.txt", 0, "dxrk", _content("hello world"), None, importance=3.0)
+        meta2 = pal._build_fragmento_metadata("w", "r", "/a.txt", 0, "dxrk", _content("hello world"), None, importance=3.0)
         assert meta2["importance"] == 3.0
 
     def test_overlap_empty(self):
@@ -1227,7 +1227,7 @@ class TestPalaceHelpers:
         keep = {"S": 1.0}
         assert pal._lapse_meta_in_place(keep, "forgotten") is keep
 
-    def test_wing_snapshot_variants(self, tmp_path):
+    def test_nodo_snapshot_variants(self, tmp_path):
         dm = _dm(tmp_path, name="snap")
         try:
             col = dm._collection(create=False)
@@ -1237,11 +1237,11 @@ class TestPalaceHelpers:
                     return GetResult(
                         ids=["a", "b"],
                         documents=["doc a here", ""],
-                        metadatas=["bad", {"wing": "w", "quarantined": True}],  # type: ignore[list-item]
+                        metadatas=["bad", {"nodo": "w", "quarantined": True}],  # type: ignore[list-item]
                         embeddings=None,
                     )
 
-            snap = pal._wing_snapshot(_SnapStub(), "w")  # type: ignore[arg-type]
+            snap = pal._nodo_snapshot(_SnapStub(), "w")  # type: ignore[arg-type]
             assert [e["id"] for e in snap] == ["a"]
             assert snap[0]["meta"] == {}
 
@@ -1249,28 +1249,28 @@ class TestPalaceHelpers:
                 def get(self, **kw):
                     raise RuntimeError("boom")
 
-            assert pal._wing_snapshot(_BoomStub(), "w") == []  # type: ignore[arg-type]
-            assert pal._wing_snapshot(col, "w") == []
+            assert pal._nodo_snapshot(_BoomStub(), "w") == []  # type: ignore[arg-type]
+            assert pal._nodo_snapshot(col, "w") == []
         finally:
             dm.close()
 
     def test_best_lifecycle_branches(self):
         snap = [
-            {"id": "skip", "doc": "quantum garden lunar festival", "meta": {"wing": "w"}},
-            {"id": "dead", "doc": "quantum garden lunar festival", "meta": {"wing": "w", "valid_to": "x"}},
-            {"id": "empty", "doc": "", "meta": {"wing": "w"}},
-            {"id": "exact", "doc": "target content repeated here", "meta": {"wing": "w"}},
+            {"id": "skip", "doc": "quantum garden lunar festival", "meta": {"nodo": "w"}},
+            {"id": "dead", "doc": "quantum garden lunar festival", "meta": {"nodo": "w", "valid_to": "x"}},
+            {"id": "empty", "doc": "", "meta": {"nodo": "w"}},
+            {"id": "exact", "doc": "target content repeated here", "meta": {"nodo": "w"}},
         ]
         best, sim = pal._best_lifecycle_candidate(snap, "target content repeated here", exclude_ids={"skip"})
         assert best is not None and best["id"] == "exact" and sim == 1.0
         assert pal._best_lifecycle_candidate([], "zzz") == (None, 0.0)
 
     def test_init_bad_max_entries(self, tmp_path):
-        dm = pal.DxrkMemory(str(tmp_path / "badcap"), max_entries_per_wing="bad")  # type: ignore[arg-type]
-        assert dm._max_entries_per_wing == pal.DEFAULT_MAX_ENTRIES_PER_WING
+        dm = pal.DxrkMemory(str(tmp_path / "badcap"), max_entries_per_nodo="bad")  # type: ignore[arg-type]
+        assert dm._max_entries_per_nodo == pal.DEFAULT_MAX_ENTRIES_PER_NODO
 
 
-# ─── palace drawers ─────────────────────────────────────────────────────────
+# ─── malla fragmentos ─────────────────────────────────────────────────────────
 
 
 class _BoomGetCol:
@@ -1300,50 +1300,50 @@ class _BadMetaCol:
         return getattr(self._real, name)
 
 
-class TestPalaceDrawers:
-    def test_add_drawer_same_id_read_failure(self, tmp_path):
+class TestSangreGlobulos:
+    def test_add_fragmento_same_id_read_failure(self, tmp_path):
         dm = _dm(tmp_path, name="sameid")
         try:
             col = dm._collection(create=True)
             boom = _BoomGetCol(col)
             with mock.patch.object(dm, "_collection", return_value=boom):
-                did = dm.add_drawer("w", "r", _content("same id read fail alpha"), "/n1.md", 0)
-            assert did.startswith("drawer_")
-            assert dm.get_drawer(did) is not None
+                did = dm.add_fragmento("w", "r", _content("same id read fail alpha"), "/n1.md", 0)
+            assert did.startswith("fragmento_")
+            assert dm.get_fragmento(did) is not None
         finally:
             dm.close()
 
-    def test_add_drawer_dedupe_bad_seen_count(self, tmp_path):
+    def test_add_fragmento_dedupe_bad_seen_count(self, tmp_path):
         dm = _dm(tmp_path, name="dedupe")
         try:
-            first = dm.add_drawer("w", "r", _content("victim original text omega"), "/f1.md", 0)
+            first = dm.add_fragmento("w", "r", _content("victim original text omega"), "/f1.md", 0)
             col = dm._collection(create=False)
             col.update(ids=[first], metadatas=[{"seen_count": "bad"}])
-            did = dm.add_drawer("w", "r", _content("victim original text omega"), "/f2.md", 0)
+            did = dm.add_fragmento("w", "r", _content("victim original text omega"), "/f2.md", 0)
             assert did == first
             got = col.get(ids=[first], include=["metadatas"])
             assert got.metadatas[0]["seen_count"] == 1
         finally:
             dm.close()
 
-    def test_add_drawer_dedupe_touch_failure(self, tmp_path):
+    def test_add_fragmento_dedupe_touch_failure(self, tmp_path):
         dm = _dm(tmp_path, name="dedupf")
         try:
-            first = dm.add_drawer("w", "r", _content("touch fail victim sigma"), "/f1.md", 0)
+            first = dm.add_fragmento("w", "r", _content("touch fail victim sigma"), "/f1.md", 0)
             col = dm._collection(create=False)
             with (
                 mock.patch.object(col, "update", side_effect=RuntimeError("boom")),
                 mock.patch.object(dm, "_collection", return_value=col),
             ):
-                did = dm.add_drawer("w", "r", _content("touch fail victim sigma"), "/f2.md", 0)
+                did = dm.add_fragmento("w", "r", _content("touch fail victim sigma"), "/f2.md", 0)
             assert did == first
         finally:
             dm.close()
 
-    def test_add_drawer_contradiction_supersedes(self, tmp_path, monkeypatch):
+    def test_add_fragmento_contradiction_supersedes(self, tmp_path, monkeypatch):
         dm = _dm(tmp_path, name="contra")
         try:
-            old = dm.add_drawer("w", "r", _content("contradiction victim tau"), "/old.md", 0)
+            old = dm.add_fragmento("w", "r", _content("contradiction victim tau"), "/old.md", 0)
             col = dm._collection(create=False)
             victim = {
                 "id": old,
@@ -1352,16 +1352,16 @@ class TestPalaceDrawers:
             }
             monkeypatch.setattr(pal, "_best_lifecycle_candidate", lambda *a, **k: (victim, 0.99))
             monkeypatch.setattr(pal, "classify_content_pair", lambda *a, **k: "contradiction")
-            new_id = dm.add_drawer("w", "r", _content("brand new replacement text kappa"), "/new.md", 0)
+            new_id = dm.add_fragmento("w", "r", _content("brand new replacement text kappa"), "/new.md", 0)
             assert new_id != old
             assert col.get(ids=[old], include=["metadatas"]).metadatas[0]["valid_to"]
         finally:
             dm.close()
 
-    def test_add_drawer_distinct_with_best_inserts(self, tmp_path, monkeypatch):
+    def test_add_fragmento_distinct_with_best_inserts(self, tmp_path, monkeypatch):
         dm = _dm(tmp_path, name="dist")
         try:
-            old = dm.add_drawer("w", "r", _content("distinct victim iota keeper"), "/old.md", 0)
+            old = dm.add_fragmento("w", "r", _content("distinct victim iota keeper"), "/old.md", 0)
             col = dm._collection(create=False)
             victim = {
                 "id": old,
@@ -1370,16 +1370,16 @@ class TestPalaceDrawers:
             }
             monkeypatch.setattr(pal, "_best_lifecycle_candidate", lambda *a, **k: (victim, 0.99))
             monkeypatch.setattr(pal, "classify_content_pair", lambda *a, **k: "distinct")
-            new_id = dm.add_drawer("w", "r", _content("brand new distinct text lambda"), "/new.md", 0)
+            new_id = dm.add_fragmento("w", "r", _content("brand new distinct text lambda"), "/new.md", 0)
             assert new_id != old
-            assert dm.get_drawer(new_id) is not None
+            assert dm.get_fragmento(new_id) is not None
         finally:
             dm.close()
 
     def test_mark_superseded_variants(self, tmp_path):
         dm = _dm(tmp_path, name="marks")
         try:
-            did = dm.add_drawer("w", "r", _content("mark superseded alpha"), "/m.md", 0)
+            did = dm.add_fragmento("w", "r", _content("mark superseded alpha"), "/m.md", 0)
             col = dm._collection(create=False)
             marked, pre = pal.DxrkMemory._mark_superseded(col, did, "new1", "2026-01-01T00:00:00+00:00")
             assert marked is True
@@ -1391,31 +1391,31 @@ class TestPalaceDrawers:
             bad = _BadMetaCol(col)
             marked3, pre3 = pal.DxrkMemory._mark_superseded(bad, "x", "y", "2026-01-01T00:00:00+00:00")  # type: ignore[arg-type]
             assert marked3 is True and pre3 == {}
-            fresh = dm.add_drawer("w", "r", _content("mark fail target beta"), "/m2.md", 0)
+            fresh = dm.add_fragmento("w", "r", _content("mark fail target beta"), "/m2.md", 0)
             with mock.patch.object(col, "update", side_effect=RuntimeError("boom")):
                 marked4, _ = pal.DxrkMemory._mark_superseded(col, fresh, "n2", "2026-01-01T00:00:00+00:00")
                 assert marked4 is False
         finally:
             dm.close()
 
-    def test_wing_cap_scan_failure(self, tmp_path):
+    def test_nodo_cap_scan_failure(self, tmp_path):
         dm = _dm(tmp_path, name="wcap")
         try:
             col = dm._collection(create=False)
             boom = _BoomGetCol(col)
-            assert dm._enforce_wing_cap_once(boom, "w", 10) == (0, 0, False)  # type: ignore[arg-type]
+            assert dm._enforce_nodo_cap_once(boom, "w", 10) == (0, 0, False)  # type: ignore[arg-type]
         finally:
             dm.close()
 
-    def test_wing_cap_delete_failure_keeps_rows(self, tmp_path):
+    def test_nodo_cap_delete_failure_keeps_rows(self, tmp_path):
         dm = _dm(tmp_path, name="wcapd")
         try:
-            dm.add_drawer("w", "r", _content("cap row alpha one"), "/a1.md", 0)
-            dm.add_drawer("w", "r", _content("cap row beta two"), "/a2.md", 0)
-            dm._max_entries_per_wing = 1
+            dm.add_fragmento("w", "r", _content("cap row alpha one"), "/a1.md", 0)
+            dm.add_fragmento("w", "r", _content("cap row beta two"), "/a2.md", 0)
+            dm._max_entries_per_nodo = 1
             col = dm._collection(create=False)
             with mock.patch.object(col, "delete", side_effect=RuntimeError("boom")):
-                assert dm._enforce_wing_cap(col, "w") == 0
+                assert dm._enforce_nodo_cap(col, "w") == 0
             assert col.count() == 2
         finally:
             dm.close()
@@ -1429,29 +1429,29 @@ class TestPalaceDrawers:
                 mock.patch.object(dm, "_collection", return_value=col),
             ):
                 with pytest.raises(ValueError, match="consolidate read failed"):
-                    dm.consolidate_drawers(["a", "b"])
+                    dm.consolidate_fragmentos(["a", "b"])
         finally:
             dm.close()
 
     def test_consolidate_empty_distillate(self, tmp_path, monkeypatch):
         dm = _dm(tmp_path, name="cone")
         try:
-            d1 = dm.add_drawer("w", "r", _content("consolidate source alpha"), "/ca.md", 0)
-            d2 = dm.add_drawer("w", "r", _content("consolidate source beta"), "/cb.md", 0)
+            d1 = dm.add_fragmento("w", "r", _content("consolidate source alpha"), "/ca.md", 0)
+            d2 = dm.add_fragmento("w", "r", _content("consolidate source beta"), "/cb.md", 0)
             monkeypatch.setattr(pal, "_distill_sentences", lambda texts, **k: "")
             with pytest.raises(ValueError, match="empty distillate"):
-                dm.consolidate_drawers([d1, d2])
+                dm.consolidate_fragmentos([d1, d2])
         finally:
             dm.close()
 
     def test_consolidate_bad_importance_tolerated(self, tmp_path):
         dm = _dm(tmp_path, name="coni")
         try:
-            d1 = dm.add_drawer("w", "r", "The migration shipped on Friday. Rollback plan approved. " * 6, "/ca.md", 0)
-            d2 = dm.add_drawer("w", "r", "The migration shipped on Friday. Monitoring enabled after. " * 6, "/cb.md", 0)
+            d1 = dm.add_fragmento("w", "r", "The migration shipped on Friday. Rollback plan approved. " * 6, "/ca.md", 0)
+            d2 = dm.add_fragmento("w", "r", "The migration shipped on Friday. Monitoring enabled after. " * 6, "/cb.md", 0)
             col = dm._collection(create=False)
             col.update(ids=[d1], metadatas=[{"importance": "bad"}])
-            out = dm.consolidate_drawers([d1, d2])
+            out = dm.consolidate_fragmentos([d1, d2])
             assert out["sources"] == 2
         finally:
             dm.close()
@@ -1459,7 +1459,7 @@ class TestPalaceDrawers:
     def test_forget_ids_read_failure(self, tmp_path):
         dm = _dm(tmp_path, name="forg")
         try:
-            did = dm.add_drawer("w", "r", _content("forget read fail alpha"), "/g.md", 0)
+            did = dm.add_fragmento("w", "r", _content("forget read fail alpha"), "/g.md", 0)
             col = dm._collection(create=False)
             orig = col.get
 
@@ -1469,7 +1469,7 @@ class TestPalaceDrawers:
                 return orig(*a, **k)
 
             with mock.patch.object(col, "get", side_effect=_g), mock.patch.object(dm, "_collection", return_value=col):
-                out = dm.forget(drawer_ids=[did])
+                out = dm.forget(fragmento_ids=[did])
             assert out["matched"] == 0
         finally:
             dm.close()
@@ -1477,13 +1477,13 @@ class TestPalaceDrawers:
     def test_forget_hard_delete_failure(self, tmp_path):
         dm = _dm(tmp_path, name="forgh")
         try:
-            did = dm.add_drawer("w", "r", _content("forget hard fail alpha"), "/h.md", 0)
+            did = dm.add_fragmento("w", "r", _content("forget hard fail alpha"), "/h.md", 0)
             col = dm._collection(create=False)
             with (
                 mock.patch.object(col, "delete", side_effect=RuntimeError("boom")),
                 mock.patch.object(dm, "_collection", return_value=col),
             ):
-                out = dm.forget(drawer_ids=[did], hard=True)
+                out = dm.forget(fragmento_ids=[did], hard=True)
             assert out["matched"] == 1
             assert out["deleted"] == 0
         finally:
@@ -1492,13 +1492,13 @@ class TestPalaceDrawers:
     def test_forget_soft_mark_failure(self, tmp_path):
         dm = _dm(tmp_path, name="forgs")
         try:
-            did = dm.add_drawer("w", "r", _content("forget soft fail alpha"), "/s.md", 0)
+            did = dm.add_fragmento("w", "r", _content("forget soft fail alpha"), "/s.md", 0)
             col = dm._collection(create=False)
             with (
                 mock.patch.object(col, "update", side_effect=RuntimeError("boom")),
                 mock.patch.object(dm, "_collection", return_value=col),
             ):
-                out = dm.forget(drawer_ids=[did])
+                out = dm.forget(fragmento_ids=[did])
             assert out["matched"] == 1
             assert out["soft_forgotten"] == 0
         finally:
@@ -1507,18 +1507,18 @@ class TestPalaceDrawers:
     def test_forget_kg_failures_ignored(self, tmp_path):
         dm = _dm(tmp_path, name="forgk")
         try:
-            did = dm.add_drawer("w", "r", _content("forget kg fail alpha"), "/k.md", 0)
+            did = dm.add_fragmento("w", "r", _content("forget kg fail alpha"), "/k.md", 0)
             kgm = mock.MagicMock()
             kgm.supersede_source.side_effect = RuntimeError("kg boom")
             kgm.close.side_effect = RuntimeError("close boom")
             with mock.patch.object(dm, "_kg_or_none", return_value=kgm):
-                out = dm.forget(drawer_ids=[did], include_kg=True)
+                out = dm.forget(fragmento_ids=[did], include_kg=True)
             assert out["matched"] == 1
             assert out["kg_superseded"] == 0
             dm2 = pal.DxrkMemory(str(tmp_path / "nokg"), auto_kg=False)
             dm2.init()
             try:
-                out2 = dm2.forget(drawer_ids=["x"], include_kg=True)
+                out2 = dm2.forget(fragmento_ids=["x"], include_kg=True)
                 assert out2["kg_superseded"] == 0
             finally:
                 dm2.close()
@@ -1531,10 +1531,10 @@ class TestPalaceDrawers:
             col = dm._collection(create=False)
             boom = _BoomGetCol(col)
             with mock.patch.object(dm, "_collection", return_value=boom):
-                assert dm.pin_drawer("x") is False
-                assert dm.unpin_drawer("x") is False
-                assert dm.quarantine_drawer("x") is False
-                assert dm.unquarantine_drawer("x") is False
+                assert dm.pin_fragmento("x") is False
+                assert dm.unpin_fragmento("x") is False
+                assert dm.quarantine_fragmento("x") is False
+                assert dm.unquarantine_fragmento("x") is False
                 assert dm.record_lapse("x") is False
         finally:
             dm.close()
@@ -1542,18 +1542,18 @@ class TestPalaceDrawers:
     def test_pin_idempotent_and_failures(self, tmp_path):
         dm = _dm(tmp_path, name="pini")
         try:
-            did = dm.add_drawer("w", "r", _content("pin idempotent alpha"), "/p.md", 0)
-            assert dm.pin_drawer(did) is True
-            assert dm.pin_drawer(did) is True
-            assert dm.pin_drawer("missing_xyz") is False
-            did2 = dm.add_drawer("w", "r", _content("pin fail beta keeper"), "/p2.md", 0)
+            did = dm.add_fragmento("w", "r", _content("pin idempotent alpha"), "/p.md", 0)
+            assert dm.pin_fragmento(did) is True
+            assert dm.pin_fragmento(did) is True
+            assert dm.pin_fragmento("missing_xyz") is False
+            did2 = dm.add_fragmento("w", "r", _content("pin fail beta keeper"), "/p2.md", 0)
             col = dm._collection(create=False)
             with (
                 mock.patch.object(col, "upsert", side_effect=RuntimeError("boom")),
                 mock.patch.object(dm, "_collection", return_value=col),
             ):
-                assert dm.pin_drawer(did2) is False
-                assert dm.unpin_drawer(did) is False
+                assert dm.pin_fragmento(did2) is False
+                assert dm.unpin_fragmento(did) is False
         finally:
             dm.close()
 
@@ -1563,43 +1563,43 @@ class TestPalaceDrawers:
             col = dm._collection(create=False)
             bad = _BadMetaCol(col)
             with mock.patch.object(dm, "_collection", return_value=bad):
-                assert dm.pin_drawer("x") is True
-                assert dm.unpin_drawer("x") is True
+                assert dm.pin_fragmento("x") is True
+                assert dm.unpin_fragmento("x") is True
         finally:
             dm.close()
 
     def test_quarantine_idempotent_and_failures(self, tmp_path):
         dm = _dm(tmp_path, name="quar")
         try:
-            did = dm.add_drawer("w", "r", _content("quarantine idempotent alpha"), "/q.md", 0)
-            assert dm.quarantine_drawer(did, reason="r1") is True
-            assert dm.quarantine_drawer(did, reason="r2") is True
-            assert dm.quarantine_drawer("missing_xyz") is False
-            did2 = dm.add_drawer("w", "r", _content("quarantine fail beta"), "/q2.md", 0)
+            did = dm.add_fragmento("w", "r", _content("quarantine idempotent alpha"), "/q.md", 0)
+            assert dm.quarantine_fragmento(did, reason="r1") is True
+            assert dm.quarantine_fragmento(did, reason="r2") is True
+            assert dm.quarantine_fragmento("missing_xyz") is False
+            did2 = dm.add_fragmento("w", "r", _content("quarantine fail beta"), "/q2.md", 0)
             col = dm._collection(create=False)
             with (
                 mock.patch.object(col, "upsert", side_effect=RuntimeError("boom")),
                 mock.patch.object(dm, "_collection", return_value=col),
             ):
-                assert dm.quarantine_drawer(did2) is False
+                assert dm.quarantine_fragmento(did2) is False
         finally:
             dm.close()
 
     def test_unquarantine_variants(self, tmp_path):
         dm = _dm(tmp_path, name="unq")
         try:
-            did = dm.add_drawer("w", "r", _content("unquarantine alpha keeper"), "/u.md", 0)
-            assert dm.unquarantine_drawer(did) is True
-            assert dm.unquarantine_drawer("missing_xyz") is False
-            assert dm.quarantine_drawer(did, reason="r") is True
+            did = dm.add_fragmento("w", "r", _content("unquarantine alpha keeper"), "/u.md", 0)
+            assert dm.unquarantine_fragmento(did) is True
+            assert dm.unquarantine_fragmento("missing_xyz") is False
+            assert dm.quarantine_fragmento(did, reason="r") is True
             col = dm._collection(create=False)
             with (
                 mock.patch.object(col, "upsert", side_effect=RuntimeError("boom")),
                 mock.patch.object(dm, "_collection", return_value=col),
             ):
-                assert dm.unquarantine_drawer(did) is False
-            assert dm.unquarantine_drawer(did) is True
-            got = dm.get_drawer(did)
+                assert dm.unquarantine_fragmento(did) is False
+            assert dm.unquarantine_fragmento(did) is True
+            got = dm.get_fragmento(did)
             assert got is not None and got["document"] != ""
         finally:
             dm.close()
@@ -1607,10 +1607,10 @@ class TestPalaceDrawers:
     def test_record_lapse_variants(self, tmp_path):
         dm = _dm(tmp_path, name="lapse")
         try:
-            did = dm.add_drawer("w", "r", _content("lapse alpha keeper"), "/l.md", 0)
+            did = dm.add_fragmento("w", "r", _content("lapse alpha keeper"), "/l.md", 0)
             assert dm.record_lapse(did) is True
             assert dm.record_lapse("missing_xyz") is False
-            got = dm.get_drawer(did)
+            got = dm.get_fragmento(did)
             assert got is not None
             assert len(got["metadata"].get("score_ledger", [])) >= 2  # type: ignore[union-attr]
             col = dm._collection(create=False)
@@ -1622,31 +1622,31 @@ class TestPalaceDrawers:
         finally:
             dm.close()
 
-    def test_list_drawers_variants(self, tmp_path):
+    def test_list_fragmentos_variants(self, tmp_path):
         dm = _dm(tmp_path, name="listd")
         try:
-            d1 = dm.add_drawer("w", "r1", _content("list alpha keeper"), "/l1.md", 0)
-            dm.add_drawer("w", "r2", _content("list beta keeper"), "/l2.md", 0)
-            assert len(dm.list_drawers(wing="w", room="r1")) == 1
-            assert len(dm.list_drawers(room="r2")) == 1
-            assert len(dm.list_drawers(limit="bad")) == 2  # type: ignore[arg-type]
-            assert dm.quarantine_drawer(d1) is True
-            assert all(r["id"] != d1 for r in dm.list_drawers())
-            inc = dm.list_drawers(include_quarantined=True)
+            d1 = dm.add_fragmento("w", "r1", _content("list alpha keeper"), "/l1.md", 0)
+            dm.add_fragmento("w", "r2", _content("list beta keeper"), "/l2.md", 0)
+            assert len(dm.list_fragmentos(nodo="w", celda="r1")) == 1
+            assert len(dm.list_fragmentos(celda="r2")) == 1
+            assert len(dm.list_fragmentos(limit="bad")) == 2  # type: ignore[arg-type]
+            assert dm.quarantine_fragmento(d1) is True
+            assert all(r["id"] != d1 for r in dm.list_fragmentos())
+            inc = dm.list_fragmentos(include_quarantined=True)
             stub = next(r for r in inc if r["id"] == d1)
             assert stub["quarantined"] is True
             assert "document" not in stub
             col = dm._collection(create=False)
             boom = _BoomGetCol(col)
             with mock.patch.object(dm, "_collection", return_value=boom):
-                assert dm.list_drawers() == []
+                assert dm.list_fragmentos() == []
         finally:
             dm.close()
 
     def test_pins_path_exception(self, tmp_path):
         dm = _dm(tmp_path, name="pinp")
         try:
-            dm.palace_path = 123  # type: ignore[assignment]
+            dm.malla_path = 123  # type: ignore[assignment]
             assert dm._pins_path() is None
         finally:
             dm.close()
@@ -1654,9 +1654,9 @@ class TestPalaceDrawers:
     def test_pins_roundtrip_and_failures(self, tmp_path):
         dm = _dm(tmp_path, name="pins")
         try:
-            (Path(dm.palace_path) / "pins.json").write_text("{bad")
+            (Path(dm.malla_path) / "pins.json").write_text("{bad")
             assert dm._read_pins() == {}
-            (Path(dm.palace_path) / "pins.json").write_text("[1]")
+            (Path(dm.malla_path) / "pins.json").write_text("[1]")
             assert dm._read_pins() == {}
             rec = dm.pin_identity()
             assert rec["scope"] == "identity"
@@ -1679,11 +1679,11 @@ class TestPalaceDrawers:
             assert dm.spine_counters() == {"checksum_mismatches": 0}
             assert dm._bump_spine_counter("checksum_mismatches") == 1
             assert dm._bump_spine_counter("checksum_mismatches") == 2
-            (Path(dm.palace_path) / "spine_counters.json").write_text("{bad")
+            (Path(dm.malla_path) / "spine_counters.json").write_text("{bad")
             assert dm._read_spine_counters() == {}
-            (Path(dm.palace_path) / "spine_counters.json").write_text("[1]")
+            (Path(dm.malla_path) / "spine_counters.json").write_text("[1]")
             assert dm._read_spine_counters() == {}
-            (Path(dm.palace_path) / "spine_counters.json").write_text('{"a": "bad", "b": 2}')
+            (Path(dm.malla_path) / "spine_counters.json").write_text('{"a": "bad", "b": 2}')
             assert dm._read_spine_counters() == {"b": 2}
             mem = pal.DxrkMemory("memory-only")
             assert mem._bump_spine_counter("x") == 0
@@ -1695,19 +1695,19 @@ class TestPalaceDrawers:
     def test_usage_budgets_status_mix(self, tmp_path):
         dm = _dm(tmp_path, name="mix")
         try:
-            d_pin = dm.add_drawer("w", "r", _content("mix pinned alpha keeper"), "/p.md", 0)
-            d_sup = dm.add_drawer("w", "r", _content("mix superseded beta keeper"), "/s.md", 0)
-            dm.add_drawer("w", "r", _content("mix replacement gamma keeper"), "/s2.md", 0, supersedes=d_sup)
-            d_for = dm.add_drawer("w", "r", _content("mix forgotten delta keeper"), "/f.md", 0)
+            d_pin = dm.add_fragmento("w", "r", _content("mix pinned alpha keeper"), "/p.md", 0)
+            d_sup = dm.add_fragmento("w", "r", _content("mix superseded beta keeper"), "/s.md", 0)
+            dm.add_fragmento("w", "r", _content("mix replacement gamma keeper"), "/s2.md", 0, supersedes=d_sup)
+            d_for = dm.add_fragmento("w", "r", _content("mix forgotten delta keeper"), "/f.md", 0)
             dm.forget([d_for])
-            d_qua = dm.add_drawer("w", "r", _content("mix quarantined epsilon keeper"), "/q.md", 0)
-            dm.quarantine_drawer(d_qua)
-            assert dm.pin_drawer(d_pin) is True
+            d_qua = dm.add_fragmento("w", "r", _content("mix quarantined epsilon keeper"), "/q.md", 0)
+            dm.quarantine_fragmento(d_qua)
+            assert dm.pin_fragmento(d_pin) is True
             col = dm._collection(create=False)
             col.upsert(
-                documents=[_content("mix legacy zeta keeper")], ids=["legacy1"], metadatas=[{"wing": "w", "room": "r"}]
+                documents=[_content("mix legacy zeta keeper")], ids=["legacy1"], metadatas=[{"nodo": "w", "celda": "r"}]
             )
-            u = dm.wing_usage("w")
+            u = dm.nodo_usage("w")
             assert u["count"] == 6
             assert u["pinned"] == 1
             assert u["superseded"] == 2
@@ -1721,7 +1721,7 @@ class TestPalaceDrawers:
             assert st["count"] == 6
             assert st["quarantine_warning"] is True
             assert len(st["merkle_root"]) == 64
-            col.upsert(documents=["odd"], ids=["odd1"], metadatas=[{"wing": 123}])  # type: ignore[dict-item]
+            col.upsert(documents=["odd"], ids=["odd1"], metadatas=[{"nodo": 123}])  # type: ignore[dict-item]
             assert 123 not in dm.budgets()
         finally:
             dm.close()
@@ -1729,13 +1729,13 @@ class TestPalaceDrawers:
     def test_usage_budgets_status_failures(self, tmp_path):
         dm = _dm(tmp_path, name="mixf")
         try:
-            dm.add_drawer("w", "r", _content("mix fail alpha keeper"), "/a.md", 0)
+            dm.add_fragmento("w", "r", _content("mix fail alpha keeper"), "/a.md", 0)
             col = dm._collection(create=False)
             with (
                 mock.patch.object(col, "get", side_effect=RuntimeError("boom")),
                 mock.patch.object(dm, "_collection", return_value=col),
             ):
-                u = dm.wing_usage("w")
+                u = dm.nodo_usage("w")
                 assert u["count"] == 0
                 assert dm.budgets() == {}
                 st = dm.status()
@@ -1744,17 +1744,17 @@ class TestPalaceDrawers:
         finally:
             dm.close()
 
-    def test_get_drawer_checksum_mismatch_quarantines(self, tmp_path):
+    def test_get_fragmento_checksum_mismatch_quarantines(self, tmp_path):
         dm = _dm(tmp_path, name="chk")
         try:
-            did = dm.add_drawer("w", "r", _content("checksum tamper alpha keeper"), "/o.md", 0)
+            did = dm.add_fragmento("w", "r", _content("checksum tamper alpha keeper"), "/o.md", 0)
             col = dm._collection(create=False)
             col._conn.execute(
                 "UPDATE embeddings SET document=? WHERE id=?",  # type: ignore[attr-defined]
                 ("tampered entirely different", did),
             )
             col._conn.commit()  # type: ignore[attr-defined]
-            got = dm.get_drawer(did)
+            got = dm.get_fragmento(did)
             assert got is not None
             assert got["quarantined"] is True
             assert got["quarantine_reason"] == "checksum_mismatch"
@@ -1762,10 +1762,10 @@ class TestPalaceDrawers:
         finally:
             dm.close()
 
-    def test_get_drawer_quarantine_persist_failure(self, tmp_path):
+    def test_get_fragmento_quarantine_persist_failure(self, tmp_path):
         dm = _dm(tmp_path, name="chkf")
         try:
-            did = dm.add_drawer("w", "r", _content("quarantine persist alpha"), "/o.md", 0)
+            did = dm.add_fragmento("w", "r", _content("quarantine persist alpha"), "/o.md", 0)
             col = dm._collection(create=False)
             col._conn.execute(
                 "UPDATE embeddings SET document=? WHERE id=?",  # type: ignore[attr-defined]
@@ -1776,60 +1776,60 @@ class TestPalaceDrawers:
                 mock.patch.object(col, "update", side_effect=RuntimeError("boom")),
                 mock.patch.object(dm, "_collection", return_value=col),
             ):
-                got = dm.get_drawer(did)
+                got = dm.get_fragmento(did)
             assert got is not None and got["quarantined"] is True
         finally:
             dm.close()
 
-    def test_get_drawer_access_fallback(self, tmp_path):
+    def test_get_fragmento_access_fallback(self, tmp_path):
         dm = _dm(tmp_path, name="acc")
         try:
-            did = dm.add_drawer("w", "r", _content("access fallback alpha keeper"), "/a.md", 0)
+            did = dm.add_fragmento("w", "r", _content("access fallback alpha keeper"), "/a.md", 0)
             col = dm._collection(create=False)
             col.update(ids=[did], metadatas=[{"access_count": "bad"}])
-            with mock.patch("dxrk.memory.palace._apply_access", side_effect=RuntimeError("boom")):
-                got = dm.get_drawer(did)
+            with mock.patch("dxrk.memory.malla._apply_access", side_effect=RuntimeError("boom")):
+                got = dm.get_fragmento(did)
             assert got is not None
             assert got["document"] == _content("access fallback alpha keeper")
             assert got["metadata"]["access_count"] == 1
         finally:
             dm.close()
 
-    def test_get_drawer_access_bump_failure(self, tmp_path):
+    def test_get_fragmento_access_bump_failure(self, tmp_path):
         dm = _dm(tmp_path, name="accb")
         try:
-            did = dm.add_drawer("w", "r", _content("access bump fail alpha keeper"), "/a.md", 0)
+            did = dm.add_fragmento("w", "r", _content("access bump fail alpha keeper"), "/a.md", 0)
             col = dm._collection(create=False)
             with (
                 mock.patch.object(col, "update", side_effect=RuntimeError("boom")),
                 mock.patch.object(dm, "_collection", return_value=col),
             ):
-                got = dm.get_drawer(did)
+                got = dm.get_fragmento(did)
             assert got is not None and got["document"] != ""
         finally:
             dm.close()
 
-    def test_get_drawer_dead_writeback_failure(self, tmp_path):
+    def test_get_fragmento_dead_writeback_failure(self, tmp_path):
         dm = _dm(tmp_path, name="dead")
         try:
-            old = dm.add_drawer("w", "r", _content("dead writeback alpha keeper"), "/o.md", 0)
-            dm.add_drawer("w", "r", _content("dead replacement beta keeper"), "/n.md", 0, supersedes=old)
+            old = dm.add_fragmento("w", "r", _content("dead writeback alpha keeper"), "/o.md", 0)
+            dm.add_fragmento("w", "r", _content("dead replacement beta keeper"), "/n.md", 0, supersedes=old)
             col = dm._collection(create=False)
             with (
                 mock.patch.object(col, "update", side_effect=RuntimeError("boom")),
                 mock.patch.object(dm, "_collection", return_value=col),
             ):
-                got = dm.get_drawer(old)
+                got = dm.get_fragmento(old)
             assert got is not None
             assert got["document"] == _content("dead writeback alpha keeper")
         finally:
             dm.close()
 
 
-# ─── palace mine / timeline / kg ────────────────────────────────────────────
+# ─── malla mine / timeline / kg ────────────────────────────────────────────
 
 
-class TestPalaceMineTimeline:
+class TestSangreMineTimeline:
     def _proj(self, tmp_path: Path, name: str = "proj") -> Path:
         proj = tmp_path / name
         proj.mkdir(exist_ok=True)
@@ -1844,7 +1844,7 @@ class TestPalaceMineTimeline:
         try:
             real = dm._collection
 
-            def _fake(name="dxrk_drawers", *, create=True):
+            def _fake(name="dxrk_fragmentos", *, create=True):
                 if name == "dxrk_closets":
                     raise CollectionNotInitializedError("no closets")
                 return real(name, create=create)
@@ -1863,7 +1863,7 @@ class TestPalaceMineTimeline:
             closets = mock.MagicMock()
             closets.delete.side_effect = RuntimeError("closet purge boom")
 
-            def _fake(name="dxrk_drawers", *, create=True):
+            def _fake(name="dxrk_fragmentos", *, create=True):
                 if name == "dxrk_closets":
                     return closets
                 return real(name, create=create)
@@ -1878,18 +1878,18 @@ class TestPalaceMineTimeline:
         proj = self._proj(tmp_path)
         dm = _dm(tmp_path, name="mded")
         try:
-            vdid = dm.add_drawer("w", "r", _content("mine victim omega keeper"), "/victim.md", 0)
+            vdid = dm.add_fragmento("w", "r", _content("mine victim omega keeper"), "/victim.md", 0)
             col = dm._collection(create=True)
             col.update(ids=[vdid], metadatas=[{"seen_count": "bad"}])
             victim = {
                 "id": vdid,
                 "doc": _content("mine victim omega keeper"),
-                "meta": {"wing": "w", "seen_count": "bad"},
+                "meta": {"nodo": "w", "seen_count": "bad"},
             }
             monkeypatch.setattr(pal, "_best_lifecycle_candidate", lambda *a, **k: (victim, 0.99))
             monkeypatch.setattr(pal, "classify_content_pair", lambda *a, **k: "duplicate")
-            out = dm.mine(str(proj), wing="w", room="r")
-            assert out["drawers_deduped"] == 1
+            out = dm.mine(str(proj), nodo="w", celda="r")
+            assert out["fragmentos_deduped"] == 1
             assert col.get(ids=[vdid], include=["metadatas"]).metadatas[0]["seen_count"] == 1
         finally:
             dm.close()
@@ -1898,17 +1898,17 @@ class TestPalaceMineTimeline:
         proj = self._proj(tmp_path)
         dm = _dm(tmp_path, name="mded2")
         try:
-            vdid = dm.add_drawer("w", "r", _content("mine touch victim sigma"), "/victim.md", 0)
+            vdid = dm.add_fragmento("w", "r", _content("mine touch victim sigma"), "/victim.md", 0)
             col = dm._collection(create=True)
-            victim = {"id": vdid, "doc": _content("mine touch victim sigma"), "meta": {"wing": "w"}}
+            victim = {"id": vdid, "doc": _content("mine touch victim sigma"), "meta": {"nodo": "w"}}
             monkeypatch.setattr(pal, "_best_lifecycle_candidate", lambda *a, **k: (victim, 0.99))
             monkeypatch.setattr(pal, "classify_content_pair", lambda *a, **k: "duplicate")
             with (
                 mock.patch.object(col, "update", side_effect=RuntimeError("boom")),
                 mock.patch.object(dm, "_collection", return_value=col),
             ):
-                out = dm.mine(str(proj), wing="w", room="r")
-            assert out["drawers_deduped"] == 1
+                out = dm.mine(str(proj), nodo="w", celda="r")
+            assert out["fragmentos_deduped"] == 1
         finally:
             dm.close()
 
@@ -1943,7 +1943,7 @@ class TestPalaceMineTimeline:
         dm = _dm(tmp_path, name="mrb")
         try:
             old_content = _content("rollback victim tau keeper", 10)
-            old_id = dm.add_drawer("w", "r", old_content, "/victim.md", 0)
+            old_id = dm.add_fragmento("w", "r", old_content, "/victim.md", 0)
             col = dm._collection(create=True)
             victim = {
                 "id": old_id,
@@ -1974,7 +1974,7 @@ class TestPalaceMineTimeline:
                 mock.patch.object(dm, "_collection", return_value=col),
             ):
                 with pytest.raises(RuntimeError, match="batch upsert boom"):
-                    dm.mine(str(proj), wing="w", room="r")
+                    dm.mine(str(proj), nodo="w", celda="r")
             after = col.get(ids=[old_id], include=["metadatas"])
             assert after.metadatas[0].get("superseded_by") is not None
         finally:
@@ -1997,15 +1997,15 @@ class TestPalaceMineTimeline:
     def test_timeline_session_pin_and_filters(self, tmp_path):
         dm = _dm(tmp_path, name="tl2")
         try:
-            ds = dm.add_drawer("w", "r", _content("session summary alpha keeper"), "session:abc", 0)
+            ds = dm.add_fragmento("w", "r", _content("session summary alpha keeper"), "session:abc", 0)
             col = dm._collection(create=False)
             col.update(ids=[ds], metadatas=[{"filed_at": "2024-05-01T10:00:00+00:00"}])
-            dn = dm.add_drawer("w", "r", _content("session nodate beta keeper"), "session:nodate", 0)
+            dn = dm.add_fragmento("w", "r", _content("session nodate beta keeper"), "session:nodate", 0)
             col.update(ids=[dn], metadatas=[{"filed_at": ""}])
-            dp = dm.add_drawer("w", "r", _content("pinned drawer gamma keeper"), "/p.md", 0)
-            assert dm.pin_drawer(dp) is True
-            dq = dm.add_drawer("w", "r", _content("quarantined delta keeper"), "/q.md", 0)
-            assert dm.quarantine_drawer(dq) is True
+            dp = dm.add_fragmento("w", "r", _content("pinned fragmento gamma keeper"), "/p.md", 0)
+            assert dm.pin_fragmento(dp) is True
+            dq = dm.add_fragmento("w", "r", _content("quarantined delta keeper"), "/q.md", 0)
+            assert dm.quarantine_fragmento(dq) is True
             entries = dm.timeline()
             refs = {e["ref"] for e in entries}
             assert ds in refs
@@ -2015,7 +2015,7 @@ class TestPalaceMineTimeline:
             kinds = {e["ref"]: e["kind"] for e in entries}
             assert kinds[ds] == "session"
             assert kinds[dp] == "pin"
-            assert dm.timeline(wing="other") == []
+            assert dm.timeline(nodo="other") == []
             assert dm.timeline(since="2030-01-01", before="2031-01-01") == []
         finally:
             dm.close()
@@ -2023,7 +2023,7 @@ class TestPalaceMineTimeline:
     def test_timeline_kg_episodes(self, tmp_path):
         dm = _dm(tmp_path, name="tl3")
         try:
-            did = dm.add_drawer("w", "r", _content("kg linked alpha keeper"), "/p/f.md", 0)
+            did = dm.add_fragmento("w", "r", _content("kg linked alpha keeper"), "/p/f.md", 0)
             eps = [
                 "notadict",
                 {
@@ -2052,7 +2052,7 @@ class TestPalaceMineTimeline:
                     "predicate": "p",
                     "object": "B",
                     "current": True,
-                    "source_drawer_id": did,
+                    "source_fragmento_id": did,
                 },
                 {
                     "source_file": "/p/g.md",
@@ -2070,8 +2070,8 @@ class TestPalaceMineTimeline:
                 entries = dm.timeline()
             files = {e["ref"]: e for e in entries if e["kind"] == "file"}
             assert set(files) == {"/p/f.md", "/p/g.md"}
-            assert files["/p/f.md"]["wing"] == "w"
-            assert files["/p/g.md"]["wing"] is None
+            assert files["/p/f.md"]["nodo"] == "w"
+            assert files["/p/g.md"]["nodo"] is None
             assert files["/p/f.md"]["current"] is True
         finally:
             dm.close()
@@ -2079,7 +2079,7 @@ class TestPalaceMineTimeline:
     def test_timeline_kg_failures(self, tmp_path):
         dm = _dm(tmp_path, name="tl4")
         try:
-            ds = dm.add_drawer("w", "r", _content("kg fail session alpha"), "session:z", 0)
+            ds = dm.add_fragmento("w", "r", _content("kg fail session alpha"), "session:z", 0)
             col = dm._collection(create=False)
             col.update(ids=[ds], metadatas=[{"filed_at": "2024-05-01T10:00:00+00:00"}])
             kgm = mock.MagicMock()
@@ -2124,12 +2124,12 @@ class TestPalaceMineTimeline:
 
 
 class TestEngineSmoke:
-    def test_engine_reexports_palace(self):
+    def test_engine_reexports_malla(self):
         from dxrk.memory import engine as eng
-        from dxrk.memory import palace as palmod
+        from dxrk.memory import malla as palmod
 
         assert eng.DxrkMemory is palmod.DxrkMemory
-        assert eng.Palace is palmod.Palace
+        assert eng.Malla is palmod.Malla
         assert eng.chunk_text is palmod.chunk_text
 
 
@@ -2140,7 +2140,7 @@ class TestSqliteRound2:
     def test_pool_vectors_corrupt_blob_backfills(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "corrupt")
         try:
-            col.add(documents=["hello world content"], ids=["e1"], metadatas=[{"wing": "w"}])
+            col.add(documents=["hello world content"], ids=["e1"], metadatas=[{"nodo": "w"}])
             col._conn.execute("UPDATE doc_vectors SET vec=?", (b"short",))  # type: ignore[attr-defined]
             col._conn.commit()  # type: ignore[attr-defined]
             pool = col._fetch_pool("hello", "", [], None, 5)  # type: ignore[attr-defined]
@@ -2155,15 +2155,15 @@ class TestSearchRound2:
     def test_closet_two_docs_iterates(self):
         from dxrk.memory.search import hybrid_search
 
-        drawer = _FakeDrawerCol(["hello world"], [_meta("/p/a.md")], [0.5], ids=["d0"])
-        closet = _FakeDrawerCol(
+        fragmento = _FakeGlobuloCol(["hello world"], [_meta("/p/a.md")], [0.5], ids=["d0"])
+        closet = _FakeGlobuloCol(
             ["hello again", "hello more", ""],
             [_meta("/p/a.md"), _meta("/p/b.md"), _meta("")],
             [0.1, 0.2, 0.3],
             ids=["c0", "c1", "c2"],
         )
-        out = hybrid_search(drawer, "hello", closet_collection=closet)
-        assert out["results"][0]["matched_via"] == "drawer+closet"
+        out = hybrid_search(fragmento, "hello", closet_collection=closet)
+        assert out["results"][0]["matched_via"] == "fragmento+closet"
 
 
 class TestGraphRound2:
@@ -2232,22 +2232,22 @@ class TestGraphRound2:
 
 
 class TestPolicyRound2:
-    def test_over_budget_two_wings(self, tmp_path):
+    def test_over_budget_two_nodos(self, tmp_path):
         dm = _dm(tmp_path, name="pob2")
         try:
             p = mock.MagicMock()
-            p.list_wings.return_value = ["a", "b"]
-            p.wing_usage.side_effect = [{"over": False}, {"over": True}]
-            p.enforce_wing_cap.return_value = 2
-            assert PolicyEngine(p)._run_over_budget() == {"wings_over": ["b"], "evicted": 2}
+            p.list_nodos.return_value = ["a", "b"]
+            p.nodo_usage.side_effect = [{"over": False}, {"over": True}]
+            p.enforce_nodo_cap.return_value = 2
+            assert PolicyEngine(p)._run_over_budget() == {"nodos_over": ["b"], "evicted": 2}
         finally:
             dm.close()
 
     def test_rescore_ledger_ts_variants(self, tmp_path):
         dm = _dm(tmp_path, name="plts")
         try:
-            d1 = dm.add_drawer("w", "r", _content("ledger garbage ts alpha"), "/g.md", 0)
-            d2 = dm.add_drawer("w", "r", _content("ledger naive ts beta"), "/n.md", 0)
+            d1 = dm.add_fragmento("w", "r", _content("ledger garbage ts alpha"), "/g.md", 0)
+            d2 = dm.add_fragmento("w", "r", _content("ledger naive ts beta"), "/n.md", 0)
             col = dm._collection(create=False)
             old = _stale(40)
             naive_old = (datetime.now(UTC) - timedelta(days=40)).replace(tzinfo=None).isoformat()
@@ -2263,20 +2263,20 @@ class TestPolicyRound2:
             dm.close()
 
 
-class TestPalaceRound2:
+class TestSangreRound2:
     def test_mine_distinct_with_best_inserts(self, tmp_path, monkeypatch):
         proj = tmp_path / "proj"
         proj.mkdir()
         (proj / "n.md").write_text(_content("fresh distinct file content", 30))
         dm = _dm(tmp_path, name="mdist")
         try:
-            vdid = dm.add_drawer("w", "r", _content("mine distinct victim rho"), "/victim.md", 0)
-            victim = {"id": vdid, "doc": _content("mine distinct victim rho"), "meta": {"wing": "w"}}
+            vdid = dm.add_fragmento("w", "r", _content("mine distinct victim rho"), "/victim.md", 0)
+            victim = {"id": vdid, "doc": _content("mine distinct victim rho"), "meta": {"nodo": "w"}}
             monkeypatch.setattr(pal, "_best_lifecycle_candidate", lambda *a, **k: (victim, 0.99))
             monkeypatch.setattr(pal, "classify_content_pair", lambda *a, **k: "distinct")
-            out = dm.mine(str(proj), wing="w", room="r")
-            assert out["drawers_added"] == 2
-            assert out["drawers_deduped"] == 0
+            out = dm.mine(str(proj), nodo="w", celda="r")
+            assert out["fragmentos_added"] == 2
+            assert out["fragmentos_deduped"] == 0
         finally:
             dm.close()
 
@@ -2286,7 +2286,7 @@ class TestPalaceRound2:
         (proj / "new.md").write_text(_content("brand new file content tau", 30))
         dm = _dm(tmp_path, name=name)
         old_content = _content("rollback victim tau keeper", 10)
-        old_id = dm.add_drawer("w", "r", old_content, "/victim.md", 0)
+        old_id = dm.add_fragmento("w", "r", old_content, "/victim.md", 0)
         col = dm._collection(create=True)
         victim = {
             "id": old_id,
@@ -2306,7 +2306,7 @@ class TestPalaceRound2:
             orig_upsert = col.upsert
             state = {"armed": False}
 
-            def _coll(name="dxrk_drawers", *, create=True):
+            def _coll(name="dxrk_fragmentos", *, create=True):
                 if name == "dxrk_closets":
                     raise CollectionNotInitializedError("no closets")
                 return col
@@ -2328,7 +2328,7 @@ class TestPalaceRound2:
                 mock.patch.object(dm, "_collection", side_effect=_coll),
             ):
                 with pytest.raises(RuntimeError, match="batch upsert boom"):
-                    dm.mine(str(proj), wing="w", room="r")
+                    dm.mine(str(proj), nodo="w", celda="r")
         finally:
             dm.close()
 
@@ -2357,7 +2357,7 @@ class TestPalaceRound2:
                 mock.patch.object(dm, "_collection", return_value=col),
             ):
                 with pytest.raises(RuntimeError, match="batch upsert boom"):
-                    dm.mine(str(proj), wing="w", room="r")
+                    dm.mine(str(proj), nodo="w", celda="r")
         finally:
             dm.close()
 
@@ -2377,21 +2377,21 @@ class TestPalaceRound2:
     def test_forget_scope_variants(self, tmp_path):
         dm = _dm(tmp_path, name="fsc")
         try:
-            dm.add_drawer("w", "r1", _content("forget scope alpha keeper"), "/a.md", 0)
-            dm.add_drawer("w", "r2", _content("forget scope beta keeper"), "/b.md", 0)
-            out = dm.forget(wing="w", room="r1")
+            dm.add_fragmento("w", "r1", _content("forget scope alpha keeper"), "/a.md", 0)
+            dm.add_fragmento("w", "r2", _content("forget scope beta keeper"), "/b.md", 0)
+            out = dm.forget(nodo="w", celda="r1")
             assert out["matched"] == 1
             assert out["soft_forgotten"] == 1
-            out2 = dm.forget(room="r2")
+            out2 = dm.forget(celda="r2")
             assert out2["matched"] == 1
             col = dm._collection(create=False)
             with (
                 mock.patch.object(col, "get", side_effect=RuntimeError("scan boom")),
                 mock.patch.object(dm, "_collection", return_value=col),
             ):
-                assert dm.forget(wing="w")["matched"] == 0
-            assert dm.forget(wing="no_wing_xyz")["matched"] == 0
-            assert dm.forget(wing="w", before="2020-01-01")["matched"] == 0
+                assert dm.forget(nodo="w")["matched"] == 0
+            assert dm.forget(nodo="no_nodo_xyz")["matched"] == 0
+            assert dm.forget(nodo="w", before="2020-01-01")["matched"] == 0
         finally:
             dm.close()
 
@@ -2399,8 +2399,8 @@ class TestPalaceRound2:
         dm = pal.DxrkMemory(str(tmp_path / "nkg2"), auto_kg=False)
         dm.init()
         try:
-            did = dm.add_drawer("w", "r", _content("nokg matched alpha keeper"), "/k.md", 0)
-            out = dm.forget(drawer_ids=[did], include_kg=True)
+            did = dm.add_fragmento("w", "r", _content("nokg matched alpha keeper"), "/k.md", 0)
+            out = dm.forget(fragmento_ids=[did], include_kg=True)
             assert out["matched"] == 1
             assert out["kg_superseded"] == 0
         finally:
@@ -2409,7 +2409,7 @@ class TestPalaceRound2:
     def test_counters_path_exception(self, tmp_path):
         dm = _dm(tmp_path, name="cpe")
         try:
-            dm.palace_path = 123  # type: ignore[assignment]
+            dm.malla_path = 123  # type: ignore[assignment]
             assert dm._counters_path() is None
             assert dm._read_spine_counters() == {}
             assert dm._bump_spine_counter("x") == 0
@@ -2419,15 +2419,15 @@ class TestPalaceRound2:
     def test_timeline_pinned_without_date_skipped(self, tmp_path):
         dm = _dm(tmp_path, name="tlnd")
         try:
-            dp = dm.add_drawer("w", "r", _content("pinned nodate alpha keeper"), "/p.md", 0)
-            assert dm.pin_drawer(dp) is True
+            dp = dm.add_fragmento("w", "r", _content("pinned nodate alpha keeper"), "/p.md", 0)
+            assert dm.pin_fragmento(dp) is True
             col = dm._collection(create=False)
             col.update(ids=[dp], metadatas=[{"pinned_at": "", "filed_at": ""}])
             assert all(e["ref"] != dp for e in dm.timeline())
         finally:
             dm.close()
 
-    def test_timeline_ghost_drawer_episode(self, tmp_path):
+    def test_timeline_ghost_fragmento_episode(self, tmp_path):
         dm = _dm(tmp_path, name="tlgh")
         try:
             eps = [
@@ -2439,7 +2439,7 @@ class TestPalaceRound2:
                     "predicate": "q",
                     "object": "D",
                     "current": True,
-                    "source_drawer_id": "ghost_drawer",
+                    "source_fragmento_id": "ghost_fragmento",
                 },
             ]
             kgm = mock.MagicMock()
@@ -2448,14 +2448,14 @@ class TestPalaceRound2:
                 entries = dm.timeline()
             files = [e for e in entries if e["kind"] == "file"]
             assert len(files) == 1
-            assert files[0]["wing"] is None
+            assert files[0]["nodo"] is None
         finally:
             dm.close()
 
     def test_timeline_identity_pin_variants(self, tmp_path):
         dm = _dm(tmp_path, name="tlip")
         try:
-            (Path(dm.palace_path) / "pins.json").write_text('{"identity": {"scope": "identity"}}')
+            (Path(dm.malla_path) / "pins.json").write_text('{"identity": {"scope": "identity"}}')
             assert not [e for e in dm.timeline() if e["ref"] == "identity"]
             dm.pin_identity()
             assert any(e["ref"] == "identity" for e in dm.timeline())
@@ -2464,7 +2464,7 @@ class TestPalaceRound2:
             dm.close()
 
 
-class TestPalaceRound3:
+class TestSangreRound3:
     def _fake_msvcrt(self, monkeypatch):
         import sys
 
@@ -2486,7 +2486,7 @@ class TestPalaceRound3:
         self._fake_msvcrt(monkeypatch)
         monkeypatch.setattr("os.name", "nt")
         monkeypatch.setattr(
-            "dxrk.memory.palace._unlock_mine_lock_file",
+            "dxrk.memory.malla._unlock_mine_lock_file",
             lambda f: (_ for _ in ()).throw(OSError("unlock down")),
         )
         pal._cleanup_mine_lock_file(lp)
@@ -2500,25 +2500,25 @@ class TestPalaceRound3:
         lf.close()
         self._fake_msvcrt(monkeypatch)
         monkeypatch.setattr("os.name", "nt")
-        monkeypatch.setattr("dxrk.memory.palace._lock_mine_lock_file", lambda f, blocking: True)
-        monkeypatch.setattr("dxrk.memory.palace._mine_lock_file_is_current", lambda f, p: True)
-        monkeypatch.setattr("dxrk.memory.palace._unlock_mine_lock_file", lambda f: None)
+        monkeypatch.setattr("dxrk.memory.malla._lock_mine_lock_file", lambda f, blocking: True)
+        monkeypatch.setattr("dxrk.memory.malla._mine_lock_file_is_current", lambda f, p: True)
+        monkeypatch.setattr("dxrk.memory.malla._unlock_mine_lock_file", lambda f: None)
         monkeypatch.setattr(os_mod, "remove", lambda p: (_ for _ in ()).throw(OSError("ro")))
         pal._cleanup_mine_lock_file(lp)
         assert os_mod.path.exists(lp)
 
-    def test_mine_palace_lock_nt_acquire_release(self, tmp_path, monkeypatch):
+    def test_mine_malla_lock_nt_acquire_release(self, tmp_path, monkeypatch):
         import pathlib as pathlib_mod
 
         fake = self._fake_msvcrt(monkeypatch)
         monkeypatch.setattr("os.name", "nt")
         monkeypatch.setattr(pal, "Path", pathlib_mod.PosixPath)
         monkeypatch.setattr(pal, "_dxrk_lock_dir", lambda tenant_id=None: tmp_path / "locks")
-        with pal.mine_palace_lock(str(tmp_path / "palace-nt")):
+        with pal.mine_malla_lock(str(tmp_path / "malla-nt")):
             pass
         assert fake.locking.call_count >= 2
 
-    def test_mine_palace_lock_nt_contention(self, tmp_path, monkeypatch):
+    def test_mine_malla_lock_nt_contention(self, tmp_path, monkeypatch):
         import pathlib as pathlib_mod
 
         import pytest
@@ -2529,34 +2529,34 @@ class TestPalaceRound3:
         monkeypatch.setattr(pal, "Path", pathlib_mod.PosixPath)
         monkeypatch.setattr(pal, "_dxrk_lock_dir", lambda tenant_id=None: tmp_path / "locks")
         with pytest.raises(RuntimeError, match="held by another writer"):
-            with pal.mine_palace_lock(str(tmp_path / "palace-nt-busy")):
+            with pal.mine_malla_lock(str(tmp_path / "malla-nt-busy")):
                 pass
 
-    def test_wing_cap_exhausts_max_passes(self, tmp_path):
+    def test_nodo_cap_exhausts_max_passes(self, tmp_path):
         dm = _dm(tmp_path, name="wexh")
         try:
             col = dm._collection(create=False)
             calls = {"n": 0}
 
-            def _always_full(c, wing, cap):
+            def _always_full(c, nodo, cap):
                 calls["n"] += 1
                 return 1, cap + 5, True
 
-            with mock.patch.object(dm, "_enforce_wing_cap_once", side_effect=_always_full):
-                total = dm._enforce_wing_cap(col, "w")
-            assert total == pal._WING_CAP_MAX_PASSES
-            assert calls["n"] == pal._WING_CAP_MAX_PASSES
+            with mock.patch.object(dm, "_enforce_nodo_cap_once", side_effect=_always_full):
+                total = dm._enforce_nodo_cap(col, "w")
+            assert total == pal._NODO_CAP_MAX_PASSES
+            assert calls["n"] == pal._NODO_CAP_MAX_PASSES
         finally:
             dm.close()
 
     def test_consolidate_self_collision_skips_mark(self, tmp_path, monkeypatch):
         dm = _dm(tmp_path, name="cself")
         try:
-            d1 = dm.add_drawer("w", "r", _content("self collision alpha keeper one"), "/sa.md", 0)
-            d2 = dm.add_drawer("w", "r", _content("self collision beta keeper two"), "/sb.md", 0)
-            monkeypatch.setattr(pal.DrawerRecord, "make_id", staticmethod(lambda *a, **k: d1))
-            out = dm.consolidate_drawers([d1, d2])
-            assert out["drawer_id"] == d1
+            d1 = dm.add_fragmento("w", "r", _content("self collision alpha keeper one"), "/sa.md", 0)
+            d2 = dm.add_fragmento("w", "r", _content("self collision beta keeper two"), "/sb.md", 0)
+            monkeypatch.setattr(pal.FragmentoRecord, "make_id", staticmethod(lambda *a, **k: d1))
+            out = dm.consolidate_fragmentos([d1, d2])
+            assert out["fragmento_id"] == d1
             assert out["sources"] == 2
         finally:
             dm.close()

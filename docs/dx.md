@@ -22,21 +22,21 @@ Este documento es el **plan ejecutable** para llevar a Dxrk a **Top1 GitHub DX**
 
 ## 1. Benchmarks comparativos — DxrkMemory vs mem0 / Zep / Chroma
 
-### 1.1 Tabla honesta (corpus 1k–10k drawers, laptop M3 / Ubuntu 22.04, Python 3.13)
+### 1.1 Tabla honesta (corpus 1k–10k fragmentos, laptop M3 / Ubuntu 22.04, Python 3.13)
 
 | Métrica | **DxrkMemory 2.0** (stdlib-only) | **mem0** (`mem0ai`) | **Zep** (cloud) | **Chroma** (`chromadb` 1.x) |
 |---|---:|---:|---:|---:|
 | **Recall@10** (LOCOMO subset, 500 Q) | **0.72** BM25 + closet boost + date_window | 0.84 (dense + rerank) | 0.86 (temporal graph + embeddings) | 0.88 (HNSW `ef=200`) |
 | **Recall@10 + vector plugin futuro** | 0.83 (BM25 + optional `VectorBackend`) | — | — | — |
-| **Latencia `search` 1k drawers** (p50) | **35 ms** (FTS5 trigram + BM25) | 78 ms (sqlite+vector+openai local) | 140 ms + network | 12 ms (HNSW in-mem) |
-| **Latencia `search` 10k drawers** | 68 ms | 145 ms | 180 ms + network | 18 ms |
+| **Latencia `search` 1k fragmentos** (p50) | **35 ms** (FTS5 trigram + BM25) | 78 ms (sqlite+vector+openai local) | 140 ms + network | 12 ms (HNSW in-mem) |
+| **Latencia `search` 10k fragmentos** | 68 ms | 145 ms | 180 ms + network | 18 ms |
 | **Latencia `wake_up()` L0+L1 600–900 tok** | **<50 ms cold** (WAL, sin ONNX) | 220 ms (model warmup) | n/a (API call) | n/a |
 | **Cold start import** | **<80 ms** (`import dxrk.memory`) | 620 ms (onnx load) | 0 (sdk) | 480 ms |
 | **Install size** (deps extra) | **0 MB** (stdlib `sqlite3`) | ~180 MB (`chromadb` 120 + `onnx` 60) | 0 MB sdk / cloud cost | ~120 MB (`chromadb`) |
 | **Deps** (instalación vía git) | **0 extra** (`textual`, `httpx`, `PyYAML`, `cryptography`, `bs4` solo en core; memory 0) | 14 (`chromadb`, `openai`, `numpy`, `onnxruntime`) | 5 + cloud account | 9 (`chromadb`, `hnswlib`, `numpy`) |
 | **Offline** | **Sí 100%** | Parcial (requiere `OPENAI_API_KEY` para embeddings) | No (cloud) | Sí (local) |
-| **Persistencia** | `~/.dxrk/palace/sqlite_palace.db` WAL `0o600` + `~/.dxrk/knowledge_graph.sqlite3` | `~/.mem0/chroma.sqlite3` + json | Cloud PG | `chroma.sqlite3` + HNSW bin |
-| **Multi-tenant** | `palace_path` per tenant `chmod 0o600`, `RLock` + `mine_palace_lock` 900s | `user_id` string, single DB | org/project API key | collection per tenant |
+| **Persistencia** | `~/.dxrk/malla/malla.db` WAL `0o600` + `~/.dxrk/knowledge_graph.sqlite3` | `~/.mem0/chroma.sqlite3` + json | Cloud PG | `chroma.sqlite3` + HNSW bin |
+| **Multi-tenant** | `malla_path` per tenant `chmod 0o600`, `RLock` + `mine_malla_lock` 900s | `user_id` string, single DB | org/project API key | collection per tenant |
 | **Licencia** | MIT (Dxrk) | Apache-2.0 | Commercial + OSS | Apache-2.0 |
 | **Zero-trace mempalace** | `grep engram|mempal dxrk/memory → 0` | n/a | n/a | n/a |
 
@@ -110,14 +110,14 @@ README actual ya es bueno (Release v0.1.2, License MIT, Python 3.13, Platform, C
 
 ```bash
 uv tool install git+https://github.com/Dxrk777/Dxrk.git  # 1) instala + detecta agentes
-dxrk memory mine --wing dxrk --room code   # 2) indexa el repo (800/100 chunk, FTS5 trigram+WAL)
+dxrk memory mine --nodo dxrk --celda code   # 2) indexa el repo (800/100 chunk, FTS5 trigram+WAL)
 dxrk query "¿qué arquitectura decidimos para memoria?"  # 3) BM25 + Graph temporal, <50ms cold
 # Python
-from dxrk.memory import Palace
-pal = Palace("~/.dxrk/palace"); pal.search("hybrid BM25", n_results=5)
+from dxrk.memory import Malla
+pal = Malla("~/.dxrk/malla"); pal.search("hybrid BM25", n_results=5)
 ```
 
-> **Por qué DxrkMemory 2.0:** `sqlite3` FTS5 `trigram→porter→unicode61` + BM25 híbrido, Graph temporal `valid_from/valid_to`, AAAK 600–900 tok wake-up, Palace locks `~/.dxrk/locks` 900s, FIFO guard `O_NONBLOCK` — ver [`docs/memory.md`](memory.md) · [`docs/MIGRATION_3.3.5_3.7.1.md`](MIGRATION_3.3.5_3.7.1.md) · [`docs/dx.md`](dx.md)
+> **Por qué DxrkMemory 2.0:** `sqlite3` FTS5 `trigram→porter→unicode61` + BM25 híbrido, Graph temporal `valid_from/valid_to`, AAAK 600–900 tok wake-up, Malla locks `~/.dxrk/locks` 900s, FIFO guard `O_NONBLOCK` — ver [`docs/memory.md`](memory.md) · [`docs/MIGRATION_3.3.5_3.7.1.md`](MIGRATION_3.3.5_3.7.1.md) · [`docs/dx.md`](dx.md)
 ```
 
 ### 2.3 Checklist README hero (done = PR merged)
@@ -319,7 +319,7 @@ tar tzf dist/dxrk-0.2.0.tar.gz | head -n 20
 # 7) test install from sdist (smoke)
 uv tool install --from dist/dxrk-0.2.0.tar.gz dxrk --force 2>&1 | tail
 dxrk-py --help | head -n 20
-uv run python -c "from dxrk.memory import AgentMemory, Palace; print('memory ok')"
+uv run python -c "from dxrk.memory import AgentMemory, Malla; print('memory ok')"
 
 # 8) tag + push (dispara .github/workflows/publish.yml)
 git cliff --unreleased --tag v0.2.0 --prepend CHANGELOG.md  # o git-cliff manual
@@ -388,7 +388,7 @@ classifiers = [
 
 **1) Ejemplos (4 mínimo, cada uno <40 líneas, `uv run` directo):**
 
-- `examples/memory-30s.py` — `Palace.mine` + `search` en 10 líneas.
+- `examples/memory-30s.py` — `Malla.mine` + `search` en 10 líneas.
 - `examples/graph-temporal.py` — `KnowledgeGraph` `valid_from`/`as_of` + `traverse`.
 - `examples/aaak-compress.py` — `Dialect.compress` 600–900 tok demo.
 - `examples/hybrid-search.py` — `hybrid_search` con `since`/`before` + `closet boost`.
@@ -524,7 +524,7 @@ uv run mkdocs build  # debe dar 0 warnings tras PR2
 
 ## 12. Referencias
 
-- `memory.md` — DxrkMemory 2.0 flagship 13 módulos, FTS5, Palace locks, BM25, Graph, AAAK, Layers 600–900 tok
+- `memory.md` — DxrkMemory 2.0 flagship 13 módulos, FTS5, Malla locks, BM25, Graph, AAAK, Layers 600–900 tok
 - `MIGRATION_3.3.5_3.7.1.md` — delta 388 files, 6 parches portados, no-portados justificados
 - `adr/ADR-002-memory-separation.md` — aislamiento DxrkMemory / Learner / RAG
 - `adr/ADR-003-hybrid-vs-stdlib.md` — decisión stdlib-only vs hybrid (P5)

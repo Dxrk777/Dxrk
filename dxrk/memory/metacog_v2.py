@@ -44,9 +44,9 @@ def _now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
 
-def load_metacog_state(palace_path: Path) -> MetacogState:
+def load_metacog_state(malla_path: Path) -> MetacogState:
     """Load metacognitive state from sidecar JSON."""
-    path = palace_path / METACOG_SIDECAR
+    path = malla_path / METACOG_SIDECAR
     if not path.exists():
         return MetacogState()
     try:
@@ -67,9 +67,9 @@ def load_metacog_state(palace_path: Path) -> MetacogState:
         return MetacogState()
 
 
-def save_metacog_state(palace_path: Path, state: MetacogState) -> None:
+def save_metacog_state(malla_path: Path, state: MetacogState) -> None:
     """Persist metacognitive state to sidecar JSON (0o600)."""
-    path = palace_path / METACOG_SIDECAR
+    path = malla_path / METACOG_SIDECAR
     data = {
         "calibration_error": state.calibration_error,
         "bias_direction": state.bias_direction,
@@ -139,7 +139,7 @@ def record_judgment(
         state: current MetacogState
         predicted: confidence prediction [0, 1]
         actual: binary outcome (0 or 1)
-        context: optional context (wing, query_type, etc.)
+        context: optional context (nodo, query_type, etc.)
 
     Returns:
         Updated MetacogState
@@ -383,9 +383,9 @@ def calibrate_confidence(
         return raw_confidence
 
 
-def run_calibration(palace_path: Path) -> MetacogState:
+def run_calibration(malla_path: Path) -> MetacogState:
     """Run full calibration: fit temperature + isotonic, save state."""
-    state = load_metacog_state(palace_path)
+    state = load_metacog_state(malla_path)
 
     if state.n_judgments < MIN_JUDGMENTS_FOR_ECE:
         return state
@@ -410,7 +410,7 @@ def run_calibration(palace_path: Path) -> MetacogState:
         n_bins=state.n_bins,
     )
 
-    save_metacog_state(palace_path, new_state)
+    save_metacog_state(malla_path, new_state)
     return new_state
 
 
@@ -441,23 +441,23 @@ class MetacognitionPrediction:
     bias_info: dict | None = None
 
 
-from dxrk.memory.palace import DxrkMemory
+from dxrk.memory.malla import DxrkMemory
 
 
 class MetacognitionV2:
     """Wrapper class for metacognitive operations (MCP/CLI compatible)."""
 
-    def __init__(self, palace: DxrkMemory):
-        self.palace = palace
+    def __init__(self, malla: DxrkMemory):
+        self.malla = malla
         from pathlib import Path
 
-        self._palace_path = Path(palace._path) if hasattr(palace, "_path") else Path(".")
-        self._state = load_metacog_state(self._palace_path)
+        self._malla_path = Path(malla._path) if hasattr(malla, "_path") else Path(".")
+        self._state = load_metacog_state(self._malla_path)
 
-    def predict(self, query: str, wing: str = "default") -> MetacognitionPrediction:
+    def predict(self, query: str, nodo: str = "default") -> MetacognitionPrediction:
         """Get metacognitive prediction for a query."""
-        # Use palace search to estimate difficulty
-        results = self.palace.search(query, wing=wing, n_results=5)
+        # Use malla search to estimate difficulty
+        results = self.malla.search(query, nodo=nodo, n_results=5)
         hits_raw = results.get("results", []) if isinstance(results, dict) else []
         hits: list = hits_raw if isinstance(hits_raw, list) else []
 
@@ -479,10 +479,10 @@ class MetacognitionV2:
             bias_info=bias_info,
         )
 
-    def fit_calibration(self, wing: str = "default", method: str = "temperature") -> dict:
+    def fit_calibration(self, nodo: str = "default", method: str = "temperature") -> dict:
         """Fit calibration and return parameters."""
         # Run full calibration
-        new_state = run_calibration(self._palace_path)
+        new_state = run_calibration(self._malla_path)
         self._state = new_state
         return {
             "temperature": new_state.temperature,

@@ -4,7 +4,7 @@
 Stdlib-only port of session hook logic.
 Reads JSON from stdin, outputs JSON to stdout.
 Invoked as ``python -m dxrk.memory.hooks_cli <hook> <harness>``.
-Kill-switch: if palace root does not exist, all hooks are no-ops.
+Kill-switch: if malla root does not exist, all hooks are no-ops.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from datetime import datetime
 from pathlib import Path
 
 SAVE_INTERVAL = 15
-PALACE_ROOT = Path.home() / ".dxrk" / "memory"
+MALLA_ROOT = Path.home() / ".dxrk" / "memory"
 STATE_DIR = Path.home() / ".dxrk" / "hook_state"
 _MINE_PID_DIR = STATE_DIR / "mine_pids"
 _MINE_PID_FILE_ENV = "DXRK_MINE_PID_FILE"
@@ -42,8 +42,8 @@ def _detached_popen_kwargs() -> dict:
     return kwargs
 
 
-def _palace_root_exists() -> bool:
-    return PALACE_ROOT.is_dir()
+def _malla_root_exists() -> bool:
+    return MALLA_ROOT.is_dir()
 
 
 def _is_trusted_python(path: str) -> bool:
@@ -86,8 +86,8 @@ def _dxrk_python() -> str:
 
 STOP_BLOCK_REASON = (
     "AUTO-SAVE checkpoint (DxrkMemory). Save this session's key content:\n"
-    "1. dxrk_memory_add_drawer — verbatim quotes, decisions, code snippets "
-    "(place in appropriate wing and room)\n"
+    "1. dxrk_memory_add_fragmento — verbatim quotes, decisions, code snippets "
+    "(place in appropriate nodo and celda)\n"
     "2. dxrk_memory_kg_add — entity relationships (optional)\n"
     "For THIS save, use DxrkMemory tools only. Use verbatim quotes where possible. "
     "Continue conversation after saving."
@@ -95,8 +95,8 @@ STOP_BLOCK_REASON = (
 
 PRECOMPACT_BLOCK_REASON = (
     "COMPACTION IMMINENT (DxrkMemory). Save ALL session content before context is lost:\n"
-    "1. dxrk_memory_add_drawer — ALL verbatim quotes, decisions, code, context "
-    "(place each in appropriate wing and room)\n"
+    "1. dxrk_memory_add_fragmento — ALL verbatim quotes, decisions, code, context "
+    "(place each in appropriate nodo and celda)\n"
     "2. dxrk_memory_kg_add — entity relationships (optional)\n"
     "Be thorough — after compaction this is all that survives. "
     "Save everything to DxrkMemory, then allow compaction to proceed."
@@ -161,7 +161,7 @@ _state_dir_initialized = False
 
 
 def _log(message: str) -> None:
-    if not _palace_root_exists():
+    if not _malla_root_exists():
         return
     global _state_dir_initialized
     try:
@@ -364,9 +364,9 @@ def _maybe_auto_ingest() -> None:
     targets = _get_mine_targets()
     if not targets:
         return
-    for mine_dir, wing in targets:
+    for mine_dir, nodo in targets:
         try:
-            _spawn_mine([_dxrk_python(), "-m", "dxrk.memory", "mine", mine_dir, "--wing", wing])
+            _spawn_mine([_dxrk_python(), "-m", "dxrk.memory", "mine", mine_dir, "--nodo", nodo])
         except OSError:
             pass
 
@@ -377,11 +377,11 @@ def _mine_sync() -> None:
         return
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     log_path = STATE_DIR / "hook.log"
-    for mine_dir, wing in targets:
+    for mine_dir, nodo in targets:
         try:
             with open(log_path, "a", encoding="utf-8") as log_f:
                 subprocess.run(
-                    [_dxrk_python(), "-m", "dxrk.memory", "mine", mine_dir, "--wing", wing],
+                    [_dxrk_python(), "-m", "dxrk.memory", "mine", mine_dir, "--nodo", nodo],
                     stdout=log_f,
                     stderr=log_f,
                     timeout=60,
@@ -451,7 +451,7 @@ def _extract_themes(messages: list[str], max_themes: int = 3) -> list[str]:
 def _save_session_summary_direct(
     transcript_path: str,
     session_id: str,
-    wing: str = "",
+    nodo: str = "",
 ) -> dict:
     messages = _extract_recent_messages(transcript_path)
     if not messages:
@@ -461,27 +461,27 @@ def _save_session_summary_direct(
     now = datetime.now()
     topics = "|".join(m[:80] for m in messages[-10:])
     content = f"SESSION:{now.strftime('%Y-%m-%d')}|session:{session_id}|msgs:{len(messages)}|recent:{topics}"
-    wing = wing or "sessions"
-    room = now.strftime("%Y-%m-%d")
+    nodo = nodo or "sessions"
+    celda = now.strftime("%Y-%m-%d")
     try:
-        from dxrk.memory.palace import DxrkMemory
+        from dxrk.memory.malla import DxrkMemory
 
-        dm = DxrkMemory(str(PALACE_ROOT))
+        dm = DxrkMemory(str(MALLA_ROOT))
         dm.init()
-        drawer_id = dm.add_drawer(
-            wing=wing,
-            room=room,
+        fragmento_id = dm.add_fragmento(
+            nodo=nodo,
+            celda=celda,
             content=content,
             source_file=f"session:{session_id}",
             chunk_index=0,
         )
-        _log(f"Session summary saved: {drawer_id}")
+        _log(f"Session summary saved: {fragmento_id}")
         try:
             ack_file = STATE_DIR / "last_checkpoint"
             ack_file.write_text(json.dumps({"msgs": len(messages), "ts": now.isoformat()}), encoding="utf-8")
         except OSError:
             pass
-        return {"count": len(messages), "themes": themes, "drawer_id": drawer_id}
+        return {"count": len(messages), "themes": themes, "fragmento_id": fragmento_id}
     except Exception as e:
         _log(f"Session summary error: {e}")
     return {"count": 0}
@@ -499,7 +499,7 @@ def _ingest_transcript(transcript_path: str) -> None:
                 "dxrk.memory",
                 "mine",
                 str(path.parent),
-                "--wing",
+                "--nodo",
                 "sessions",
             ]
         )
@@ -534,7 +534,7 @@ _ENCODED_PARENT_PREFIXES = (
 )
 
 
-def _wing_from_transcript_path(transcript_path: str) -> str:
+def _nodo_from_transcript_path(transcript_path: str) -> str:
     try:
         path = Path(transcript_path).expanduser()
         if path.is_file():
@@ -557,7 +557,7 @@ def _wing_from_transcript_path(transcript_path: str) -> str:
                         continue
                     project = cwd_norm.rsplit("/", 1)[-1]
                     slug = project.lower().replace(" ", "_").replace("-", "_")
-                    return f"wing_{slug}"
+                    return f"nodo_{slug}"
     except OSError:
         pass
     normalized = transcript_path.replace("\\", "/")
@@ -573,16 +573,16 @@ def _wing_from_transcript_path(transcript_path: str) -> str:
                 break
         project = encoded.lower().replace(" ", "_").replace("-", "_")
         if project:
-            return f"wing_{project}"
+            return f"nodo_{project}"
     match = re.search(r"-Projects-([^/]+?)(?:/|$)", normalized)
     if match:
         project = match.group(1).lower().replace(" ", "_").replace("-", "_")
-        return f"wing_{project}"
-    return "wing_sessions"
+        return f"nodo_{project}"
+    return "nodo_sessions"
 
 
 def hook_stop(data: dict, harness: str) -> None:
-    if not _palace_root_exists():
+    if not _malla_root_exists():
         _output({})
         return
     parsed = _parse_harness_input(data, harness)
@@ -605,10 +605,10 @@ def hook_stop(data: dict, harness: str) -> None:
     _log(f"Session {session_id}: {exchange_count} exchanges, {since_last} since last save")
     if since_last >= SAVE_INTERVAL and exchange_count > 0:
         _log(f"TRIGGERING SAVE at exchange {exchange_count}")
-        project_wing = _wing_from_transcript_path(transcript_path)
+        project_nodo = _nodo_from_transcript_path(transcript_path)
         result: dict = {"count": 0}
         if transcript_path:
-            result = _save_session_summary_direct(transcript_path, session_id, wing=project_wing)
+            result = _save_session_summary_direct(transcript_path, session_id, nodo=project_nodo)
             _ingest_transcript(transcript_path)
         _maybe_auto_ingest()
         count = result.get("count", 0)
@@ -630,7 +630,7 @@ _SESSION_START_MAX_CHARS = 1800
 
 
 def hook_session_start(data: dict, harness: str) -> None:
-    if not _palace_root_exists():
+    if not _malla_root_exists():
         _output({})
         return
     parsed = _parse_harness_input(data, harness)
@@ -646,21 +646,21 @@ def hook_session_start(data: dict, harness: str) -> None:
 
 
 def _session_start_context(transcript_path: str) -> dict:
-    """L0 identity + L1 top drawers via MemoryStack.wake_up (compact)."""
+    """L0 identity + L1 top fragmentos via MemoryStack.wake_up (compact)."""
     from dxrk.memory.layers import MemoryStack
 
-    wing: str | None = None
+    nodo: str | None = None
     if transcript_path:
         try:
-            wing = _wing_from_transcript_path(transcript_path)
+            nodo = _nodo_from_transcript_path(transcript_path)
         except Exception:
-            wing = None
-    stack = MemoryStack(palace_path=str(PALACE_ROOT))
-    text = stack.wake_up(wing=wing) if wing else stack.wake_up()
-    if wing and "No memories yet" in text:
-        # project wing with no drawers yet — fall back to unscoped recall
+            nodo = None
+    stack = MemoryStack(malla_path=str(MALLA_ROOT))
+    text = stack.wake_up(nodo=nodo) if nodo else stack.wake_up()
+    if nodo and "No memories yet" in text:
+        # project nodo with no fragmentos yet — fall back to unscoped recall
         text = stack.wake_up()
-    if "No palace found" in text or "No memories yet" in text:
+    if "No malla found" in text or "No memories yet" in text:
         return {}
     text = text.strip()
     if len(text) > _SESSION_START_MAX_CHARS:
@@ -671,7 +671,7 @@ def _session_start_context(transcript_path: str) -> dict:
 
 
 def hook_precompact(data: dict, harness: str) -> None:
-    if not _palace_root_exists():
+    if not _malla_root_exists():
         _output({})
         return
     parsed = _parse_harness_input(data, harness)

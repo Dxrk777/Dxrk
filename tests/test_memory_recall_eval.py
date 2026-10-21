@@ -13,11 +13,11 @@ from pathlib import Path
 import pytest
 
 from dxrk.memory import AgentMemory
-from dxrk.memory.palace import DxrkMemory
+from dxrk.memory.malla import DxrkMemory
 
-WING = "proj"
+NODO = "proj"
 
-# (drawer_id, room, content)
+# (fragmento_id, celda, content)
 CORPUS: list[tuple[str, str, str]] = [
     (
         "auth",
@@ -96,20 +96,20 @@ def _reset_hook_state_flag():
 
 
 @pytest.fixture()
-def palace(tmp_path: Path) -> Path:
-    pal = tmp_path / "eval_palace"
+def malla(tmp_path: Path) -> Path:
+    pal = tmp_path / "eval_malla"
     dm = DxrkMemory(str(pal))
     dm.init()
-    for marker, room, content in CORPUS:
-        dm.add_drawer(WING, room, content, source_file=f"/eval/{marker}.md", chunk_index=0)
+    for marker, celda, content in CORPUS:
+        dm.add_fragmento(NODO, celda, content, source_file=f"/eval/{marker}.md", chunk_index=0)
     dm.close()
     return pal
 
 
-def _palace_hits(pal: Path, query: str, k: int) -> list[str]:
+def _malla_hits(pal: Path, query: str, k: int) -> list[str]:
     dm = DxrkMemory(str(pal))
     try:
-        res = dm.search(query, wing=WING, n_results=k)
+        res = dm.search(query, nodo=NODO, n_results=k)
     finally:
         dm.close()
     hits = res.get("results", [])
@@ -123,10 +123,10 @@ def _palace_hits(pal: Path, query: str, k: int) -> list[str]:
 
 def _agent_hits(pal: Path, query: str, k: int) -> list[str]:
     mem = AgentMemory(path=str(pal))
-    entries = mem.search(WING, query, 0, k)
+    entries = mem.search(NODO, query, 0, k)
     out: list[str] = []
     for e in entries:
-        out.append(_marker({"source_file": e.palace_path}, e.content))
+        out.append(_marker({"source_file": e.malla_path}, e.content))
     return out
 
 
@@ -135,37 +135,37 @@ def _precision_at_k(ranked: list[str], target: str, k: int) -> float:
     return sum(1 for m in topk if m == target) / k
 
 
-def test_eval_palace_hybrid_recall(palace: Path):
-    """Each conceptual query must rank its target in the top-k (palace path)."""
+def test_eval_malla_hybrid_recall(malla: Path):
+    """Each conceptual query must rank its target in the top-k (malla path)."""
     recalls: list[float] = []
     for query, target, k in GRADED:
-        ranked = _palace_hits(palace, query, k)
+        ranked = _malla_hits(malla, query, k)
         assert target in ranked[:k], f"query {query!r} missed {target}: {ranked}"
         assert _precision_at_k(ranked, target, k) >= 1 / k
         recalls.append(1.0 if target in ranked[:k] else 0.0)
     assert sum(recalls) / len(recalls) == 1.0
 
 
-def test_eval_agent_search_recall(palace: Path):
+def test_eval_agent_search_recall(malla: Path):
     """Same bar through AgentMemory.search (AND-filter removal, Phase 1B)."""
     recalls: list[float] = []
     for query, target, k in GRADED:
-        ranked = _agent_hits(palace, query, k)
+        ranked = _agent_hits(malla, query, k)
         assert target in ranked[:k], f"query {query!r} missed {target}: {ranked}"
         assert _precision_at_k(ranked, target, k) >= 1 / k
         recalls.append(1.0 if target in ranked[:k] else 0.0)
     assert sum(recalls) / len(recalls) == 1.0
 
 
-def test_eval_pure_vector_win(palace: Path):
+def test_eval_pure_vector_win(malla: Path):
     """The auth query has ZERO lexical overlap — only the vector can rank it.
 
     Pins Phase 1A: BM25-only retrieval scores this 0.0 and can never
     separate it from decoys on meaning.
     """
-    dm = DxrkMemory(str(palace))
+    dm = DxrkMemory(str(malla))
     try:
-        res = dm.search("how do we handle auth?", wing=WING, n_results=3)
+        res = dm.search("how do we handle auth?", nodo=NODO, n_results=3)
     finally:
         dm.close()
     hits = res.get("results", [])
@@ -177,18 +177,18 @@ def test_eval_pure_vector_win(palace: Path):
     assert float(top.get("similarity", 0.0)) >= 0.15
 
 
-def test_eval_gibberish_recall_floor(palace: Path):
-    """A nonsense query must not surface corpus drawers (relevance floor)."""
-    mem = AgentMemory(path=str(palace))
-    assert mem.search(WING, "xqzt blorpt fnord quantum", 0, 5) == []
+def test_eval_gibberish_recall_floor(malla: Path):
+    """A nonsense query must not surface corpus fragmentos (relevance floor)."""
+    mem = AgentMemory(path=str(malla))
+    assert mem.search(NODO, "xqzt blorpt fnord quantum", 0, 5) == []
 
 
-def test_hook_session_start_round_trip(palace: Path, tmp_path: Path, monkeypatch):
+def test_hook_session_start_round_trip(malla: Path, tmp_path: Path, monkeypatch):
     """hook_session_start returns L0+L1 context; a conceptual query then recalls it."""
     import dxrk.memory.hooks_cli as hc
 
     state = tmp_path / "hstate"
-    monkeypatch.setattr(hc, "PALACE_ROOT", palace)
+    monkeypatch.setattr(hc, "MALLA_ROOT", malla)
     monkeypatch.setattr(hc, "STATE_DIR", state)
     monkeypatch.setattr(hc, "_MINE_PID_DIR", state / "mine_pids")
     hc._state_dir_initialized = False
@@ -198,11 +198,11 @@ def test_hook_session_start_round_trip(palace: Path, tmp_path: Path, monkeypatch
     hc.hook_session_start({"session_id": "eval-sess", "transcript_path": ""}, "dxrk")
     assert len(outs) == 1
     msg = outs[0].get("systemMessage", "")
-    assert "JWT bearer" in msg  # L1 top drawer surfaced at session start
+    assert "JWT bearer" in msg  # L1 top fragmento surfaced at session start
     assert len(msg) <= 2000  # compact output bound
 
     # round-trip: the hooked context is searchable via a conceptual query
-    assert "auth" in _agent_hits(palace, "how do we handle auth?", 3)[:3]
+    assert "auth" in _agent_hits(malla, "how do we handle auth?", 3)[:3]
 
 
 # ---------------------------------------------------------------------------
@@ -262,15 +262,15 @@ class TestLocalVectors:
 
     def test_query_embeddings_dim_matched_ranks(self, tmp_path: Path):
         """Explicit DIM-wide embeddings are honored (true hybrid, not neutral)."""
-        from dxrk.memory.backend import PalaceRef, SqliteBackend
+        from dxrk.memory.backend import MallaRef, SqliteBackend
         from dxrk.memory.vectors import embed_text
 
         be = SqliteBackend()
         try:
-            ref = PalaceRef(id=str(tmp_path), local_path=str(tmp_path))
-            col = be.get_collection(palace=ref, collection_name="qemb2", create=True)
-            col.add(documents=["alpha beta gamma"], ids=["a"], metadatas=[{"wing": "w"}])
-            col.add(documents=["unrelated zebra quantum"], ids=["b"], metadatas=[{"wing": "w"}])
+            ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
+            col = be.get_collection(malla=ref, collection_name="qemb2", create=True)
+            col.add(documents=["alpha beta gamma"], ids=["a"], metadatas=[{"nodo": "w"}])
+            col.add(documents=["unrelated zebra quantum"], ids=["b"], metadatas=[{"nodo": "w"}])
             q = col.query(query_embeddings=[embed_text("alpha beta gamma")], n_results=2)
             assert q.ids[0][0] == "a"
             assert q.distances[0][0] < q.distances[0][1]
@@ -278,13 +278,13 @@ class TestLocalVectors:
             be.close()
 
     def test_query_embeddings_dim_mismatch_stays_neutral(self, tmp_path: Path):
-        from dxrk.memory.backend import PalaceRef, SqliteBackend
+        from dxrk.memory.backend import MallaRef, SqliteBackend
 
         be = SqliteBackend()
         try:
-            ref = PalaceRef(id=str(tmp_path), local_path=str(tmp_path))
-            col = be.get_collection(palace=ref, collection_name="qemb3", create=True)
-            col.add(documents=["alpha beta"], ids=["q1"], metadatas=[{"wing": "w"}])
+            ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
+            col = be.get_collection(malla=ref, collection_name="qemb3", create=True)
+            col.add(documents=["alpha beta"], ids=["q1"], metadatas=[{"nodo": "w"}])
             q = col.query(query_embeddings=[[0.1, 0.2]], n_results=5)
             assert "q1" in q.ids[0]
             assert q.distances[0][0] == 0.5
@@ -293,13 +293,13 @@ class TestLocalVectors:
 
     def test_legacy_rows_backfilled_on_query(self, tmp_path: Path):
         """Rows written before doc_vectors existed get vectors lazily."""
-        from dxrk.memory.backend import PalaceRef, SqliteBackend
+        from dxrk.memory.backend import MallaRef, SqliteBackend
 
         be = SqliteBackend()
         try:
-            ref = PalaceRef(id=str(tmp_path), local_path=str(tmp_path))
-            col = be.get_collection(palace=ref, collection_name="backfill", create=True)
-            col.add(documents=["authentication tokens login"], ids=["l1"], metadatas=[{"wing": "w"}])
+            ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
+            col = be.get_collection(malla=ref, collection_name="backfill", create=True)
+            col.add(documents=["authentication tokens login"], ids=["l1"], metadatas=[{"nodo": "w"}])
             col._conn.execute("DELETE FROM doc_vectors")  # type: ignore[attr-defined]
             col._conn.commit()  # type: ignore[attr-defined]
             q = col.query(query_texts=["how do we handle auth?"], n_results=5)
@@ -310,13 +310,13 @@ class TestLocalVectors:
             be.close()
 
     def test_delete_purges_vectors(self, tmp_path: Path):
-        from dxrk.memory.backend import PalaceRef, SqliteBackend
+        from dxrk.memory.backend import MallaRef, SqliteBackend
 
         be = SqliteBackend()
         try:
-            ref = PalaceRef(id=str(tmp_path), local_path=str(tmp_path))
-            col = be.get_collection(palace=ref, collection_name="delvec", create=True)
-            col.add(documents=["to be deleted"], ids=["d1"], metadatas=[{"wing": "w"}])
+            ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
+            col = be.get_collection(malla=ref, collection_name="delvec", create=True)
+            col.add(documents=["to be deleted"], ids=["d1"], metadatas=[{"nodo": "w"}])
             col.delete(ids=["d1"])
             cur = col._conn.execute("SELECT COUNT(*) FROM doc_vectors")  # type: ignore[attr-defined]
             assert cur.fetchone()[0] == 0

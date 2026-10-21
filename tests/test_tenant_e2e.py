@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Tenant e2e isolation — palace/vault/jwt/rbac + CLI.
+"""Tenant e2e isolation — malla/vault/jwt/rbac + CLI.
 
 Covers gap remaining after R05 P4 (77.82%). Stdlib + pytest only.
 """
@@ -33,9 +33,9 @@ def _iso_home(tmp_path: pathlib.Path, monkeypatch) -> pathlib.Path:
 def test_migration_idempotent_and_ensure_tenant(tmp_path, monkeypatch):
     home = _iso_home(tmp_path, monkeypatch)
     # create legacy files
-    legacy_palace = home / ".dxrk" / "palace"
-    legacy_palace.mkdir(parents=True)
-    (legacy_palace / "sqlite_palace.db").write_text("fake")
+    legacy_malla = home / ".dxrk" / "malla"
+    legacy_malla.mkdir(parents=True)
+    (legacy_malla / "malla.db").write_text("fake")
     (home / ".dxrk" / "identity.txt").parent.mkdir(parents=True, exist_ok=True)
     (home / ".dxrk" / "identity.txt").write_text("legacy identity")
     # migrate
@@ -56,13 +56,13 @@ def test_dxrk_memory_tenant_isolation(tmp_path, monkeypatch):
     migrate_legacy_to_default()
     m_acme = DxrkMemory(tenant_id="acme")
     m_bob = DxrkMemory(tenant_id="bob")
-    assert m_acme.palace_path != m_bob.palace_path
-    assert "acme" in str(m_acme.palace_path)
-    assert "bob" in str(m_bob.palace_path)
-    # add distinct drawers
-    id1 = m_acme.add_drawer("proj", "general", "acme secret", "a.py", 0)
-    id2 = m_bob.add_drawer("proj", "general", "bob secret", "a.py", 0)
-    # drawer ids deterministic per (wing,room,source_file,chunk_index) — same across tenants is OK since DB isolated
+    assert m_acme.malla_path != m_bob.malla_path
+    assert "acme" in str(m_acme.malla_path)
+    assert "bob" in str(m_bob.malla_path)
+    # add distinct fragmentos
+    id1 = m_acme.add_fragmento("proj", "general", "acme secret", "a.py", 0)
+    id2 = m_bob.add_fragmento("proj", "general", "bob secret", "a.py", 0)
+    # fragmento ids deterministic per (nodo,celda,source_file,chunk_index) — same across tenants is OK since DB isolated
     assert id1 == id2 or id1 != id2
     # search isolation
     r_acme = m_acme.search("acme", n_results=5)
@@ -222,6 +222,6 @@ def test_memory_cli_hooks_tenant(tmp_path, monkeypatch):
     migrate_legacy_to_default()
     # ensure DxrkMemory with tenant_id works via CLI search/mine path
     m = DxrkMemory(tenant_id="acme")
-    m.add_drawer("proj", "r1", "hello from acme", "f.py", 0)
+    m.add_fragmento("proj", "r1", "hello from acme", "f.py", 0)
     res = m.search("hello", n_results=5)
     assert res.get("documents") or res.get("results")

@@ -14,14 +14,14 @@ from .scoring import r_fsrs
 from .thompson import ThompsonConfig, select_evaluation_candidates
 
 CALIBRATION_DIR = ".calibration"
-CALIBRATION_FILE = "{tenant}_{wing}.json"
-GLOBAL_CALIBRATION_FILE = "global_{wing}.json"
+CALIBRATION_FILE = "{tenant}_{nodo}.json"
+GLOBAL_CALIBRATION_FILE = "global_{nodo}.json"
 SCHEMA_VERSION = 3
 
 
 @dataclass(frozen=True)
 class CalibrationParams:
-    """Calibrated FSRS parameters for a tenant+wing or global wing."""
+    """Calibrated FSRS parameters for a tenant+nodo or global nodo."""
 
     a: float = 1.5  # growth rate
     b: float = 0.2  # stability decay
@@ -32,7 +32,7 @@ class CalibrationParams:
     calibrated_at: str = ""
     schema_version: int = SCHEMA_VERSION
     tenant: str = ""  # "" = global
-    wing: str = ""
+    nodo: str = ""
     n_queries: int = 0  # number of queries used for calibration
 
 
@@ -43,32 +43,32 @@ def _now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
 
-def _calibration_dir(palace_path: Path) -> Path:
+def _calibration_dir(malla_path: Path) -> Path:
     """Get calibration directory path."""
-    cal_dir = palace_path / CALIBRATION_DIR
+    cal_dir = malla_path / CALIBRATION_DIR
     cal_dir.mkdir(exist_ok=True)
     return cal_dir
 
 
-def _tenant_wing_path(palace_path: Path, tenant: str, wing: str) -> Path:
-    """Get path for tenant+wing calibration file."""
+def _tenant_nodo_path(malla_path: Path, tenant: str, nodo: str) -> Path:
+    """Get path for tenant+nodo calibration file."""
     if tenant:
-        filename = f"{tenant}_{wing}.json"
+        filename = f"{tenant}_{nodo}.json"
     else:
-        filename = f"{wing}.json"
-    return _calibration_dir(palace_path) / filename
+        filename = f"{nodo}.json"
+    return _calibration_dir(malla_path) / filename
 
 
-def _global_wing_path(palace_path: Path, wing: str) -> Path:
-    """Get path for global wing calibration file."""
-    return _calibration_dir(palace_path) / GLOBAL_CALIBRATION_FILE.format(wing=wing)
+def _global_nodo_path(malla_path: Path, nodo: str) -> Path:
+    """Get path for global nodo calibration file."""
+    return _calibration_dir(malla_path) / GLOBAL_CALIBRATION_FILE.format(nodo=nodo)
 
 
-def load_calibration(palace_path: Path, tenant: str, wing: str) -> CalibrationParams:
+def load_calibration(malla_path: Path, tenant: str, nodo: str) -> CalibrationParams:
     """Load calibration from JSON file with fallback chain."""
-    # 1. Try tenant+wing specific
+    # 1. Try tenant+nodo specific
     if tenant:
-        path = _tenant_wing_path(palace_path, tenant, wing)
+        path = _tenant_nodo_path(malla_path, tenant, nodo)
         if path.exists():
             try:
                 data = json.loads(path.read_text())
@@ -76,8 +76,8 @@ def load_calibration(palace_path: Path, tenant: str, wing: str) -> CalibrationPa
             except Exception:
                 pass
 
-    # 2. Fallback to global wing
-    path = _global_wing_path(palace_path, wing)
+    # 2. Fallback to global nodo
+    path = _global_nodo_path(malla_path, nodo)
     if path.exists():
         try:
             data = json.loads(path.read_text())
@@ -89,12 +89,12 @@ def load_calibration(palace_path: Path, tenant: str, wing: str) -> CalibrationPa
     return DEFAULT_PARAMS
 
 
-def save_calibration(palace_path: Path, params: CalibrationParams) -> None:
+def save_calibration(malla_path: Path, params: CalibrationParams) -> None:
     """Save calibration to JSON file (0o600)."""
     if params.tenant:
-        path = _tenant_wing_path(palace_path, params.tenant, params.wing)
+        path = _tenant_nodo_path(malla_path, params.tenant, params.nodo)
     else:
-        path = _global_wing_path(palace_path, params.wing)
+        path = _global_nodo_path(malla_path, params.nodo)
 
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(asdict(params), indent=2))
@@ -102,8 +102,8 @@ def save_calibration(palace_path: Path, params: CalibrationParams) -> None:
 
 
 def evaluate_recall_at_k(
-    palace,
-    wing: str,
+    malla,
+    nodo: str,
     params: CalibrationParams,
     k: int = 10,
     sample_size: int = 50,
@@ -111,29 +111,29 @@ def evaluate_recall_at_k(
     """
     Evaluate recall@k using given FSRS parameters.
 
-    Simulates queries against the palace and measures how often
-    the correct drawer is in top-k.
+    Simulates queries against the malla and measures how often
+    the correct fragmento is in top-k.
     """
-    drawers = [d for d in palace.iter_drawers() if d.get("metadata", {}).get("wing") == wing]
-    if len(drawers) < 2:
+    fragmentos = [d for d in malla.iter_fragmentos() if d.get("metadata", {}).get("nodo") == nodo]
+    if len(fragmentos) < 2:
         return 0.0
 
     # Sample queries
     import random
 
-    queries = random.sample(drawers, min(sample_size, len(drawers)))
+    queries = random.sample(fragmentos, min(sample_size, len(fragmentos)))
     hits = 0
 
-    for q_drawer in queries:
-        q_id = q_drawer["id"]
-        q_drawer.get("metadata", {})
-        q_doc = q_drawer.get("document", "")
+    for q_fragmento in queries:
+        q_id = q_fragmento["id"]
+        q_fragmento.get("metadata", {})
+        q_doc = q_fragmento.get("document", "")
         if not q_doc:
             continue
 
-        # Score all drawers with these params
+        # Score all fragmentos with these params
         scored = []
-        for d in drawers:
+        for d in fragmentos:
             if d["id"] == q_id:
                 continue
             meta = d.get("metadata", {})
@@ -153,9 +153,9 @@ def evaluate_recall_at_k(
     return hits / len(queries) if queries else 0.0
 
 
-def calibrate_wing(
-    palace,
-    wing: str,
+def calibrate_nodo(
+    malla,
+    nodo: str,
     tenant: str = "",
     qieo_config: QIEOConfig | None = None,
     thompson_config: ThompsonConfig | None = None,
@@ -163,16 +163,16 @@ def calibrate_wing(
     objective_samples: int = 30,
 ) -> CalibrationParams:
     """
-    Calibrate FSRS parameters for a tenant+wing using QIEO + Thompson Sampling.
+    Calibrate FSRS parameters for a tenant+nodo using QIEO + Thompson Sampling.
 
     Process:
     1. Thompson Sampling selects evaluation candidates (explore/exploit)
     2. QIEO optimizes parameters to maximize recall@k on candidates
-    3. Save calibrated params (tenant+wing or global)
+    3. Save calibrated params (tenant+nodo or global)
 
     Args:
-        palace: DxrkMemory instance
-        wing: wing name to calibrate
+        malla: DxrkMemory instance
+        nodo: nodo name to calibrate
         tenant: tenant identifier (empty = global)
         qieo_config: QIEO configuration
         thompson_config: Thompson Sampling configuration
@@ -188,16 +188,16 @@ def calibrate_wing(
         thompson_config = ThompsonConfig(alpha_prior=1.0, beta_prior=1.0, exploration_bonus=0.5)
 
     # Select evaluation candidates via Thompson Sampling
-    candidate_ids = select_evaluation_candidates(palace, n=20, config=thompson_config)
+    candidate_ids = select_evaluation_candidates(malla, n=20, config=thompson_config)
 
     if not candidate_ids:
         return DEFAULT_PARAMS
 
-    # Get candidate drawers
+    # Get candidate fragmentos
     candidates = []
-    for drawer in palace.iter_drawers():
-        if drawer["id"] in candidate_ids:
-            candidates.append(drawer)
+    for fragmento in malla.iter_fragmentos():
+        if fragmento["id"] in candidate_ids:
+            candidates.append(fragmento)
 
     if len(candidates) < 2:
         return DEFAULT_PARAMS
@@ -211,9 +211,9 @@ def calibrate_wing(
             c=c,
             pe_lambda=pe_lambda,
             tenant=tenant,
-            wing=wing,
+            nodo=nodo,
         )
-        return evaluate_recall_at_k(palace, wing, test_params, k=objective_k, sample_size=objective_samples)
+        return evaluate_recall_at_k(malla, nodo, test_params, k=objective_k, sample_size=objective_samples)
 
     # Bounds for parameters (based on FSRS literature)
     bounds = [
@@ -237,41 +237,41 @@ def calibrate_wing(
         calibrated_at=datetime.now(UTC).isoformat(),
         schema_version=SCHEMA_VERSION,
         tenant=tenant,
-        wing=wing,
+        nodo=nodo,
         n_queries=len(candidates),
     )
 
-    save_calibration(Path(palace._path), result)
+    save_calibration(Path(malla._path), result)
     return result
 
 
-def get_calibration_params(palace_path: Path, tenant: str, wing: str) -> CalibrationParams:
-    """Get calibration params for a tenant+wing (load from file or defaults)."""
-    return load_calibration(palace_path, tenant, wing)
+def get_calibration_params(malla_path: Path, tenant: str, nodo: str) -> CalibrationParams:
+    """Get calibration params for a tenant+nodo (load from file or defaults)."""
+    return load_calibration(malla_path, tenant, nodo)
 
 
-def list_calibrated_wings(palace_path: Path) -> list[str]:
-    """List wings that have calibration files."""
-    cal_dir = palace_path / CALIBRATION_DIR
+def list_calibrated_nodos(malla_path: Path) -> list[str]:
+    """List nodos that have calibration files."""
+    cal_dir = malla_path / CALIBRATION_DIR
     if not cal_dir.exists():
         return []
     return [f.stem for f in cal_dir.glob("*.json")]
 
 
-def get_calibration_chain(palace_path: Path, tenant: str, wing: str) -> list[CalibrationParams]:
+def get_calibration_chain(malla_path: Path, tenant: str, nodo: str) -> list[CalibrationParams]:
     """Get the full fallback chain of calibration params."""
     chain = []
 
-    # Tenant+wing
+    # Tenant+nodo
     if tenant:
-        tenant_wing = load_calibration(palace_path, tenant, wing)
-        if tenant_wing != DEFAULT_PARAMS:
-            chain.append(tenant_wing)
+        tenant_nodo = load_calibration(malla_path, tenant, nodo)
+        if tenant_nodo != DEFAULT_PARAMS:
+            chain.append(tenant_nodo)
 
-    # Global wing
-    global_wing = load_calibration(palace_path, "", wing)
-    if global_wing != DEFAULT_PARAMS:
-        chain.append(global_wing)
+    # Global nodo
+    global_nodo = load_calibration(malla_path, "", nodo)
+    if global_nodo != DEFAULT_PARAMS:
+        chain.append(global_nodo)
 
     # Default
     chain.append(DEFAULT_PARAMS)
@@ -318,6 +318,6 @@ def merge_calibrations(chain: list[CalibrationParams], alpha: float = 0.7) -> Ca
         calibrated_at=datetime.now(UTC).isoformat(),
         schema_version=SCHEMA_VERSION,
         tenant=chain[0].tenant,
-        wing=chain[0].wing,
+        nodo=chain[0].nodo,
         n_queries=sum(c.n_queries for c in chain),
     )
