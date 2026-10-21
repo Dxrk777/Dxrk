@@ -396,6 +396,22 @@ def test_app_actions_and_run(tmp_path, monkeypatch):
     assert calls == ["ran"]
 
 
+def test_app_neon_theme_contract(tmp_path, monkeypatch):
+    _iso_home(tmp_path, monkeypatch)
+    from dxrk.tui.app import DXRK_NEON, DxrkApp
+
+    ctx = TUIContext(version="test")
+    ctx_var.set(ctx)
+    app = DxrkApp(ctx=ctx)
+
+    assert DXRK_NEON.name == "dxrk-neon"
+    assert DXRK_NEON.primary == "#00f0ff"
+    assert DXRK_NEON.secondary == "#b026ff"
+    assert DXRK_NEON.dark is True
+    assert app.theme == "dxrk-neon"
+    assert "dxrk-neon" in app.available_themes
+
+
 # ---------------------------------------------------------------------------
 # chat_backend.py
 # ---------------------------------------------------------------------------

@@ -49,19 +49,19 @@ from dxrk.tui.screens.tenant_switcher import TenantSwitcherScreen
 log = logging.getLogger(__name__)
 
 
-DXRK_GOTHIC = Theme(
-    name="dxrk-gothic",
-    primary="#9d0208",  # sangre
-    secondary="#5a189a",  # violeta arcano
-    warning="#ffaa00",
-    error="#ff0033",
-    success="#4ade80",
-    accent="#ff4d6d",  # rosa neón punk
-    foreground="#e8e0d0",  # hueso
-    background="#0c0612",  # negro violáceo
-    surface="#150b1e",
-    panel="#1a0e26",
-    boost="#2a1740",
+DXRK_NEON = Theme(
+    name="dxrk-neon",
+    primary="#00f0ff",  # cian eléctrico
+    secondary="#b026ff",  # violeta neón
+    warning="#ffb000",  # ámbar de advertencia
+    error="#ff3860",  # rojo neón
+    success="#00ff9f",  # verde señal
+    accent="#ff2a6d",  # magenta punk
+    foreground="#d7f9ff",  # blanco hielo
+    background="#05070d",  # negro azulado
+    surface="#0a0f1a",
+    panel="#0f1626",
+    boost="#16213a",
     dark=True,
 )
 
@@ -1028,8 +1028,8 @@ class DxrkApp(App):
         # Sync legacy STATE proxy is automatic (STATE forwards to ctx_var),
         # but keep instance sub-title in sync for display.
         self.SUB_TITLE = f"v{self.ctx.version}"
-        self.register_theme(DXRK_GOTHIC)
-        self.theme = "dxrk-gothic"
+        self.register_theme(DXRK_NEON)
+        self.theme = "dxrk-neon"
 
     def action_tenant_switcher(self) -> None:
         self.push_screen("tenant_switcher")
