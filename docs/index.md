@@ -6,7 +6,7 @@
 
 **Dxrk** es un configurador y orquestador de ecosistemas para agentes de IA. En un solo comando instala, configura y sincroniza **14 agentes de IA**, memoria persistente, skills curadas, servidores MCP y conmutador de modelos para tu stack de desarrollo completo.
 
-- 🐍 **Python 3.13+** con TUI moderna basada en [Textual](https://textual.textualize.io/)
+- 🐍 **Python 3.12+** con TUI moderna basada en [Textual](https://textual.textualize.io/)
 - 🤖 Configura **14 agentes** con un solo comando
 - 🧠 **DxrkMemory 2.0** — memoria local con búsqueda híbrida FTS5 + BM25 y grafo temporal (sin embeddings, offline)
 - 🔄 Conmutador de proveedores y modelos con asignación por fase vía `dxrk-py model` (`list`/`current`/`set`)

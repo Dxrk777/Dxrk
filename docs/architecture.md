@@ -5,7 +5,7 @@ Este documento describe la estructura interna de Dxrk.
 ## Visión general
 
 Dxrk es un configurador y orquestador de ecosistemas para agentes de IA,
-escrito en Python 3.13+. Expone una CLI (`dxrk-py`) y una TUI (Textual), y se
+escrito en Python 3.12+. Expone una CLI (`dxrk-py`) y una TUI (Textual), y se
 integra con agentes de código mediante hooks, permisos y sesiones.
 
 ## Paquetes

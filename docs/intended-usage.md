@@ -40,7 +40,7 @@ dxrk-py sync --agent claude-code --dry-run
 ## Cuándo NO usar Dxrk
 
 - Para tareas de edición de texto simple: un agente solo es suficiente.
-- En entornos sin Python 3.13+ o sin acceso a la red para la primera instalación.
+- En entornos sin Python 3.12+ o sin acceso a la red para la primera instalación.
 
 ## Modelo mental
 

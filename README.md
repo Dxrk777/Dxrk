@@ -30,14 +30,14 @@ python -m dxrk.memory search "arquitectura memoria"             # 4) busca (AND 
 ```
 > **Por qué DxrkMemory 2.0:** `sqlite3` FTS5 `trigram→porter→unicode61` + BM25 híbrido, Graph temporal `valid_from/valid_to`, AAAK 600–900 tok wake-up, Malla locks `~/.dxrk/locks` 900s — ver [`docs/memory.md`](docs/memory.md) · [`docs/MIGRATION_3.3.5_3.7.1.md`](docs/MIGRATION_3.3.5_3.7.1.md) · [`docs/dx.md`](docs/dx.md)
 
-- 🐍 **Python 3.13+** con TUI moderna basada en [Textual](https://textual.textualize.io/)
+- 🐍 **Python 3.12+** con TUI moderna basada en [Textual](https://textual.textualize.io/)
 - 🤖 Configura **14 agentes** con un solo comando
 - 🧠 **DxrkMemory 2.0 — Flagship local-first stdlib-only** (sin `chromadb`, sin `onnx`) — `sqlite3` FTS5 `trigram`+WAL, 37 módulos 14228 LOC, hybrid BM25, Malla locks, Graph temporal, dialecto AAAK, wake-up **600–900 tok** (paridad con el motor legado 3.7.1) — ver [`docs/memory.md`](docs/memory.md)
 - ⚡ Conmutador de proveedores y modelos con asignación por fase vía `dxrk-py model` (`list`/`current`/`set`)
 
 ## Instalación
 
-> Requisito: **Python 3.13+**
+> Requisito: **Python 3.12+**
 >
 > Dxrk no se publica en PyPI: se instala directo desde GitHub.
 

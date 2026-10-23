@@ -11,7 +11,7 @@ uv tool install git+https://github.com/Dxrk777/Dxrk.git
 dxrk-py --version   # Dxrk v1.5.0
 ```
 
-Requisito: Python 3.13+.
+Requisito: Python 3.12+.
 
 ## 1) Vista previa del setup (1 min)
 

@@ -7,7 +7,7 @@ name = "dxrk"
 version = "1.5.0"
 description = "Dxrk — local-first configurator for AI coding-agent ecosystems: 14 agents, memory, SDD, MCP"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 authors = [{ name = "Dxrk777" }]
 license = "MIT"
 keywords = ["ai", "agents", "cli", "tui", "claude-code", "opencode", "mcp", "rag", "sdd", "textual"]
@@ -18,7 +18,9 @@ classifiers = [
     "Operating System :: MacOS",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: 3 :: Only",
     "Topic :: Software Development :: Build Tools",
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -52,7 +54,7 @@ swe = ["fire>=0.7.1", "python-dotenv>=1.2.4"]
 bench = ["pytest-benchmark>=4.0"]
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true
@@ -68,7 +70,7 @@ pytest_add_cli_args_test_selection = ["tests/test_security.py", "tests/test_ente
 
 [tool.ruff]
 line-length = 120
-target-version = "py313"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]

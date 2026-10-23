@@ -5,12 +5,12 @@
 | Plataforma | Estado | Detalles |
 | --- | --- | --- |
 | macOS | Soportado | Homebrew recomendado; detección automática de `brew` |
-| Linux | Soportado | apt/dnf/pacman detectados; requiere Python 3.13+ |
+| Linux | Soportado | apt/dnf/pacman detectados; requiere Python 3.12+ |
 | Windows | Soportado | scoop/winget detectados; uso de `goos` para paths y comandos |
 
 ## Requisitos
 
-- Python 3.13 o superior.
+- Python 3.12 o superior.
 - Opcional: Pillow (procesamiento de imágenes). La memoria persistente es
   nativa 100% Python stdlib-only, sin binarios externos.
 
