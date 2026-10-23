@@ -944,7 +944,7 @@ class TestEvalHarnessRemainder:
         from dxrk.memory.eval_harness import EvalQuery, load_eval_dataset, save_eval_dataset
 
         p = tmp_path / "q.jsonl"
-        save_eval_dataset(p, [EvalQuery(query="q", expected_fragmento_ids=["a"], nodo="w")])
+        save_eval_dataset(p, [EvalQuery(query="q", expected_recall_ids=["a"], partition="w")])
         with p.open("a") as f:
             f.write("\n   \n")
         queries = load_eval_dataset(p)
@@ -954,7 +954,7 @@ class TestEvalHarnessRemainder:
         from dxrk.memory.eval_harness import generate_synthetic_queries
 
         malla = SimpleNamespace(
-            list_fragmentos=lambda **k: [
+            list_recalls=lambda **k: [
                 {"metadata": {}, "document": ""},
                 {"metadata": {}, "document": "a b"},
                 {"id": "d3", "metadata": {}, "document": "alpha beta gamma delta epsilon"},
@@ -966,7 +966,7 @@ class TestEvalHarnessRemainder:
     def test_run_empty_generates_and_reports(self, tmp_path):
         from dxrk.memory.eval_harness import EvalHarness
 
-        malla = SimpleNamespace(list_fragmentos=lambda **k: [])
+        malla = SimpleNamespace(list_recalls=lambda **k: [])
         harness = EvalHarness(malla, tmp_path)
         report = harness.run("w")
         assert report.num_queries == 0
@@ -975,13 +975,13 @@ class TestEvalHarnessRemainder:
         from dxrk.memory.eval_harness import EvalHarness, EvalQuery, save_eval_dataset
 
         malla = SimpleNamespace(
-            list_fragmentos=lambda **k: [],
+            list_recalls=lambda **k: [],
             search=lambda **k: {"results": [{"id": "a"}]},
         )
         harness = EvalHarness(malla, tmp_path)
         save_eval_dataset(
             tmp_path / "w.jsonl",
-            [EvalQuery(query="q", expected_fragmento_ids=["a"], nodo="w")],
+            [EvalQuery(query="q", expected_recall_ids=["a"], partition="w")],
         )
         report = harness.run("w")
         assert report.num_queries == 1
@@ -992,7 +992,7 @@ class TestEvalHarnessRemainder:
 
         malla = SimpleNamespace(search=lambda **k: {"results": []})
         harness = EvalHarness(malla, tmp_path)
-        report = harness.run("w", queries=[EvalQuery(query="q", expected_fragmento_ids=["a"], nodo="w")])
+        report = harness.run("w", queries=[EvalQuery(query="q", expected_recall_ids=["a"], partition="w")])
         assert report.num_queries == 1
 
     def test_calibrate_placeholder(self, tmp_path):
@@ -1507,7 +1507,7 @@ class TestThompsonRemainder:
         from dxrk.memory.thompson import select_evaluation_candidates
 
         malla = SimpleNamespace(
-            iter_fragmentos=lambda: [
+            iter_recalls=lambda: [
                 {"id": "q", "metadata": {"quarantined": True}},
                 {"id": "p", "metadata": {"pinned": True}},
                 {"id": "ok", "metadata": {}},
@@ -1625,8 +1625,8 @@ class TestStressRemainder:
                 )
             )
             with (
-                mock.patch.object(dm, "list_nodos", return_value=["w"]),
-                mock.patch.object(dm, "nodo_usage", return_value={"count": 6, "budget": 10}),
+                mock.patch.object(dm, "list_partitions", return_value=["w"]),
+                mock.patch.object(dm, "partition_usage", return_value={"count": 6, "budget": 10}),
                 mock.patch.object(dm, "_collection", return_value=fake_col),
             ):
                 state = compute_system_stress(dm)
@@ -1819,42 +1819,42 @@ class TestReviewScreenRemainder:
 
 
 class TestCalibrateRemainder:
-    def _fragmentos(self):
+    def _recalls(self):
         return [
-            {"id": "a", "document": "alpha beta gamma delta", "metadata": {"nodo": "w"}},
-            {"id": "b", "document": "epsilon zeta eta theta", "metadata": {"nodo": "w"}},
-            {"id": "c", "document": "", "metadata": {"nodo": "w"}},
-            {"id": "z", "document": "other nodo doc here", "metadata": {"nodo": "x"}},
+            {"id": "a", "document": "alpha beta gamma delta", "metadata": {"partition": "w"}},
+            {"id": "b", "document": "epsilon zeta eta theta", "metadata": {"partition": "w"}},
+            {"id": "c", "document": "", "metadata": {"partition": "w"}},
+            {"id": "z", "document": "other partition doc here", "metadata": {"partition": "x"}},
         ]
 
-    def test_recall_few_fragmentos(self):
+    def test_recall_few_recalls(self):
         from dxrk.memory.calibrate import CalibrationParams, evaluate_recall_at_k
 
-        malla = SimpleNamespace(iter_fragmentos=lambda: self._fragmentos()[:1])
+        malla = SimpleNamespace(iter_recalls=lambda: self._recalls()[:1])
         assert evaluate_recall_at_k(malla, "w", CalibrationParams()) == 0.0
 
     def test_recall_skips_empty_doc(self):
         from dxrk.memory.calibrate import CalibrationParams, evaluate_recall_at_k
 
-        malla = SimpleNamespace(iter_fragmentos=lambda: self._fragmentos())
+        malla = SimpleNamespace(iter_recalls=lambda: self._recalls())
         out = evaluate_recall_at_k(malla, "w", CalibrationParams(), k=5, sample_size=10)
         assert out == 0.0
 
-    def test_nodo_few_candidates(self):
+    def test_partition_few_candidates(self):
         import dxrk.memory.calibrate as cal
 
-        malla = SimpleNamespace(iter_fragmentos=lambda: self._fragmentos())
+        malla = SimpleNamespace(iter_recalls=lambda: self._recalls())
         with mock.patch.object(cal, "select_evaluation_candidates", return_value=["a"]):
-            assert cal.calibrate_nodo(malla, "w") == cal.DEFAULT_PARAMS
+            assert cal.calibrate_partition(malla, "w") == cal.DEFAULT_PARAMS
 
-    def test_nodo_optimizes(self, tmp_path):
+    def test_partition_optimizes(self, tmp_path):
         import dxrk.memory.calibrate as cal
         from dxrk.memory.qieo import QIEOConfig
 
-        malla = SimpleNamespace(iter_fragmentos=lambda: self._fragmentos(), _path=str(tmp_path))
+        malla = SimpleNamespace(iter_recalls=lambda: self._recalls(), _path=str(tmp_path))
         cfg = QIEOConfig(pop_size=4, n_iter=2)
         with mock.patch.object(cal, "select_evaluation_candidates", return_value=["a", "b"]):
-            out = cal.calibrate_nodo(malla, "w", qieo_config=cfg, objective_k=2, objective_samples=4)
+            out = cal.calibrate_partition(malla, "w", qieo_config=cfg, objective_k=2, objective_samples=4)
         assert out.method == "qieo"
 
 
@@ -1908,14 +1908,14 @@ class TestLayersRemainder:
             out = layers._resolve_identity_path(None, None)
         assert out.endswith(os.path.join(".dxrk", "identity.txt"))
 
-    def test_layer2_no_fragmentos(self):
+    def test_layer2_no_recalls(self):
         from dxrk.memory.layers import Layer2
 
         fake_col = SimpleNamespace(get=lambda **k: SimpleNamespace(documents=["d"], metadatas=[{"quarantined": True}]))
         layer = Layer2(malla_path="/tmp/nonexistent-malla")
         with mock.patch("dxrk.memory.layers._get_collection", return_value=fake_col):
-            assert layer.retrieve(nodo="w") == "No fragmentos found for nodo=w."
-            assert layer.retrieve(nodo="w", celda="r") == "No fragmentos found for nodo=w celda=r."
+            assert layer.retrieve(partition="w") == "No recalls found for partition=w."
+            assert layer.retrieve(partition="w", subgroup="r") == "No recalls found for partition=w subgroup=r."
 
 
 # ═══════════ ola 10 ═══════════
@@ -2811,7 +2811,7 @@ class TestHooksCliRemainder:
         import dxrk.memory.hooks_cli as hooks
 
         with (
-            mock.patch.object(hooks, "_nodo_from_transcript_path", side_effect=ValueError("x")),
+            mock.patch.object(hooks, "_partition_from_transcript_path", side_effect=ValueError("x")),
             mock.patch(
                 "dxrk.memory.layers.MemoryStack",
                 return_value=SimpleNamespace(wake_up=Mock(return_value="hola")),
@@ -2819,7 +2819,7 @@ class TestHooksCliRemainder:
         ):
             assert hooks._session_start_context("t") == {"systemMessage": "hola"}
         with (
-            mock.patch.object(hooks, "_nodo_from_transcript_path", return_value="nodo_x"),
+            mock.patch.object(hooks, "_partition_from_transcript_path", return_value="partition_x"),
             mock.patch(
                 "dxrk.memory.layers.MemoryStack",
                 return_value=SimpleNamespace(wake_up=Mock(side_effect=["No memories yet para x", "texto real"])),
@@ -2827,7 +2827,7 @@ class TestHooksCliRemainder:
         ):
             assert hooks._session_start_context("t") == {"systemMessage": "texto real"}
         with (
-            mock.patch.object(hooks, "_nodo_from_transcript_path", return_value="nodo_x"),
+            mock.patch.object(hooks, "_partition_from_transcript_path", return_value="partition_x"),
             mock.patch(
                 "dxrk.memory.layers.MemoryStack",
                 return_value=SimpleNamespace(wake_up=Mock(return_value="x" * 5000)),
@@ -2836,7 +2836,7 @@ class TestHooksCliRemainder:
             out = hooks._session_start_context("t")
             assert out["systemMessage"].endswith("... (more in DxrkMemory search)")
         with (
-            mock.patch.object(hooks, "_nodo_from_transcript_path", return_value="nodo_x"),
+            mock.patch.object(hooks, "_partition_from_transcript_path", return_value="partition_x"),
             mock.patch(
                 "dxrk.memory.layers.MemoryStack",
                 return_value=SimpleNamespace(wake_up=Mock(return_value="   ")),
@@ -3161,11 +3161,11 @@ class TestScoringRemainder:
 
 
 class TestCalibrateV2Remainder:
-    def _fragmentos(self):
+    def _recalls(self):
         return [
-            {"id": "a", "document": "alpha beta gamma delta", "metadata": {"nodo": "w"}},
-            {"id": "b", "document": "epsilon zeta eta theta", "metadata": {"nodo": "w"}},
-            {"id": "c", "document": "", "metadata": {"nodo": "w"}},
+            {"id": "a", "document": "alpha beta gamma delta", "metadata": {"partition": "w"}},
+            {"id": "b", "document": "epsilon zeta eta theta", "metadata": {"partition": "w"}},
+            {"id": "c", "document": "", "metadata": {"partition": "w"}},
         ]
 
     def test_now_iso(self):
@@ -3174,10 +3174,10 @@ class TestCalibrateV2Remainder:
         assert "T" in _now_iso()
 
     def test_tenant_path_no_tenant(self, tmp_path):
-        from dxrk.memory.calibrate_v2 import _tenant_nodo_path
+        from dxrk.memory.calibrate_v2 import _tenant_partition_path
 
-        assert _tenant_nodo_path(tmp_path, "", "w").name == "w.json"
-        assert _tenant_nodo_path(tmp_path, "t", "w").name == "t_w.json"
+        assert _tenant_partition_path(tmp_path, "", "w").name == "w.json"
+        assert _tenant_partition_path(tmp_path, "t", "w").name == "t_w.json"
 
     def test_load_corrupt_global(self, tmp_path):
         from dxrk.memory.calibrate_v2 import DEFAULT_PARAMS, load_calibration
@@ -3190,24 +3190,24 @@ class TestCalibrateV2Remainder:
     def test_recall_few_and_empty_doc(self):
         from dxrk.memory.calibrate_v2 import CalibrationParams, evaluate_recall_at_k
 
-        one = SimpleNamespace(iter_fragmentos=lambda: self._fragmentos()[:1])
+        one = SimpleNamespace(iter_recalls=lambda: self._recalls()[:1])
         assert evaluate_recall_at_k(one, "w", CalibrationParams()) == 0.0
-        full = SimpleNamespace(iter_fragmentos=lambda: self._fragmentos())
+        full = SimpleNamespace(iter_recalls=lambda: self._recalls())
         assert evaluate_recall_at_k(full, "w", CalibrationParams(), k=5, sample_size=10) == 0.0
 
-    def test_nodo_few_candidates(self, tmp_path):
+    def test_partition_few_candidates(self, tmp_path):
         import dxrk.memory.calibrate_v2 as cal
 
-        malla = SimpleNamespace(iter_fragmentos=lambda: self._fragmentos(), _path=str(tmp_path))
+        malla = SimpleNamespace(iter_recalls=lambda: self._recalls(), _path=str(tmp_path))
         with mock.patch.object(cal, "select_evaluation_candidates", return_value=["a"]):
-            assert cal.calibrate_nodo(malla, "w") == cal.DEFAULT_PARAMS
+            assert cal.calibrate_partition(malla, "w") == cal.DEFAULT_PARAMS
 
-    def test_nodo_optimizes(self, tmp_path):
+    def test_partition_optimizes(self, tmp_path):
         import dxrk.memory.calibrate_v2 as cal
         from dxrk.memory.qieo import QIEOConfig
 
-        malla = SimpleNamespace(iter_fragmentos=lambda: self._fragmentos(), _path=str(tmp_path))
+        malla = SimpleNamespace(iter_recalls=lambda: self._recalls(), _path=str(tmp_path))
         cfg = QIEOConfig(pop_size=4, n_iter=2)
         with mock.patch.object(cal, "select_evaluation_candidates", return_value=["a", "b"]):
-            out = cal.calibrate_nodo(malla, "w", qieo_config=cfg, objective_k=2, objective_samples=4)
+            out = cal.calibrate_partition(malla, "w", qieo_config=cfg, objective_k=2, objective_samples=4)
         assert out.method == "qieo"

@@ -372,8 +372,8 @@ def normalize_content(content: str) -> str:
 
 def scan_and_chunk(
     project_dir: str | Path,
-    nodo: str = "default",
-    celda: str = "general",
+    partition: str = "default",
+    subgroup: str = "general",
 ) -> list[tuple[Path, list[dict[str, object]]]]:
     """Scan project and chunk each file — helper for Malla ingestion."""
     project_path = Path(project_dir).expanduser().resolve()

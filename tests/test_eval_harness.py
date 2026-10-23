@@ -81,7 +81,7 @@ class TestEvalHarness:
 
         assert len(loaded) == 2
         assert loaded[0].query == "query 1"
-        assert loaded[0].expected_fragmento_ids == ["d1", "d2"]
+        assert loaded[0].expected_recall_ids == ["d1", "d2"]
         assert loaded[0].difficulty == 3.0
         assert loaded[0].tags == ("tag1",)
         assert loaded[1].tags == ("tag2", "tag3")
@@ -100,12 +100,12 @@ class TestEvalHarness:
         try:
             for i in range(10):
                 content = f"{uuid.uuid4()} unique content about topic {i} with random words {uuid.uuid4()}"
-                dm.add_fragmento("w", "r", content, f"/f{i}.md", 0)
+                dm.add_recall("w", "r", content, f"/f{i}.md", 0)
 
             queries = generate_synthetic_queries(dm, "w", n=20)
             assert len(queries) > 0
-            assert all(q.nodo == "w" for q in queries)
-            assert all(q.expected_fragmento_ids for q in queries)
+            assert all(q.partition == "w" for q in queries)
+            assert all(q.expected_recall_ids for q in queries)
         finally:
             dm.close()
 
@@ -190,7 +190,7 @@ class TestEvalIntegration:
         ]
 
         report = aggregate_results(results, "w")
-        assert report.nodo == "w"
+        assert report.partition == "w"
         assert report.num_queries == 2
         assert report.recall_at_k[1] == 0.5  # (1.0 + 0.0) / 2
         assert report.recall_at_k[3] == 1.0
@@ -237,12 +237,12 @@ class TestEvalIntegration:
             # Use distinct content with UUIDs to avoid deduplication
             for i in range(5):
                 content = f"{uuid.uuid4()} unique content about topic {i} with random words {uuid.uuid4()}"
-                dm.add_fragmento("w", "r", content, f"/f{i}.md", 0)
+                dm.add_recall("w", "r", content, f"/f{i}.md", 0)
 
             harness = EvalHarness(dm, tmp_path / "eval")
             report = harness.run("w", k=10)
 
-            assert report.nodo == "w"
+            assert report.partition == "w"
             assert report.num_queries > 0
             assert 0.0 <= report.recall_at_k.get(1, 0.0) <= 1.0
             assert report.evaluated_at != ""
@@ -260,7 +260,7 @@ class TestEvalIntegration:
         try:
             for i in range(10):
                 content = f"{uuid.uuid4()} topic {i} unique distinct content details {uuid.uuid4()}"
-                dm.add_fragmento("w", "r", content, f"/f{i}.md", 0)
+                dm.add_recall("w", "r", content, f"/f{i}.md", 0)
 
             harness = EvalHarness(dm, tmp_path / "eval")
             # Force synthetic by not having a dataset file

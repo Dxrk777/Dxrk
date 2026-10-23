@@ -19,8 +19,8 @@ def _legacy_meta(n: int = 4) -> dict[str, object]:
     from datetime import UTC, datetime
 
     return {
-        "nodo": "w",
-        "celda": "r",
+        "partition": "w",
+        "subgroup": "r",
         "source_file": "/legacy.md",
         "chunk_index": 0,
         "filed_at": datetime.now(UTC).isoformat(),
@@ -50,7 +50,7 @@ class TestEnsureSpineDefaults:
     def test_legacy_row_without_access_signals(self) -> None:
         from dxrk.memory.migrate import ensure_spine_defaults
 
-        meta = ensure_spine_defaults({"nodo": "w"})
+        meta = ensure_spine_defaults({"partition": "w"})
         assert meta["schema_version"] == 2
         assert float(meta["S"]) == 1.0  # type: ignore[arg-type]
         assert float(meta["rd"]) == 350.0  # type: ignore[arg-type]
@@ -78,19 +78,19 @@ class TestEnsureSpineDefaults:
     def test_needs_rehash(self) -> None:
         from dxrk.memory.migrate import ensure_spine_defaults, needs_rehash
 
-        assert needs_rehash(ensure_spine_defaults({"nodo": "w"})) is True
+        assert needs_rehash(ensure_spine_defaults({"partition": "w"})) is True
         assert needs_rehash({"content_sha256": "abc"}) is False
 
 
 class TestSangreMigrationWiring:
-    def test_add_fragmento_stamps_spine_keys(self, tmp_path: Path) -> None:
+    def test_add_recall_stamps_spine_keys(self, tmp_path: Path) -> None:
         import hashlib
 
         from dxrk.memory.migrate import SCHEMA_VERSION
 
         dm = _dm(tmp_path)
         try:
-            did = dm.add_fragmento("w", "r", "Migration stamps spine keys on new fragmentos here.", "/n.md", 0)
+            did = dm.add_recall("w", "r", "Migration stamps spine keys on new recalls here.", "/n.md", 0)
             col = dm._collection(create=False)
             got = col.get(ids=[did], include=["metadatas"])
             meta = got.metadatas[0]
@@ -109,44 +109,44 @@ class TestSangreMigrationWiring:
         finally:
             dm.close()
 
-    def test_get_fragmento_migrates_legacy_row(self, tmp_path: Path) -> None:
+    def test_get_recall_migrates_legacy_row(self, tmp_path: Path) -> None:
         from dxrk.memory.migrate import needs_rehash
 
         dm = _dm(tmp_path)
         try:
             col = dm._collection(create=True)
             col.upsert(
-                documents=["legacy fragmento body text here for migration."],
-                ids=["fragmento_w_r_deadbeef00000000000000"],
+                documents=["legacy recall body text here for migration."],
+                ids=["recall_w_r_deadbeef00000000000000"],
                 metadatas=[_legacy_meta(n=3)],
             )
-            raw_before = col.get(ids=["fragmento_w_r_deadbeef00000000000000"], include=["metadatas"]).metadatas[0]
+            raw_before = col.get(ids=["recall_w_r_deadbeef00000000000000"], include=["metadatas"]).metadatas[0]
             assert isinstance(raw_before, dict) and "schema_version" not in raw_before
             assert needs_rehash(raw_before) is True
-            got = dm.get_fragmento("fragmento_w_r_deadbeef00000000000000")
+            got = dm.get_recall("recall_w_r_deadbeef00000000000000")
             assert got is not None
             assert got["metadata"]["schema_version"] == 2
             # Migrated prior S=1+log1p(3), then the live read applies the
             # success outcome (S only grows on access).
             assert float(got["metadata"]["S"]) >= math.log1p(3) + 1.0  # type: ignore[arg-type]
-            raw_after = col.get(ids=["fragmento_w_r_deadbeef00000000000000"], include=["metadatas"]).metadatas[0]
+            raw_after = col.get(ids=["recall_w_r_deadbeef00000000000000"], include=["metadatas"]).metadatas[0]
             assert isinstance(raw_after, dict)
             assert raw_after["schema_version"] == 2  # migration persisted (lazy write-back)
         finally:
             dm.close()
 
-    def test_nodo_snapshot_ensures_spine_in_memory(self, tmp_path: Path) -> None:
-        from dxrk.memory.malla import _nodo_snapshot
+    def test_partition_snapshot_ensures_spine_in_memory(self, tmp_path: Path) -> None:
+        from dxrk.memory.malla import _partition_snapshot
 
         dm = _dm(tmp_path)
         try:
             col = dm._collection(create=True)
             col.upsert(
                 documents=["legacy snapshot body text here for the scan."],
-                ids=["fragmento_w_r_0000000000000000000001"],
+                ids=["recall_w_r_0000000000000000000001"],
                 metadatas=[_legacy_meta(n=1)],
             )
-            snap = _nodo_snapshot(col, "w")
+            snap = _partition_snapshot(col, "w")
             assert len(snap) == 1
             meta = snap[0]["meta"]
             assert isinstance(meta, dict)

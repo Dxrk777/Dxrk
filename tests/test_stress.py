@@ -41,9 +41,9 @@ class TestStress:
         dm.init()
         try:
             # Need to set a cap for density to be meaningful
-            dm._max_entries_per_nodo = 100
+            dm._max_entries_per_partition = 100
             for i in range(50):
-                dm.add_fragmento("w", "r", f"content {i}", f"/f{i}.md", i)
+                dm.add_recall("w", "r", f"content {i}", f"/f{i}.md", i)
             state = compute_system_stress(dm)
             assert state.density > 0.0
             assert state.density <= 1.0
@@ -57,8 +57,8 @@ class TestStress:
         dm = DxrkMemory(str(tmp_path / "malla"))
         dm.init()
         try:
-            # Add fragmento with very low S (will be migrated to have S)
-            dm.add_fragmento("w", "r", "unstable", "/u.md", 0)
+            # Add recall with very low S (will be migrated to have S)
+            dm.add_recall("w", "r", "unstable", "/u.md", 0)
             state = compute_system_stress(dm)
             assert state.avg_inv_stability >= 0.0
         finally:
@@ -71,14 +71,14 @@ class TestStress:
         dm = DxrkMemory(str(tmp_path / "malla"))
         dm.init()
         try:
-            did = dm.add_fragmento("w", "r", "to quarantine", "/q.md", 0)
+            did = dm.add_recall("w", "r", "to quarantine", "/q.md", 0)
             # Manually quarantine (simulate checksum mismatch)
             from dxrk.memory.malla import DxrkMemory
 
             col = dm._collection(create=False)
             raw = col.get(ids=[did], include=["documents", "metadatas"])
             col.upsert(documents=["TAMPERED"], ids=[did], metadatas=[raw.metadatas[0]])
-            dm.get_fragmento(did)  # triggers quarantine
+            dm.get_recall(did)  # triggers quarantine
             state = compute_system_stress(dm)
             assert state.recent_quarantines >= 1
         finally:

@@ -1296,9 +1296,9 @@ class TestMineTimeout:
 class TestPidFile:
     def test_deterministic(self, tmp_path, monkeypatch):
         _iso_hc(monkeypatch, tmp_path)
-        cmd = [sys.executable, "-m", "dxrk.memory", "mine", "/tmp/p", "--nodo", "default"]
+        cmd = [sys.executable, "-m", "dxrk.memory", "mine", "/tmp/p", "--partition", "default"]
         assert hc._pid_file_for_cmd(cmd) == hc._pid_file_for_cmd(cmd)
-        other = [sys.executable, "-m", "dxrk.memory", "mine", "/other", "--nodo", "x"]
+        other = [sys.executable, "-m", "dxrk.memory", "mine", "/other", "--partition", "x"]
         assert hc._pid_file_for_cmd(other) != hc._pid_file_for_cmd(cmd)
         assert hc._pid_file_for_cmd([sys.executable, "-c", "print(1)"]).name.startswith("mine_")
 
@@ -1341,7 +1341,7 @@ class TestPidAlive:
 
 class TestMineAlreadyRunning:
     def _cmd(self):
-        return [sys.executable, "-m", "dxrk.memory", "mine", "/tmp/proj", "--nodo", "default"]
+        return [sys.executable, "-m", "dxrk.memory", "mine", "/tmp/proj", "--partition", "default"]
 
     def test_no_file(self, tmp_path, monkeypatch):
         _iso_hc(monkeypatch, tmp_path)
@@ -1430,7 +1430,7 @@ class TestCreateMineSlot:
 
 class TestClaimMineSlot:
     def _cmd(self):
-        return [sys.executable, "-m", "dxrk.memory", "mine", "/tmp/cproj", "--nodo", "default"]
+        return [sys.executable, "-m", "dxrk.memory", "mine", "/tmp/cproj", "--partition", "default"]
 
     def test_fresh_and_busy(self, tmp_path, monkeypatch):
         _iso_hc(monkeypatch, tmp_path)
@@ -1491,7 +1491,7 @@ class TestClaimMineSlot:
 
 class TestSpawnMine:
     def _cmd(self, proj):
-        return [sys.executable, "-m", "dxrk.memory", "mine", str(proj), "--nodo", "default"]
+        return [sys.executable, "-m", "dxrk.memory", "mine", str(proj), "--partition", "default"]
 
     def test_skip_when_busy(self, tmp_path, monkeypatch):
         _iso_hc(monkeypatch, tmp_path, malla=True)
@@ -1688,8 +1688,8 @@ class TestSaveSummary:
             return real_write(self, *a, **k)
 
         monkeypatch.setattr(Path, "write_text", _fake_write)
-        res = hc._save_session_summary_direct(str(tr), "sAck", nodo="nodo_t")
-        assert res["count"] == 2 and "fragmento_id" in res
+        res = hc._save_session_summary_direct(str(tr), "sAck", partition="partition_t")
+        assert res["count"] == 2 and "recall_id" in res
 
     def test_success(self, tmp_path, monkeypatch):
         _iso_hc(monkeypatch, tmp_path, malla=True)
@@ -1697,7 +1697,7 @@ class TestSaveSummary:
         with open(tr, "w", encoding="utf-8") as f:
             for i in range(2):
                 f.write(json.dumps({"message": {"role": "user", "content": f"project alpha content {i}"}}) + "\n")
-        res = hc._save_session_summary_direct(str(tr), "sOk", nodo="nodo_t")
+        res = hc._save_session_summary_direct(str(tr), "sOk", partition="partition_t")
         assert res["count"] == 2
         assert isinstance(res["themes"], list)
 
@@ -1742,21 +1742,21 @@ class TestVenaFromTranscript:
             f.write('{"cwd": ""}\n')
             f.write('{"cwd": "/"}\n')
             f.write('{"cwd": "/home/user/Projects/MyProject"}\n')
-        assert hc._nodo_from_transcript_path(str(tr)) == "nodo_myproject"
+        assert hc._partition_from_transcript_path(str(tr)) == "partition_myproject"
 
     def test_open_oserror(self, tmp_path, monkeypatch):
         tr = tmp_path / "o.jsonl"
         tr.write_text('{"cwd": "/a/b"}\n')
         monkeypatch.setattr(Path, "open", lambda *a, **k: (_ for _ in ()).throw(OSError("ro")))
-        assert hc._nodo_from_transcript_path(str(tr)) == "nodo_sessions"
+        assert hc._partition_from_transcript_path(str(tr)) == "partition_sessions"
 
     def test_encoded_paths(self):
-        assert hc._nodo_from_transcript_path("/x/.claude/projects/-Users-bob-git-CoolProj/y.jsonl") == "nodo_coolproj"
-        assert hc._nodo_from_transcript_path("/x/.claude/projects/-plainproj/y.jsonl") == "nodo_plainproj"
-        assert hc._nodo_from_transcript_path("/x/.claude/projects/-Users-bob-dev-Thing/y.jsonl") == "nodo_thing"
-        assert hc._nodo_from_transcript_path("/some-Projects-AwesomeX/file.jsonl") == "nodo_awesomex"
-        assert hc._nodo_from_transcript_path("/nonexistent_xyz/f.jsonl") == "nodo_sessions"
-        assert hc._nodo_from_transcript_path("") == "nodo_sessions"
+        assert hc._partition_from_transcript_path("/x/.claude/projects/-Users-bob-git-CoolProj/y.jsonl") == "partition_coolproj"
+        assert hc._partition_from_transcript_path("/x/.claude/projects/-plainproj/y.jsonl") == "partition_plainproj"
+        assert hc._partition_from_transcript_path("/x/.claude/projects/-Users-bob-dev-Thing/y.jsonl") == "partition_thing"
+        assert hc._partition_from_transcript_path("/some-Projects-AwesomeX/file.jsonl") == "partition_awesomex"
+        assert hc._partition_from_transcript_path("/nonexistent_xyz/f.jsonl") == "partition_sessions"
+        assert hc._partition_from_transcript_path("") == "partition_sessions"
 
     def test_no_cwd_exhausts(self, tmp_path):
         tr = tmp_path / "nc.jsonl"
@@ -1764,17 +1764,17 @@ class TestVenaFromTranscript:
             f.write("\n")
             f.write('{"a": 1}\n')
             f.write('{"cwd": }\n')
-        assert hc._nodo_from_transcript_path(str(tr)) == "nodo_sessions"
+        assert hc._partition_from_transcript_path(str(tr)) == "partition_sessions"
 
     def test_200_line_break(self, tmp_path):
         tr = tmp_path / "big.jsonl"
         with open(tr, "w", encoding="utf-8") as f:
             for _ in range(205):
                 f.write('{"a": 1}\n')
-        assert hc._nodo_from_transcript_path(str(tr)) == "nodo_sessions"
+        assert hc._partition_from_transcript_path(str(tr)) == "partition_sessions"
 
     def test_empty_project_after_prefix(self):
-        assert hc._nodo_from_transcript_path("/x/.claude/projects/-git-/y.jsonl") == "nodo_sessions"
+        assert hc._partition_from_transcript_path("/x/.claude/projects/-git-/y.jsonl") == "partition_sessions"
 
 
 class TestHookStop:
@@ -1813,7 +1813,7 @@ class TestHookStop:
         outs = []
         monkeypatch.setattr(hc, "_output", outs.append)
         monkeypatch.setattr(hc, "_count_human_messages", lambda p: 20)
-        monkeypatch.setattr(hc, "_nodo_from_transcript_path", lambda p: "nodo_x")
+        monkeypatch.setattr(hc, "_partition_from_transcript_path", lambda p: "partition_x")
         monkeypatch.setattr(hc, "_save_session_summary_direct", lambda *a, **k: {"count": 0})
         monkeypatch.setattr(hc, "_ingest_transcript", lambda p: None)
         monkeypatch.setattr(hc, "_maybe_auto_ingest", lambda: None)
@@ -1828,7 +1828,7 @@ class TestHookStop:
         ingested, auto = [], []
         monkeypatch.setattr(hc, "_output", outs.append)
         monkeypatch.setattr(hc, "_count_human_messages", lambda p: 20)
-        monkeypatch.setattr(hc, "_nodo_from_transcript_path", lambda p: "nodo_x")
+        monkeypatch.setattr(hc, "_partition_from_transcript_path", lambda p: "partition_x")
         monkeypatch.setattr(hc, "_save_session_summary_direct", lambda *a, **k: {"count": 3, "themes": ["alpha"]})
         monkeypatch.setattr(hc, "_ingest_transcript", lambda p: ingested.append(p))
         monkeypatch.setattr(hc, "_maybe_auto_ingest", lambda: auto.append(1))
@@ -1856,7 +1856,7 @@ class TestHookStop:
         outs = []
         monkeypatch.setattr(hc, "_output", outs.append)
         monkeypatch.setattr(hc, "_count_human_messages", lambda p: 20)
-        monkeypatch.setattr(hc, "_nodo_from_transcript_path", lambda p: "nodo_x")
+        monkeypatch.setattr(hc, "_partition_from_transcript_path", lambda p: "partition_x")
         monkeypatch.setattr(hc, "_save_session_summary_direct", lambda *a, **k: {"count": 2, "themes": []})
         monkeypatch.setattr(hc, "_ingest_transcript", lambda p: None)
         monkeypatch.setattr(hc, "_maybe_auto_ingest", lambda: None)
@@ -2258,8 +2258,8 @@ class TestAgentMemoryRetrieveSqlite:
             "session_id": "s1",
             "type": 1,
             "importance": 2.5,
-            "nodo": "w",
-            "celda": "r",
+            "partition": "w",
+            "subgroup": "r",
             "source_file": "f",
             "filed_at": "2024-01-01T00:00:00",
             "custom": "k",
@@ -2269,7 +2269,7 @@ class TestAgentMemoryRetrieveSqlite:
         assert e is not None and e.content == "doc a"
         assert e.type == MemoryType.EPISODIC and e.importance == 2.5
         assert e.metadata == {"custom": "k"}
-        assert e.nodo == "w" and e.malla_path == "f"
+        assert e.partition == "w" and e.malla_path == "f"
         e2 = m.retrieve("a")
         assert e2.access_count == 2
 
@@ -2331,8 +2331,8 @@ class TestAgentMemorySearchSqlite:
             "session_id": "s1",
             "type": 1,
             "importance": 2.0,
-            "nodo": "w",
-            "celda": "r",
+            "partition": "w",
+            "subgroup": "r",
             "source_file": "f",
             "filed_at": "2024-06-01T00:00:00",
         }
@@ -2565,13 +2565,13 @@ class TestAgentMemoryStatsSqlite:
     def test_meta_branches(self, tmp_path, _iso_tenant):
         m = _sqlite_mem(tmp_path, "stats5")
         m.store(MemoryEntry(content="hello", project_id="p1"))
-        metas = ["notadict", {"type": "bad", "nodo": "w1", "celda": "r1"}, {"mem_type": 1}, {"nodo": 123, "celda": 456}]
+        metas = ["notadict", {"type": "bad", "partition": "w1", "subgroup": "r1"}, {"mem_type": 1}, {"partition": 123, "subgroup": 456}]
         m._malla_collection = _StubCol(count_val=9, getres=SimpleNamespace(ids=["a", "b", "c", "d"], metadatas=metas))
         st = m.stats()
         assert st.total_entries == 9
         assert st.by_project == 1 and st.by_session == 1
 
-    def test_no_nodos_fallback(self, tmp_path, _iso_tenant):
+    def test_no_partitions_fallback(self, tmp_path, _iso_tenant):
         m = _sqlite_mem(tmp_path, "stats6")
         m.store(MemoryEntry(content="hello", project_id="p1", session_id="s1"))
         m._malla_collection = _StubCol(count_val=3, getres=SimpleNamespace(ids=["a"], metadatas=[{"type": 0}]))

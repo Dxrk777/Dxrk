@@ -66,7 +66,7 @@ class TestMemoryEntry:
         assert e.importance == 0.0
         assert e.project_id == ""
         assert e.title == ""
-        assert e.nodo == ""
+        assert e.partition == ""
 
     def test_custom_fields(self):
         from dxrk.memory.types import MemoryEntry, MemoryType
@@ -78,29 +78,45 @@ class TestMemoryEntry:
         assert e.type == MemoryType.EPISODIC
 
 
-class TestGlobuloRecord:
-    def test_make_id_deterministic(self):
-        from dxrk.memory.types import FragmentoRecord
+class TestDxrkHierarchy:
+    def test_canonical_names_alias_previous_generations(self):
+        from dxrk.memory.types import DxrkRecall, FragmentoRecord, Recall, RecallRecord
 
-        a = FragmentoRecord.make_id("w", "r", "/a/b.txt", 0)
-        b = FragmentoRecord.make_id("w", "r", "/a/b.txt", 0)
+        assert DxrkRecall is RecallRecord is FragmentoRecord is Recall
+
+    def test_partition_and_subgroup_values(self):
+        from dxrk.memory.types import DxrkPartition, DxrkSubgroup
+
+        partition = DxrkPartition("code")
+        subgroup = DxrkSubgroup("code", "auth")
+        assert partition.name == "code"
+        assert subgroup.partition == "code"
+        assert subgroup.name == "auth"
+
+
+class TestDxrkRecall:
+    def test_make_id_deterministic(self):
+        from dxrk.memory.types import RecallRecord
+
+        a = RecallRecord.make_id("w", "r", "/a/b.txt", 0)
+        b = RecallRecord.make_id("w", "r", "/a/b.txt", 0)
         assert a == b
-        assert a.startswith("fragmento_w_r_")
-        assert len(a) == len("fragmento_w_r_") + 24
+        assert a.startswith("recall_w_r_")
+        assert len(a) == len("recall_w_r_") + 24
 
     def test_make_id_diff_chunk(self):
-        from dxrk.memory.types import FragmentoRecord
+        from dxrk.memory.types import RecallRecord
 
-        a = FragmentoRecord.make_id("w", "r", "/a/b.txt", 0)
-        b = FragmentoRecord.make_id("w", "r", "/a/b.txt", 1)
+        a = RecallRecord.make_id("w", "r", "/a/b.txt", 0)
+        b = RecallRecord.make_id("w", "r", "/a/b.txt", 1)
         assert a != b
 
-    def test_make_id_diff_nodo_celda_hash_only_file_and_index(self):
-        from dxrk.memory.types import FragmentoRecord
+    def test_make_id_diff_partition_subgroup_hash_only_file_and_index(self):
+        from dxrk.memory.types import RecallRecord
 
-        # implementation hashes only source_file + chunk_index, nodo/celda only in prefix
-        a = FragmentoRecord.make_id("w1", "r1", "/a/b.txt", 0)
-        b = FragmentoRecord.make_id("w2", "r2", "/a/b.txt", 0)
+        # implementation hashes only source_file + chunk_index, partition/subgroup only in prefix
+        a = RecallRecord.make_id("w1", "r1", "/a/b.txt", 0)
+        b = RecallRecord.make_id("w2", "r2", "/a/b.txt", 0)
         # prefix differs but hash suffix same
         suffix_a = a.split("_")[-1]
         suffix_b = b.split("_")[-1]
@@ -108,19 +124,19 @@ class TestGlobuloRecord:
         assert a != b
 
     def test_make_id_hash_matches(self):
-        from dxrk.memory.types import FragmentoRecord
+        from dxrk.memory.types import RecallRecord
 
-        nodo, celda, src, idx = "nodo", "celda", "/tmp/file.md", 3
+        partition, subgroup, src, idx = "partition", "subgroup", "/tmp/file.md", 3
         expected = hashlib.sha256(f"{src}{idx}".encode()).hexdigest()[:24]
-        assert FragmentoRecord.make_id(nodo, celda, src, idx) == f"fragmento_{nodo}_{celda}_{expected}"
+        assert RecallRecord.make_id(partition, subgroup, src, idx) == f"recall_{partition}_{subgroup}_{expected}"
 
     def test_defaults(self):
-        from dxrk.memory.types import FragmentoRecord
+        from dxrk.memory.types import RecallRecord
 
-        r = FragmentoRecord(
-            fragmento_id="fragmento_w_r_abc",
-            nodo="w",
-            celda="r",
+        r = RecallRecord(
+            recall_id="recall_w_r_abc",
+            partition="w",
+            subgroup="r",
             content="c",
             source_file="/a",
             chunk_index=0,
@@ -153,14 +169,14 @@ class TestClosetRecord:
 
         c = ClosetRecord(
             closet_id="closet_w_r_abc",
-            nodo="w",
-            celda="r",
+            partition="w",
+            subgroup="r",
             source_file="/a",
             content="c",
-            fragmento_ids=("d1", "d2"),
+            recall_ids=("d1", "d2"),
             malla_path="/p",
         )
-        assert c.fragmento_ids == ("d1", "d2")
+        assert c.recall_ids == ("d1", "d2")
         assert c.normalize_version == 2
 
 
@@ -390,12 +406,12 @@ class TestHybridRank:
 
 
 class TestBuildWhereFilter:
-    def test_nodo_and_celda(self):
+    def test_partition_and_subgroup(self):
         from dxrk.memory.search import build_where_filter
 
-        assert build_where_filter("w", "r") == {"$and": [{"nodo": "w"}, {"celda": "r"}]}
-        assert build_where_filter("w", None) == {"nodo": "w"}
-        assert build_where_filter(None, "r") == {"celda": "r"}
+        assert build_where_filter("w", "r") == {"$and": [{"partition": "w"}, {"subgroup": "r"}]}
+        assert build_where_filter("w", None) == {"partition": "w"}
+        assert build_where_filter(None, "r") == {"subgroup": "r"}
         assert build_where_filter(None, None) == {}
         assert build_where_filter("", "") == {}
 
@@ -405,14 +421,14 @@ class TestBuildWhereFilter:
         be = SqliteBackend()
         ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
         col = be.get_collection(malla=ref, collection_name="wf_test", create=True)
-        col.add(documents=["hello a"], ids=["a1"], metadatas=[{"nodo": "w1", "celda": "r1"}])
-        col.add(documents=["hello b"], ids=["b1"], metadatas=[{"nodo": "w2", "celda": "r1"}])
+        col.add(documents=["hello a"], ids=["a1"], metadatas=[{"partition": "w1", "subgroup": "r1"}])
+        col.add(documents=["hello b"], ids=["b1"], metadatas=[{"partition": "w2", "subgroup": "r1"}])
         from dxrk.memory.search import build_where_filter, hybrid_search
 
         wf = build_where_filter("w1", None)
         res = hybrid_search(col, "hello", where=wf, n_results=5)
         # only w1 should match
-        sources = [r["nodo"] for r in res["results"]]
+        sources = [r["partition"] for r in res["results"]]
         assert all(s == "w1" for s in sources)
         be.close()
 
@@ -430,19 +446,19 @@ class TestClosetBoosts:
 
         be = SqliteBackend()
         ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
-        fragmento_col = be.get_collection(malla=ref, collection_name="fragmentos", create=True)
+        recall_col = be.get_collection(malla=ref, collection_name="recalls", create=True)
         closet_col = be.get_collection(malla=ref, collection_name="closets", create=True)
-        # fragmento doc
-        fragmento_col.add(
+        # recall doc
+        recall_col.add(
             documents=["hello world unique"],
             ids=["d1"],
-            metadatas=[{"nodo": "w", "celda": "r", "source_file": "/a/b.txt"}],
+            metadatas=[{"partition": "w", "subgroup": "r", "source_file": "/a/b.txt"}],
         )
         # closet doc far distance (> cap) should not boost
         closet_col.add(
             documents=["hello world unique"],
             ids=["c1"],
-            metadatas=[{"nodo": "w", "celda": "r", "source_file": "/a/b.txt"}],
+            metadatas=[{"partition": "w", "subgroup": "r", "source_file": "/a/b.txt"}],
         )
         # monkeypatch closet collection query to return high distance
 
@@ -457,7 +473,7 @@ class TestClosetBoosts:
             )
 
         with mock.patch.object(closet_col, "query", side_effect=fake_query):
-            res = hybrid_search(fragmento_col, "hello", n_results=5, closet_collection=closet_col)
+            res = hybrid_search(recall_col, "hello", n_results=5, closet_collection=closet_col)
             # distance > cap => no boost
             assert res["results"][0]["closet_boost"] == 0.0
         be.close()
@@ -620,7 +636,7 @@ class TestDialect:
 
         d = Dialect()
         txt = "We decided to switch to Postgres because it scales better. The api design is critical."
-        comp = d.compress(txt, {"source_file": "/a/b.md", "nodo": "w", "celda": "r"})
+        comp = d.compress(txt, {"source_file": "/a/b.md", "partition": "w", "subgroup": "r"})
         # header line + zettel
         assert "w|r|?|b" in comp or "w" in comp
         assert "0:" in comp
@@ -630,7 +646,7 @@ class TestDialect:
 
         d = Dialect()
         txt = "We decided to switch to Postgres because it scales better."
-        comp = d.compress(txt, {"nodo": "w", "celda": "r", "source_file": "/tmp/file.txt"})
+        comp = d.compress(txt, {"partition": "w", "subgroup": "r", "source_file": "/tmp/file.txt"})
         decoded = d.decode(comp)
         assert isinstance(decoded, dict)
         assert "header" in decoded
@@ -843,15 +859,15 @@ class TestScanProject:
 # malla/DxrkMemory
 # ---------------------------------------------------------------------------
 class TestDxrkMemory:
-    def test_add_fragmento(self, tmp_path: Path):
+    def test_add_recall(self, tmp_path: Path):
         from dxrk.memory.malla import DxrkMemory
 
         pal = tmp_path / "malla"
         dm = DxrkMemory(str(pal))
         dm.init()
-        did = dm.add_fragmento("w1", "r1", "hello world", "/a/b.txt", 0)
-        assert did.startswith("fragmento_w1_r1_")
-        got = dm.get_fragmento(did)
+        did = dm.add_recall("w1", "r1", "hello world", "/a/b.txt", 0)
+        assert did.startswith("recall_w1_r1_")
+        got = dm.get_recall(did)
         assert got is not None
         assert got["document"] == "hello world"
         dm.close()
@@ -862,18 +878,22 @@ class TestDxrkMemory:
         pal = tmp_path / "malla"
         dm = DxrkMemory(str(pal))
         dm.init()
-        # Add two fragmentos with known filed_at via direct upsert to control dates
+        # Add two recalls with known filed_at via direct upsert to control dates
         col = dm._collection(create=True)  # type: ignore[attr-defined]
         # Use manual dates: add with filed_at metadata
         col.upsert(
             documents=["old content hello"],
             ids=["id_old"],
-            metadatas=[{"nodo": "w", "celda": "r", "source_file": "/old.txt", "filed_at": "2026-01-01T00:00:00+00:00"}],
+            metadatas=[
+                {"partition": "w", "subgroup": "r", "source_file": "/old.txt", "filed_at": "2026-01-01T00:00:00+00:00"}
+            ],
         )
         col.upsert(
             documents=["new content hello"],
             ids=["id_new"],
-            metadatas=[{"nodo": "w", "celda": "r", "source_file": "/new.txt", "filed_at": "2026-02-15T00:00:00+00:00"}],
+            metadatas=[
+                {"partition": "w", "subgroup": "r", "source_file": "/new.txt", "filed_at": "2026-02-15T00:00:00+00:00"}
+            ],
         )
         # since 2026-02-01 should only include new
         res = dm.search("hello", since="2026-02-01")
@@ -896,9 +916,9 @@ class TestDxrkMemory:
         pal = tmp_path / "malla"
         dm = DxrkMemory(str(pal))
         dm.init()
-        result = dm.mine(str(proj), nodo="default", celda="general")
+        result = dm.mine(str(proj), partition="default", subgroup="general")
         assert result["files_mined"] == 1
-        assert result["fragmentos_added"] >= 1
+        assert result["recalls_added"] >= 1
         # check metadata chunk_total and source_mtime
         col = dm._collection(create=False)  # type: ignore[attr-defined]
         got = col.get(include=["metadatas"], limit=10)
@@ -922,7 +942,7 @@ class TestDxrkMemory:
         dm = DxrkMemory(str(pal))
         dm.init()
         res = dm.mine(str(proj), dry_run=True)
-        assert res["fragmentos_added"] >= 1
+        assert res["recalls_added"] >= 1
         assert dm.count() == 0
         dm.close()
 
@@ -984,39 +1004,61 @@ class TestDxrkMemory:
         pal = tmp_path / "malla_w"
         dm = DxrkMemory(str(pal))
         dm.init()
-        dm.add_fragmento("nodoA", "celda1", "hello filter test", "/a.txt", 0)
-        dm.add_fragmento("nodoB", "celda1", "hello filter test", "/b.txt", 0)
-        res = dm.search("hello", nodo="nodoA")
+        dm.add_recall("partitionA", "subgroup1", "hello filter test", "/a.txt", 0)
+        dm.add_recall("partitionB", "subgroup1", "hello filter test", "/b.txt", 0)
+        res = dm.search("hello", partition="partitionA")
         for r in res["results"]:
-            assert r["nodo"] == "nodoA"
+            assert r["partition"] == "partitionA"
         dm.close()
 
-    def test_add_fragmento_same_id_idempotent(self, tmp_path: Path):
+    def test_add_recall_same_id_idempotent(self, tmp_path: Path):
         from dxrk.memory.malla import DxrkMemory
 
         pal = tmp_path / "malla_idem"
         dm = DxrkMemory(str(pal))
         dm.init()
-        id1 = dm.add_fragmento("w", "r", "content v1", "/same.txt", 0)
-        id2 = dm.add_fragmento("w", "r", "content v2", "/same.txt", 0)
+        id1 = dm.add_recall("w", "r", "content v1", "/same.txt", 0)
+        id2 = dm.add_recall("w", "r", "content v2", "/same.txt", 0)
         assert id1 == id2
         assert dm.count() == 1
-        got = dm.get_fragmento(id1)
+        got = dm.get_recall(id1)
         assert got is not None
         assert got["document"] == "content v2"
         dm.close()
 
-    def test_list_nodos_celdas(self, tmp_path: Path):
+    def test_list_partitions_subgroups(self, tmp_path: Path):
         from dxrk.memory.malla import DxrkMemory
 
         pal = tmp_path / "malla_lr"
         dm = DxrkMemory(str(pal))
         dm.init()
-        dm.add_fragmento("w1", "r1", "c1", "/a1.txt", 0)
-        dm.add_fragmento("w1", "r2", "c2", "/a2.txt", 0)
-        dm.add_fragmento("w2", "r1", "c3", "/a3.txt", 0)
-        assert set(dm.list_nodos()) == {"w1", "w2"}
-        assert set(dm.list_celdas("w1")) == {"r1", "r2"}
+        dm.add_recall("w1", "r1", "c1", "/a1.txt", 0)
+        dm.add_recall("w1", "r2", "c2", "/a2.txt", 0)
+        dm.add_recall("w2", "r1", "c3", "/a3.txt", 0)
+        assert set(dm.list_partitions()) == {"w1", "w2"}
+        assert set(dm.list_subgroups("w1")) == {"r1", "r2"}
+        dm.close()
+
+    def test_typed_partition_and_subgroup_records(self, tmp_path: Path):
+        from dxrk.memory.malla import DxrkMemory
+        from dxrk.memory.types import DxrkPartition, DxrkSubgroup
+
+        dm = DxrkMemory(str(tmp_path / "malla_typed"))
+        dm.init()
+        dm.add_recall("w1", "r1", "c1", "/a1.txt", 0)
+        dm.add_recall("w1", "r2", "c2", "/a2.txt", 0)
+        dm.add_recall("w2", "r1", "c3", "/a3.txt", 0)
+
+        assert set(dm.list_partition_records()) == {DxrkPartition("w1"), DxrkPartition("w2")}
+        assert set(dm.list_subgroup_records("w1")) == {
+            DxrkSubgroup("w1", "r1"),
+            DxrkSubgroup("w1", "r2"),
+        }
+        assert set(dm.list_subgroup_records()) == {
+            DxrkSubgroup("w1", "r1"),
+            DxrkSubgroup("w1", "r2"),
+            DxrkSubgroup("w2", "r1"),
+        }
         dm.close()
 
     def test_health_and_count(self, tmp_path: Path):
@@ -1028,7 +1070,7 @@ class TestDxrkMemory:
         h = dm.health()
         assert h["ok"] is True
         assert dm.count() == 0
-        dm.add_fragmento("w", "r", "hi", "/a.txt", 0)
+        dm.add_recall("w", "r", "hi", "/a.txt", 0)
         assert dm.count() == 1
         dm.close()
 
@@ -1065,9 +1107,9 @@ class TestLayers:
         ident.write_text("Identity " * 25)
         dm = DxrkMemory(str(pal))
         dm.init()
-        # Add enough fragmentos to reach ~500+ chars L1. Contents must be
+        # Add enough recalls to reach ~500+ chars L1. Contents must be
         # genuinely distinct: Phase 2 write-time dedupe collapses
-        # near-identical fragmentos (same information, divergent copies).
+        # near-identical recalls (same information, divergent copies).
         topics = [
             "harbour master logged seventeen container ships before the tide",
             "sourdough starter needs daily rye flour and lukewarm spring water",
@@ -1086,7 +1128,7 @@ class TestLayers:
             "lockkeeper opened the lower gates for the narrowboat convoy",
         ]
         for i in range(15):
-            dm.add_fragmento("w", f"celda{i % 3}", (topics[i] + " ") * 8 + f"note-{i}", f"/file{i}.md", 0)
+            dm.add_recall("w", f"subgroup{i % 3}", (topics[i] + " ") * 8 + f"note-{i}", f"/file{i}.md", 0)
         ms = MemoryStack(malla_path=str(pal), identity_path=str(ident))
         wake = ms.wake_up()
         assert "Identity" in wake
@@ -1097,7 +1139,7 @@ class TestLayers:
         # also check status
         st = ms.status()
         assert st["malla_path"] == str(pal)
-        assert st["total_fragmentos"] == 15
+        assert st["total_recalls"] == 15
         dm.close()
 
     def test_layer1_generate_empty(self, tmp_path: Path):
@@ -1116,9 +1158,9 @@ class TestLayers:
         pal = tmp_path / "malla_l2"
         dm = DxrkMemory(str(pal))
         dm.init()
-        dm.add_fragmento("nodoX", "celdaY", "unique l2 content", "/a.md", 0)
+        dm.add_recall("partitionX", "subgroupY", "unique l2 content", "/a.md", 0)
         l2 = Layer2(str(pal))
-        out = l2.retrieve(nodo="nodoX", celda="celdaY")
+        out = l2.retrieve(partition="partitionX", subgroup="subgroupY")
         assert "unique l2 content" in out or "L2" in out
         dm.close()
 
@@ -1129,7 +1171,7 @@ class TestLayers:
         pal = tmp_path / "malla_l3"
         dm = DxrkMemory(str(pal))
         dm.init()
-        dm.add_fragmento("w", "r", "deep search hello", "/a.md", 0)
+        dm.add_recall("w", "r", "deep search hello", "/a.md", 0)
         l3 = Layer3(str(pal))
         out = l3.search("hello")
         assert "hello" in out.lower() or "No results" not in out
@@ -1142,7 +1184,7 @@ class TestLayers:
         pal = tmp_path / "malla_tok"
         dm = DxrkMemory(str(pal))
         dm.init()
-        dm.add_fragmento("w", "r", "token test " * 50, "/a.md", 0)
+        dm.add_recall("w", "r", "token test " * 50, "/a.md", 0)
         l1 = Layer1(str(pal))
         gen = l1.generate()
         assert l1.token_estimate() == len(gen) // 4
@@ -1159,7 +1201,7 @@ class TestBackendSqlite:
         be = SqliteBackend()
         ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
         col = be.get_collection(malla=ref, collection_name="wal_test", create=True)
-        col.add(documents=["hi"], ids=["1"], metadatas=[{"nodo": "w"}])
+        col.add(documents=["hi"], ids=["1"], metadatas=[{"partition": "w"}])
         db_path = tmp_path / "malla.db"
         conn = sqlite3.connect(str(db_path))
         cur = conn.execute("PRAGMA journal_mode;")
@@ -1197,7 +1239,7 @@ class TestBackendSqlite:
         ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
         col = be.get_collection(malla=ref, collection_name="c1", create=True)
         assert col.count() == 0
-        col.add(documents=["hello world"], ids=["id1"], metadatas=[{"nodo": "w", "celda": "r"}])
+        col.add(documents=["hello world"], ids=["id1"], metadatas=[{"partition": "w", "subgroup": "r"}])
         assert col.count() == 1
         got = col.get(ids=["id1"], include=["documents", "metadatas"])
         assert got.ids == ["id1"]
@@ -1216,17 +1258,17 @@ class TestBackendSqlite:
         be = SqliteBackend()
         ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
         col = be.get_collection(malla=ref, collection_name="c2", create=True)
-        col.add(documents=["a"], ids=["a1"], metadatas=[{"nodo": "w1", "celda": "r1", "chunk_index": 0}])
-        col.add(documents=["b"], ids=["b1"], metadatas=[{"nodo": "w1", "celda": "r2", "chunk_index": 1}])
-        col.add(documents=["c"], ids=["c1"], metadatas=[{"nodo": "w2", "celda": "r1", "chunk_index": 2}])
+        col.add(documents=["a"], ids=["a1"], metadatas=[{"partition": "w1", "subgroup": "r1", "chunk_index": 0}])
+        col.add(documents=["b"], ids=["b1"], metadatas=[{"partition": "w1", "subgroup": "r2", "chunk_index": 1}])
+        col.add(documents=["c"], ids=["c1"], metadatas=[{"partition": "w2", "subgroup": "r1", "chunk_index": 2}])
         # $and
-        got = col.get(where={"$and": [{"nodo": "w1"}, {"celda": "r1"}]})
+        got = col.get(where={"$and": [{"partition": "w1"}, {"subgroup": "r1"}]})
         assert got.ids == ["a1"]
         # $in operator via _where_to_sql through get where
         got2 = col.get(where={"chunk_index": {"$in": [0, 2]}})
         assert set(got2.ids) == {"a1", "c1"}
         # query with where $and
-        q = col.query(query_texts=["a"], n_results=5, where={"$and": [{"nodo": "w1"}, {"celda": "r1"}]})
+        q = col.query(query_texts=["a"], n_results=5, where={"$and": [{"partition": "w1"}, {"subgroup": "r1"}]})
         # should only have a1 in first bucket if FTS matches?
         # at least filter respected: if results empty fallback still respects? check not containing c1
         flat_ids = [i for bucket in q.ids for i in bucket]
@@ -1240,11 +1282,11 @@ class TestBackendSqlite:
         be = SqliteBackend()
         ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
         col = be.get_collection(malla=ref, collection_name="c3", create=True)
-        col.add(documents=["hi"], ids=["1"], metadatas=[{"nodo": "w"}])
+        col.add(documents=["hi"], ids=["1"], metadatas=[{"partition": "w"}])
         with pytest.raises(UnsupportedFilterError):
-            col.get(where={"nodo": {"$unknown": "x"}})
+            col.get(where={"partition": {"$unknown": "x"}})
         with pytest.raises(UnsupportedFilterError):
-            col.get(where={"$or": [{"nodo": "w"}]})  # unsupported top-level op
+            col.get(where={"$or": [{"partition": "w"}]})  # unsupported top-level op
         be.close()
 
     def test_upsert_and_count(self, tmp_path: Path):
@@ -1253,12 +1295,12 @@ class TestBackendSqlite:
         be = SqliteBackend()
         ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
         col = be.get_collection(malla=ref, collection_name="up", create=True)
-        col.add(documents=["first"], ids=["1"], metadatas=[{"nodo": "w"}])
-        col.upsert(documents=["second"], ids=["1"], metadatas=[{"nodo": "w2"}])
+        col.add(documents=["first"], ids=["1"], metadatas=[{"partition": "w"}])
+        col.upsert(documents=["second"], ids=["1"], metadatas=[{"partition": "w2"}])
         assert col.count() == 1
         got = col.get(ids=["1"])
         assert got.documents[0] == "second"
-        assert got.metadatas[0]["nodo"] == "w2"
+        assert got.metadatas[0]["partition"] == "w2"
         be.close()
 
     def test_delete_by_where(self, tmp_path: Path):
@@ -1267,11 +1309,11 @@ class TestBackendSqlite:
         be = SqliteBackend()
         ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
         col = be.get_collection(malla=ref, collection_name="delw", create=True)
-        col.add(documents=["a"], ids=["a1"], metadatas=[{"nodo": "del"}])
-        col.add(documents=["b"], ids=["b1"], metadatas=[{"nodo": "keep"}])
-        col.delete(where={"nodo": "del"})
+        col.add(documents=["a"], ids=["a1"], metadatas=[{"partition": "del"}])
+        col.add(documents=["b"], ids=["b1"], metadatas=[{"partition": "keep"}])
+        col.delete(where={"partition": "del"})
         assert col.count() == 1
-        got = col.get(where={"nodo": "keep"})
+        got = col.get(where={"partition": "keep"})
         assert got.ids == ["b1"]
         be.close()
 
@@ -1321,7 +1363,7 @@ class TestBackendSqlite:
         be = SqliteBackend()
         ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
         col = be.get_collection(malla=ref, collection_name="qnt", create=True)
-        col.add(documents=["hello"], ids=["1"], metadatas=[{"nodo": "w"}])
+        col.add(documents=["hello"], ids=["1"], metadatas=[{"partition": "w"}])
         q = col.query(query_texts=[""], n_results=5)
         # fallback returns something
         assert q.ids[0] == ["1"] or q.ids[0] == []
@@ -1363,41 +1405,41 @@ class TestHooksCli:
         # negative pid handling: on linux -1 means all processes; we just ensure it returns bool
         assert isinstance(_pid_alive(-2), bool)
 
-    def test_nodo_from_transcript_path_cwd(self, tmp_path: Path):
-        from dxrk.memory.hooks_cli import _nodo_from_transcript_path
+    def test_partition_from_transcript_path_cwd(self, tmp_path: Path):
+        from dxrk.memory.hooks_cli import _partition_from_transcript_path
 
         transcript = tmp_path / "transcript.jsonl"
         # write jsonl with cwd
         with open(transcript, "w", encoding="utf-8") as f:
             f.write(json.dumps({"cwd": "/home/alice/Projects/MyProject"}) + "\n")
             f.write(json.dumps({"cwd": "/other"}) + "\n")
-        nodo = _nodo_from_transcript_path(str(transcript))
-        assert nodo == "nodo_myproject"
+        partition = _partition_from_transcript_path(str(transcript))
+        assert partition == "partition_myproject"
 
-    def test_nodo_from_transcript_path_encoded(self):
-        from dxrk.memory.hooks_cli import _nodo_from_transcript_path
+    def test_partition_from_transcript_path_encoded(self):
+        from dxrk.memory.hooks_cli import _partition_from_transcript_path
 
         path = "/home/user/.claude/projects/-Users-alice-Projects-myproj/transcript.jsonl"
-        nodo = _nodo_from_transcript_path(path)
-        assert nodo.startswith("nodo_")
-        assert "myproj" in nodo
+        partition = _partition_from_transcript_path(path)
+        assert partition.startswith("partition_")
+        assert "myproj" in partition
 
-    def test_nodo_from_transcript_path_fallback(self, tmp_path: Path):
-        from dxrk.memory.hooks_cli import _nodo_from_transcript_path
+    def test_partition_from_transcript_path_fallback(self, tmp_path: Path):
+        from dxrk.memory.hooks_cli import _partition_from_transcript_path
 
         missing = tmp_path / "missing.jsonl"
-        nodo = _nodo_from_transcript_path(str(missing))
-        assert nodo == "nodo_sessions"
+        partition = _partition_from_transcript_path(str(missing))
+        assert partition == "partition_sessions"
         # also weird path without regex match
-        nodo2 = _nodo_from_transcript_path("/tmp/foo.jsonl")
-        assert nodo2 == "nodo_sessions"
+        partition2 = _partition_from_transcript_path("/tmp/foo.jsonl")
+        assert partition2 == "partition_sessions"
 
     def test_mine_slot_timeout_and_pid_file(self, tmp_path: Path, monkeypatch):
         from dxrk.memory import hooks_cli as hc
         from dxrk.memory.hooks_cli import _mine_already_running, _pid_file_for_cmd
 
         monkeypatch.setattr(hc, "_MINE_PID_DIR", tmp_path / "pids")
-        fake_cmd = ["python", "-m", "dxrk.memory", "mine", "/proj", "--nodo", "default"]
+        fake_cmd = ["python", "-m", "dxrk.memory", "mine", "/proj", "--partition", "default"]
         pid_file = _pid_file_for_cmd(fake_cmd)
         # no pid file => not running
         assert _mine_already_running(fake_cmd) is False
@@ -1426,14 +1468,14 @@ class TestMcpServer:
         expected = {
             "dxrk_memory_status",
             "dxrk_memory_search",
-            "dxrk_memory_add_fragmento",
-            "dxrk_memory_get_fragmento",
-            "dxrk_memory_list_fragmentos",
-            "dxrk_memory_update_fragmento",
-            "dxrk_memory_delete_fragmento",
+            "dxrk_memory_add_recall",
+            "dxrk_memory_get_recall",
+            "dxrk_memory_list_recalls",
+            "dxrk_memory_update_recall",
+            "dxrk_memory_delete_recall",
             "dxrk_memory_check_duplicate",
-            "dxrk_memory_list_nodos",
-            "dxrk_memory_list_celdas",
+            "dxrk_memory_list_partitions",
+            "dxrk_memory_list_subgroups",
             "dxrk_memory_taxonomy",
             "dxrk_memory_mine",
             "dxrk_memory_kg_query",
@@ -1526,20 +1568,20 @@ class TestMcpServer:
         resp3 = _dispatch({"method": "tools/call", "id": 12, "params": {"name": "unknown_tool", "arguments": {}}})
         assert "error" in resp3
 
-    def test_call_tool_add_and_get_fragmento(self, tmp_path: Path, monkeypatch):
+    def test_call_tool_add_and_get_recall(self, tmp_path: Path, monkeypatch):
         from dxrk.memory.mcp_server import _dispatch
 
         monkeypatch.setenv("DXRK_MEMORY_PATH", str(tmp_path / "mcp_pal2"))
-        # add fragmento
+        # add recall
         add_resp = _dispatch(
             {
                 "method": "tools/call",
                 "id": 20,
                 "params": {
-                    "name": "dxrk_memory_add_fragmento",
+                    "name": "dxrk_memory_add_recall",
                     "arguments": {
-                        "nodo": "w1",
-                        "celda": "r1",
+                        "partition": "w1",
+                        "subgroup": "r1",
                         "content": "mcp hello",
                         "source_file": "/a.txt",
                         "chunk_index": 0,
@@ -1549,23 +1591,23 @@ class TestMcpServer:
         )
         assert add_resp["result"]["isError"] is False
         data = json.loads(add_resp["result"]["content"][0]["text"])
-        did = data["fragmento_id"]
-        # get fragmento
+        did = data["recall_id"]
+        # get recall
         get_resp = _dispatch(
             {
                 "method": "tools/call",
                 "id": 21,
-                "params": {"name": "dxrk_memory_get_fragmento", "arguments": {"fragmento_id": did}},
+                "params": {"name": "dxrk_memory_get_recall", "arguments": {"recall_id": did}},
             }
         )
         gdata = json.loads(get_resp["result"]["content"][0]["text"])
-        assert gdata["fragmento"] is not None
-        # list nodos
-        nodos_resp = _dispatch(
-            {"method": "tools/call", "id": 22, "params": {"name": "dxrk_memory_list_nodos", "arguments": {}}}
+        assert gdata["recall"] is not None
+        # list partitions
+        partitions_resp = _dispatch(
+            {"method": "tools/call", "id": 22, "params": {"name": "dxrk_memory_list_partitions", "arguments": {}}}
         )
-        wdata = json.loads(nodos_resp["result"]["content"][0]["text"])
-        assert "w1" in wdata["nodos"]
+        wdata = json.loads(partitions_resp["result"]["content"][0]["text"])
+        assert "w1" in wdata["partitions"]
         # taxonomy
         tax_resp = _dispatch(
             {"method": "tools/call", "id": 23, "params": {"name": "dxrk_memory_taxonomy", "arguments": {}}}
@@ -1650,8 +1692,8 @@ class TestMcpServer:
                 "method": "tools/call",
                 "id": 40,
                 "params": {
-                    "name": "dxrk_memory_add_fragmento",
-                    "arguments": {"nodo": "w", "celda": "r", "content": "one", "source_file": "/one.txt"},
+                    "name": "dxrk_memory_add_recall",
+                    "arguments": {"partition": "w", "subgroup": "r", "content": "one", "source_file": "/one.txt"},
                 },
             }
         )
@@ -1660,18 +1702,18 @@ class TestMcpServer:
                 "method": "tools/call",
                 "id": 41,
                 "params": {
-                    "name": "dxrk_memory_add_fragmento",
-                    "arguments": {"nodo": "w", "celda": "r", "content": "two", "source_file": "/two.txt"},
+                    "name": "dxrk_memory_add_recall",
+                    "arguments": {"partition": "w", "subgroup": "r", "content": "two", "source_file": "/two.txt"},
                 },
             }
         )
-        did2 = json.loads(add2["result"]["content"][0]["text"])["fragmento_id"]
-        # list fragmentos
+        did2 = json.loads(add2["result"]["content"][0]["text"])["recall_id"]
+        # list recalls
         lst = _dispatch(
             {
                 "method": "tools/call",
                 "id": 42,
-                "params": {"name": "dxrk_memory_list_fragmentos", "arguments": {"limit": 10}},
+                "params": {"name": "dxrk_memory_list_recalls", "arguments": {"limit": 10}},
             }
         )
         assert json.loads(lst["result"]["content"][0]["text"])["count"] >= 1
@@ -1680,7 +1722,7 @@ class TestMcpServer:
             {
                 "method": "tools/call",
                 "id": 43,
-                "params": {"name": "dxrk_memory_delete_fragmento", "arguments": {"fragmento_id": did2}},
+                "params": {"name": "dxrk_memory_delete_recall", "arguments": {"recall_id": did2}},
             }
         )
         assert json.loads(del_resp["result"]["content"][0]["text"])["deleted"] == did2
@@ -1704,7 +1746,7 @@ class TestMcpServer:
                 "params": {"name": "dxrk_memory_mine", "arguments": {"project_dir": str(proj)}},
             }
         )
-        assert "fragmentos_added" in json.loads(mine_resp["result"]["content"][0]["text"])
+        assert "recalls_added" in json.loads(mine_resp["result"]["content"][0]["text"])
 
     def test_stdio_main_loop(self, tmp_path: Path, monkeypatch):
         import io
@@ -1742,46 +1784,46 @@ def test_types_top_by_importance_sorts_when_short():
     assert [e.importance for e in types_tbi(entries, 10)] == [0.9, 0.5, 0.1]
 
 
-def test_layer1_generate_filters_by_nodo(tmp_path: Path):
+def test_layer1_generate_filters_by_partition(tmp_path: Path):
     from dxrk.memory.layers import Layer1
     from dxrk.memory.malla import DxrkMemory
 
-    pal = tmp_path / "pal_nodo"
+    pal = tmp_path / "pal_partition"
     dm = DxrkMemory(str(pal))
     dm.init()
     try:
-        dm.add_fragmento("alpha", "r", "alpha only content " * 20, "/a.txt", 0)
-        dm.add_fragmento("beta", "r", "beta only content " * 20, "/b.txt", 0)
-        out = Layer1(str(pal), nodo="alpha").generate()
+        dm.add_recall("alpha", "r", "alpha only content " * 20, "/a.txt", 0)
+        dm.add_recall("beta", "r", "beta only content " * 20, "/b.txt", 0)
+        out = Layer1(str(pal), partition="alpha").generate()
         assert "alpha only content" in out
         assert "beta only content" not in out
-        # no filter -> both nodos present
+        # no filter -> both partitions present
         out_all = Layer1(str(pal)).generate()
         assert "alpha only content" in out_all
         assert "beta only content" in out_all
-        # unknown nodo -> explicit empty message, not silent all-nodos leak
-        assert "No memories yet for nodo=zeta" in Layer1(str(pal), nodo="zeta").generate()
+        # unknown partition -> explicit empty message, not silent all-partitions leak
+        assert "No memories yet for partition=zeta" in Layer1(str(pal), partition="zeta").generate()
     finally:
         dm.close()
 
 
-def test_memory_stack_wake_up_nodo_filters_without_mutation(tmp_path: Path):
+def test_memory_stack_wake_up_partition_filters_without_mutation(tmp_path: Path):
     from dxrk.memory.layers import MemoryStack
     from dxrk.memory.malla import DxrkMemory
 
-    pal = tmp_path / "pal_stack_nodo"
+    pal = tmp_path / "pal_stack_partition"
     ident = tmp_path / "ident.txt"
     ident.write_text("stack identity")
     dm = DxrkMemory(str(pal))
     dm.init()
     try:
-        dm.add_fragmento("alpha", "r", "alpha stack content " * 20, "/a.txt", 0)
-        dm.add_fragmento("beta", "r", "beta stack content " * 20, "/b.txt", 0)
+        dm.add_recall("alpha", "r", "alpha stack content " * 20, "/a.txt", 0)
+        dm.add_recall("beta", "r", "beta stack content " * 20, "/b.txt", 0)
         ms = MemoryStack(malla_path=str(pal), identity_path=str(ident))
-        scoped = ms.wake_up(nodo="alpha")
+        scoped = ms.wake_up(partition="alpha")
         assert "alpha stack content" in scoped
         assert "beta stack content" not in scoped
-        # scoped call must not stick: unscoped wake_up still sees both nodos
+        # scoped call must not stick: unscoped wake_up still sees both partitions
         full = ms.wake_up()
         assert "alpha stack content" in full
         assert "beta stack content" in full
@@ -1798,10 +1840,10 @@ def test_mcp_check_duplicate_detects_exact_content(tmp_path: Path, monkeypatch):
             "method": "tools/call",
             "id": 1,
             "params": {
-                "name": "dxrk_memory_add_fragmento",
+                "name": "dxrk_memory_add_recall",
                 "arguments": {
-                    "nodo": "w",
-                    "celda": "r",
+                    "partition": "w",
+                    "subgroup": "r",
                     "content": "the quick brown fox jumps over",
                     "source_file": "/f.txt",
                 },
@@ -1833,7 +1875,7 @@ def test_mcp_check_duplicate_detects_exact_content(tmp_path: Path, monkeypatch):
     assert json.loads(fresh["result"]["content"][0]["text"])["duplicate"] is False
 
 
-def test_mcp_update_fragmento_no_orphan_on_nodo_change(tmp_path: Path, monkeypatch):
+def test_mcp_update_recall_no_orphan_on_partition_change(tmp_path: Path, monkeypatch):
     from dxrk.memory.mcp_server import _dispatch
 
     monkeypatch.setenv("DXRK_MEMORY_PATH", str(tmp_path / "pal_upd"))
@@ -1842,12 +1884,17 @@ def test_mcp_update_fragmento_no_orphan_on_nodo_change(tmp_path: Path, monkeypat
             "method": "tools/call",
             "id": 1,
             "params": {
-                "name": "dxrk_memory_add_fragmento",
-                "arguments": {"nodo": "w1", "celda": "r", "content": "update me content here", "source_file": "/u.txt"},
+                "name": "dxrk_memory_add_recall",
+                "arguments": {
+                    "partition": "w1",
+                    "subgroup": "r",
+                    "content": "update me content here",
+                    "source_file": "/u.txt",
+                },
             },
         }
     )
-    did = json.loads(add["result"]["content"][0]["text"])["fragmento_id"]
+    did = json.loads(add["result"]["content"][0]["text"])["recall_id"]
 
     def _count():
         st = _dispatch({"method": "tools/call", "id": 99, "params": {"name": "dxrk_memory_status", "arguments": {}}})
@@ -1859,8 +1906,8 @@ def test_mcp_update_fragmento_no_orphan_on_nodo_change(tmp_path: Path, monkeypat
             "method": "tools/call",
             "id": 2,
             "params": {
-                "name": "dxrk_memory_update_fragmento",
-                "arguments": {"fragmento_id": did, "nodo": "w2", "content": "update me content here revised"},
+                "name": "dxrk_memory_update_recall",
+                "arguments": {"recall_id": did, "partition": "w2", "content": "update me content here revised"},
             },
         }
     )
@@ -1870,15 +1917,15 @@ def test_mcp_update_fragmento_no_orphan_on_nodo_change(tmp_path: Path, monkeypat
         {
             "method": "tools/call",
             "id": 3,
-            "params": {"name": "dxrk_memory_get_fragmento", "arguments": {"fragmento_id": did}},
+            "params": {"name": "dxrk_memory_get_recall", "arguments": {"recall_id": did}},
         }
     )
-    fragmento = json.loads(got["result"]["content"][0]["text"])["fragmento"]
-    assert fragmento["metadata"]["nodo"] == "w2"
-    assert "revised" in fragmento["document"]
+    recall = json.loads(got["result"]["content"][0]["text"])["recall"]
+    assert recall["metadata"]["partition"] == "w2"
+    assert "revised" in recall["document"]
 
 
-def test_mcp_update_fragmento_not_found_is_error(tmp_path: Path, monkeypatch):
+def test_mcp_update_recall_not_found_is_error(tmp_path: Path, monkeypatch):
     from dxrk.memory.mcp_server import _dispatch
 
     monkeypatch.setenv("DXRK_MEMORY_PATH", str(tmp_path / "pal_nf"))
@@ -1886,7 +1933,7 @@ def test_mcp_update_fragmento_not_found_is_error(tmp_path: Path, monkeypatch):
         {
             "method": "tools/call",
             "id": 1,
-            "params": {"name": "dxrk_memory_update_fragmento", "arguments": {"fragmento_id": "missing-id"}},
+            "params": {"name": "dxrk_memory_update_recall", "arguments": {"recall_id": "missing-id"}},
         }
     )
     assert resp["result"]["isError"] is True

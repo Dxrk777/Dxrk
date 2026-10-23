@@ -4,7 +4,7 @@
 Design pins (Fase 0 RDU):
 - R_fsrs(t, S) = (1 + (19/81) * t / S) ** -0.5, S in days.
 - R(S) == 0.9 exactly; R(2S) > 0.8.
-- A fresh fragmento (S=1, 7d idle) ranks below a mature one (S=60, n=12).
+- A fresh recall (S=1, 7d idle) ranks below a mature one (S=60, n=12).
 - A lapse outcome lowers stability S.
 - score_ledger hash-chaining detects tampering via verify_chain.
 """
@@ -53,7 +53,7 @@ def test_r_at_2S_above_point_eight() -> None:
     assert r_fsrs(2.0, 1.0) > 0.8
 
 
-def test_new_fragmento_ranks_below_mature() -> None:
+def test_new_recall_ranks_below_mature() -> None:
     from dxrk.memory.scoring import score_meta
 
     new = _spine_meta(s=1.0, n=0, days_idle=7.0)

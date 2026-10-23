@@ -7,24 +7,24 @@ from dataclasses import dataclass
 from typing import Protocol
 
 
-class FragmentoLike(Protocol):
-    """Minimal fragmento protocol for confidence propagation."""
+class RecallLike(Protocol):
+    """Minimal recall protocol for confidence propagation."""
 
     id: str
     metadata: dict
     quarantined: bool
 
 
-class FragmentoIterator(Protocol):
-    """Protocol for iterating fragmentos."""
+class RecallIterator(Protocol):
+    """Protocol for iterating recalls."""
 
-    def __call__(self) -> list[FragmentoLike]: ...
+    def __call__(self) -> list[RecallLike]: ...
 
 
-class FragmentoGetter(Protocol):
-    """Protocol for getting a single fragmento by ID."""
+class RecallGetter(Protocol):
+    """Protocol for getting a single recall by ID."""
 
-    def __call__(self, fragmento_id: str) -> FragmentoLike | None: ...
+    def __call__(self, recall_id: str) -> RecallLike | None: ...
 
 
 @dataclass(frozen=True)
@@ -36,20 +36,20 @@ class ConfidencePropagation:
     related_count: int
 
 
-def find_related_fragmentos(
-    get_fragmento: FragmentoGetter,
-    iter_fragmentos: FragmentoIterator,
-    fragmento_id: str,
+def find_related_recalls(
+    get_recall: RecallGetter,
+    iter_recalls: RecallIterator,
+    recall_id: str,
     max_related: int = 10,
     min_similarity: float = 0.3,
 ) -> list[tuple[str, float]]:
     """
-    Find related fragmentos by nodo/celda and embedding similarity.
+    Find related recalls by partition/subgroup and embedding similarity.
 
-    Returns: list of (fragmento_id, similarity) sorted by similarity desc.
+    Returns: list of (recall_id, similarity) sorted by similarity desc.
     """
-    # Get the source fragmento to find its nodo/celda
-    source = get_fragmento(fragmento_id)
+    # Get the source recall to find its partition/subgroup
+    source = get_recall(recall_id)
     if not source:
         return []
 
@@ -59,23 +59,23 @@ def find_related_fragmentos(
         return d.get(key, default)
 
     source_meta = _get(source, "metadata", {})
-    nodo = source_meta.get("nodo", "")
-    celda = source_meta.get("celda", "")
+    partition = source_meta.get("partition", "")
+    subgroup = source_meta.get("subgroup", "")
 
-    # Find fragmentos in same nodo/celda (structural similarity)
+    # Find recalls in same partition/subgroup (structural similarity)
     related = []
-    for other in iter_fragmentos():
-        if _get(other, "id") == fragmento_id:
+    for other in iter_recalls():
+        if _get(other, "id") == recall_id:
             continue
         if _get(other, "quarantined"):
             continue
 
         other_meta = _get(other, "metadata", {})
-        # Nodo match
+        # Partition match
         sim = 0.0
-        if other_meta.get("nodo") == nodo:
+        if other_meta.get("partition") == partition:
             sim += 0.5
-        if other_meta.get("celda") == celda:
+        if other_meta.get("subgroup") == subgroup:
             sim += 0.3
 
         # Embedding similarity if available (would need embeddings access)
@@ -89,25 +89,25 @@ def find_related_fragmentos(
 
 
 def propagate_confidence(
-    get_fragmento: FragmentoGetter,
-    iter_fragmentos: FragmentoIterator,
-    fragmento_id: str,
+    get_recall: RecallGetter,
+    iter_recalls: RecallIterator,
+    recall_id: str,
     base_confidence: float,
     max_depth: int = 2,
     decay_per_depth: float = 0.5,
     min_similarity: float = 0.3,
 ) -> ConfidencePropagation:
     """
-    Propagate confidence from a fragmento to related fragmentos (Bayesian propagation).
+    Propagate confidence from a recall to related recalls (Bayesian propagation).
 
     Confidence propagates through the graph:
     confidence(d) = base_conf(d) * Π(1 + sim * related_conf * decay) for depth levels
 
     Args:
-        get_fragmento: callable(fragmento_id) -> fragmento or None
-        iter_fragmentos: callable() -> list of fragmentos
-        fragmento_id: starting fragmento
-        base_confidence: confidence of source fragmento
+        get_recall: callable(recall_id) -> recall or None
+        iter_recalls: callable() -> list of recalls
+        recall_id: starting recall
+        base_confidence: confidence of source recall
         max_depth: max propagation depth
         decay_per_depth: multiplicative decay per depth level
         min_similarity: minimum similarity to propagate
@@ -119,8 +119,8 @@ def propagate_confidence(
         return ConfidencePropagation(base_confidence, 0, 0)
 
     # BFS propagation
-    visited = {fragmento_id}
-    queue = [(fragmento_id, base_confidence, 0)]
+    visited = {recall_id}
+    queue = [(recall_id, base_confidence, 0)]
     total_propagated = 0.0
     related_count = 0
     max_depth_reached = 0
@@ -131,8 +131,8 @@ def propagate_confidence(
         if depth >= max_depth:
             continue
 
-        # Find related fragmentos
-        related = find_related_fragmentos(get_fragmento, iter_fragmentos, current_id, min_similarity=min_similarity)
+        # Find related recalls
+        related = find_related_recalls(get_recall, iter_recalls, current_id, min_similarity=min_similarity)
         related_count += len(related)
 
         for rel_id, sim in related:
@@ -172,7 +172,7 @@ def adjusted_uncertainty(rd: float, t_days: float, confidence: float) -> float:
 
 
 def confidence_from_retrievability(meta: dict) -> float:
-    """Estimate confidence from fragmento's retrievability and stability."""
+    """Estimate confidence from recall's retrievability and stability."""
     S = float(meta.get("S", 1.0))
     D = float(meta.get("D", 5.0))
     rd = float(meta.get("rd", 350.0))

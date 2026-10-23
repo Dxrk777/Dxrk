@@ -222,18 +222,18 @@ class TestMcpBranches:
 
 class TestConfidenceBranches:
     def test_get_with_attrs(self):
-        from dxrk.memory.confidence import find_related_fragmentos
+        from dxrk.memory.confidence import find_related_recalls
 
-        src = SimpleNamespace(id="a", metadata={"nodo": "w", "celda": "r"}, quarantined=False)
-        other = SimpleNamespace(id="b", metadata={"nodo": "w", "celda": "r"}, quarantined=False)
-        out = find_related_fragmentos(lambda i: src, lambda: [src, other], "a")
+        src = SimpleNamespace(id="a", metadata={"partition": "w", "subgroup": "r"}, quarantined=False)
+        other = SimpleNamespace(id="b", metadata={"partition": "w", "subgroup": "r"}, quarantined=False)
+        out = find_related_recalls(lambda i: src, lambda: [src, other], "a")
         assert out == [("b", 0.8)]
 
     def test_protocol_stubs(self):
-        from dxrk.memory.confidence import FragmentoGetter, FragmentoIterator
+        from dxrk.memory.confidence import RecallGetter, RecallIterator
 
-        assert FragmentoIterator.__call__(None) is None
-        assert FragmentoGetter.__call__(None, "x") is None
+        assert RecallIterator.__call__(None) is None
+        assert RecallGetter.__call__(None, "x") is None
 
 
 class TestReconsolidationBranches:
@@ -425,11 +425,11 @@ class TestScholarBranches:
 
 
 class TestThompsonBranches:
-    def _malla(self, fragmentos):
-        return SimpleNamespace(iter_fragmentos=lambda: fragmentos)
+    def _malla(self, recalls):
+        return SimpleNamespace(iter_recalls=lambda: recalls)
 
     def test_skip_low_visits_and_pinned(self):
-        from dxrk.memory.thompson import thompson_select_fragmentos
+        from dxrk.memory.thompson import thompson_select_recalls
 
         malla = self._malla(
             [
@@ -439,7 +439,7 @@ class TestThompsonBranches:
                 {"id": "ok", "metadata": {"access_count_total": 99}},
             ]
         )
-        out = thompson_select_fragmentos(malla, 5, min_visits=1)
+        out = thompson_select_recalls(malla, 5, min_visits=1)
         assert "low" not in out and "pin" not in out and "q" not in out
         assert "ok" in out
 

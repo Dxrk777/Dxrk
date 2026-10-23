@@ -34,7 +34,7 @@ class HealthMetrics:
     search_latency_p95_ms: float
     search_latency_p99_ms: float
     mine_throughput_files_per_sec: float
-    calibration_ece: dict[str, float]  # nodo -> ECE
+    calibration_ece: dict[str, float]  # partition -> ECE
     quarantine_count: int
     stress_level: float
     memory_usage_mb: float
@@ -142,16 +142,16 @@ def collect_health_metrics(malla) -> HealthMetrics:
     # This would be tracked in practice; placeholder for now
     mine_throughput = 100.0
 
-    # Calibration ECE per nodo
+    # Calibration ECE per partition
     cal_ece = {}
-    for nodo in malla.list_nodos():
+    for partition in malla.list_partitions():
         # Simplified: would compute actual ECE from metacog
-        cal_ece[nodo] = 0.05
+        cal_ece[partition] = 0.05
 
     # Quarantine count
     total_q = 0
-    for nodo in malla.list_nodos():
-        usage = malla.nodo_usage(nodo)
+    for partition in malla.list_partitions():
+        usage = malla.partition_usage(partition)
         total_q += usage.get("quarantined", 0)
 
     # Stress level
@@ -324,7 +324,7 @@ class AutoRollbackManager:
     def check_and_rollback(
         self,
         malla,
-        nodo: str,
+        partition: str,
         tenant: str,
         current_report,
         baseline_report,
@@ -345,7 +345,7 @@ class AutoRollbackManager:
             return False
 
         # Log the regression
-        self._log_regression(nodo, tenant, regression)
+        self._log_regression(partition, tenant, regression)
 
         if self.confirmation_required:
             # In production, would notify operator; for now auto-rollback if severe
@@ -353,7 +353,7 @@ class AutoRollbackManager:
                 return False
 
         # Perform rollback
-        return self._rollback(nodo, tenant)
+        return self._rollback(partition, tenant)
 
     def _detect_regression(self, current, baseline) -> dict:
         """Detect regression between current and baseline metrics."""
@@ -390,18 +390,18 @@ class AutoRollbackManager:
             "details": details,
         }
 
-    def _log_regression(self, nodo: str, tenant: str, regression: dict):
+    def _log_regression(self, partition: str, tenant: str, regression: dict):
         """Log regression event."""
         entry = {
             "timestamp": _now_iso(),
-            "nodo": nodo,
+            "partition": partition,
             "tenant": tenant,
             "severity": regression["severity"],
             "details": regression["details"],
         }
         self._rollback_history.append(entry)
 
-    def _rollback(self, nodo: str, tenant: str) -> bool:
+    def _rollback(self, partition: str, tenant: str) -> bool:
         """Rollback calibration to previous version."""
 
         # In practice, would restore from backup; simplified here
@@ -409,13 +409,13 @@ class AutoRollbackManager:
         entry = {
             "timestamp": _now_iso(),
             "action": "rollback",
-            "nodo": nodo,
+            "partition": partition,
             "tenant": tenant,
         }
         self._rollback_history.append(entry)
         return True
 
-    def check_regression(self, nodo: str = "default", tenant: str = "") -> dict[str, Any]:
+    def check_regression(self, partition: str = "default", tenant: str = "") -> dict[str, Any]:
         """Check for regression without performing rollback (MCP/CLI wrapper)."""
         from dxrk.memory.eval_harness import EvalHarness, EvalReport
         from dxrk.memory.malla import DxrkMemory
@@ -425,14 +425,14 @@ class AutoRollbackManager:
         dm.init()
         try:
             harness = EvalHarness(dm, Path(self.malla_path) / "eval")
-            current_report = harness.run(nodo=nodo)
+            current_report = harness.run(partition=partition)
         finally:
             dm.close()
 
         # Load baseline from eval history
         # For now, create a dummy baseline with slightly better metrics
         baseline_report = EvalReport(
-            nodo=nodo,
+            partition=partition,
             num_queries=current_report.num_queries,
             recall_at_k={k: v + 0.02 for k, v in current_report.recall_at_k.items()},
             mrr=min(current_report.mrr + 0.01, 1.0),
@@ -491,8 +491,8 @@ def get_circuit_breakers() -> dict[str, CircuitBreaker]:
     return dict(_CIRCUIT_BREAKERS)
 
 
-def check_slo(malla, nodo: str = "default", config: SLOConfig | None = None) -> SLOStatus:
-    """Check SLO compliance for a nodo (MCP/CLI wrapper)."""
+def check_slo(malla, partition: str = "default", config: SLOConfig | None = None) -> SLOStatus:
+    """Check SLO compliance for a partition (MCP/CLI wrapper)."""
     if config is None:
         config = load_slo_config(Path(malla._path))
     metrics = collect_health_metrics(malla)

@@ -18,7 +18,7 @@ class StressState:
     level: float = 0.0  # [0, 1] current stress
     last_computed: str = ""  # ISO timestamp
     defenses_active: bool = False  # whether cooperative masking is active
-    density: float = 0.0  # fragmento density (count/cap)
+    density: float = 0.0  # recall density (count/cap)
     avg_inv_stability: float = 0.0  # mean 1/S
     recent_quarantines: int = 0  # quarantines in last 7 days
 
@@ -45,21 +45,21 @@ def compute_system_stress(malla: DxrkMemory) -> StressState:
 
     High stress → activate defensive mechanisms (TripleCopy full, shorter reconsolidation, etc.)
     """
-    nodos = malla.list_nodos()
-    total_fragmentos = 0
+    partitions = malla.list_partitions()
+    total_recalls = 0
     total_cap = 0
     inv_stabilities = []
     recent_q = 0
     cutoff = datetime.now(UTC)
 
     col = malla._collection(create=False)
-    for nodo in nodos:
-        usage = malla.nodo_usage(nodo)
-        total_fragmentos += int(cast(Any, usage.get("count", 0)))
+    for partition in partitions:
+        usage = malla.partition_usage(partition)
+        total_recalls += int(cast(Any, usage.get("count", 0)))
         total_cap += int(cast(Any, usage.get("budget", 0)))
-        # Query fragmentos in this nodo
+        # Query recalls in this partition
         got = col.get(
-            where={"nodo": {"$in": [nodo]}},
+            where={"partition": {"$in": [partition]}},
             include=["metadatas"],
             limit=2000,
         )
@@ -83,7 +83,7 @@ def compute_system_stress(malla: DxrkMemory) -> StressState:
                 except Exception:
                     pass
 
-    density = total_fragmentos / total_cap if total_cap > 0 else 0.0
+    density = total_recalls / total_cap if total_cap > 0 else 0.0
     avg_inv_s = sum(inv_stabilities) / len(inv_stabilities) if inv_stabilities else 0.0
     quarantine_rate = min(recent_q / QUARANTINE_NORMALIZER, 1.0)
 

@@ -34,7 +34,7 @@ def test_engine_reexports_helpers_and_constants() -> None:
     assert engine.reap_stale_mine_locks is malla.reap_stale_mine_locks
     assert engine._detect_hall is malla._detect_hall
     assert engine._extract_entities is malla._extract_entities
-    assert engine._build_fragmento_metadata is malla._build_fragmento_metadata
+    assert engine._build_recall_metadata is malla._build_recall_metadata
 
 
 def test_engine_import_path_equivalence() -> None:

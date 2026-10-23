@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Calibrate nodo tests."""
+"""Calibrate partition tests."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from dxrk.memory.calibrate import (
     DEFAULT_PARAMS,
     CalibrationParams,
     get_calibration_params,
-    list_calibrated_nodos,
+    list_calibrated_partitions,
     load_calibration,
     save_calibration,
 )
@@ -36,8 +36,8 @@ class TestCalibrate:
         params = CalibrationParams(
             a=2.0, b=0.3, c=1.5, pe_lambda=0.2, score=0.85, method="qieo", calibrated_at="2024-01-01T00:00:00+00:00"
         )
-        save_calibration(tmp_path, "test_nodo", params)
-        loaded = load_calibration(tmp_path, "test_nodo")
+        save_calibration(tmp_path, "test_partition", params)
+        loaded = load_calibration(tmp_path, "test_partition")
         assert loaded.a == 2.0
         assert loaded.b == 0.3
         assert loaded.c == 1.5
@@ -57,65 +57,65 @@ class TestCalibrate:
         """Corrupted JSON returns defaults."""
         cal_dir = tmp_path / ".calibration"
         cal_dir.mkdir()
-        (cal_dir / "test_nodo.json").write_text("not json")
-        loaded = load_calibration(tmp_path, "test_nodo")
+        (cal_dir / "test_partition.json").write_text("not json")
+        loaded = load_calibration(tmp_path, "test_partition")
         assert loaded.a == DEFAULT_PARAMS.a
 
     @pytest.mark.skipif(sys.platform == "win32", reason="POSIX-only file permissions")
     def test_save_creates_dir_and_0o600(self, tmp_path: Path) -> None:
         """Save creates .calibration dir and sets 0o600."""
         params = CalibrationParams()
-        save_calibration(tmp_path, "nodo1", params)
+        save_calibration(tmp_path, "partition1", params)
         cal_dir = tmp_path / ".calibration"
         assert cal_dir.exists()
-        path = cal_dir / "nodo1.json"
+        path = cal_dir / "partition1.json"
         assert path.exists()
         assert path.stat().st_mode & 0o777 == 0o600
 
     def test_get_calibration_params(self, tmp_path: Path) -> None:
         """get_calibration_params loads from malla path."""
         params = CalibrationParams(a=1.23)
-        save_calibration(tmp_path, "nodo1", params)
-        loaded = get_calibration_params(tmp_path, "nodo1")
+        save_calibration(tmp_path, "partition1", params)
+        loaded = get_calibration_params(tmp_path, "partition1")
         assert loaded.a == 1.23
 
-    def test_list_calibrated_nodos(self, tmp_path: Path) -> None:
-        """List calibrated nodos."""
-        save_calibration(tmp_path, "nodo_a", CalibrationParams())
-        save_calibration(tmp_path, "nodo_b", CalibrationParams())
-        nodos = list_calibrated_nodos(tmp_path)
-        assert "nodo_a" in nodos
-        assert "nodo_b" in nodos
-        assert len(nodos) == 2
+    def test_list_calibrated_partitions(self, tmp_path: Path) -> None:
+        """List calibrated partitions."""
+        save_calibration(tmp_path, "partition_a", CalibrationParams())
+        save_calibration(tmp_path, "partition_b", CalibrationParams())
+        partitions = list_calibrated_partitions(tmp_path)
+        assert "partition_a" in partitions
+        assert "partition_b" in partitions
+        assert len(partitions) == 2
 
-    def test_list_calibrated_nodos_empty(self, tmp_path: Path) -> None:
+    def test_list_calibrated_partitions_empty(self, tmp_path: Path) -> None:
         """Empty dir returns empty list."""
-        nodos = list_calibrated_nodos(tmp_path)
-        assert nodos == []
+        partitions = list_calibrated_partitions(tmp_path)
+        assert partitions == []
 
-    def test_calibrate_nodo_no_candidates(self, tmp_path: Path) -> None:
+    def test_calibrate_partition_no_candidates(self, tmp_path: Path) -> None:
         """Calibrate returns defaults when no candidates."""
-        from dxrk.memory.calibrate import calibrate_nodo
+        from dxrk.memory.calibrate import calibrate_partition
 
         malla = Mock()
-        malla.iter_fragmentos.return_value = []
+        malla.iter_recalls.return_value = []
         malla._path = str(tmp_path)
 
-        result = calibrate_nodo(malla, "empty_nodo")
+        result = calibrate_partition(malla, "empty_partition")
         assert result.a == DEFAULT_PARAMS.a
 
-    def test_calibrate_nodo_runs(self, tmp_path: Path) -> None:
+    def test_calibrate_partition_runs(self, tmp_path: Path) -> None:
         """Calibrate runs and saves file (mock malla)."""
-        from dxrk.memory.calibrate import calibrate_nodo
+        from dxrk.memory.calibrate import calibrate_partition
 
-        # Create fragmentos with enough data
-        fragmentos = []
+        # Create recalls with enough data
+        recalls = []
         for i in range(10):
-            fragmentos.append(
+            recalls.append(
                 {
                     "id": f"d{i}",
                     "metadata": {
-                        "nodo": "test",
+                        "partition": "test",
                         "access_count_total": i * 2,
                         "irt_hits": i,
                         "irt_misses": max(0, 5 - i),
@@ -127,13 +127,13 @@ class TestCalibrate:
                 }
             )
         malla = Mock()
-        malla.iter_fragmentos.return_value = fragmentos
+        malla.iter_recalls.return_value = recalls
         malla._path = str(tmp_path)
 
         qieo_config = QIEOConfig(pop_size=10, n_iter=5)
         thompson_config = ThompsonConfig()
 
-        result = calibrate_nodo(malla, "test", qieo_config, thompson_config)
+        result = calibrate_partition(malla, "test", qieo_config, thompson_config)
 
         # Should have run and saved
         assert result.schema_version == 2

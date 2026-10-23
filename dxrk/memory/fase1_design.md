@@ -9,7 +9,7 @@
 
 | # | Objetivo | Descripción |
 |---|----------|-------------|
-| 1 | **Eval harness de calibración** | Framework para optimizar constantes FSRS por nodo usando datos de recall (goldens + eval queries) |
+| 1 | **Eval harness de calibración** | Framework para optimizar constantes FSRS por partition usando datos de recall (goldens + eval queries) |
 | 2 | **Juez externo mejorado** | `Judge` class que usa `Verifier` + eval harness para validar cambios de memoria (no solo tests) |
 | 3 | **Sleep consolidation** | Background daemon / scheduled task que corre consolidación inteligente durante "sleep" |
 
@@ -19,7 +19,7 @@
 
 ```
 dxrk/memory/
-├── calibrate.py          # Eval harness + optimización FSRS por nodo
+├── calibrate.py          # Eval harness + optimización FSRS por partition
 ├── judge.py              # Juez externo mejorado (Judge class)
 ├── sleep.py              # Sleep consolidation daemon
 ├── malla.py             # Existente — hooks de integración
@@ -45,8 +45,8 @@ dxrk/memory/
 - Cargar corpus de evaluación (goldens + queries graded estilo `test_memory_recall_eval.py`)
 - Barrer espacio de parámetros FSRS (grid + random sampling, stdlib only)
 - Métricas: `recall@k`, `MRR`, `NDCG`, `calibration error (ECE)` entre `R(t,S)` predicho vs observado
-- Persistir mejor config por nodo en `malla/.calibration/{nodo}.json`
-- CLI `dxrk memory calibrate --nodo NODO --trials N`
+- Persistir mejor config por partition en `malla/.calibration/{partition}.json`
+- CLI `dxrk memory calibrate --partition PARTITION --trials N`
 - Entrypoint en mcp_server como read-tool (no write): `dxrk_memory_calibrate`
 
 ### 3.2 Estructuras de Datos
@@ -60,7 +60,7 @@ from datetime import UTC, datetime
 
 @dataclass(slots=True)
 class FSRSParams:
-    """Parámetros FSRS calibrables por nodo."""
+    """Parámetros FSRS calibrables por partition."""
     DECAY: float = -0.5
     FACTOR: float = 19.0 / 81.0
     a: float = 1.5
@@ -82,10 +82,10 @@ class EvalQuery:
 
 @dataclass(slots=True)
 class EvalCorpus:
-    """Corpus de evaluación: fragmentos base + queries graded."""
-    fragmentos: list[dict[str, Any]]  # {nodo, celda, content, source_file, chunk_index}
+    """Corpus de evaluación: recalls base + queries graded."""
+    recalls: list[dict[str, Any]]  # {partition, subgroup, content, source_file, chunk_index}
     queries: list[EvalQuery]
-    nodo: str
+    partition: str
 
 @dataclass(slots=True)
 class CalibrationMetrics:
@@ -100,9 +100,9 @@ class CalibrationMetrics:
 
 @dataclass(slots=True)
 class VenaCalibration:
-    """Persistido en malla/.calibration/{nodo}.json"""
+    """Persistido en malla/.calibration/{partition}.json"""
     schema_version: int = 1
-    nodo: str = ""
+    partition: str = ""
     params: FSRSParams = field(default_factory=FSRSParams)
     metrics: CalibrationMetrics | None = None
     calibrated_at: str = ""
@@ -129,7 +129,7 @@ PARAM_BOUNDS: dict[str, tuple[float, float]] = {
 ### 3.4 Algoritmo de Optimización (stdlib only)
 
 ```python
-def calibrate_nodo(
+def calibrate_partition(
     corpus: EvalCorpus,
     trials: int = 200,
     grid_density: int = 5,
@@ -155,16 +155,16 @@ def calibrate_nodo(
 
 ```
 {malla_path}/.calibration/
-├── proj.json          # Nodo "proj"
-├── ops.json           # Nodo "ops"
-└── default.json       # Nodo "default"
+├── proj.json          # Partition "proj"
+├── ops.json           # Partition "ops"
+└── default.json       # Partition "default"
 ```
 
 Schema JSON:
 ```json
 {
   "schema_version": 1,
-  "nodo": "proj",
+  "partition": "proj",
   "params": {"DECAY": -0.5, "FACTOR": 0.234, "a": 1.5, "b": 0.2, "c": 1.0, "k": 2.0, "p": 0.2, "q": 0.2, "r": 1.0},
   "metrics": {"recall_at_k": {"1": 1.0, "3": 1.0, "5": 1.0}, "mrr": 1.0, "ndcg": 1.0, "ece": 0.02, "trials": 200},
   "calibrated_at": "2026-10-02T12:00:00Z",
@@ -176,17 +176,17 @@ Schema JSON:
 
 ```python
 # scoring.py — exponer factory para params calibrados
-def get_fsrs_params(nodo: str, malla_path: str | None = None) -> FSRSParams:
-    """Lee malla/.calibration/{nodo}.json o retorna defaults hardcodeados."""
+def get_fsrs_params(partition: str, malla_path: str | None = None) -> FSRSParams:
+    """Lee malla/.calibration/{partition}.json o retorna defaults hardcodeados."""
     pass
 
-# r_fsrs, update_success, update_lapse usan get_fsrs_params(nodo) en vez de constants globales
+# r_fsrs, update_success, update_lapse usan get_fsrs_params(partition) en vez de constants globales
 ```
 
 ### 3.7 CLI
 
 ```bash
-dxrk memory calibrate --nodo proj --trials 200 --seed 42
+dxrk memory calibrate --partition proj --trials 200 --seed 42
 # Output: JSON con best params + métricas
 ```
 
@@ -195,16 +195,16 @@ dxrk memory calibrate --nodo proj --trials 200 --seed 42
 ```python
 # mcp_server.py TOOLS dict
 "dxrk_memory_calibrate": {
-    "description": "Calibrar parámetros FSRS para un nodo usando corpus de evaluación (read-only)",
+    "description": "Calibrar parámetros FSRS para un partition usando corpus de evaluación (read-only)",
     "inputSchema": {
         "type": "object",
         "properties": {
-            "nodo": {"type": "string"},
+            "partition": {"type": "string"},
             "trials": {"type": "integer", "default": 200},
             "seed": {"type": "integer", "default": 42},
             "malla": {"type": "string"},
         },
-        "required": ["nodo"],
+        "required": ["partition"],
     },
 },
 ```
@@ -232,11 +232,11 @@ from dxrk.judge.verifier import Verifier, VerifyResult
 @dataclass(slots=True)
 class MemoryStateSnapshot:
     """Snapshot del estado de memoria antes/después de un cambio."""
-    nodo: str
-    fragmento_count: int
-    fragmento_ids: list[str]
-    # sample de fragmentos para eval (top-N por rank_score)
-    sample_fragmentos: list[dict[str, Any]]
+    partition: str
+    recall_count: int
+    recall_ids: list[str]
+    # sample de recalls para eval (top-N por rank_score)
+    sample_recalls: list[dict[str, Any]]
     merkle_root: str
     timestamp: str
 
@@ -288,8 +288,8 @@ class Judge:
         pass
 
     @staticmethod
-    def snapshot_memory(malla_path: str, nodo: str, sample_size: int = 50) -> MemoryStateSnapshot:
-        """Toma snapshot del estado actual de un nodo."""
+    def snapshot_memory(malla_path: str, partition: str, sample_size: int = 50) -> MemoryStateSnapshot:
+        """Toma snapshot del estado actual de un partition."""
         pass
 ```
 
@@ -318,13 +318,13 @@ dxrk memory judge --before before.json --after after.json --corpus eval_corpus.j
 
 - Background daemon / scheduled task que corre consolidación inteligente durante "sleep"
 - Detectar candidatos:
-  - Fragmentos viejos (`filed_at > 30d`)
+  - Recalls viejos (`filed_at > 30d`)
   - Baja importancia (`importance < 0.3` o `rank_score` bottom 20%)
   - Near-dupes (`Dedupe > 0.85` via `classify_content_pair`)
-  - Contradicciones pendientes (fragmentos con `supersedes` sin consolidar)
-- Llamar `consolidate_fragmentos` en lotes (max 50 fragmentos/sleep)
-- Respetar cap/quarantine/pinned; no tocar fragmentos con `valid_to` reciente (< 7d)
-- Log estructurado en ledger de cada fragmento afectado (`reason: "sleep_consolidation"`)
+  - Contradicciones pendientes (recalls con `supersedes` sin consolidar)
+- Llamar `consolidate_recalls` en lotes (max 50 recalls/sleep)
+- Respetar cap/quarantine/pinned; no tocar recalls con `valid_to` reciente (< 7d)
+- Log estructurado en ledger de cada recall afectado (`reason: "sleep_consolidation"`)
 - CLI `dxrk memory sleep --once` (one-shot) y `--daemon` (loop con intervalo configurable, default 4h)
 - MCP tool write `dxrk_memory_sleep_consolidate{once:bool}` gateada por `memory.maintain`
 
@@ -339,7 +339,7 @@ from typing import Any
 
 @dataclass(slots=True)
 class SleepConfig:
-    max_fragmentos_per_sleep: int = 50
+    max_recalls_per_sleep: int = 50
     min_age_days: int = 30
     min_importance: float = 0.3
     recent_valid_to_days: int = 7
@@ -349,9 +349,9 @@ class SleepConfig:
 
 @dataclass(slots=True)
 class ConsolidationCandidate:
-    fragmento_ids: list[str]
-    nodo: str
-    celda: str
+    recall_ids: list[str]
+    partition: str
+    subgroup: str
     reason: str  # "old_low_importance", "near_duplicate", "contradiction"
     score: float  # priority score (higher = more urgent)
 
@@ -361,7 +361,7 @@ class SleepResult:
     consolidated: int
     skipped: int
     errors: list[str]
-    affected_fragmentos: list[dict[str, Any]]  # {id, action, reason}
+    affected_recalls: list[dict[str, Any]]  # {id, action, reason}
     duration_seconds: float
     timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 ```
@@ -371,11 +371,11 @@ class SleepResult:
 ```python
 def find_consolidation_candidates(
     dm: DxrkMemory,
-    nodo: str,
+    partition: str,
     config: SleepConfig,
 ) -> list[ConsolidationCandidate]:
     """
-    1. Escanear nodo (STATUS_SCAN_LIMIT = 10000)
+    1. Escanear partition (STATUS_SCAN_LIMIT = 10000)
     2. Filtrar:
        - filed_at > min_age_days
        - NOT quarantined, NOT pinned, NOT valid_to recent
@@ -385,7 +385,7 @@ def find_consolidation_candidates(
        - "duplicate" → agrupar para consolidar
        - "contradiction" → marcar para revisión (no auto-consolidar)
     5. Rankear candidatos por score combinado (edad + importancia + similitud)
-    6. Return top max_fragmentos_per_sleep
+    6. Return top max_recalls_per_sleep
     """
     pass
 ```
@@ -395,15 +395,15 @@ def find_consolidation_candidates(
 ```python
 def run_sleep_consolidation(
     dm: DxrkMemory,
-    nodo: str | None = None,
+    partition: str | None = None,
     config: SleepConfig | None = None,
 ) -> SleepResult:
     """
-    Para cada nodo (o nodo específico):
+    Para cada partition (o partition específico):
     1. find_consolidation_candidates
     2. Para cada grupo de candidatos:
-       - Llamar dm.consolidate_fragmentos(ids, nodo, celda)
-       - En ledger de CADA fragmento afectado: ledger_append(..., reason="sleep_consolidation")
+       - Llamar dm.consolidate_recalls(ids, partition, subgroup)
+       - En ledger de CADA recall afectado: ledger_append(..., reason="sleep_consolidation")
     3. Return SleepResult
     """
     pass
@@ -415,17 +415,17 @@ def run_sleep_consolidation(
 # En migrate.py ledger_append ya existe
 # Sleep consolidation añade entrada:
 ledger_append(meta, score=new_score, S=new_S, D=new_D, reason="sleep_consolidation")
-# Esto permite auditoría completa: cada fragmento consolidado tiene trazabilidad
+# Esto permite auditoría completa: cada recall consolidado tiene trazabilidad
 ```
 
 ### 5.6 CLI
 
 ```bash
 # One-shot
-dxrk memory sleep --once --nodo proj --max-fragmentos 50
+dxrk memory sleep --once --partition proj --max-recalls 50
 
 # Daemon (loop cada 4h por defecto)
-dxrk memory sleep --daemon --interval-hours 4 --nodos proj,ops
+dxrk memory sleep --daemon --interval-hours 4 --partitions proj,ops
 
 # Dry-run para ver qué haría
 dxrk memory sleep --once --dry-run
@@ -441,8 +441,8 @@ dxrk memory sleep --once --dry-run
         "type": "object",
         "properties": {
             "once": {"type": "boolean", "default": True},
-            "nodo": {"type": "string"},
-            "max_fragmentos": {"type": "integer", "default": 50},
+            "partition": {"type": "string"},
+            "max_recalls": {"type": "integer", "default": 50},
             "dry_run": {"type": "boolean", "default": False},
             "malla": {"type": "string"},
         },
@@ -473,12 +473,12 @@ _MCP_TOOL_OPS["dxrk_memory_sleep_consolidate"] = "memory.maintain"
 └── (malla DB + ledger existentes)
 ```
 
-### 6.2 `.calibration/{nodo}.json` — Schema v1
+### 6.2 `.calibration/{partition}.json` — Schema v1
 
 ```json
 {
   "schema_version": 1,
-  "nodo": "proj",
+  "partition": "proj",
   "params": {
     "DECAY": -0.5,
     "FACTOR": 0.234567,
@@ -513,7 +513,7 @@ _MCP_TOOL_OPS["dxrk_memory_sleep_consolidate"] = "memory.maintain"
     "consolidated": 12,
     "skipped": 38,
     "errors": [],
-    "affected_fragmentos": [
+    "affected_recalls": [
       {"id": "proj:backend:auth:0", "action": "consolidated", "reason": "old_low_importance"},
       {"id": "proj:ops:deploy:0", "action": "consolidated", "reason": "near_duplicate"}
     ],
@@ -532,9 +532,9 @@ _MCP_TOOL_OPS["dxrk_memory_sleep_consolidate"] = "memory.maintain"
 | 2 | **Calibrate: Search space & bounds** | `calibrate.py` | `test_calibrate_bounds.py` | `PARAM_BOUNDS`, validación de rangos |
 | 3 | **Calibrate: Metrics (recall@k, MRR, NDCG, ECE)** | `calibrate.py` | `test_calibrate_metrics.py` | Implementar 4 métricas, tests con datos conocidos |
 | 4 | **Calibrate: Grid search + random sampling** | `calibrate.py` | `test_calibrate_search.py` | Algoritmo de optimización stdlib-only |
-| 5 | **Calibrate: Persistence (.calibration/{nodo}.json)** | `calibrate.py` | `test_calibrate_persist.py` | Read/write JSON, schema versioning |
-| 6 | **Calibrate: Integration con scoring.py** | `scoring.py`, `calibrate.py` | `test_calibrate_integration.py` | `get_fsrs_params(nodo)`, `r_fsrs` usa params calibrados |
-| 7 | **Calibrate: CLI `dxrk memory calibrate`** | `commands/memory.py`, `calibrate.py` | `test_cli_calibrate.py` | Subcomando con args --nodo --trials --seed |
+| 5 | **Calibrate: Persistence (.calibration/{partition}.json)** | `calibrate.py` | `test_calibrate_persist.py` | Read/write JSON, schema versioning |
+| 6 | **Calibrate: Integration con scoring.py** | `scoring.py`, `calibrate.py` | `test_calibrate_integration.py` | `get_fsrs_params(partition)`, `r_fsrs` usa params calibrados |
+| 7 | **Calibrate: CLI `dxrk memory calibrate`** | `commands/memory.py`, `calibrate.py` | `test_cli_calibrate.py` | Subcomando con args --partition --trials --seed |
 | 8 | **Calibrate: MCP tool read-only** | `mcp_server.py` | `test_mcp_calibrate.py` | `dxrk_memory_calibrate` tool |
 | 9 | **Judge: Data structures + Verdict** | `judge.py` | `test_judge_structures.py` | `MemoryStateSnapshot`, `Verdict`, `JudgeConfig` |
 | 10 | **Judge: verify_change implementation** | `judge.py` | `test_judge_verify.py` | Snapshot before/after, run verifier + eval harness |
@@ -551,24 +551,24 @@ _MCP_TOOL_OPS["dxrk_memory_sleep_consolidate"] = "memory.maintain"
 | Riesgo | Probabilidad | Impacto | Mitigación |
 |--------|--------------|---------|------------|
 | **Calibración overfit a goldens** | Media | Alto | ECE (calibration error) detecta overconfidence; holdout queries no vistas durante calibración |
-| **Sleep consolidation rompe recall** | Baja | Alto | Solo consolida fragmentos viejos + baja importancia; pinned/quarantine/valid_to recientes intocables; ledger trazabilidad completa |
+| **Sleep consolidation rompe recall** | Baja | Alto | Solo consolida recalls viejos + baja importancia; pinned/quarantine/valid_to recientes intocables; ledger trazabilidad completa |
 | **Judge false positives (regression_detected)** | Media | Medio | Thresholds conservadores (5% recall, 10% MRR); métricas múltiples deben fallar juntas |
-| **Calibración por nodo fragmenta modelo** | Baja | Medio | Defaults globales como fallback; calibración opcional por nodo |
-| **Daemon sleep consume recursos** | Baja | Bajo | Max 50 fragmentos/sleep, intervalo 4h configurable, dry-run por defecto en CLI |
+| **Calibración por partition fragmenta modelo** | Baja | Medio | Defaults globales como fallback; calibración opcional por partition |
+| **Daemon sleep consume recursos** | Baja | Bajo | Max 50 recalls/sleep, intervalo 4h configurable, dry-run por defecto en CLI |
 | **Grid search explosión combinatoria** | Media | Medio | Podar a top-20 tras grid grueso; random sampling focalizado; trials cap |
 
 ---
 
 ## 9. Decisiones de Diseño Clave
 
-### 9.1 ¿Por qué FSRS params por nodo y no global?
+### 9.1 ¿Por qué FSRS params por partition y no global?
 
-Diferentes nodos tienen dinámicas de memoria distintas:
+Diferentes partitions tienen dinámicas de memoria distintas:
 - `proj` (código/docs técnicos): decay lento, estabilidad alta
 - `ops` (runbooks/incidentes): decay medio, frecuencia importa
 - `personal` (notas): decay rápido, importancia subjetiva
 
-Calibración por nodo permite especialización sin fragmentar el modelo base.
+Calibración por partition permite especialización sin fragmentar el modelo base.
 
 ### 9.2 ¿Por qué ECE (Expected Calibration Error)?
 
@@ -586,19 +586,19 @@ El juez **observa y reporta**. La remediación es decisión humana (o política 
 
 ### 9.4 ¿Por qué ledger entry `reason: "sleep_consolidation"`?
 
-Trazabilidad completa: cada fragmento consolidado durante sleep deja rastro en su score_ledger. Permite:
+Trazabilidad completa: cada recall consolidado durante sleep deja rastro en su score_ledger. Permite:
 - Auditar qué se consolidó y por qué
 - Revertir si consolidation introdujo regresión
-- Debugging de "¿por qué desapareció este fragmento?"
+- Debugging de "¿por qué desapareció este recall?"
 
 ---
 
 ## 10. Criterios de Aceptación (Definition of Done)
 
 ### Calibración
-- [ ] `dxrk memory calibrate --nodo proj --trials 100` corre y produce `.calibration/proj.json`
+- [ ] `dxrk memory calibrate --partition proj --trials 100` corre y produce `.calibration/proj.json`
 - [ ] Métricas: recall@k ≥ 0.95, MRR ≥ 0.90, NDCG ≥ 0.90, ECE ≤ 0.05 en goldens
-- [ ] `scoring.r_fsrs` usa params calibrados cuando existe `.calibration/{nodo}.json`
+- [ ] `scoring.r_fsrs` usa params calibrados cuando existe `.calibration/{partition}.json`
 - [ ] MCP tool `dxrk_memory_calibrate` expuesto como read-only
 - [ ] Tests espejo pasan (`test_calibrate_*.py`)
 
@@ -611,8 +611,8 @@ Trazabilidad completa: cada fragmento consolidado durante sleep deja rastro en s
 
 ### Sleep
 - [ ] `dxrk memory sleep --once --dry-run` lista candidatos sin mutar
-- [ ] `dxrk memory sleep --once` consolida ≤50 fragmentos, respeta pinned/quarantine/valid_to reciente
-- [ ] Ledger entry `reason: "sleep_consolidation"` en cada fragmento afectado
+- [ ] `dxrk memory sleep --once` consolida ≤50 recalls, respeta pinned/quarantine/valid_to reciente
+- [ ] Ledger entry `reason: "sleep_consolidation"` en cada recall afectado
 - [ ] Daemon `--daemon --interval-hours 4` corre loop controlado
 - [ ] MCP tool `dxrk_memory_sleep_consolidate` gated by `memory.maintain`
 - [ ] Tests espejo pasan
@@ -631,7 +631,7 @@ Trazabilidad completa: cada fragmento consolidado durante sleep deja rastro en s
 3. **Implementar Tareas 9-11** (Juez) en branch `feat/fase1-judge`
 4. **Implementar Tareas 12-15** (Sleep) en branch `feat/fase1-sleep`
 5. **Merge secuencial** con verification gates en cada paso
-6. **Fase 2**: Per-nodo parameter override en runtime, policy-driven consolidation, advanced judge policies
+6. **Fase 2**: Per-partition parameter override en runtime, policy-driven consolidation, advanced judge policies
 
 ---
 

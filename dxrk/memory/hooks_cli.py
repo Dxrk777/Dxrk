@@ -86,8 +86,8 @@ def _dxrk_python() -> str:
 
 STOP_BLOCK_REASON = (
     "AUTO-SAVE checkpoint (DxrkMemory). Save this session's key content:\n"
-    "1. dxrk_memory_add_fragmento — verbatim quotes, decisions, code snippets "
-    "(place in appropriate nodo and celda)\n"
+    "1. dxrk_memory_add_recall — verbatim quotes, decisions, code snippets "
+    "(place in appropriate partition and subgroup)\n"
     "2. dxrk_memory_kg_add — entity relationships (optional)\n"
     "For THIS save, use DxrkMemory tools only. Use verbatim quotes where possible. "
     "Continue conversation after saving."
@@ -95,8 +95,8 @@ STOP_BLOCK_REASON = (
 
 PRECOMPACT_BLOCK_REASON = (
     "COMPACTION IMMINENT (DxrkMemory). Save ALL session content before context is lost:\n"
-    "1. dxrk_memory_add_fragmento — ALL verbatim quotes, decisions, code, context "
-    "(place each in appropriate nodo and celda)\n"
+    "1. dxrk_memory_add_recall — ALL verbatim quotes, decisions, code, context "
+    "(place each in appropriate partition and subgroup)\n"
     "2. dxrk_memory_kg_add — entity relationships (optional)\n"
     "Be thorough — after compaction this is all that survives. "
     "Save everything to DxrkMemory, then allow compaction to proceed."
@@ -364,9 +364,9 @@ def _maybe_auto_ingest() -> None:
     targets = _get_mine_targets()
     if not targets:
         return
-    for mine_dir, nodo in targets:
+    for mine_dir, partition in targets:
         try:
-            _spawn_mine([_dxrk_python(), "-m", "dxrk.memory", "mine", mine_dir, "--nodo", nodo])
+            _spawn_mine([_dxrk_python(), "-m", "dxrk.memory", "mine", mine_dir, "--partition", partition])
         except OSError:
             pass
 
@@ -377,11 +377,11 @@ def _mine_sync() -> None:
         return
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     log_path = STATE_DIR / "hook.log"
-    for mine_dir, nodo in targets:
+    for mine_dir, partition in targets:
         try:
             with open(log_path, "a", encoding="utf-8") as log_f:
                 subprocess.run(
-                    [_dxrk_python(), "-m", "dxrk.memory", "mine", mine_dir, "--nodo", nodo],
+                    [_dxrk_python(), "-m", "dxrk.memory", "mine", mine_dir, "--partition", partition],
                     stdout=log_f,
                     stderr=log_f,
                     timeout=60,
@@ -451,7 +451,7 @@ def _extract_themes(messages: list[str], max_themes: int = 3) -> list[str]:
 def _save_session_summary_direct(
     transcript_path: str,
     session_id: str,
-    nodo: str = "",
+    partition: str = "",
 ) -> dict:
     messages = _extract_recent_messages(transcript_path)
     if not messages:
@@ -461,27 +461,27 @@ def _save_session_summary_direct(
     now = datetime.now()
     topics = "|".join(m[:80] for m in messages[-10:])
     content = f"SESSION:{now.strftime('%Y-%m-%d')}|session:{session_id}|msgs:{len(messages)}|recent:{topics}"
-    nodo = nodo or "sessions"
-    celda = now.strftime("%Y-%m-%d")
+    partition = partition or "sessions"
+    subgroup = now.strftime("%Y-%m-%d")
     try:
         from dxrk.memory.malla import DxrkMemory
 
         dm = DxrkMemory(str(MALLA_ROOT))
         dm.init()
-        fragmento_id = dm.add_fragmento(
-            nodo=nodo,
-            celda=celda,
+        recall_id = dm.add_recall(
+            partition=partition,
+            subgroup=subgroup,
             content=content,
             source_file=f"session:{session_id}",
             chunk_index=0,
         )
-        _log(f"Session summary saved: {fragmento_id}")
+        _log(f"Session summary saved: {recall_id}")
         try:
             ack_file = STATE_DIR / "last_checkpoint"
             ack_file.write_text(json.dumps({"msgs": len(messages), "ts": now.isoformat()}), encoding="utf-8")
         except OSError:
             pass
-        return {"count": len(messages), "themes": themes, "fragmento_id": fragmento_id}
+        return {"count": len(messages), "themes": themes, "recall_id": recall_id}
     except Exception as e:
         _log(f"Session summary error: {e}")
     return {"count": 0}
@@ -499,7 +499,7 @@ def _ingest_transcript(transcript_path: str) -> None:
                 "dxrk.memory",
                 "mine",
                 str(path.parent),
-                "--nodo",
+                "--partition",
                 "sessions",
             ]
         )
@@ -534,7 +534,7 @@ _ENCODED_PARENT_PREFIXES = (
 )
 
 
-def _nodo_from_transcript_path(transcript_path: str) -> str:
+def _partition_from_transcript_path(transcript_path: str) -> str:
     try:
         path = Path(transcript_path).expanduser()
         if path.is_file():
@@ -557,7 +557,7 @@ def _nodo_from_transcript_path(transcript_path: str) -> str:
                         continue
                     project = cwd_norm.rsplit("/", 1)[-1]
                     slug = project.lower().replace(" ", "_").replace("-", "_")
-                    return f"nodo_{slug}"
+                    return f"partition_{slug}"
     except OSError:
         pass
     normalized = transcript_path.replace("\\", "/")
@@ -573,12 +573,12 @@ def _nodo_from_transcript_path(transcript_path: str) -> str:
                 break
         project = encoded.lower().replace(" ", "_").replace("-", "_")
         if project:
-            return f"nodo_{project}"
+            return f"partition_{project}"
     match = re.search(r"-Projects-([^/]+?)(?:/|$)", normalized)
     if match:
         project = match.group(1).lower().replace(" ", "_").replace("-", "_")
-        return f"nodo_{project}"
-    return "nodo_sessions"
+        return f"partition_{project}"
+    return "partition_sessions"
 
 
 def hook_stop(data: dict, harness: str) -> None:
@@ -605,10 +605,10 @@ def hook_stop(data: dict, harness: str) -> None:
     _log(f"Session {session_id}: {exchange_count} exchanges, {since_last} since last save")
     if since_last >= SAVE_INTERVAL and exchange_count > 0:
         _log(f"TRIGGERING SAVE at exchange {exchange_count}")
-        project_nodo = _nodo_from_transcript_path(transcript_path)
+        project_partition = _partition_from_transcript_path(transcript_path)
         result: dict = {"count": 0}
         if transcript_path:
-            result = _save_session_summary_direct(transcript_path, session_id, nodo=project_nodo)
+            result = _save_session_summary_direct(transcript_path, session_id, partition=project_partition)
             _ingest_transcript(transcript_path)
         _maybe_auto_ingest()
         count = result.get("count", 0)
@@ -646,19 +646,19 @@ def hook_session_start(data: dict, harness: str) -> None:
 
 
 def _session_start_context(transcript_path: str) -> dict:
-    """L0 identity + L1 top fragmentos via MemoryStack.wake_up (compact)."""
+    """L0 identity + L1 top recalls via MemoryStack.wake_up (compact)."""
     from dxrk.memory.layers import MemoryStack
 
-    nodo: str | None = None
+    partition: str | None = None
     if transcript_path:
         try:
-            nodo = _nodo_from_transcript_path(transcript_path)
+            partition = _partition_from_transcript_path(transcript_path)
         except Exception:
-            nodo = None
+            partition = None
     stack = MemoryStack(malla_path=str(MALLA_ROOT))
-    text = stack.wake_up(nodo=nodo) if nodo else stack.wake_up()
-    if nodo and "No memories yet" in text:
-        # project nodo with no fragmentos yet — fall back to unscoped recall
+    text = stack.wake_up(partition=partition) if partition else stack.wake_up()
+    if partition and "No memories yet" in text:
+        # project partition with no recalls yet — fall back to unscoped recall
         text = stack.wake_up()
     if "No malla found" in text or "No memories yet" in text:
         return {}

@@ -27,46 +27,58 @@ SERVER_NAME = "dxrk-memory"
 SERVER_VERSION = "2.0.0"
 
 # Old tool names stay callable (silent deprecation) so MCP clients with a
-# cached tool list keep working after the malla/nodo/celda/fragmento rename.
+# cached tool list keep working after the malla/partition/subgroup/recall rename.
 _LEGACY_TOOL_NAMES: dict[str, str] = {
-    "dxrk_memory_add_drawer": "dxrk_memory_add_fragmento",
-    "dxrk_memory_get_drawer": "dxrk_memory_get_fragmento",
-    "dxrk_memory_list_drawers": "dxrk_memory_list_fragmentos",
-    "dxrk_memory_update_drawer": "dxrk_memory_update_fragmento",
-    "dxrk_memory_delete_drawer": "dxrk_memory_delete_fragmento",
-    "dxrk_memory_list_rooms": "dxrk_memory_list_celdas",
-    "dxrk_memory_add_relic": "dxrk_memory_add_fragmento",
-    "dxrk_memory_get_relic": "dxrk_memory_get_fragmento",
-    "dxrk_memory_list_relics": "dxrk_memory_list_fragmentos",
-    "dxrk_memory_update_relic": "dxrk_memory_update_fragmento",
-    "dxrk_memory_delete_relic": "dxrk_memory_delete_fragmento",
-    "dxrk_memory_list_chambers": "dxrk_memory_list_celdas",
-    "dxrk_memory_add_globulo": "dxrk_memory_add_fragmento",
-    "dxrk_memory_get_globulo": "dxrk_memory_get_fragmento",
-    "dxrk_memory_list_globulos": "dxrk_memory_list_fragmentos",
-    "dxrk_memory_update_globulo": "dxrk_memory_update_fragmento",
-    "dxrk_memory_delete_globulo": "dxrk_memory_delete_fragmento",
-    "dxrk_memory_list_venas": "dxrk_memory_list_celdas",
-    "dxrk_memory_list_capilares": "dxrk_memory_list_celdas",
+    "dxrk_memory_add_fragmento": "dxrk_memory_add_recall",
+    "dxrk_memory_get_fragmento": "dxrk_memory_get_recall",
+    "dxrk_memory_list_fragmentos": "dxrk_memory_list_recalls",
+    "dxrk_memory_update_fragmento": "dxrk_memory_update_recall",
+    "dxrk_memory_delete_fragmento": "dxrk_memory_delete_recall",
+    "dxrk_memory_list_nodos": "dxrk_memory_list_partitions",
+    "dxrk_memory_list_celdas": "dxrk_memory_list_subgroups",
+    "dxrk_memory_add_drawer": "dxrk_memory_add_recall",
+    "dxrk_memory_get_drawer": "dxrk_memory_get_recall",
+    "dxrk_memory_list_drawers": "dxrk_memory_list_recalls",
+    "dxrk_memory_update_drawer": "dxrk_memory_update_recall",
+    "dxrk_memory_delete_drawer": "dxrk_memory_delete_recall",
+    "dxrk_memory_list_rooms": "dxrk_memory_list_subgroups",
+    "dxrk_memory_add_relic": "dxrk_memory_add_recall",
+    "dxrk_memory_get_relic": "dxrk_memory_get_recall",
+    "dxrk_memory_list_relics": "dxrk_memory_list_recalls",
+    "dxrk_memory_update_relic": "dxrk_memory_update_recall",
+    "dxrk_memory_delete_relic": "dxrk_memory_delete_recall",
+    "dxrk_memory_list_chambers": "dxrk_memory_list_subgroups",
+    "dxrk_memory_add_globulo": "dxrk_memory_add_recall",
+    "dxrk_memory_get_globulo": "dxrk_memory_get_recall",
+    "dxrk_memory_list_globulos": "dxrk_memory_list_recalls",
+    "dxrk_memory_update_globulo": "dxrk_memory_update_recall",
+    "dxrk_memory_delete_globulo": "dxrk_memory_delete_recall",
+    "dxrk_memory_list_venas": "dxrk_memory_list_subgroups",
+    "dxrk_memory_list_capilares": "dxrk_memory_list_subgroups",
 }
 
 # Old argument spellings are accepted as aliases; the canonical key wins if
 # both are supplied. Three legacy generations stay callable in silence.
 _LEGACY_ARG_ALIASES: dict[str, str] = {
-    "wing": "nodo",
-    "vena": "nodo",
-    "room": "celda",
-    "chamber": "celda",
-    "capilar": "celda",
-    "drawer": "fragmento",
-    "relic": "fragmento",
-    "globulo": "fragmento",
-    "drawer_id": "fragmento_id",
-    "relic_id": "fragmento_id",
-    "globulo_id": "fragmento_id",
-    "drawer_ids": "fragmento_ids",
-    "relic_ids": "fragmento_ids",
-    "globulo_ids": "fragmento_ids",
+    "nodo": "partition",
+    "celda": "subgroup",
+    "fragmento": "recall",
+    "fragmento_id": "recall_id",
+    "fragmento_ids": "recall_ids",
+    "wing": "partition",
+    "vena": "partition",
+    "room": "subgroup",
+    "chamber": "subgroup",
+    "capilar": "subgroup",
+    "drawer": "recall",
+    "relic": "recall",
+    "globulo": "recall",
+    "drawer_id": "recall_id",
+    "relic_id": "recall_id",
+    "globulo_id": "recall_id",
+    "drawer_ids": "recall_ids",
+    "relic_ids": "recall_ids",
+    "globulo_ids": "recall_ids",
     "palace": "malla",
     "crypt": "malla",
     "sangre": "malla",
@@ -108,9 +120,9 @@ def _resolve_malla(malla: str | None) -> str:
 # arg or DXRK_TENANT env; user from DXRK_USER env.
 _MCP_WRITE_TOOLS: frozenset[str] = frozenset(
     {
-        "dxrk_memory_add_fragmento",
-        "dxrk_memory_update_fragmento",
-        "dxrk_memory_delete_fragmento",
+        "dxrk_memory_add_recall",
+        "dxrk_memory_update_recall",
+        "dxrk_memory_delete_recall",
         "dxrk_memory_mine",
         "dxrk_memory_kg_add",
         "dxrk_memory_kg_invalidate",
@@ -147,7 +159,7 @@ def _check_mcp_op(name: str, args: dict[str, Any]) -> None:
     require_op(tenant, resolve_user(), _MCP_TOOL_OPS.get(name, "mine"))
 
 
-# MCP reads project fragmento metadata: the score ledger ships truncated to
+# MCP reads project recall metadata: the score ledger ships truncated to
 # the last entries (with score_ledger_dropped adjusted so the visible
 # slice stays hash-chain verifiable) and the raw access_history list is
 # replaced by its length — timestamps are bookkeeping, not read payload.
@@ -169,13 +181,13 @@ TOOLS: dict[str, dict[str, Any]] = {
         },
     },
     "dxrk_memory_search": {
-        "description": "Hybrid BM25 search over fragmentos with optional date window",
+        "description": "Hybrid BM25 search over recalls with optional date window",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "query": {"type": "string"},
-                "nodo": {"type": "string"},
-                "celda": {"type": "string"},
+                "partition": {"type": "string"},
+                "subgroup": {"type": "string"},
                 "n_results": {"type": "integer", "default": 5},
                 "since": {"type": "string", "description": "ISO date YYYY-MM-DD inclusive"},
                 "before": {"type": "string", "description": "ISO date YYYY-MM-DD exclusive"},
@@ -184,66 +196,66 @@ TOOLS: dict[str, dict[str, Any]] = {
             "required": ["query"],
         },
     },
-    "dxrk_memory_add_fragmento": {
-        "description": "Add a single fragmento (verbatim chunk) to a nodo/celda",
+    "dxrk_memory_add_recall": {
+        "description": "Add a single recall (verbatim chunk) to a partition/subgroup",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "nodo": {"type": "string"},
-                "celda": {"type": "string"},
+                "partition": {"type": "string"},
+                "subgroup": {"type": "string"},
                 "content": {"type": "string"},
                 "source_file": {"type": "string"},
                 "chunk_index": {"type": "integer", "default": 0},
                 "malla": {"type": "string"},
                 "supersedes": {
                     "type": "string",
-                    "description": "Fragmento id this version replaces (old row kept with valid_to)",
+                    "description": "Recall id this version replaces (old row kept with valid_to)",
                 },
                 "importance": {"type": "number", "description": "Explicit importance for decay-aware ranking"},
             },
-            "required": ["nodo", "celda", "content", "source_file"],
+            "required": ["partition", "subgroup", "content", "source_file"],
         },
     },
-    "dxrk_memory_get_fragmento": {
-        "description": "Fetch a fragmento by id",
+    "dxrk_memory_get_recall": {
+        "description": "Fetch a recall by id",
         "inputSchema": {
             "type": "object",
-            "properties": {"fragmento_id": {"type": "string"}, "malla": {"type": "string"}},
-            "required": ["fragmento_id"],
+            "properties": {"recall_id": {"type": "string"}, "malla": {"type": "string"}},
+            "required": ["recall_id"],
         },
     },
-    "dxrk_memory_list_fragmentos": {
-        "description": "List fragmentos (paginated) optionally filtered by nodo/celda",
+    "dxrk_memory_list_recalls": {
+        "description": "List recalls (paginated) optionally filtered by partition/subgroup",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "nodo": {"type": "string"},
-                "celda": {"type": "string"},
+                "partition": {"type": "string"},
+                "subgroup": {"type": "string"},
                 "limit": {"type": "integer", "default": 20},
                 "malla": {"type": "string"},
             },
         },
     },
-    "dxrk_memory_update_fragmento": {
-        "description": "Update fragmento content/metadata (upsert)",
+    "dxrk_memory_update_recall": {
+        "description": "Update recall content/metadata (upsert)",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "fragmento_id": {"type": "string"},
+                "recall_id": {"type": "string"},
                 "content": {"type": "string"},
-                "nodo": {"type": "string"},
-                "celda": {"type": "string"},
+                "partition": {"type": "string"},
+                "subgroup": {"type": "string"},
                 "malla": {"type": "string"},
             },
-            "required": ["fragmento_id"],
+            "required": ["recall_id"],
         },
     },
-    "dxrk_memory_delete_fragmento": {
-        "description": "Delete fragmento(s) by id or where filter",
+    "dxrk_memory_delete_recall": {
+        "description": "Delete recall(s) by id or where filter",
         "inputSchema": {
             "type": "object",
-            "properties": {"fragmento_id": {"type": "string"}, "malla": {"type": "string"}},
-            "required": ["fragmento_id"],
+            "properties": {"recall_id": {"type": "string"}, "malla": {"type": "string"}},
+            "required": ["recall_id"],
         },
     },
     "dxrk_memory_check_duplicate": {
@@ -258,16 +270,16 @@ TOOLS: dict[str, dict[str, Any]] = {
             "required": ["content"],
         },
     },
-    "dxrk_memory_list_nodos": {
-        "description": "List nodos present in malla",
+    "dxrk_memory_list_partitions": {
+        "description": "List partitions present in malla",
         "inputSchema": {"type": "object", "properties": {"malla": {"type": "string"}}},
     },
-    "dxrk_memory_list_celdas": {
-        "description": "List celdas, optionally for a nodo",
-        "inputSchema": {"type": "object", "properties": {"nodo": {"type": "string"}, "malla": {"type": "string"}}},
+    "dxrk_memory_list_subgroups": {
+        "description": "List subgroups, optionally for a partition",
+        "inputSchema": {"type": "object", "properties": {"partition": {"type": "string"}, "malla": {"type": "string"}}},
     },
     "dxrk_memory_taxonomy": {
-        "description": "Nodos → celdas → count taxonomy",
+        "description": "Partitions → subgroups → count taxonomy",
         "inputSchema": {"type": "object", "properties": {"malla": {"type": "string"}}},
     },
     "dxrk_memory_mine": {
@@ -276,8 +288,8 @@ TOOLS: dict[str, dict[str, Any]] = {
             "type": "object",
             "properties": {
                 "project_dir": {"type": "string"},
-                "nodo": {"type": "string", "default": "default"},
-                "celda": {"type": "string", "default": "general"},
+                "partition": {"type": "string", "default": "default"},
+                "subgroup": {"type": "string", "default": "general"},
                 "dry_run": {"type": "boolean", "default": False},
                 "malla": {"type": "string"},
             },
@@ -335,7 +347,7 @@ TOOLS: dict[str, dict[str, Any]] = {
         "inputSchema": {"type": "object", "properties": {"kg_path": {"type": "string"}}},
     },
     "dxrk_memory_graph_stats": {
-        "description": "Malla graph overview (nodos/celdas/tunnels)",
+        "description": "Malla graph overview (partitions/subgroups/tunnels)",
         "inputSchema": {"type": "object", "properties": {"malla": {"type": "string"}}},
     },
     "dxrk_memory_traverse": {
@@ -352,16 +364,16 @@ TOOLS: dict[str, dict[str, Any]] = {
         },
     },
     "dxrk_memory_consolidate": {
-        "description": "Merge fragmentos into one distilled fragmento that supersedes them (extractive, no LLM)",
+        "description": "Merge recalls into one distilled recall that supersedes them (extractive, no LLM)",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "fragmento_ids": {"type": "array", "items": {"type": "string"}},
-                "nodo": {"type": "string"},
-                "celda": {"type": "string"},
+                "recall_ids": {"type": "array", "items": {"type": "string"}},
+                "partition": {"type": "string"},
+                "subgroup": {"type": "string"},
                 "malla": {"type": "string"},
             },
-            "required": ["fragmento_ids"],
+            "required": ["recall_ids"],
         },
     },
     "dxrk_memory_forget": {
@@ -369,10 +381,10 @@ TOOLS: dict[str, dict[str, Any]] = {
         "inputSchema": {
             "type": "object",
             "properties": {
-                "fragmento_ids": {"type": "array", "items": {"type": "string"}},
-                "nodo": {"type": "string"},
-                "celda": {"type": "string"},
-                "before": {"type": "string", "description": "ISO date: forget fragmentos filed strictly before"},
+                "recall_ids": {"type": "array", "items": {"type": "string"}},
+                "partition": {"type": "string"},
+                "subgroup": {"type": "string"},
+                "before": {"type": "string", "description": "ISO date: forget recalls filed strictly before"},
                 "hard": {"type": "boolean", "default": False},
                 "include_kg": {"type": "boolean", "default": False},
                 "malla": {"type": "string"},
@@ -380,12 +392,12 @@ TOOLS: dict[str, dict[str, Any]] = {
         },
     },
     "dxrk_memory_pin": {
-        "description": "Pin a fragmento (or the L0 identity block) against decay-eviction; pinned fragmentos lead wake_up",
+        "description": "Pin a recall (or the L0 identity block) against decay-eviction; pinned recalls lead wake_up",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "fragmento_id": {"type": "string"},
-                "scope": {"type": "string", "enum": ["fragmento", "identity"], "default": "fragmento"},
+                "recall_id": {"type": "string"},
+                "scope": {"type": "string", "enum": ["recall", "identity"], "default": "recall"},
                 "pinned": {"type": "boolean", "default": True},
                 "malla": {"type": "string"},
             },
@@ -398,36 +410,36 @@ TOOLS: dict[str, dict[str, Any]] = {
             "properties": {
                 "since": {"type": "string", "description": "ISO date inclusive"},
                 "before": {"type": "string", "description": "ISO date exclusive"},
-                "nodo": {"type": "string"},
+                "partition": {"type": "string"},
                 "limit": {"type": "integer", "default": 50},
                 "malla": {"type": "string"},
             },
         },
     },
     "dxrk_memory_quarantine": {
-        "description": "Quarantine (or release) a fragmento fail-closed; gated by the memory.maintain cap",
+        "description": "Quarantine (or release) a recall fail-closed; gated by the memory.maintain cap",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "fragmento_id": {"type": "string"},
+                "recall_id": {"type": "string"},
                 "reason": {"type": "string", "default": ""},
                 "unquarantine": {"type": "boolean", "default": False},
                 "malla": {"type": "string"},
             },
-            "required": ["fragmento_id"],
+            "required": ["recall_id"],
         },
     },
     # Fase 2: Eval Harness
     "dxrk_memory_eval_run": {
-        "description": "Run evaluation harness on a nodo (recall@k, MRR, NDCG, ECE)",
+        "description": "Run evaluation harness on a partition (recall@k, MRR, NDCG, ECE)",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "nodo": {"type": "string"},
+                "partition": {"type": "string"},
                 "n_queries": {"type": "integer", "default": 10},
                 "malla": {"type": "string"},
             },
-            "required": ["nodo"],
+            "required": ["partition"],
         },
     },
     "dxrk_memory_eval_synthetic": {
@@ -435,11 +447,11 @@ TOOLS: dict[str, dict[str, Any]] = {
         "inputSchema": {
             "type": "object",
             "properties": {
-                "nodo": {"type": "string"},
+                "partition": {"type": "string"},
                 "n": {"type": "integer", "default": 20},
                 "malla": {"type": "string"},
             },
-            "required": ["nodo"],
+            "required": ["partition"],
         },
     },
     # Fase 2: Metacognición Avanzada
@@ -449,10 +461,10 @@ TOOLS: dict[str, dict[str, Any]] = {
             "type": "object",
             "properties": {
                 "query": {"type": "string"},
-                "nodo": {"type": "string"},
+                "partition": {"type": "string"},
                 "malla": {"type": "string"},
             },
-            "required": ["query", "nodo"],
+            "required": ["query", "partition"],
         },
     },
     "dxrk_memory_calibrate_fit": {
@@ -460,21 +472,21 @@ TOOLS: dict[str, dict[str, Any]] = {
         "inputSchema": {
             "type": "object",
             "properties": {
-                "nodo": {"type": "string"},
+                "partition": {"type": "string"},
                 "method": {"type": "string", "enum": ["temperature", "isotonic"], "default": "temperature"},
                 "malla": {"type": "string"},
             },
-            "required": ["nodo"],
+            "required": ["partition"],
         },
     },
     # Fase 2: Multi-Tenant Calibrate
     "dxrk_memory_calibrate_tenant": {
-        "description": "Get or set calibration for a tenant+nodo combination",
+        "description": "Get or set calibration for a tenant+partition combination",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "tenant": {"type": "string"},
-                "nodo": {"type": "string"},
+                "partition": {"type": "string"},
                 "a": {"type": "number"},
                 "b": {"type": "number"},
                 "c": {"type": "number"},
@@ -482,19 +494,19 @@ TOOLS: dict[str, dict[str, Any]] = {
                 "score": {"type": "number"},
                 "malla": {"type": "string"},
             },
-            "required": ["tenant", "nodo"],
+            "required": ["tenant", "partition"],
         },
     },
     "dxrk_memory_calibrate_chain": {
-        "description": "Get calibration chain with fallback (tenant+nodo → global → default)",
+        "description": "Get calibration chain with fallback (tenant+partition → global → default)",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "tenant": {"type": "string"},
-                "nodo": {"type": "string"},
+                "partition": {"type": "string"},
                 "malla": {"type": "string"},
             },
-            "required": ["tenant", "nodo"],
+            "required": ["tenant", "partition"],
         },
     },
     # Fase 2: Production Hardening
@@ -512,10 +524,10 @@ TOOLS: dict[str, dict[str, Any]] = {
         "inputSchema": {
             "type": "object",
             "properties": {
-                "nodo": {"type": "string"},
+                "partition": {"type": "string"},
                 "malla": {"type": "string"},
             },
-            "required": ["nodo"],
+            "required": ["partition"],
         },
     },
     "dxrk_memory_rollback_check": {
@@ -523,10 +535,10 @@ TOOLS: dict[str, dict[str, Any]] = {
         "inputSchema": {
             "type": "object",
             "properties": {
-                "nodo": {"type": "string"},
+                "partition": {"type": "string"},
                 "malla": {"type": "string"},
             },
-            "required": ["nodo"],
+            "required": ["partition"],
         },
     },
     # Fase 2: Judge Externo Continuo
@@ -619,7 +631,7 @@ def _dispatch(req: dict[str, Any]) -> dict[str, Any] | None:
         if is_notification():
             return None
         # if tool returned error, map to isError (any "error" key, including
-        # domain errors like update_fragmento not-found without traceback)
+        # domain errors like update_recall not-found without traceback)
         is_error = isinstance(result_obj, dict) and "error" in result_obj
         return {"jsonrpc": "2.0", "id": req_id, "result": {"content": content, "isError": bool(is_error)}}
 

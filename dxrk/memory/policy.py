@@ -4,7 +4,7 @@
 ``PolicyEngine(malla).maybe_run(trigger)`` runs hygiene triggers that
 write paths cannot afford inline:
 
-- ``write``    -> ``over_budget`` only (nodo.count > cap -> enforce_nodo_cap).
+- ``write``    -> ``over_budget`` only (partition.count > cap -> enforce_partition_cap).
 - ``periodic`` -> ``rescore_stale`` + ``checksum_sweep`` + ``quarantine_sweep``,
   each at most once per ``min_interval_seconds`` (default 15 min), tracked
   in the ``<malla>/.policy_state.json`` sidecar (``last_run`` per trigger
@@ -138,26 +138,26 @@ class PolicyEngine:
     # -- triggers -------------------------------------------------------
 
     def _run_over_budget(self) -> dict[str, object]:
-        nodos_over: list[str] = []
+        partitions_over: list[str] = []
         evicted = 0
         try:
-            nodos = self._malla.list_nodos()
+            partitions = self._malla.list_partitions()
         except Exception:
-            logger.debug("Policy over_budget list_nodos failed", exc_info=True)
-            return {"nodos_over": nodos_over, "evicted": evicted}
-        for nodo in nodos:
+            logger.debug("Policy over_budget list_partitions failed", exc_info=True)
+            return {"partitions_over": partitions_over, "evicted": evicted}
+        for partition in partitions:
             try:
-                usage = self._malla.nodo_usage(str(nodo))
+                usage = self._malla.partition_usage(str(partition))
             except Exception:
-                logger.debug("Policy over_budget nodo_usage failed for %s", nodo, exc_info=True)
+                logger.debug("Policy over_budget partition_usage failed for %s", partition, exc_info=True)
                 continue
             if isinstance(usage, dict) and usage.get("over"):
-                nodos_over.append(str(nodo))
+                partitions_over.append(str(partition))
                 try:
-                    evicted += int(self._malla.enforce_nodo_cap(str(nodo)))
+                    evicted += int(self._malla.enforce_partition_cap(str(partition)))
                 except Exception:
-                    logger.debug("Policy over_budget eviction failed for %s", nodo, exc_info=True)
-        return {"nodos_over": sorted(nodos_over), "evicted": evicted}
+                    logger.debug("Policy over_budget eviction failed for %s", partition, exc_info=True)
+        return {"partitions_over": sorted(partitions_over), "evicted": evicted}
 
     def _run_rescore_stale(self) -> dict[str, object]:
         from .migrate import ensure_spine_defaults, ledger_append
@@ -279,7 +279,7 @@ class PolicyEngine:
             if not reason:
                 continue
             try:
-                if self._malla.quarantine_fragmento(rid, reason=reason):
+                if self._malla.quarantine_recall(rid, reason=reason):
                     quarantined.append(rid)
                     reasons[rid] = reason
             except Exception:

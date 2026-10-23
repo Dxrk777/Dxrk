@@ -81,8 +81,8 @@ def save_judge_state(malla_path: str | Path, state: JudgeState) -> None:
     path.chmod(0o600)
 
 
-def load_baseline_report(malla_path: str | Path, nodo: str) -> dict | None:
-    """Load baseline evaluation report for a nodo."""
+def load_baseline_report(malla_path: str | Path, partition: str) -> dict | None:
+    """Load baseline evaluation report for a partition."""
     from dxrk.memory.malla import DxrkMemory
 
     from .eval_harness import EvalHarness
@@ -91,14 +91,14 @@ def load_baseline_report(malla_path: str | Path, nodo: str) -> dict | None:
     try:
         dm.init()
         harness = EvalHarness(dm, Path(dm.malla_path) / "eval")
-        report = harness.run(nodo=nodo)
+        report = harness.run(partition=partition)
         return asdict(report)
     finally:
         dm.close()
 
 
-def save_baseline_report(malla_path: str | Path, nodo: str, report: dict) -> None:
-    """Save baseline report for a nodo."""
+def save_baseline_report(malla_path: str | Path, partition: str, report: dict) -> None:
+    """Save baseline report for a partition."""
 
     # Reports are saved by EvalHarness.run()
     pass
@@ -162,13 +162,13 @@ class ContinuousJudge:
 
     def _run_verification_cycle(self) -> Verdict:
         """Run a single verification cycle."""
-        nodos: list[str] = []
-        # Get all nodos from eval harness
-        for nodo_path in self.eval_harness.eval_dir.glob("*.jsonl"):
-            nodos.append(nodo_path.stem)
+        partitions: list[str] = []
+        # Get all partitions from eval harness
+        for partition_path in self.eval_harness.eval_dir.glob("*.jsonl"):
+            partitions.append(partition_path.stem)
 
-        for nodo in nodos:
-            verdict = self._verify_nodo(str(nodo))
+        for partition in partitions:
+            verdict = self._verify_partition(str(partition))
             self._last_verdict = verdict
 
             # Update judge state
@@ -188,15 +188,15 @@ class ContinuousJudge:
             passed=True, regression_detected=False, severity="none", details=[], current_report={}, baseline_report=None
         )
 
-    def _verify_nodo(self, nodo: str) -> Verdict:
-        """Verify a single nodo against its baseline."""
+    def _verify_partition(self, partition: str) -> Verdict:
+        """Verify a single partition against its baseline."""
         from dxrk.memory.malla import DxrkMemory
 
         dm = DxrkMemory(str(self.malla_path))
         try:
             dm.init()
             # Get current evaluation
-            current_report_dict = load_baseline_report(self.malla_path, nodo)
+            current_report_dict = load_baseline_report(self.malla_path, partition)
             if not current_report_dict:
                 return Verdict(
                     passed=True,
@@ -210,13 +210,13 @@ class ContinuousJudge:
             current_report = EvalReport(**current_report_dict)
 
             # Load baseline
-            baseline_report = load_baseline_report(Path(self.malla_path), nodo)
+            baseline_report = load_baseline_report(Path(self.malla_path), partition)
 
             if baseline_report is None:
                 # First run: save as baseline, pass
                 from dataclasses import asdict
 
-                save_baseline_report(Path(self.malla_path), nodo, asdict(self.eval_harness.run(nodo)))
+                save_baseline_report(Path(self.malla_path), partition, asdict(self.eval_harness.run(partition)))
                 return Verdict(
                     passed=True,
                     regression_detected=False,
@@ -229,7 +229,7 @@ class ContinuousJudge:
             baseline = EvalReport(**baseline_report)
 
             # Detect regression
-            verdict = self._compare_reports(current_report, baseline, nodo)
+            verdict = self._compare_reports(current_report, baseline, partition)
 
             # Auto-rollback if regression detected and auto_rollback enabled
             if verdict.regression_detected and self.auto_rollback and verdict.severity == "critical":
@@ -241,14 +241,14 @@ class ContinuousJudge:
                 try:
                     dm.init()
                     # Load calibration chain and rollback
-                    chain = get_calibration_chain(Path(self.malla_path), "", nodo)
+                    chain = get_calibration_chain(Path(self.malla_path), "", partition)
                     if len(chain) >= 2:
                         # Restore previous calibration
                         previous = chain[1]
                         save_calibration(Path(self.malla_path), previous)
 
                         # Log rollback
-                        self._log_rollback(nodo, "", "auto_rollback_critical")
+                        self._log_rollback(partition, "", "auto_rollback_critical")
                 finally:
                     dm.close()
 
@@ -266,7 +266,7 @@ class ContinuousJudge:
         finally:
             dm.close()
 
-    def _compare_reports(self, current: EvalReport, baseline: EvalReport, nodo: str) -> Verdict:
+    def _compare_reports(self, current: EvalReport, baseline: EvalReport, partition: str) -> Verdict:
         """Compare current report against baseline."""
         severity = "none"
         details = []
@@ -312,12 +312,12 @@ class ContinuousJudge:
             baseline_report=asdict(baseline),
         )
 
-    def _log_rollback(self, nodo: str, tenant: str, reason: str):
+    def _log_rollback(self, partition: str, tenant: str, reason: str):
         """Log rollback event."""
         state = load_judge_state(self.malla_path)
         entry = {
             "timestamp": _now_iso(),
-            "nodo": nodo,
+            "partition": partition,
             "tenant": tenant,
             "reason": reason,
         }

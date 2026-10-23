@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 """Lazy spine migration + score ledger for the RDU ranking model (Fase 0).
 
-Schema v2 spine keys carried on every fragmento metadata dict:
+Schema v2 spine keys carried on every recall metadata dict:
 
 - ``S`` (stability, days), ``D`` (difficulty 1..10), ``rd`` (rating
   deviation), ``s_updates`` — the FSRS-style memory state.
@@ -32,12 +32,12 @@ SPINE_RD_DEFAULT = 350.0
 
 
 def content_sha256_of(content: str) -> str:
-    """Hex sha256 of fragmento content (integrity checksum)."""
+    """Hex sha256 of recall content (integrity checksum)."""
     return hashlib.sha256((content or "").encode("utf-8")).hexdigest()
 
 
 def needs_rehash(meta: dict[str, object]) -> bool:
-    """True when the fragmento has no usable checksum (implicit rehash flag)."""
+    """True when the recall has no usable checksum (implicit rehash flag)."""
     sha = meta.get("content_sha256")
     return not (isinstance(sha, str) and sha.strip() != "")
 
@@ -248,7 +248,7 @@ def verify_chain(meta: dict[str, object]) -> tuple[bool, int]:
 def merkle_root(metas: Iterable[dict[str, object]]) -> str:
     """Malla integrity root: sha256 over sorted non-empty content checksums.
 
-    Returns ``""`` when no fragmento carries a checksum yet (nothing to commit
+    Returns ``""`` when no recall carries a checksum yet (nothing to commit
     to). Any checksum change, add, or removal changes the root.
     """
     hashes = sorted(

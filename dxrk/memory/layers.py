@@ -15,7 +15,7 @@ from .scoring import score_meta
 
 # Limits
 MAX_SCAN = 2000
-MAX_FRAGMENTOS_L1 = 15
+MAX_RECALLS_L1 = 15
 MAX_CHARS_L1 = 3200
 
 
@@ -111,24 +111,24 @@ class Layer0:
 
 
 class Layer1:
-    """Essential story — top fragmentos, auto-generated, ~500-800 tokens."""
+    """Essential story — top recalls, auto-generated, ~500-800 tokens."""
 
-    MAX_FRAGMENTOS: int = MAX_FRAGMENTOS_L1
+    MAX_RECALLS: int = MAX_RECALLS_L1
     MAX_CHARS: int = MAX_CHARS_L1
     MAX_SCAN: int = MAX_SCAN
 
     def __init__(
         self,
         malla_path: str | None = None,
-        nodo: str | None = None,
+        partition: str | None = None,
         tenant_id: str | None = None,
     ) -> None:
         self.tenant_id: str = _effective_tenant_id(tenant_id)
         self.malla_path = _resolve_malla_path(tenant_id, malla_path)
-        self.nodo = nodo
+        self.partition = partition
 
-    def generate(self, nodo: str | None = None) -> str:
-        effective_nodo = nodo or self.nodo
+    def generate(self, partition: str | None = None) -> str:
+        effective_partition = partition or self.partition
         try:
             col = _get_collection(self.malla_path, create=False)
         except Exception:
@@ -158,9 +158,9 @@ class Layer1:
             meta = meta or {}
             if not isinstance(meta, dict):
                 meta = {}
-            if effective_nodo and str(meta.get("nodo") or "") != effective_nodo:
+            if effective_partition and str(meta.get("partition") or "") != effective_partition:
                 continue
-            # Dead fragmentos (superseded / forgotten / quarantined) never
+            # Dead recalls (superseded / forgotten / quarantined) never
             # surface — the live revision is the current version.
             if _is_dead_meta(meta):
                 continue
@@ -170,23 +170,23 @@ class Layer1:
             score = score_meta(meta, default_importance=1.0)
             scored.append((score, meta, doc))
         scored.sort(key=lambda x: x[0], reverse=True)
-        if effective_nodo and not scored:
-            return f"## L1 — No memories yet for nodo={effective_nodo}."
-        # Phase 3: pinned fragmentos always surface in wake_up — they lead the
-        # list (up to MAX_FRAGMENTOS), then top-scored fill remaining slots.
+        if effective_partition and not scored:
+            return f"## L1 — No memories yet for partition={effective_partition}."
+        # Phase 3: pinned recalls always surface in wake_up — they lead the
+        # list (up to MAX_RECALLS), then top-scored fill remaining slots.
         pinned = [(s, m, d) for s, m, d in scored if isinstance(m, dict) and m.get("pinned")]
         rest = [(s, m, d) for s, m, d in scored if not (isinstance(m, dict) and m.get("pinned"))]
-        top = (pinned + rest)[: self.MAX_FRAGMENTOS]
-        by_celda: dict[str, list[tuple[float, dict[str, object], str]]] = defaultdict(list)
+        top = (pinned + rest)[: self.MAX_RECALLS]
+        by_subgroup: dict[str, list[tuple[float, dict[str, object], str]]] = defaultdict(list)
         for imp, meta, doc in top:
-            celda = str(meta.get("celda", "general")) if isinstance(meta.get("celda"), str) else "general"
-            by_celda[celda].append((imp, meta, doc))
+            subgroup = str(meta.get("subgroup", "general")) if isinstance(meta.get("subgroup"), str) else "general"
+            by_subgroup[subgroup].append((imp, meta, doc))
         lines: list[str] = ["## L1 — ESSENTIAL STORY"]
         total = 0
-        for celda, entries in sorted(by_celda.items()):
-            celda_line = f"\n[{celda}]"
-            lines.append(celda_line)
-            total += len(celda_line)
+        for subgroup, entries in sorted(by_subgroup.items()):
+            subgroup_line = f"\n[{subgroup}]"
+            lines.append(subgroup_line)
+            total += len(subgroup_line)
             for _imp, meta, doc in entries:
                 src = meta.get("source_file", "")
                 src_name = Path(str(src)).name if isinstance(src, str) and src else ""
@@ -208,24 +208,24 @@ class Layer1:
 
 
 class Layer2:
-    """On-demand nodo/celda filtered retrieval."""
+    """On-demand partition/subgroup filtered retrieval."""
 
     def __init__(self, malla_path: str | None = None, tenant_id: str | None = None) -> None:
         self.tenant_id: str = _effective_tenant_id(tenant_id)
         self.malla_path = _resolve_malla_path(tenant_id, malla_path)
 
-    def retrieve(self, nodo: str | None = None, celda: str | None = None, n_results: int = 10) -> str:
+    def retrieve(self, partition: str | None = None, subgroup: str | None = None, n_results: int = 10) -> str:
         try:
             col = _get_collection(self.malla_path, create=False)
         except Exception:
             return "No malla found."
         where: dict[str, object] = {}
-        if nodo and celda:
-            where = {"$and": [{"nodo": nodo}, {"celda": celda}]}
-        elif nodo:
-            where = {"nodo": nodo}
-        elif celda:
-            where = {"celda": celda}
+        if partition and subgroup:
+            where = {"$and": [{"partition": partition}, {"subgroup": subgroup}]}
+        elif partition:
+            where = {"partition": partition}
+        elif subgroup:
+            where = {"subgroup": subgroup}
         kwargs: dict[str, object] = {"include": ["documents", "metadatas"], "limit": n_results}
         if where:
             kwargs["where"] = where
@@ -236,11 +236,11 @@ class Layer2:
         docs = res.documents
         metas = res.metadatas
         if not docs:
-            label = f"nodo={nodo}" if nodo else ""
-            if celda:
-                label += f" celda={celda}" if label else f"celda={celda}"
-            return f"No fragmentos found for {label}."
-        # Dead fragmentos (superseded / forgotten / quarantined) are history only.
+            label = f"partition={partition}" if partition else ""
+            if subgroup:
+                label += f" subgroup={subgroup}" if label else f"subgroup={subgroup}"
+            return f"No recalls found for {label}."
+        # Dead recalls (superseded / forgotten / quarantined) are history only.
         kept: list[tuple[str, dict[str, object]]] = []
         for doc, meta in zip(docs[:n_results], metas[:n_results]):
             meta = meta or {}
@@ -250,19 +250,19 @@ class Layer2:
                 continue
             kept.append((doc or "", meta))
         if not kept:
-            label = f"nodo={nodo}" if nodo else ""
-            if celda:
-                label += f" celda={celda}" if label else f"celda={celda}"
-            return f"No fragmentos found for {label}."
-        lines = [f"## L2 — ON-DEMAND ({len(kept)} fragmentos)"]
+            label = f"partition={partition}" if partition else ""
+            if subgroup:
+                label += f" subgroup={subgroup}" if label else f"subgroup={subgroup}"
+            return f"No recalls found for {label}."
+        lines = [f"## L2 — ON-DEMAND ({len(kept)} recalls)"]
         for doc, meta in kept:
-            celda_name = str(meta.get("celda", "?"))
+            subgroup_name = str(meta.get("subgroup", "?"))
             src = meta.get("source_file", "")
             src_name = Path(str(src)).name if isinstance(src, str) and src else ""
             snippet = doc.strip().replace("\n", " ")
             if len(snippet) > 300:
                 snippet = snippet[:297] + "..."
-            entry = f"  [{celda_name}] {snippet}"
+            entry = f"  [{subgroup_name}] {snippet}"
             if src_name:
                 entry += f"  ({src_name})"
             lines.append(entry)
@@ -276,7 +276,7 @@ class Layer3:
         self.tenant_id: str = _effective_tenant_id(tenant_id)
         self.malla_path = _resolve_malla_path(tenant_id, malla_path)
 
-    def search(self, query: str, nodo: str | None = None, celda: str | None = None, n_results: int = 5) -> str:
+    def search(self, query: str, partition: str | None = None, subgroup: str | None = None, n_results: int = 5) -> str:
         from .search import hybrid_search
 
         try:
@@ -284,12 +284,12 @@ class Layer3:
         except Exception:
             return "No malla found."
         where: dict[str, object] | None = None
-        if nodo and celda:
-            where = {"$and": [{"nodo": nodo}, {"celda": celda}]}
-        elif nodo:
-            where = {"nodo": nodo}
-        elif celda:
-            where = {"celda": celda}
+        if partition and subgroup:
+            where = {"$and": [{"partition": partition}, {"subgroup": subgroup}]}
+        elif partition:
+            where = {"partition": partition}
+        elif subgroup:
+            where = {"subgroup": subgroup}
         res = hybrid_search(col, query, where=where, n_results=n_results)
         hits = res.get("results", [])
         if not hits:
@@ -299,7 +299,7 @@ class Layer3:
         for i, hit in enumerate(hits, 1):
             if not isinstance(hit, dict):
                 continue
-            lines.append(f"  [{i}] {hit.get('nodo', '?')}/{hit.get('celda', '?')} (sim={hit.get('similarity', 0)})")
+            lines.append(f"  [{i}] {hit.get('partition', '?')}/{hit.get('subgroup', '?')} (sim={hit.get('similarity', 0)})")
             txt = str(hit.get("text", ""))[:300]
             lines.append(f"      {txt}")
             src = hit.get("source_file")
@@ -325,18 +325,18 @@ class MemoryStack:
         self.l2 = Layer2(self.malla_path, tenant_id=tenant_id)
         self.l3 = Layer3(self.malla_path, tenant_id=tenant_id)
 
-    def wake_up(self, nodo: str | None = None) -> str:
+    def wake_up(self, partition: str | None = None) -> str:
         parts: list[str] = []
         parts.append(self.l0.render())
         parts.append("")
-        parts.append(self.l1.generate(nodo=nodo))
+        parts.append(self.l1.generate(partition=partition))
         return "\n".join(parts)
 
-    def recall(self, nodo: str | None = None, celda: str | None = None, n_results: int = 10) -> str:
-        return self.l2.retrieve(nodo=nodo, celda=celda, n_results=n_results)
+    def recall(self, partition: str | None = None, subgroup: str | None = None, n_results: int = 10) -> str:
+        return self.l2.retrieve(partition=partition, subgroup=subgroup, n_results=n_results)
 
-    def search(self, query: str, nodo: str | None = None, celda: str | None = None, n_results: int = 5) -> str:
-        return self.l3.search(query, nodo=nodo, celda=celda, n_results=n_results)
+    def search(self, query: str, partition: str | None = None, subgroup: str | None = None, n_results: int = 5) -> str:
+        return self.l3.search(query, partition=partition, subgroup=subgroup, n_results=n_results)
 
     def status(self) -> dict[str, object]:
         result: dict[str, object] = {
@@ -346,13 +346,13 @@ class MemoryStack:
                 "exists": os.path.exists(self.identity_path),
                 "tokens": self.l0.token_estimate(),
             },
-            "L1_essential": {"description": "Auto-generated from top fragmentos"},
-            "L2_on_demand": {"description": "Nodo/celda filtered retrieval"},
+            "L1_essential": {"description": "Auto-generated from top recalls"},
+            "L2_on_demand": {"description": "Partition/subgroup filtered retrieval"},
             "L3_deep_search": {"description": "Full hybrid search via sqlite"},
         }
         try:
             col = _get_collection(self.malla_path, create=False)
-            result["total_fragmentos"] = col.count()
+            result["total_recalls"] = col.count()
         except Exception:
-            result["total_fragmentos"] = 0
+            result["total_recalls"] = 0
         return result

@@ -92,8 +92,8 @@ def _where_to_sql(where: dict[str, object] | None) -> tuple[str, list[object]]:
     """Translate chroma-style where filter to SQL for metadata JSON.
 
     Supports:
-      {"nodo": "proj"}
-      {"$and": [{"nodo": "..."}, {"celda": "..."}]}
+      {"partition": "proj"}
+      {"$and": [{"partition": "..."}, {"subgroup": "..."}]}
       {"chunk_index": {"$in": [0,1,2]}}
       {"source_file": "path"}
 
@@ -164,7 +164,7 @@ def _where_to_sql(where: dict[str, object] | None) -> tuple[str, list[object]]:
 # exact matches on top; the RDU rank (retrievability x frequency + rd
 # boost, normalized to [0, 1]) is a small tie-breaker only — it re-orders
 # near-ties, never buries relevance. One formula everywhere: the same
-# score_meta drives the nodo-cap eviction, Layer1, and the non-sqlite
+# score_meta drives the partition-cap eviction, Layer1, and the non-sqlite
 # hybrid nudge.
 COS_W = 0.6
 BM25_W = 0.3

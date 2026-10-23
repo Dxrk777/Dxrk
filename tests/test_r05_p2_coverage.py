@@ -328,23 +328,23 @@ def test_hooks_pid_alive_self_and_dead(tmp_path, monkeypatch):
     assert hc._pid_alive(123) is False
 
 
-def test_hooks_nodo_from_transcript_empty_and_fallback(tmp_path):
+def test_hooks_partition_from_transcript_empty_and_fallback(tmp_path):
     import dxrk.memory.hooks_cli as hc
 
-    assert hc._nodo_from_transcript_path("") == "nodo_sessions"
-    assert hc._nodo_from_transcript_path("/tmp/nope.jsonl") == "nodo_sessions"
+    assert hc._partition_from_transcript_path("") == "partition_sessions"
+    assert hc._partition_from_transcript_path("/tmp/nope.jsonl") == "partition_sessions"
     # path with .. should be sanitized via _validate -> None then fallback regex
     # encoded project via regex 1
     p = "/home/dxrk/.claude/projects/-Users-dxrk-git-MyCoolProj/transcript.jsonl"
-    assert hc._nodo_from_transcript_path(p) == "nodo_mycoolproj"
+    assert hc._partition_from_transcript_path(p) == "partition_mycoolproj"
     # second regex Projects: re.search(r"-Projects-([^/]+?)(?:/|$)")
     p2b = "/some-Projects-AwesomeX/file.jsonl"
-    assert hc._nodo_from_transcript_path(p2b) == "nodo_awesomex"
-    # fallback to nodo_sessions for non-matching
-    assert hc._nodo_from_transcript_path("/some/other/path/file.jsonl") == "nodo_sessions"
+    assert hc._partition_from_transcript_path(p2b) == "partition_awesomex"
+    # fallback to partition_sessions for non-matching
+    assert hc._partition_from_transcript_path("/some/other/path/file.jsonl") == "partition_sessions"
 
 
-def test_hooks_nodo_from_transcript_cwd_json(tmp_path, monkeypatch):
+def test_hooks_partition_from_transcript_cwd_json(tmp_path, monkeypatch):
     import dxrk.memory.hooks_cli as hc
 
     tr = tmp_path / "transcript.jsonl"
@@ -353,17 +353,17 @@ def test_hooks_nodo_from_transcript_cwd_json(tmp_path, monkeypatch):
         f.write('{"foo":"bar"}\n')
         f.write('{"cwd": "/home/user/Projects/MyProject"}\n')
         f.write('{"cwd": "/other"}\n')
-    assert hc._nodo_from_transcript_path(str(tr)) == "nodo_myproject"
+    assert hc._partition_from_transcript_path(str(tr)) == "partition_myproject"
     # cwd with spaces and dash
     tr2 = tmp_path / "tr2.jsonl"
     with open(tr2, "w", encoding="utf-8") as f:
         f.write('{"cwd": "/tmp/My Cool-Project"}\n')
-    assert hc._nodo_from_transcript_path(str(tr2)) == "nodo_my_cool_project"
+    assert hc._partition_from_transcript_path(str(tr2)) == "partition_my_cool_project"
     # with backslashes Windows style
     tr3 = tmp_path / "tr3.jsonl"
     with open(tr3, "w", encoding="utf-8") as f:
         f.write('{"cwd": "C:\\\\Users\\\\foo\\\\Projects\\\\WinProj"}\n')
-    assert hc._nodo_from_transcript_path(str(tr3)) == "nodo_winproj"
+    assert hc._partition_from_transcript_path(str(tr3)) == "partition_winproj"
     # file not exists -> fallback regex already tested
 
 
@@ -455,17 +455,17 @@ def test_hooks_save_session_summary_direct_with_malla(tmp_path, monkeypatch):
         f.write("\n")
         json.dump({"message": {"role": "assistant", "content": "hi"}}, f)
         f.write("\n")
-    res = hc._save_session_summary_direct(str(tr), "sess123", nodo="nodo_test")
+    res = hc._save_session_summary_direct(str(tr), "sess123", partition="partition_test")
     assert res["count"] == 5
-    assert "fragmento_id" in res
-    fragmento_id = res["fragmento_id"]
-    assert isinstance(fragmento_id, str) and fragmento_id
-    # check fragmento actually exists via DxrkMemory
+    assert "recall_id" in res
+    recall_id = res["recall_id"]
+    assert isinstance(recall_id, str) and recall_id
+    # check recall actually exists via DxrkMemory
     from dxrk.memory.malla import DxrkMemory
 
     dm = DxrkMemory(str(malla_root))
     dm.init()
-    got = dm.get_fragmento(fragmento_id)
+    got = dm.get_recall(recall_id)
     assert got is not None
     # themes extracted
     assert isinstance(res.get("themes"), list)
@@ -520,7 +520,7 @@ def test_hooks_claim_slot_and_already_running(tmp_path, monkeypatch):
     state = tmp_path / "state"
     monkeypatch.setattr(hc, "STATE_DIR", state)
     monkeypatch.setattr(hc, "_MINE_PID_DIR", state / "mine_pids")
-    cmd = [sys.executable, "-m", "dxrk.memory", "mine", "/tmp/proj", "--nodo", "default"]
+    cmd = [sys.executable, "-m", "dxrk.memory", "mine", "/tmp/proj", "--partition", "default"]
     # first claim should succeed
     p1 = hc._claim_mine_slot(cmd)
     assert p1 is not None
@@ -547,7 +547,7 @@ def test_hooks_claim_slot_and_already_running(tmp_path, monkeypatch):
     pf2 = hc._pid_file_for_cmd(cmd)
     assert pf1 == pf2
     # different cmd different file
-    pf3 = hc._pid_file_for_cmd([sys.executable, "-m", "dxrk.memory", "mine", "/other", "--nodo", "x"])
+    pf3 = hc._pid_file_for_cmd([sys.executable, "-m", "dxrk.memory", "mine", "/other", "--partition", "x"])
     assert pf3 != pf1
     # no mine in cmd
     pf4 = hc._pid_file_for_cmd([sys.executable, "-c", "print(1)"])
@@ -615,9 +615,9 @@ def test_main_mine_dispatch_dry_run(tmp_path, monkeypatch):
     proj.mkdir()
     (proj / "hello.py").write_text("print('hello world')\n" * 50)
     # dry_run via malla isolated HOME
-    rc = mem_main.main(["mine", str(proj), "--nodo", "default", "--dry-run"])
+    rc = mem_main.main(["mine", str(proj), "--partition", "default", "--dry-run"])
     assert rc == 0
-    # malla should exist but have 0 fragmentos because dry_run
+    # malla should exist but have 0 recalls because dry_run
     from dxrk.memory.malla import DxrkMemory
 
     dm = DxrkMemory(str(home / ".dxrk" / "memory"))
@@ -637,10 +637,10 @@ def test_main_mine_dispatch_real(tmp_path, monkeypatch):
     proj = tmp_path / "proj_real"
     proj.mkdir()
     (proj / "a.txt").write_text("alpha beta gamma " * 100)
-    rc = mem_main.main(["mine", str(proj), "--nodo", "nodo_a", "--celda", "general"])
+    rc = mem_main.main(["mine", str(proj), "--partition", "partition_a", "--subgroup", "general"])
     assert rc == 0
     # missing project should fail
-    rc2 = mem_main.main(["mine", str(tmp_path / "nope"), "--nodo", "default"])
+    rc2 = mem_main.main(["mine", str(tmp_path / "nope"), "--partition", "default"])
     assert rc2 == 1
 
 
@@ -652,7 +652,7 @@ def test_main_search_dispatch(tmp_path, monkeypatch):
     proj = tmp_path / "proj_search"
     proj.mkdir()
     (proj / "search.txt").write_text("searchable content unicorn " * 50)
-    mem_main.main(["mine", str(proj), "--nodo", "default"])
+    mem_main.main(["mine", str(proj), "--partition", "default"])
     # mock AgentMemory search to avoid sqlite full scan? Just run real search via __main__
     # It prints json lines to stdout; capture
     import contextlib
@@ -665,9 +665,9 @@ def test_main_search_dispatch(tmp_path, monkeypatch):
         rc = mem_main.main(["search", "unicorn", "--n", "2"])
     assert rc == 0
     # output may be empty if not found but should not crash
-    # also test search with nodo filter
+    # also test search with partition filter
     with contextlib.redirect_stdout(_io.StringIO()):
-        rc2 = mem_main.main(["search", "unicorn", "--nodo", "default"])
+        rc2 = mem_main.main(["search", "unicorn", "--partition", "default"])
     assert rc2 == 0
 
 
@@ -732,19 +732,19 @@ def test_malla_mine_dry_run_counts(tmp_path, monkeypatch):
     (proj / "file2.txt").write_text("another file " * 100)
     dm = DxrkMemory(str(malla_path))
     dm.init()
-    res = dm.mine(str(proj), nodo="default", celda="general", dry_run=True)
+    res = dm.mine(str(proj), partition="default", subgroup="general", dry_run=True)
     assert int(res["files_mined"]) == 2  # type: ignore[arg-type]
-    assert int(res["fragmentos_added"]) >= 2  # type: ignore[arg-type]
+    assert int(res["recalls_added"]) >= 2  # type: ignore[arg-type]
     assert int(res["files_skipped"]) == 0  # type: ignore[arg-type]
-    # dry_run should not have added fragmentos
+    # dry_run should not have added recalls
     assert dm.count() == 0
     # real mine then dry_run again should still work
-    res2 = dm.mine(str(proj), nodo="default", celda="general", dry_run=False)
+    res2 = dm.mine(str(proj), partition="default", subgroup="general", dry_run=False)
     assert int(res2["files_mined"]) == 2  # type: ignore[arg-type]
     assert dm.count() > 0
     # skipped small file
     (proj / "tiny.txt").write_text("hi")
-    res3 = dm.mine(str(proj), nodo="default", dry_run=True)
+    res3 = dm.mine(str(proj), partition="default", dry_run=True)
     assert int(res3["files_skipped"]) >= 1  # type: ignore[arg-type]
 
 
@@ -804,7 +804,7 @@ def test_malla_tenant_isolation_mine(tmp_path, monkeypatch):
     # malla_path should be tenants/tenantA/malla
     assert "tenantA" in dm_a.malla_path or "tenants" in dm_a.malla_path
     dm_a.init()
-    dm_a.mine(str(proj), nodo="default")
+    dm_a.mine(str(proj), partition="default")
     assert dm_a.count() > 0
     # tenant b should be empty
     dm_b = DxrkMemory(tenant_id="tenantB", agent="dev")
@@ -825,7 +825,7 @@ def test_malla_tenant_isolation_mine(tmp_path, monkeypatch):
 
 
 def test_malla_chunk_and_metadata(tmp_path):
-    from dxrk.memory.malla import DxrkMemory, _build_fragmento_metadata, _detect_hall, _extract_entities, chunk_text
+    from dxrk.memory.malla import DxrkMemory, _build_recall_metadata, _detect_hall, _extract_entities, chunk_text
 
     # chunk validation
     try:
@@ -849,8 +849,8 @@ def test_malla_chunk_and_metadata(tmp_path):
     assert _detect_hall("api database deploy") == "technical"
     ents = _extract_entities("Alice Alice Bob Bob Alice")
     assert isinstance(ents, str)
-    meta = _build_fragmento_metadata("w", "r", "src", 0, "agent", "hello Alice Alice", None, chunk_total=3)
-    assert meta["nodo"] == "w"
+    meta = _build_recall_metadata("w", "r", "src", 0, "agent", "hello Alice Alice", None, chunk_total=3)
+    assert meta["partition"] == "w"
     assert meta["chunk_total"] == 3
     # DxrkMemory via memory-only sentinel
     dm = DxrkMemory("memory-only")

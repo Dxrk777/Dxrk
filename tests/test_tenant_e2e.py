@@ -59,10 +59,10 @@ def test_dxrk_memory_tenant_isolation(tmp_path, monkeypatch):
     assert m_acme.malla_path != m_bob.malla_path
     assert "acme" in str(m_acme.malla_path)
     assert "bob" in str(m_bob.malla_path)
-    # add distinct fragmentos
-    id1 = m_acme.add_fragmento("proj", "general", "acme secret", "a.py", 0)
-    id2 = m_bob.add_fragmento("proj", "general", "bob secret", "a.py", 0)
-    # fragmento ids deterministic per (nodo,celda,source_file,chunk_index) — same across tenants is OK since DB isolated
+    # add distinct recalls
+    id1 = m_acme.add_recall("proj", "general", "acme secret", "a.py", 0)
+    id2 = m_bob.add_recall("proj", "general", "bob secret", "a.py", 0)
+    # recall ids deterministic per (partition,subgroup,source_file,chunk_index) — same across tenants is OK since DB isolated
     assert id1 == id2 or id1 != id2
     # search isolation
     r_acme = m_acme.search("acme", n_results=5)
@@ -222,6 +222,6 @@ def test_memory_cli_hooks_tenant(tmp_path, monkeypatch):
     migrate_legacy_to_default()
     # ensure DxrkMemory with tenant_id works via CLI search/mine path
     m = DxrkMemory(tenant_id="acme")
-    m.add_fragmento("proj", "r1", "hello from acme", "f.py", 0)
+    m.add_recall("proj", "r1", "hello from acme", "f.py", 0)
     res = m.search("hello", n_results=5)
     assert res.get("documents") or res.get("results")

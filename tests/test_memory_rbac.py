@@ -20,9 +20,9 @@ from dxrk.memory.mcp_server import _check_mcp_op, _dispatch, _handle_tool
 from dxrk.security.rbac import TenantRoleResolver
 
 WRITE_TOOLS = [
-    "dxrk_memory_add_fragmento",
-    "dxrk_memory_update_fragmento",
-    "dxrk_memory_delete_fragmento",
+    "dxrk_memory_add_recall",
+    "dxrk_memory_update_recall",
+    "dxrk_memory_delete_recall",
     "dxrk_memory_mine",
     "dxrk_memory_kg_add",
     "dxrk_memory_kg_invalidate",
@@ -31,9 +31,9 @@ WRITE_TOOLS = [
 READ_TOOLS = [
     "dxrk_memory_status",
     "dxrk_memory_search",
-    "dxrk_memory_get_fragmento",
-    "dxrk_memory_list_fragmentos",
-    "dxrk_memory_list_nodos",
+    "dxrk_memory_get_recall",
+    "dxrk_memory_list_recalls",
+    "dxrk_memory_list_partitions",
 ]
 
 
@@ -82,7 +82,7 @@ class TestCheckMcpOp:
         _iso_home(tmp_path, monkeypatch)
         _check_mcp_op("dxrk_memory_mine", {})  # sin tenant/user: trusted mode
         monkeypatch.setenv("DXRK_USER", "alice")
-        _check_mcp_op("dxrk_memory_add_fragmento", {})  # sin tenant: bypass igual
+        _check_mcp_op("dxrk_memory_add_recall", {})  # sin tenant: bypass igual
 
     def test_tenant_from_args(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         _iso_home(tmp_path, monkeypatch)
@@ -118,11 +118,11 @@ class TestResolveSangre:
 
 
 class TestHandleTool:
-    def test_add_fragmento_denied(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_add_recall_denied(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         _iso_home(tmp_path, monkeypatch)
         _seed_tenant("acme", {"ro": "readonly"})
         _as_user(monkeypatch, "acme", "ro")
-        res = _handle_tool("dxrk_memory_add_fragmento", {"nodo": "w", "celda": "r", "content": "c", "source_file": "f"})
+        res = _handle_tool("dxrk_memory_add_recall", {"partition": "w", "subgroup": "r", "content": "c", "source_file": "f"})
         assert "RBAC_DENIED" in res.get("error", "")
 
     def test_mine_denied(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -174,7 +174,7 @@ class TestMemoryCli:
         proj = tmp_path / "proj"
         proj.mkdir()
         (proj / "a.py").write_text("x = 1\n", encoding="utf-8")
-        code = mem_cli._cmd_mine(["--dry-run", "--nodo", "t", str(proj)])
+        code = mem_cli._cmd_mine(["--dry-run", "--partition", "t", str(proj)])
         assert code == 0
         assert (home / ".dxrk").exists()  # malla aislado en HOME temporal
 
@@ -317,7 +317,7 @@ class TestQuarantineCap:
         _seed_tenant("acme", {"dev": "dev"})
         _as_user(monkeypatch, "acme", "dev")
         with pytest.raises(PermissionError, match="RBAC_DENIED"):
-            _check_mcp_op("dxrk_memory_quarantine", {"fragmento_id": "x"})
+            _check_mcp_op("dxrk_memory_quarantine", {"recall_id": "x"})
 
     def test_quarantine_tool_allowed_with_cap(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -328,7 +328,7 @@ class TestQuarantineCap:
         _seed_tenant("acme", {"dev": "dev"})
         _as_user(monkeypatch, "acme", "dev")
         grant_memory_maintain("acme", "dev")
-        _check_mcp_op("dxrk_memory_quarantine", {"fragmento_id": "x"})  # no raise
+        _check_mcp_op("dxrk_memory_quarantine", {"recall_id": "x"})  # no raise
 
     def test_quarantine_tool_roundtrip(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -343,13 +343,13 @@ class TestQuarantineCap:
         pal = tmp_path / "pal"
         res = _handle_tool(
             "dxrk_memory_quarantine",
-            {"fragmento_id": "nope", "malla": str(pal)},
+            {"recall_id": "nope", "malla": str(pal)},
         )
         assert "RBAC_DENIED" in res.get("error", "")
         grant_memory_maintain("acme", "dev")
         res = _handle_tool(
             "dxrk_memory_quarantine",
-            {"fragmento_id": "nope", "malla": str(pal)},
+            {"recall_id": "nope", "malla": str(pal)},
         )
         assert "RBAC_DENIED" not in res.get("error", "")
 
@@ -366,13 +366,13 @@ class TestQuarantineCap:
         pal = tmp_path / "pal"
         dm = DxrkMemory(str(pal))
         dm.init()
-        did = dm.add_fragmento("w", "r", "quarantine me please " * 5, "f.py", 0)
-        res = _handle_tool("dxrk_memory_quarantine", {"fragmento_id": did, "reason": "t8", "malla": str(pal)})
+        did = dm.add_recall("w", "r", "quarantine me please " * 5, "f.py", 0)
+        res = _handle_tool("dxrk_memory_quarantine", {"recall_id": did, "reason": "t8", "malla": str(pal)})
         assert res.get("quarantined") is True
-        assert dm.get_fragmento(did) is not None and dm.get_fragmento(did).get("quarantined") is True  # type: ignore[union-attr]
+        assert dm.get_recall(did) is not None and dm.get_recall(did).get("quarantined") is True  # type: ignore[union-attr]
         res = _handle_tool(
-            "dxrk_memory_quarantine", {"fragmento_id": did, "unquarantine": True, "malla": str(pal)}
+            "dxrk_memory_quarantine", {"recall_id": did, "unquarantine": True, "malla": str(pal)}
         )
         assert res.get("quarantined") is False
-        got = dm.get_fragmento(did)
+        got = dm.get_recall(did)
         assert got is not None and got.get("document", "") != ""  # type: ignore[union-attr]

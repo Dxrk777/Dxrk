@@ -139,7 +139,7 @@ def record_judgment(
         state: current MetacogState
         predicted: confidence prediction [0, 1]
         actual: binary outcome (0 or 1)
-        context: optional context (nodo, query_type, etc.)
+        context: optional context (partition, query_type, etc.)
 
     Returns:
         Updated MetacogState
@@ -454,10 +454,10 @@ class MetacognitionV2:
         self._malla_path = Path(malla._path) if hasattr(malla, "_path") else Path(".")
         self._state = load_metacog_state(self._malla_path)
 
-    def predict(self, query: str, nodo: str = "default") -> MetacognitionPrediction:
+    def predict(self, query: str, partition: str = "default") -> MetacognitionPrediction:
         """Get metacognitive prediction for a query."""
         # Use malla search to estimate difficulty
-        results = self.malla.search(query, nodo=nodo, n_results=5)
+        results = self.malla.search(query, partition=partition, n_results=5)
         hits_raw = results.get("results", []) if isinstance(results, dict) else []
         hits: list = hits_raw if isinstance(hits_raw, list) else []
 
@@ -479,7 +479,7 @@ class MetacognitionV2:
             bias_info=bias_info,
         )
 
-    def fit_calibration(self, nodo: str = "default", method: str = "temperature") -> dict:
+    def fit_calibration(self, partition: str = "default", method: str = "temperature") -> dict:
         """Fit calibration and return parameters."""
         # Run full calibration
         new_state = run_calibration(self._malla_path)

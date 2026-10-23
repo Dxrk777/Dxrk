@@ -90,7 +90,7 @@ class TestContinuousJudge:
         dm.init()
         try:
             for i in range(5):
-                dm.add_fragmento("w", "r", f"content {i}", f"/f{i}.md", 0)
+                dm.add_recall("w", "r", f"content {i}", f"/f{i}.md", 0)
 
             harness = EvalHarness(dm, tmp_path / "eval")
             judge = ContinuousJudge(tmp_path / "malla", harness, interval_hours=1)
@@ -113,7 +113,7 @@ class TestContinuousJudge:
         dm.init()
         try:
             for i in range(5):
-                dm.add_fragmento("w", "r", f"unique content {i} distinct", f"/f{i}.md", 0)
+                dm.add_recall("w", "r", f"unique content {i} distinct", f"/f{i}.md", 0)
 
             harness = EvalHarness(dm, tmp_path / "eval")
             judge = ContinuousJudge(tmp_path / "malla", harness, interval_hours=1)
@@ -133,7 +133,7 @@ class TestContinuousJudge:
         dm.init()
         try:
             for i in range(3):
-                dm.add_fragmento("w", "r", f"content {i}", f"/f{i}.md", 0)
+                dm.add_recall("w", "r", f"content {i}", f"/f{i}.md", 0)
 
             harness = EvalHarness(dm, tmp_path / "eval")
             judge = ContinuousJudge(tmp_path / "malla", harness, interval_hours=1)
@@ -166,7 +166,7 @@ class TestJudgeRegressionDetection:
 
         # Create current and baseline EvalReports
         current_report = EvalReport(
-            nodo="w",
+            partition="w",
             num_queries=1,
             recall_at_k={10: 0.6},
             mrr=0.5,
@@ -178,7 +178,7 @@ class TestJudgeRegressionDetection:
             evaluated_at="2024-01-01T00:00:00+00:00",
         )
         baseline_report = EvalReport(
-            nodo="w",
+            partition="w",
             num_queries=1,
             recall_at_k={10: 0.7},
             mrr=0.5,
@@ -190,7 +190,7 @@ class TestJudgeRegressionDetection:
             evaluated_at="2024-01-01T00:00:00+00:00",
         )
 
-        verdict = judge._compare_reports(current_report, baseline_report, "test_nodo")
+        verdict = judge._compare_reports(current_report, baseline_report, "test_partition")
 
         # Recall dropped from 0.7 to 0.6 = 14% drop > 5% threshold
         assert verdict.regression_detected is True
@@ -208,14 +208,14 @@ class TestAutoRollback:
         dm = DxrkMemory(str(tmp_path / "malla"))
         dm.init()
         try:
-            # Add some fragmentos
+            # Add some recalls
             for i in range(5):
-                dm.add_fragmento("w", "r", f"content {i}", f"/f{i}.md", 0)
+                dm.add_recall("w", "r", f"content {i}", f"/f{i}.md", 0)
 
             # Setup calibration
             save_calibration(
                 tmp_path / "malla",
-                CalibrationParams(tenant="", nodo="w", a=1.5, b=0.2, c=1.0, pe_lambda=0.1, score=0.8),
+                CalibrationParams(tenant="", partition="w", a=1.5, b=0.2, c=1.0, pe_lambda=0.1, score=0.8),
             )
 
             EvalHarness(dm, tmp_path / "eval")

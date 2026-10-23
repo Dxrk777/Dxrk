@@ -15,9 +15,9 @@ import pytest
 from dxrk.memory import AgentMemory
 from dxrk.memory.malla import DxrkMemory
 
-NODO = "proj"
+PARTITION = "proj"
 
-# (fragmento_id, celda, content)
+# (recall_id, subgroup, content)
 CORPUS: list[tuple[str, str, str]] = [
     (
         "auth",
@@ -100,8 +100,8 @@ def malla(tmp_path: Path) -> Path:
     pal = tmp_path / "eval_malla"
     dm = DxrkMemory(str(pal))
     dm.init()
-    for marker, celda, content in CORPUS:
-        dm.add_fragmento(NODO, celda, content, source_file=f"/eval/{marker}.md", chunk_index=0)
+    for marker, subgroup, content in CORPUS:
+        dm.add_recall(PARTITION, subgroup, content, source_file=f"/eval/{marker}.md", chunk_index=0)
     dm.close()
     return pal
 
@@ -109,7 +109,7 @@ def malla(tmp_path: Path) -> Path:
 def _malla_hits(pal: Path, query: str, k: int) -> list[str]:
     dm = DxrkMemory(str(pal))
     try:
-        res = dm.search(query, nodo=NODO, n_results=k)
+        res = dm.search(query, partition=PARTITION, n_results=k)
     finally:
         dm.close()
     hits = res.get("results", [])
@@ -123,7 +123,7 @@ def _malla_hits(pal: Path, query: str, k: int) -> list[str]:
 
 def _agent_hits(pal: Path, query: str, k: int) -> list[str]:
     mem = AgentMemory(path=str(pal))
-    entries = mem.search(NODO, query, 0, k)
+    entries = mem.search(PARTITION, query, 0, k)
     out: list[str] = []
     for e in entries:
         out.append(_marker({"source_file": e.malla_path}, e.content))
@@ -165,7 +165,7 @@ def test_eval_pure_vector_win(malla: Path):
     """
     dm = DxrkMemory(str(malla))
     try:
-        res = dm.search("how do we handle auth?", nodo=NODO, n_results=3)
+        res = dm.search("how do we handle auth?", partition=PARTITION, n_results=3)
     finally:
         dm.close()
     hits = res.get("results", [])
@@ -178,9 +178,9 @@ def test_eval_pure_vector_win(malla: Path):
 
 
 def test_eval_gibberish_recall_floor(malla: Path):
-    """A nonsense query must not surface corpus fragmentos (relevance floor)."""
+    """A nonsense query must not surface corpus recalls (relevance floor)."""
     mem = AgentMemory(path=str(malla))
-    assert mem.search(NODO, "xqzt blorpt fnord quantum", 0, 5) == []
+    assert mem.search(PARTITION, "xqzt blorpt fnord quantum", 0, 5) == []
 
 
 def test_hook_session_start_round_trip(malla: Path, tmp_path: Path, monkeypatch):
@@ -198,7 +198,7 @@ def test_hook_session_start_round_trip(malla: Path, tmp_path: Path, monkeypatch)
     hc.hook_session_start({"session_id": "eval-sess", "transcript_path": ""}, "dxrk")
     assert len(outs) == 1
     msg = outs[0].get("systemMessage", "")
-    assert "JWT bearer" in msg  # L1 top fragmento surfaced at session start
+    assert "JWT bearer" in msg  # L1 top recall surfaced at session start
     assert len(msg) <= 2000  # compact output bound
 
     # round-trip: the hooked context is searchable via a conceptual query
@@ -269,8 +269,8 @@ class TestLocalVectors:
         try:
             ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
             col = be.get_collection(malla=ref, collection_name="qemb2", create=True)
-            col.add(documents=["alpha beta gamma"], ids=["a"], metadatas=[{"nodo": "w"}])
-            col.add(documents=["unrelated zebra quantum"], ids=["b"], metadatas=[{"nodo": "w"}])
+            col.add(documents=["alpha beta gamma"], ids=["a"], metadatas=[{"partition": "w"}])
+            col.add(documents=["unrelated zebra quantum"], ids=["b"], metadatas=[{"partition": "w"}])
             q = col.query(query_embeddings=[embed_text("alpha beta gamma")], n_results=2)
             assert q.ids[0][0] == "a"
             assert q.distances[0][0] < q.distances[0][1]
@@ -284,7 +284,7 @@ class TestLocalVectors:
         try:
             ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
             col = be.get_collection(malla=ref, collection_name="qemb3", create=True)
-            col.add(documents=["alpha beta"], ids=["q1"], metadatas=[{"nodo": "w"}])
+            col.add(documents=["alpha beta"], ids=["q1"], metadatas=[{"partition": "w"}])
             q = col.query(query_embeddings=[[0.1, 0.2]], n_results=5)
             assert "q1" in q.ids[0]
             assert q.distances[0][0] == 0.5
@@ -299,7 +299,7 @@ class TestLocalVectors:
         try:
             ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
             col = be.get_collection(malla=ref, collection_name="backfill", create=True)
-            col.add(documents=["authentication tokens login"], ids=["l1"], metadatas=[{"nodo": "w"}])
+            col.add(documents=["authentication tokens login"], ids=["l1"], metadatas=[{"partition": "w"}])
             col._conn.execute("DELETE FROM doc_vectors")  # type: ignore[attr-defined]
             col._conn.commit()  # type: ignore[attr-defined]
             q = col.query(query_texts=["how do we handle auth?"], n_results=5)
@@ -316,7 +316,7 @@ class TestLocalVectors:
         try:
             ref = MallaRef(id=str(tmp_path), local_path=str(tmp_path))
             col = be.get_collection(malla=ref, collection_name="delvec", create=True)
-            col.add(documents=["to be deleted"], ids=["d1"], metadatas=[{"nodo": "w"}])
+            col.add(documents=["to be deleted"], ids=["d1"], metadatas=[{"partition": "w"}])
             col.delete(ids=["d1"])
             cur = col._conn.execute("SELECT COUNT(*) FROM doc_vectors")  # type: ignore[attr-defined]
             assert cur.fetchone()[0] == 0

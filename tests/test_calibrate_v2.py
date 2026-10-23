@@ -15,7 +15,7 @@ from dxrk.memory.calibrate_v2 import (
     CalibrationParams,
     get_calibration_chain,
     get_calibration_params,
-    list_calibrated_nodos,
+    list_calibrated_partitions,
     load_calibration,
     merge_calibrations,
     save_calibration,
@@ -33,7 +33,7 @@ class TestCalibrateV2:
         assert p.pe_lambda == 0.1
         assert p.schema_version == 3
         assert p.tenant == ""
-        assert p.nodo == ""
+        assert p.partition == ""
 
     def test_save_load_calibration(self, tmp_path: Path) -> None:
         """Save and load calibration round-trip."""
@@ -46,11 +46,11 @@ class TestCalibrateV2:
             method="qieo",
             calibrated_at="2024-01-01T00:00:00+00:00",
             tenant="tenant1",
-            nodo="nodo1",
+            partition="partition1",
             n_queries=100,
         )
         save_calibration(tmp_path, params)
-        loaded = load_calibration(tmp_path, "tenant1", "nodo1")
+        loaded = load_calibration(tmp_path, "tenant1", "partition1")
         assert loaded.a == 2.0
         assert loaded.b == 0.3
         assert loaded.c == 1.5
@@ -59,98 +59,98 @@ class TestCalibrateV2:
         assert loaded.method == "qieo"
         assert loaded.calibrated_at == "2024-01-01T00:00:00+00:00"
         assert loaded.tenant == "tenant1"
-        assert loaded.nodo == "nodo1"
+        assert loaded.partition == "partition1"
         assert loaded.n_queries == 100
 
     def test_load_missing_returns_defaults(self, tmp_path: Path) -> None:
         """Missing file returns defaults."""
-        loaded = load_calibration(tmp_path, "tenant1", "nodo1")
+        loaded = load_calibration(tmp_path, "tenant1", "partition1")
         assert loaded.a == DEFAULT_PARAMS.a
 
     def test_load_corrupted_returns_defaults(self, tmp_path: Path) -> None:
         """Corrupted JSON returns defaults."""
         cal_dir = tmp_path / ".calibration"
         cal_dir.mkdir()
-        (cal_dir / "tenant1_nodo1.json").write_text("not json")
-        loaded = load_calibration(tmp_path, "tenant1", "nodo1")
+        (cal_dir / "tenant1_partition1.json").write_text("not json")
+        loaded = load_calibration(tmp_path, "tenant1", "partition1")
         assert loaded.a == DEFAULT_PARAMS.a
 
     @pytest.mark.skipif(sys.platform == "win32", reason="POSIX-only file permissions")
     def test_save_creates_dir_and_0o600(self, tmp_path: Path) -> None:
         """Save creates .calibration dir and sets 0o600."""
-        params = CalibrationParams(tenant="", nodo="nodo1")
+        params = CalibrationParams(tenant="", partition="partition1")
         save_calibration(tmp_path, params)
         cal_dir = tmp_path / CALIBRATION_DIR
         assert cal_dir.exists()
-        # Global nodo file is named "global_nodo1.json" (tenant="" uses global naming)
-        path = cal_dir / "global_nodo1.json"
+        # Global partition file is named "global_partition1.json" (tenant="" uses global naming)
+        path = cal_dir / "global_partition1.json"
         assert path.exists()
         assert path.stat().st_mode & 0o777 == 0o600
 
     def test_tenant_specific_overrides_global(self, tmp_path: Path) -> None:
         """Tenant-specific calibration overrides global."""
         # Save global
-        global_params = CalibrationParams(a=1.0, b=0.1, nodo="nodo1")
+        global_params = CalibrationParams(a=1.0, b=0.1, partition="partition1")
         save_calibration(tmp_path, global_params)
 
         # Save tenant-specific
-        tenant_params = CalibrationParams(a=2.0, b=0.3, tenant="tenant1", nodo="nodo1")
+        tenant_params = CalibrationParams(a=2.0, b=0.3, tenant="tenant1", partition="partition1")
         save_calibration(tmp_path, tenant_params)
 
         # Load should return tenant-specific
-        loaded = load_calibration(tmp_path, "tenant1", "nodo1")
+        loaded = load_calibration(tmp_path, "tenant1", "partition1")
         assert loaded.a == 2.0
         assert loaded.b == 0.3
         assert loaded.tenant == "tenant1"
 
         # Global still accessible
-        loaded_global = load_calibration(tmp_path, "", "nodo1")
+        loaded_global = load_calibration(tmp_path, "", "partition1")
         assert loaded_global.a == 1.0
 
     def test_fallback_chain(self, tmp_path: Path) -> None:
         """Fallback chain returns tenant > global > default."""
         # Save only global
-        global_params = CalibrationParams(a=1.5, nodo="nodo1")
+        global_params = CalibrationParams(a=1.5, partition="partition1")
         save_calibration(tmp_path, global_params)
 
         # Load with tenant should fallback to global
-        loaded = load_calibration(tmp_path, "tenant1", "nodo1")
+        loaded = load_calibration(tmp_path, "tenant1", "partition1")
         assert loaded.a == 1.5
         assert loaded.tenant == ""  # came from global
 
         # Load without tenant returns global
-        loaded_global = load_calibration(tmp_path, "", "nodo1")
+        loaded_global = load_calibration(tmp_path, "", "partition1")
         assert loaded_global.a == 1.5
 
     def test_get_calibration_params(self, tmp_path: Path) -> None:
         """get_calibration_params loads from malla path."""
-        params = CalibrationParams(a=1.23, tenant="tenant1", nodo="nodo1")
+        params = CalibrationParams(a=1.23, tenant="tenant1", partition="partition1")
         save_calibration(tmp_path, params)
-        loaded = get_calibration_params(tmp_path, "tenant1", "nodo1")
+        loaded = get_calibration_params(tmp_path, "tenant1", "partition1")
         assert loaded.a == 1.23
 
-    def test_list_calibrated_nodos(self, tmp_path: Path) -> None:
-        """List calibrated nodos."""
-        save_calibration(tmp_path, CalibrationParams(tenant="t1", nodo="w1", a=1.0))
-        save_calibration(tmp_path, CalibrationParams(tenant="t1", nodo="w2", a=2.0))
-        save_calibration(tmp_path, CalibrationParams(tenant="", nodo="w3", a=3.0))
-        nodos = list_calibrated_nodos(tmp_path)
-        assert "t1_w1" in nodos
-        assert "t1_w2" in nodos
-        assert "global_w3" in nodos
-        assert len(nodos) == 3
+    def test_list_calibrated_partitions(self, tmp_path: Path) -> None:
+        """List calibrated partitions."""
+        save_calibration(tmp_path, CalibrationParams(tenant="t1", partition="w1", a=1.0))
+        save_calibration(tmp_path, CalibrationParams(tenant="t1", partition="w2", a=2.0))
+        save_calibration(tmp_path, CalibrationParams(tenant="", partition="w3", a=3.0))
+        partitions = list_calibrated_partitions(tmp_path)
+        assert "t1_w1" in partitions
+        assert "t1_w2" in partitions
+        assert "global_w3" in partitions
+        assert len(partitions) == 3
 
-    def test_list_calibrated_nodos_empty(self, tmp_path: Path) -> None:
+    def test_list_calibrated_partitions_empty(self, tmp_path: Path) -> None:
         """Empty dir returns empty list."""
-        nodos = list_calibrated_nodos(tmp_path)
-        assert nodos == []
+        partitions = list_calibrated_partitions(tmp_path)
+        assert partitions == []
 
     def test_get_calibration_chain(self, tmp_path: Path) -> None:
         """Get full fallback chain."""
         # Save tenant-specific
-        save_calibration(tmp_path, CalibrationParams(tenant="t1", nodo="w1", a=1.0))
+        save_calibration(tmp_path, CalibrationParams(tenant="t1", partition="w1", a=1.0))
         # Save global
-        save_calibration(tmp_path, CalibrationParams(tenant="", nodo="w1", a=2.0))
+        save_calibration(tmp_path, CalibrationParams(tenant="", partition="w1", a=2.0))
 
         chain = get_calibration_chain(tmp_path, "t1", "w1")
         assert len(chain) == 3
@@ -160,7 +160,7 @@ class TestCalibrateV2:
 
     def test_get_calibration_chain_no_tenant(self, tmp_path: Path) -> None:
         """Chain for no tenant starts at global."""
-        save_calibration(tmp_path, CalibrationParams(tenant="", nodo="w1", a=2.0))
+        save_calibration(tmp_path, CalibrationParams(tenant="", partition="w1", a=2.0))
         chain = get_calibration_chain(tmp_path, "", "w1")
         assert len(chain) == 2
         assert chain[0].a == 2.0
@@ -169,8 +169,8 @@ class TestCalibrateV2:
     def test_merge_calibrations(self) -> None:
         """Merge calibration chain with weighted averaging."""
         chain = [
-            CalibrationParams(a=1.0, b=0.1, c=1.0, pe_lambda=0.0, tenant="t1", nodo="w1"),
-            CalibrationParams(a=2.0, b=0.3, c=2.0, pe_lambda=0.2, tenant="", nodo="w1"),
+            CalibrationParams(a=1.0, b=0.1, c=1.0, pe_lambda=0.0, tenant="t1", partition="w1"),
+            CalibrationParams(a=2.0, b=0.3, c=2.0, pe_lambda=0.2, tenant="", partition="w1"),
             DEFAULT_PARAMS,
         ]
 
@@ -179,11 +179,11 @@ class TestCalibrateV2:
         # Weighted: 0.7 * 1.0 + 0.15 * 2.0 + 0.15 * 1.5 = 0.7 + 0.3 + 0.225 = 1.225
         assert abs(merged.a - 1.225) < 0.01
         assert merged.tenant == "t1"  # inherits from most specific
-        assert merged.nodo == "w1"
+        assert merged.partition == "w1"
 
     def test_merge_calibrations_single(self) -> None:
         """Single item chain returns that item."""
-        chain = [CalibrationParams(a=3.0, tenant="t1", nodo="w1")]
+        chain = [CalibrationParams(a=3.0, tenant="t1", partition="w1")]
         merged = merge_calibrations(chain)
         assert merged.a == 3.0
         assert merged.tenant == "t1"
@@ -213,29 +213,29 @@ class TestCalibrateV2:
 
 
 class TestCalibrateIntegration:
-    def test_calibrate_nodo_no_candidates(self, tmp_path: Path) -> None:
+    def test_calibrate_partition_no_candidates(self, tmp_path: Path) -> None:
         """Calibrate returns defaults when no candidates."""
-        from dxrk.memory.calibrate_v2 import calibrate_nodo
+        from dxrk.memory.calibrate_v2 import calibrate_partition
 
         malla = Mock()
-        malla.iter_fragmentos.return_value = []
+        malla.iter_recalls.return_value = []
         malla._path = str(tmp_path)
 
-        result = calibrate_nodo(malla, "empty_nodo")
+        result = calibrate_partition(malla, "empty_partition")
         assert result.a == DEFAULT_PARAMS.a
 
-    def test_calibrate_nodo_runs_and_saves(self, tmp_path: Path) -> None:
+    def test_calibrate_partition_runs_and_saves(self, tmp_path: Path) -> None:
         """Calibrate runs and saves file (mock malla)."""
-        from dxrk.memory.calibrate_v2 import calibrate_nodo
+        from dxrk.memory.calibrate_v2 import calibrate_partition
 
-        # Create fragmentos with enough data
-        fragmentos = []
+        # Create recalls with enough data
+        recalls = []
         for i in range(10):
-            fragmentos.append(
+            recalls.append(
                 {
                     "id": f"d{i}",
                     "metadata": {
-                        "nodo": "test",
+                        "partition": "test",
                         "access_count_total": i * 2,
                         "irt_hits": i,
                         "irt_misses": max(0, 5 - i),
@@ -247,7 +247,7 @@ class TestCalibrateIntegration:
                 }
             )
         malla = Mock()
-        malla.iter_fragmentos.return_value = fragmentos
+        malla.iter_recalls.return_value = recalls
         malla._path = str(tmp_path)
 
         QIEOConfig(pop_size=10, n_iter=5)
@@ -260,7 +260,7 @@ class TestCalibrateIntegration:
 
         ThompsonConfig()
 
-        result = calibrate_nodo(
+        result = calibrate_partition(
             malla, "test", qieo_config=QIEOConfig(pop_size=10, n_iter=5), thompson_config=ThompsonConfig()
         )
 

@@ -39,20 +39,20 @@ class TestPolicyWrite:
     def test_write_runs_over_budget_inline(self, tmp_path: Path) -> None:
         from dxrk.memory.policy import PolicyEngine
 
-        dm = _dm(tmp_path, max_entries_per_nodo=100)
+        dm = _dm(tmp_path, max_entries_per_partition=100)
         seeds = (
             "quantum garden lunar harvest festival " * 12,
             "rust borrow checker trait object lifetime elision " * 12,
             "sourdough fermentation hydration baker percentage " * 12,
         )
         for i, content in enumerate(seeds):
-            dm.add_fragmento("w", "r", content, f"f{i}.py", i)
-        assert dm.nodo_usage("w")["count"] == 3
-        dm._max_entries_per_nodo = 1  # force over-budget without touching the store
+            dm.add_recall("w", "r", content, f"f{i}.py", i)
+        assert dm.partition_usage("w")["count"] == 3
+        dm._max_entries_per_partition = 1  # force over-budget without touching the store
         out = PolicyEngine(dm).maybe_run("write")
         assert out["ok"] is True
         assert out["results"]["over_budget"]["evicted"] >= 1
-        assert dm.nodo_usage("w")["count"] <= 1
+        assert dm.partition_usage("w")["count"] <= 1
 
     def test_invalid_trigger_rejected(self, tmp_path: Path) -> None:
         from dxrk.memory.policy import PolicyEngine
@@ -66,7 +66,7 @@ class TestPolicyPeriodic:
         from dxrk.memory.policy import PolicyEngine
 
         dm = _dm(tmp_path)
-        did = dm.add_fragmento("w", "r", "stale fragmento content here " * 10, "old.py", 0)
+        did = dm.add_recall("w", "r", "stale recall content here " * 10, "old.py", 0)
         col = dm._collection(create=False)
         got = col.get(ids=[did], include=["metadatas"])
         meta = dict(got.metadatas[0])
@@ -76,7 +76,7 @@ class TestPolicyPeriodic:
         col.update(ids=[did], metadatas=[meta])
         out = PolicyEngine(dm).maybe_run("periodic")
         assert out["ok"] is True
-        got2 = dm.get_fragmento(did)
+        got2 = dm.get_recall(did)
         assert got2 is not None
         ledger = got2["metadata"].get("score_ledger") or []  # type: ignore[union-attr]
         assert any(e.get("reason") == "rescore_stale" for e in ledger)
@@ -85,8 +85,8 @@ class TestPolicyPeriodic:
         from dxrk.memory.policy import PolicyEngine
 
         dm = _dm(tmp_path)
-        good = dm.add_fragmento("w", "r", "good content for sweep " * 10, "good.py", 0)
-        bad = dm.add_fragmento("w", "r", "tampered content for sweep " * 10, "bad.py", 0)
+        good = dm.add_recall("w", "r", "good content for sweep " * 10, "good.py", 0)
+        bad = dm.add_recall("w", "r", "tampered content for sweep " * 10, "bad.py", 0)
         col = dm._collection(create=False)
         got = col.get(ids=[bad], include=["metadatas"])
         meta = dict(got.metadatas[0])
@@ -104,13 +104,13 @@ class TestPolicyPeriodic:
         col = dm._collection(create=True)
         col.upsert(
             documents=[""],
-            ids=["empty-doc-fragmento"],
-            metadatas=[{"nodo": "w", "celda": "r", "source_file": "e.py", "chunk_index": 0}],
+            ids=["empty-doc-recall"],
+            metadatas=[{"partition": "w", "subgroup": "r", "source_file": "e.py", "chunk_index": 0}],
         )
         out = PolicyEngine(dm).maybe_run("periodic")
         swept = out["results"]["quarantine_sweep"]
-        assert "empty-doc-fragmento" in swept["quarantined"]
-        stub = dm.get_fragmento("empty-doc-fragmento")
+        assert "empty-doc-recall" in swept["quarantined"]
+        stub = dm.get_recall("empty-doc-recall")
         assert stub is not None and stub.get("quarantined") is True
 
     def test_periodic_throttled_15min(self, tmp_path: Path) -> None:

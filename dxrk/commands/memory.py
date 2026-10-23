@@ -92,10 +92,10 @@ def register_memory_command(reg: Registry) -> None:
             try:
                 harness = EvalHarness(dm, Path(malla_path) / "eval")
                 n_q = int(ctx.flags.get("n", "10"))
-                queries = generate_synthetic_queries(dm, nodo=ctx.args[0] if ctx.args else "default", n=n_q)
-                report = harness.run(nodo=ctx.args[0] if ctx.args else "default", queries=queries)
+                queries = generate_synthetic_queries(dm, partition=ctx.args[0] if ctx.args else "default", n=n_q)
+                report = harness.run(partition=ctx.args[0] if ctx.args else "default", queries=queries)
                 out = ctx.out
-                out.write(f"Evaluación: {report.nodo}\n")
+                out.write(f"Evaluación: {report.partition}\n")
                 out.write(f"  Queries: {report.num_queries}\n")
                 out.write(f"  Recall@k: {report.recall_at_k}\n")
                 out.write(f"  MRR: {report.mrr:.3f}\n")
@@ -110,7 +110,7 @@ def register_memory_command(reg: Registry) -> None:
 
         cmd = Command(
             name="memory eval run",
-            short="Ejecutar evaluación harness en un nodo",
+            short="Ejecutar evaluación harness en una partición",
             flags={"n": Flag("n", shorthand="n", default="10", help="Número de queries")},
             min_args=1,
             max_args=1,
@@ -140,12 +140,12 @@ def register_memory_command(reg: Registry) -> None:
             dm.init()
             try:
                 queries = generate_synthetic_queries(
-                    dm, nodo=ctx.args[0] if ctx.args else "default", n=int(ctx.flags.get("n", 20))
+                    dm, partition=ctx.args[0] if ctx.args else "default", n=int(ctx.flags.get("n", 20))
                 )
                 out = ctx.out
                 out.write(f"Queries sintéticas generadas: {len(queries)}\n")
                 for q in queries[:5]:
-                    out.write(f"  - {q.query[:60]}... (nodo={q.nodo})\n")
+                    out.write(f"  - {q.query[:60]}... (partition={q.partition})\n")
             finally:
                 dm.close()
             return 0
@@ -183,7 +183,7 @@ def register_memory_command(reg: Registry) -> None:
             dm.init()
             try:
                 meta = MetacognitionV2(dm)
-                pred = meta.predict(ctx.args[0], nodo=ctx.args[1] if len(ctx.args) > 1 else "default")
+                pred = meta.predict(ctx.args[0], partition=ctx.args[1] if len(ctx.args) > 1 else "default")
                 out = ctx.out
                 out.write("Predicción metacognitiva:\n")
                 out.write(f"  Confianza: {pred.confidence:.3f}\n")
@@ -225,7 +225,7 @@ def register_memory_command(reg: Registry) -> None:
             try:
                 meta: MetacognitionV2 = MetacognitionV2(dm)
                 result = meta.fit_calibration(
-                    nodo=ctx.args[0] if ctx.args else "default", method=str(ctx.flags.get("method", "temperature"))
+                    partition=ctx.args[0] if ctx.args else "default", method=str(ctx.flags.get("method", "temperature"))
                 )
                 out = ctx.out
                 out.write(f"Calibración ajustada: {ctx.flags.get('method', 'temperature')}\n")
@@ -267,7 +267,7 @@ def register_memory_command(reg: Registry) -> None:
             malla = Path(malla_path)
             params = CalibrationParams(
                 tenant=ctx.args[0],
-                nodo=ctx.args[1],
+                partition=ctx.args[1],
                 a=float(ctx.flags.get("a", 1.0)),
                 b=float(ctx.flags.get("b", 0.0)),
                 c=float(ctx.flags.get("c", 1.0)),
@@ -276,12 +276,12 @@ def register_memory_command(reg: Registry) -> None:
             )
             save_calibration(malla, params)
             out = ctx.out
-            out.write(f"Calibración guardada: tenant={ctx.args[0]}, nodo={ctx.args[1]}\n")
+            out.write(f"Calibración guardada: tenant={ctx.args[0]}, partition={ctx.args[1]}\n")
             return 0
 
         cmd = Command(
             name="memory calibrate tenant",
-            short="Guardar calibración para tenant+nodo",
+            short="Guardar calibración para tenant+partición",
             flags={
                 "a": Flag("a", shorthand="a", default="1.0", help="Parámetro a"),
                 "b": Flag("b", shorthand="b", default="0.0", help="Parámetro b"),
@@ -315,10 +315,10 @@ def register_memory_command(reg: Registry) -> None:
             malla = Path(malla_path)
             chain = get_calibration_chain(malla, ctx.args[0], ctx.args[1])
             out = ctx.out
-            out.write(f"Cadena de calibración (tenant={ctx.args[0]}, nodo={ctx.args[1]}):\n")
+            out.write(f"Cadena de calibración (tenant={ctx.args[0]}, partition={ctx.args[1]}):\n")
             for i, c in enumerate(chain):
                 out.write(
-                    f"  {i}. tenant={c.tenant}, nodo={c.nodo}, a={c.a:.3f}, b={c.b:.3f}, c={c.c:.3f}, pe_lambda={c.pe_lambda:.3f}, score={c.score:.3f}\n"
+                    f"  {i}. tenant={c.tenant}, partition={c.partition}, a={c.a:.3f}, b={c.b:.3f}, c={c.c:.3f}, pe_lambda={c.pe_lambda:.3f}, score={c.score:.3f}\n"
                 )
             return 0
 
@@ -381,7 +381,7 @@ def register_memory_command(reg: Registry) -> None:
             dm.init()
             try:
                 config = load_slo_config(Path(malla_path))
-                result = check_slo(dm, nodo=ctx.args[0] if ctx.args else "default", config=config)
+                result = check_slo(dm, partition=ctx.args[0] if ctx.args else "default", config=config)
                 out = ctx.out
                 out.write(f"SLO Check: {result.compliant}\n")
                 for detail in result.details:
@@ -421,7 +421,7 @@ def register_memory_command(reg: Registry) -> None:
             dm.init()
             try:
                 rollback_mgr = AutoRollbackManager(Path(malla_path))
-                result = rollback_mgr.check_regression(nodo=ctx.args[0] if ctx.args else "default")
+                result = rollback_mgr.check_regression(partition=ctx.args[0] if ctx.args else "default")
                 out = ctx.out
                 should_rollback = result.get("should_rollback", False)
                 severity = result.get("severity", "none")
@@ -467,7 +467,7 @@ def register_memory_command(reg: Registry) -> None:
             out.write(f"  Fallos consecutivos: {state.consecutive_failures}\n")
             out.write(f"  Rollbacks recientes: {len(state.rollback_history)}\n")
             for r in state.rollback_history[-5:]:
-                out.write(f"  - {r.get('timestamp', '')} {r.get('nodo', '')} {r.get('reason', '')}\n")
+                out.write(f"  - {r.get('timestamp', '')} {r.get('partition', '')} {r.get('reason', '')}\n")
             return 0
 
         cmd = Command(

@@ -68,9 +68,9 @@ class MemoryEntry:
     title: str = ""
     scope: str = ""
     topic_key: str = ""
-    nodo: str = ""
-    celda: str = ""
-    fragmento_id: str = ""
+    partition: str = ""
+    subgroup: str = ""
+    recall_id: str = ""
     malla_path: str = ""
 
 
@@ -241,11 +241,11 @@ class AgentMemory:
             # also persist to sqlite malla if enabled (malla is source of truth, dict is LRU cache)
             if self._use_sqlite and self._malla is not None:
                 try:
-                    nodo = entry.project_id or entry.nodo or "default"
-                    celda = entry.session_id or entry.celda or "general"
+                    partition = entry.project_id or entry.partition or "default"
+                    subgroup = entry.session_id or entry.subgroup or "general"
                     meta: dict[str, object] = {
-                        "nodo": nodo,
-                        "celda": celda,
+                        "partition": partition,
+                        "subgroup": subgroup,
                         "source_file": entry.malla_path or entry.id,
                         "chunk_index": 0,
                         "importance": entry.importance,
@@ -277,8 +277,8 @@ class AgentMemory:
                         meta = res.metadatas[0] if res.metadatas else {}
                         if not isinstance(meta, dict):
                             meta = {}
-                        project_id = str(meta.get("project_id") or meta.get("nodo") or "")
-                        session_id = str(meta.get("session_id") or meta.get("celda") or "")
+                        project_id = str(meta.get("project_id") or meta.get("partition") or "")
+                        session_id = str(meta.get("session_id") or meta.get("subgroup") or "")
                         type_val = meta.get("type")
                         if type_val is None:
                             type_val = meta.get("mem_type")
@@ -291,8 +291,8 @@ class AgentMemory:
                         except (TypeError, ValueError):
                             importance = 0.0
                         core_keys = {
-                            "nodo",
-                            "celda",
+                            "partition",
+                            "subgroup",
                             "source_file",
                             "chunk_index",
                             "importance",
@@ -317,8 +317,8 @@ class AgentMemory:
                             project_id=project_id,
                             session_id=session_id,
                             importance=importance,
-                            nodo=str(meta.get("nodo") or ""),
-                            celda=str(meta.get("celda") or ""),
+                            partition=str(meta.get("partition") or ""),
+                            subgroup=str(meta.get("subgroup") or ""),
                             malla_path=str(meta.get("source_file") or ""),
                             created_at=str(meta.get("filed_at") or ""),
                             accessed_at=_now(),
@@ -413,8 +413,8 @@ class AgentMemory:
                                 mt = 0
                             if mt != int(mem_type):
                                 continue
-                        project_id_val = str(meta.get("project_id") or meta.get("nodo") or "")
-                        session_id_val = str(meta.get("session_id") or meta.get("celda") or "")
+                        project_id_val = str(meta.get("project_id") or meta.get("partition") or "")
+                        session_id_val = str(meta.get("session_id") or meta.get("subgroup") or "")
                         type_val2 = meta.get("type")
                         if type_val2 is None:
                             type_val2 = meta.get("mem_type")
@@ -434,8 +434,8 @@ class AgentMemory:
                             similarity = 0.0
                         final_importance = imp if imp != 0 else similarity
                         core_keys = {
-                            "nodo",
-                            "celda",
+                            "partition",
+                            "subgroup",
                             "source_file",
                             "chunk_index",
                             "importance",
@@ -460,8 +460,8 @@ class AgentMemory:
                             project_id=project_id_val,
                             session_id=session_id_val,
                             importance=final_importance,
-                            nodo=str(meta.get("nodo") or ""),
-                            celda=str(meta.get("celda") or ""),
+                            partition=str(meta.get("partition") or ""),
+                            subgroup=str(meta.get("subgroup") or ""),
                             malla_path=str(meta.get("source_file") or ""),
                             created_at=str(meta.get("filed_at") or ""),
                             accessed_at=str(meta.get("filed_at") or ""),
@@ -519,8 +519,8 @@ class AgentMemory:
                                 mt = 0
                             if mt != int(mem_type):
                                 continue
-                        project_id_val = str(meta.get("project_id") or meta.get("nodo") or "")
-                        session_id_val = str(meta.get("session_id") or meta.get("celda") or "")
+                        project_id_val = str(meta.get("project_id") or meta.get("partition") or "")
+                        session_id_val = str(meta.get("session_id") or meta.get("subgroup") or "")
                         type_val2 = meta.get("type")
                         if type_val2 is None:
                             type_val2 = meta.get("mem_type")
@@ -533,8 +533,8 @@ class AgentMemory:
                         except (TypeError, ValueError):
                             imp = 0.0
                         core_keys = {
-                            "nodo",
-                            "celda",
+                            "partition",
+                            "subgroup",
                             "source_file",
                             "chunk_index",
                             "importance",
@@ -559,8 +559,8 @@ class AgentMemory:
                             project_id=project_id_val,
                             session_id=session_id_val,
                             importance=imp,
-                            nodo=str(meta.get("nodo") or ""),
-                            celda=str(meta.get("celda") or ""),
+                            partition=str(meta.get("partition") or ""),
+                            subgroup=str(meta.get("subgroup") or ""),
                             malla_path=str(meta.get("source_file") or ""),
                             created_at=str(meta.get("filed_at") or ""),
                             accessed_at=str(meta.get("filed_at") or ""),
@@ -689,8 +689,8 @@ class AgentMemory:
                     try:
                         got = self._malla_collection.get(include=["metadatas"], limit=5000)  # type: ignore
                         pal_by_type: dict[MemoryType, int] = {}
-                        pal_nodos: set[str] = set()
-                        pal_celdas: set[str] = set()
+                        pal_partitions: set[str] = set()
+                        pal_subgroups: set[str] = set()
                         for m in got.metadatas:
                             if not isinstance(m, dict):
                                 continue
@@ -702,16 +702,16 @@ class AgentMemory:
                             except (ValueError, TypeError):
                                 mt = MemoryType.SEMANTIC
                             pal_by_type[mt] = pal_by_type.get(mt, 0) + 1
-                            nodo = m.get("nodo") or m.get("project_id")
-                            if isinstance(nodo, str) and nodo:
-                                pal_nodos.add(nodo)
-                            celda = m.get("celda") or m.get("session_id")
-                            if isinstance(celda, str) and celda:
-                                pal_celdas.add(celda)
+                            partition = m.get("partition") or m.get("project_id")
+                            if isinstance(partition, str) and partition:
+                                pal_partitions.add(partition)
+                            subgroup = m.get("subgroup") or m.get("session_id")
+                            if isinstance(subgroup, str) and subgroup:
+                                pal_subgroups.add(subgroup)
                         if got.ids:
                             pal_by_type_final = pal_by_type or by_type
-                            by_project = len(pal_nodos) if pal_nodos else len(self._by_project)
-                            by_session = len(pal_celdas) if pal_celdas else len(self._by_session)
+                            by_project = len(pal_partitions) if pal_partitions else len(self._by_project)
+                            by_session = len(pal_subgroups) if pal_subgroups else len(self._by_session)
                             return MemoryStats(
                                 total_entries=malla_count,
                                 by_project=by_project,
@@ -764,6 +764,15 @@ class AgentMemory:
                 raw["type"] = MemoryType(raw.get("type", 0))
             except ValueError:
                 raw["type"] = MemoryType.SEMANTIC
+            # Migrate the previous hierarchy keys before filtering, otherwise
+            # old JSON rows would silently lose partition/subgroup/recall.
+            for legacy, canonical in (
+                ("nodo", "partition"),
+                ("celda", "subgroup"),
+                ("fragmento_id", "recall_id"),
+            ):
+                if canonical not in raw and legacy in raw:
+                    raw[canonical] = raw.pop(legacy)
             # filter unknown keys for forward compat (extra enriched fields)
             allowed = {k for k in MemoryEntry.__dataclass_fields__}
             filtered = {k: v for k, v in raw.items() if k in allowed}

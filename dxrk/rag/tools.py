@@ -114,7 +114,7 @@ def RegisterTools(reg: Registry, rag: RAG) -> None:
                 name="codebase_query",
                 description=(
                     "Busca código relevante en el codebase usando búsqueda semántica. "
-                    "Retorna fragmentos de código con ruta, línea y score de similitud."
+                    "Retorna recalls de código con ruta, línea y score de similitud."
                 ),
                 input_schema=codebase_query_schema,
                 execute=codebase_query_execute,

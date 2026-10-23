@@ -11,7 +11,7 @@ from dxrk.memory.scoring import update_lapse, update_success
 
 @dataclass(frozen=True)
 class ReconsolidationState:
-    """Per-fragmento reconsolidation state."""
+    """Per-recall reconsolidation state."""
 
     labile_until: str = ""  # ISO timestamp when labile window closes
     reconsolidation_count: int = 0  # number of reconsolidation events
@@ -34,14 +34,14 @@ def _parse_iso(ts: str) -> datetime:
 
 
 def is_labile(state: ReconsolidationState) -> bool:
-    """Check if fragmento is in labile window."""
+    """Check if recall is in labile window."""
     if not state.labile_until:
         return False
     return datetime.now(UTC) < _parse_iso(state.labile_until)
 
 
 def mark_labile(state: ReconsolidationState) -> ReconsolidationState:
-    """Mark fragmento as labile for LABILE_WINDOW_HOURS (called on recall)."""
+    """Mark recall as labile for LABILE_WINDOW_HOURS (called on recall)."""
     labile_until = datetime.now(UTC) + timedelta(hours=LABILE_WINDOW_HOURS)
     return replace(state, labile_until=labile_until.isoformat())
 
@@ -54,7 +54,7 @@ def reconsolidate(
     outcome: float,  # 0..1, quality of recall
 ) -> tuple[ReconsolidationState, float, float, float]:
     """
-    Reconsolidate fragmento based on recall outcome.
+    Reconsolidate recall based on recall outcome.
 
     If within labile window:
       - outcome >= 0.7: strengthen (S * 1.1)

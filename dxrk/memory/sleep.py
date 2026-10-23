@@ -12,9 +12,9 @@ from .scoring import r_fsrs
 
 @dataclass(frozen=True)
 class SleepCandidate:
-    """A fragmento selected for sleep consolidation."""
+    """A recall selected for sleep consolidation."""
 
-    fragmento_id: str
+    recall_id: str
     priority: float
     reason: str  # "pe_high" | "stale" | "contradiction" | "near_dup"
 
@@ -36,9 +36,9 @@ def _now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
 
-def is_protected(fragmento: dict) -> bool:
-    """Check if fragmento is protected from sleep consolidation."""
-    meta = fragmento.get("metadata", {})
+def is_protected(recall: dict) -> bool:
+    """Check if recall is protected from sleep consolidation."""
+    meta = recall.get("metadata", {})
     if meta.get("pinned"):
         return True
     if meta.get("quarantined"):
@@ -55,9 +55,9 @@ def is_protected(fragmento: dict) -> bool:
     return False
 
 
-def avg_prediction_error(fragmento: dict) -> float:
+def avg_prediction_error(recall: dict) -> float:
     """Compute average prediction error from ledger."""
-    ledger = fragmento.get("metadata", {}).get("score_ledger", [])
+    ledger = recall.get("metadata", {}).get("score_ledger", [])
     if not ledger:
         return 0.0
     pes: list[float] = [float(entry.get("pe", 0.0)) for entry in ledger if "pe" in entry]
@@ -66,10 +66,10 @@ def avg_prediction_error(fragmento: dict) -> float:
     return float(sum(abs(pe) for pe in pes) / len(pes))
 
 
-def count_supersedes(fragmento: dict) -> int:
+def count_supersedes(recall: dict) -> int:
     """Count superseded relations."""
     # Simple heuristic: superseded count in metadata
-    return int(fragmento.get("metadata", {}).get("superseded_count", 0))
+    return int(recall.get("metadata", {}).get("superseded_count", 0))
 
 
 def select_sleep_candidates(
@@ -91,13 +91,13 @@ def select_sleep_candidates(
     threshold = 0.1 if stress_active else 0.3
     candidates = []
 
-    for fragmento in malla.iter_fragmentos():
-        if is_protected(fragmento):
+    for recall in malla.iter_recalls():
+        if is_protected(recall):
             continue
 
-        pe_avg = avg_prediction_error(fragmento)
-        staleness = age_days(fragmento.get("metadata", {}).get("filed_at"))
-        contradiction = count_supersedes(fragmento)
+        pe_avg = avg_prediction_error(recall)
+        staleness = age_days(recall.get("metadata", {}).get("filed_at"))
+        contradiction = count_supersedes(recall)
 
         # Simulation-Selection priority (Lee & Jung 2025)
         priority = (
@@ -110,7 +110,7 @@ def select_sleep_candidates(
             reason = classify_reason(pe_avg, staleness, contradiction)
             candidates.append(
                 SleepCandidate(
-                    fragmento_id=fragmento["id"],
+                    recall_id=recall["id"],
                     priority=priority,
                     reason=reason,
                 )
@@ -120,7 +120,7 @@ def select_sleep_candidates(
 
 
 def classify_reason(pe_avg: float, staleness: float, contradiction: int) -> str:
-    """Classify why this fragmento was selected."""
+    """Classify why this recall was selected."""
     if contradiction > 0:
         return "contradiction"
     if pe_avg > 0.2:
@@ -146,20 +146,20 @@ def age_days(filed_at: str | None) -> float:
 def consolidate_candidate(malla, candidate: SleepCandidate) -> dict:
     """
     Consolidation CA3→CA1:
-    1. Replay: re-evaluate the fragmento against corpus
+    1. Replay: re-evaluate the recall against corpus
     2. Integrate: update S/D with PE
     3. Prune: if near-duplicate, merge
     """
-    fragmento = malla.get_fragmento(candidate.fragmento_id)
-    if not fragmento or "document" not in fragmento:
+    recall = malla.get_recall(candidate.recall_id)
+    if not recall or "document" not in recall:
         return {"status": "not_found"}
 
-    meta = fragmento.get("metadata", {})
-    if is_protected(fragmento):
+    meta = recall.get("metadata", {})
+    if is_protected(recall):
         return {"status": "protected"}
 
     # NREM phase: replay (re-evaluate)
-    pe = avg_prediction_error(fragmento)
+    pe = avg_prediction_error(recall)
 
     # Apply consolidation based on reason
     if candidate.reason == "near_dup":
@@ -196,7 +196,7 @@ def consolidate_candidate(malla, candidate: SleepCandidate) -> dict:
     )
 
     # Persist
-    malla.update_fragmento(candidate.fragmento_id, metadata=new_meta)
+    malla.update_recall(candidate.recall_id, metadata=new_meta)
 
     return {"status": "consolidated", "pe": pe, "S": s_new, "D": d_new}
 
@@ -206,29 +206,29 @@ def reorganize_candidate(malla, candidate: SleepCandidate) -> dict:
     REM phase: reorganize representations.
     Merge near-duplicates (>0.85 similarity).
     """
-    fragmento = malla.get_fragmento(candidate.fragmento_id)
-    if not fragmento or "document" not in fragmento:
+    recall = malla.get_recall(candidate.recall_id)
+    if not recall or "document" not in recall:
         return {"status": "not_found"}
 
-    meta = fragmento.get("metadata", {})
-    if is_protected(fragmento):
+    meta = recall.get("metadata", {})
+    if is_protected(recall):
         return {"status": "protected"}
 
-    # Find near-duplicates in same nodo
-    nodo = meta.get("nodo", "")
-    celda = meta.get("celda", "")
-    doc = fragmento["document"]
+    # Find near-duplicates in same partition
+    partition = meta.get("partition", "")
+    subgroup = meta.get("subgroup", "")
+    doc = recall["document"]
 
     # Simple text similarity (could use embeddings in future)
-    # For now, merge if same nodo/celda and very similar content
-    for other in malla.iter_fragmentos():
-        if other["id"] == candidate.fragmento_id:
+    # For now, merge if same partition/subgroup and very similar content
+    for other in malla.iter_recalls():
+        if other["id"] == candidate.recall_id:
             continue
         if is_protected(other):
             continue
-        if other.get("metadata", {}).get("nodo") != nodo:
+        if other.get("metadata", {}).get("partition") != partition:
             continue
-        if other.get("metadata", {}).get("celda") != celda:
+        if other.get("metadata", {}).get("subgroup") != subgroup:
             continue
 
         other_doc = other.get("document", "")
@@ -239,11 +239,11 @@ def reorganize_candidate(malla, candidate: SleepCandidate) -> dict:
         sim = jaccard_similarity(doc, other_doc)
         if sim > 0.85:
             # Merge: keep higher S, combine content
-            winner = candidate.fragmento_id if meta.get("S", 1.0) >= other["metadata"].get("S", 1.0) else other["id"]
-            loser = other["id"] if winner == candidate.fragmento_id else candidate.fragmento_id
+            winner = candidate.recall_id if meta.get("S", 1.0) >= other["metadata"].get("S", 1.0) else other["id"]
+            loser = other["id"] if winner == candidate.recall_id else candidate.recall_id
 
             # Mark loser as superseded
-            malla.supersede_fragmento(loser, winner)
+            malla.supersede_recall(loser, winner)
             return {"status": "merged", "winner": winner, "loser": loser, "sim": sim}
 
     return {"status": "no_merge"}
@@ -353,13 +353,13 @@ def sleep_cycle(
 
 def reconsolidate_labile(malla) -> int:
     """
-    Reconsolidate fragmentos in labile state (accessed within 6h but not reconsolidated).
+    Reconsolidate recalls in labile state (accessed within 6h but not reconsolidated).
     """
     count = 0
-    for fragmento in malla.iter_fragmentos():
-        if is_protected(fragmento):
+    for recall in malla.iter_recalls():
+        if is_protected(recall):
             continue
-        meta = fragmento.get("metadata", {})
+        meta = recall.get("metadata", {})
         labile_until = meta.get("labile_until")
         if not labile_until:
             continue
@@ -369,7 +369,7 @@ def reconsolidate_labile(malla) -> int:
                 # Labile window expired without reconsolidation → soft decay
                 new_meta = dict(meta)
                 new_meta["S"] = meta.get("S", 1.0) * 0.9
-                malla.update_fragmento(fragmento["id"], metadata=new_meta)
+                malla.update_recall(recall["id"], metadata=new_meta)
                 count += 1
         except Exception:
             pass

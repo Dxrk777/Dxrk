@@ -6,48 +6,48 @@ from __future__ import annotations
 from dxrk.memory.confidence import (
     adjusted_uncertainty,
     confidence_from_retrievability,
-    find_related_fragmentos,
+    find_related_recalls,
     propagate_confidence,
 )
 
 
-def make_fragmento(did: str, nodo: str, celda: str, quarantined: bool = False):
-    """Create a fragmento object for testing."""
+def make_recall(did: str, partition: str, subgroup: str, quarantined: bool = False):
+    """Create a recall object for testing."""
     return {
         "id": did,
         "quarantined": quarantined,
-        "metadata": {"nodo": nodo, "celda": celda},
+        "metadata": {"partition": partition, "subgroup": subgroup},
     }
 
 
 class TestConfidencePropagation:
     def test_propagate_zero_depth(self) -> None:
         """Zero depth returns base confidence."""
-        get_fragmento = lambda x: None
-        iter_fragmentos = lambda: []
-        result = propagate_confidence(get_fragmento, iter_fragmentos, "d1", 0.8, max_depth=0)
+        get_recall = lambda x: None
+        iter_recalls = lambda: []
+        result = propagate_confidence(get_recall, iter_recalls, "d1", 0.8, max_depth=0)
         assert result.propagated_confidence == 0.8
         assert result.depth_reached == 0
 
     def test_propagate_no_related(self) -> None:
-        """No related fragmentos returns base confidence."""
-        get_fragmento = lambda x: None
-        iter_fragmentos = lambda: []
-        result = propagate_confidence(get_fragmento, iter_fragmentos, "d1", 0.8, max_depth=2)
+        """No related recalls returns base confidence."""
+        get_recall = lambda x: None
+        iter_recalls = lambda: []
+        result = propagate_confidence(get_recall, iter_recalls, "d1", 0.8, max_depth=2)
         assert result.propagated_confidence == 0.8
         assert result.related_count == 0
 
     def test_propagate_single_related(self) -> None:
-        """Single related fragmento increases confidence."""
-        fragmentos = {
-            "d1": make_fragmento("d1", "w1", "r1"),
-            "d2": make_fragmento("d2", "w1", "r1"),
+        """Single related recall increases confidence."""
+        recalls = {
+            "d1": make_recall("d1", "w1", "r1"),
+            "d2": make_recall("d2", "w1", "r1"),
         }
-        get_fragmento = lambda x: fragmentos.get(x)
-        iter_fragmentos = lambda: list(fragmentos.values())
+        get_recall = lambda x: recalls.get(x)
+        iter_recalls = lambda: list(recalls.values())
 
-        result = propagate_confidence(get_fragmento, iter_fragmentos, "d1", 0.5, max_depth=1)
-        # sim = 0.5 (nodo) + 0.3 (celda) = 0.8
+        result = propagate_confidence(get_recall, iter_recalls, "d1", 0.5, max_depth=1)
+        # sim = 0.5 (partition) + 0.3 (subgroup) = 0.8
         # propagated = 0.5 * (1 + 0.8 * 0.5) = 0.5 * 1.4 = 0.7
         # final = min(1.0, 0.5 + 0.7) = 1.0 (capped)
         assert result.propagated_confidence == 1.0
@@ -82,44 +82,44 @@ class TestConfidencePropagation:
                     conf = confidence_from_retrievability(meta)
                     assert 0.0 <= conf <= 1.0
 
-    def test_find_related_same_nodo_celda(self) -> None:
-        """Find related fragmentos in same nodo/celda."""
-        fragmentos = {
-            "d1": make_fragmento("d1", "w1", "r1"),
-            "d2": make_fragmento("d2", "w1", "r1"),
-            "d3": make_fragmento("d3", "w2", "r2"),
+    def test_find_related_same_partition_subgroup(self) -> None:
+        """Find related recalls in same partition/subgroup."""
+        recalls = {
+            "d1": make_recall("d1", "w1", "r1"),
+            "d2": make_recall("d2", "w1", "r1"),
+            "d3": make_recall("d3", "w2", "r2"),
         }
-        get_fragmento = lambda x: fragmentos.get(x)
-        iter_fragmentos = lambda: list(fragmentos.values())
+        get_recall = lambda x: recalls.get(x)
+        iter_recalls = lambda: list(recalls.values())
 
-        related_found = find_related_fragmentos(get_fragmento, iter_fragmentos, "d1")
+        related_found = find_related_recalls(get_recall, iter_recalls, "d1")
         assert len(related_found) == 1
         assert related_found[0][0] == "d2"
-        assert related_found[0][1] >= 0.5  # nodo match
+        assert related_found[0][1] >= 0.5  # partition match
 
     def test_find_related_excludes_quarantined(self) -> None:
-        """Quarantined fragmentos excluded from related."""
-        fragmentos = {
-            "d1": make_fragmento("d1", "w1", "r1"),
-            "d2": make_fragmento("d2", "w1", "r1", quarantined=True),
+        """Quarantined recalls excluded from related."""
+        recalls = {
+            "d1": make_recall("d1", "w1", "r1"),
+            "d2": make_recall("d2", "w1", "r1", quarantined=True),
         }
-        get_fragmento = lambda x: fragmentos.get(x)
-        iter_fragmentos = lambda: list(fragmentos.values())
+        get_recall = lambda x: recalls.get(x)
+        iter_recalls = lambda: list(recalls.values())
 
-        related_found = find_related_fragmentos(get_fragmento, iter_fragmentos, "d1")
+        related_found = find_related_recalls(get_recall, iter_recalls, "d1")
         assert len(related_found) == 0
 
     def test_propagation_decay_per_depth(self) -> None:
         """Propagation decays with depth."""
-        fragmentos = {
-            "d1": make_fragmento("d1", "w1", "r1"),
-            "d2": make_fragmento("d2", "w1", "r1"),
-            "d3": make_fragmento("d3", "w1", "r1"),
+        recalls = {
+            "d1": make_recall("d1", "w1", "r1"),
+            "d2": make_recall("d2", "w1", "r1"),
+            "d3": make_recall("d3", "w1", "r1"),
         }
-        get_fragmento = lambda x: fragmentos.get(x)
-        iter_fragmentos = lambda: list(fragmentos.values())
+        get_recall = lambda x: recalls.get(x)
+        iter_recalls = lambda: list(recalls.values())
 
-        result = propagate_confidence(get_fragmento, iter_fragmentos, "d1", 0.5, max_depth=2, decay_per_depth=0.5)
+        result = propagate_confidence(get_recall, iter_recalls, "d1", 0.5, max_depth=2, decay_per_depth=0.5)
         # BFS from d1 finds d2,d3 at depth 1; each of those finds the other two at depth 2
         # But visited set prevents revisiting d1
         # Total unique related found = 6 (d2,d3 from d1; d1,d3 from d2; d1,d2 from d3)

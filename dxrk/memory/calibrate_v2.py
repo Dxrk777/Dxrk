@@ -14,14 +14,14 @@ from .scoring import r_fsrs
 from .thompson import ThompsonConfig, select_evaluation_candidates
 
 CALIBRATION_DIR = ".calibration"
-CALIBRATION_FILE = "{tenant}_{nodo}.json"
-GLOBAL_CALIBRATION_FILE = "global_{nodo}.json"
+CALIBRATION_FILE = "{tenant}_{partition}.json"
+GLOBAL_CALIBRATION_FILE = "global_{partition}.json"
 SCHEMA_VERSION = 3
 
 
 @dataclass(frozen=True)
 class CalibrationParams:
-    """Calibrated FSRS parameters for a tenant+nodo or global nodo."""
+    """Calibrated FSRS parameters for a tenant+partition or global partition."""
 
     a: float = 1.5  # growth rate
     b: float = 0.2  # stability decay
@@ -32,7 +32,7 @@ class CalibrationParams:
     calibrated_at: str = ""
     schema_version: int = SCHEMA_VERSION
     tenant: str = ""  # "" = global
-    nodo: str = ""
+    partition: str = ""
     n_queries: int = 0  # number of queries used for calibration
 
 
@@ -50,25 +50,25 @@ def _calibration_dir(malla_path: Path) -> Path:
     return cal_dir
 
 
-def _tenant_nodo_path(malla_path: Path, tenant: str, nodo: str) -> Path:
-    """Get path for tenant+nodo calibration file."""
+def _tenant_partition_path(malla_path: Path, tenant: str, partition: str) -> Path:
+    """Get path for tenant+partition calibration file."""
     if tenant:
-        filename = f"{tenant}_{nodo}.json"
+        filename = f"{tenant}_{partition}.json"
     else:
-        filename = f"{nodo}.json"
+        filename = f"{partition}.json"
     return _calibration_dir(malla_path) / filename
 
 
-def _global_nodo_path(malla_path: Path, nodo: str) -> Path:
-    """Get path for global nodo calibration file."""
-    return _calibration_dir(malla_path) / GLOBAL_CALIBRATION_FILE.format(nodo=nodo)
+def _global_partition_path(malla_path: Path, partition: str) -> Path:
+    """Get path for global partition calibration file."""
+    return _calibration_dir(malla_path) / GLOBAL_CALIBRATION_FILE.format(partition=partition)
 
 
-def load_calibration(malla_path: Path, tenant: str, nodo: str) -> CalibrationParams:
+def load_calibration(malla_path: Path, tenant: str, partition: str) -> CalibrationParams:
     """Load calibration from JSON file with fallback chain."""
-    # 1. Try tenant+nodo specific
+    # 1. Try tenant+partition specific
     if tenant:
-        path = _tenant_nodo_path(malla_path, tenant, nodo)
+        path = _tenant_partition_path(malla_path, tenant, partition)
         if path.exists():
             try:
                 data = json.loads(path.read_text())
@@ -76,8 +76,8 @@ def load_calibration(malla_path: Path, tenant: str, nodo: str) -> CalibrationPar
             except Exception:
                 pass
 
-    # 2. Fallback to global nodo
-    path = _global_nodo_path(malla_path, nodo)
+    # 2. Fallback to global partition
+    path = _global_partition_path(malla_path, partition)
     if path.exists():
         try:
             data = json.loads(path.read_text())
@@ -92,9 +92,9 @@ def load_calibration(malla_path: Path, tenant: str, nodo: str) -> CalibrationPar
 def save_calibration(malla_path: Path, params: CalibrationParams) -> None:
     """Save calibration to JSON file (0o600)."""
     if params.tenant:
-        path = _tenant_nodo_path(malla_path, params.tenant, params.nodo)
+        path = _tenant_partition_path(malla_path, params.tenant, params.partition)
     else:
-        path = _global_nodo_path(malla_path, params.nodo)
+        path = _global_partition_path(malla_path, params.partition)
 
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(asdict(params), indent=2))
@@ -103,7 +103,7 @@ def save_calibration(malla_path: Path, params: CalibrationParams) -> None:
 
 def evaluate_recall_at_k(
     malla,
-    nodo: str,
+    partition: str,
     params: CalibrationParams,
     k: int = 10,
     sample_size: int = 50,
@@ -112,28 +112,28 @@ def evaluate_recall_at_k(
     Evaluate recall@k using given FSRS parameters.
 
     Simulates queries against the malla and measures how often
-    the correct fragmento is in top-k.
+    the correct recall is in top-k.
     """
-    fragmentos = [d for d in malla.iter_fragmentos() if d.get("metadata", {}).get("nodo") == nodo]
-    if len(fragmentos) < 2:
+    recalls = [d for d in malla.iter_recalls() if d.get("metadata", {}).get("partition") == partition]
+    if len(recalls) < 2:
         return 0.0
 
     # Sample queries
     import random
 
-    queries = random.sample(fragmentos, min(sample_size, len(fragmentos)))
+    queries = random.sample(recalls, min(sample_size, len(recalls)))
     hits = 0
 
-    for q_fragmento in queries:
-        q_id = q_fragmento["id"]
-        q_fragmento.get("metadata", {})
-        q_doc = q_fragmento.get("document", "")
+    for q_recall in queries:
+        q_id = q_recall["id"]
+        q_recall.get("metadata", {})
+        q_doc = q_recall.get("document", "")
         if not q_doc:
             continue
 
-        # Score all fragmentos with these params
+        # Score all recalls with these params
         scored = []
-        for d in fragmentos:
+        for d in recalls:
             if d["id"] == q_id:
                 continue
             meta = d.get("metadata", {})
@@ -153,9 +153,9 @@ def evaluate_recall_at_k(
     return hits / len(queries) if queries else 0.0
 
 
-def calibrate_nodo(
+def calibrate_partition(
     malla,
-    nodo: str,
+    partition: str,
     tenant: str = "",
     qieo_config: QIEOConfig | None = None,
     thompson_config: ThompsonConfig | None = None,
@@ -163,16 +163,16 @@ def calibrate_nodo(
     objective_samples: int = 30,
 ) -> CalibrationParams:
     """
-    Calibrate FSRS parameters for a tenant+nodo using QIEO + Thompson Sampling.
+    Calibrate FSRS parameters for a tenant+partition using QIEO + Thompson Sampling.
 
     Process:
     1. Thompson Sampling selects evaluation candidates (explore/exploit)
     2. QIEO optimizes parameters to maximize recall@k on candidates
-    3. Save calibrated params (tenant+nodo or global)
+    3. Save calibrated params (tenant+partition or global)
 
     Args:
         malla: DxrkMemory instance
-        nodo: nodo name to calibrate
+        partition: partition name to calibrate
         tenant: tenant identifier (empty = global)
         qieo_config: QIEO configuration
         thompson_config: Thompson Sampling configuration
@@ -193,11 +193,11 @@ def calibrate_nodo(
     if not candidate_ids:
         return DEFAULT_PARAMS
 
-    # Get candidate fragmentos
+    # Get candidate recalls
     candidates = []
-    for fragmento in malla.iter_fragmentos():
-        if fragmento["id"] in candidate_ids:
-            candidates.append(fragmento)
+    for recall in malla.iter_recalls():
+        if recall["id"] in candidate_ids:
+            candidates.append(recall)
 
     if len(candidates) < 2:
         return DEFAULT_PARAMS
@@ -211,9 +211,9 @@ def calibrate_nodo(
             c=c,
             pe_lambda=pe_lambda,
             tenant=tenant,
-            nodo=nodo,
+            partition=partition,
         )
-        return evaluate_recall_at_k(malla, nodo, test_params, k=objective_k, sample_size=objective_samples)
+        return evaluate_recall_at_k(malla, partition, test_params, k=objective_k, sample_size=objective_samples)
 
     # Bounds for parameters (based on FSRS literature)
     bounds = [
@@ -237,7 +237,7 @@ def calibrate_nodo(
         calibrated_at=datetime.now(UTC).isoformat(),
         schema_version=SCHEMA_VERSION,
         tenant=tenant,
-        nodo=nodo,
+        partition=partition,
         n_queries=len(candidates),
     )
 
@@ -245,33 +245,33 @@ def calibrate_nodo(
     return result
 
 
-def get_calibration_params(malla_path: Path, tenant: str, nodo: str) -> CalibrationParams:
-    """Get calibration params for a tenant+nodo (load from file or defaults)."""
-    return load_calibration(malla_path, tenant, nodo)
+def get_calibration_params(malla_path: Path, tenant: str, partition: str) -> CalibrationParams:
+    """Get calibration params for a tenant+partition (load from file or defaults)."""
+    return load_calibration(malla_path, tenant, partition)
 
 
-def list_calibrated_nodos(malla_path: Path) -> list[str]:
-    """List nodos that have calibration files."""
+def list_calibrated_partitions(malla_path: Path) -> list[str]:
+    """List partitions that have calibration files."""
     cal_dir = malla_path / CALIBRATION_DIR
     if not cal_dir.exists():
         return []
     return [f.stem for f in cal_dir.glob("*.json")]
 
 
-def get_calibration_chain(malla_path: Path, tenant: str, nodo: str) -> list[CalibrationParams]:
+def get_calibration_chain(malla_path: Path, tenant: str, partition: str) -> list[CalibrationParams]:
     """Get the full fallback chain of calibration params."""
     chain = []
 
-    # Tenant+nodo
+    # Tenant+partition
     if tenant:
-        tenant_nodo = load_calibration(malla_path, tenant, nodo)
-        if tenant_nodo != DEFAULT_PARAMS:
-            chain.append(tenant_nodo)
+        tenant_partition = load_calibration(malla_path, tenant, partition)
+        if tenant_partition != DEFAULT_PARAMS:
+            chain.append(tenant_partition)
 
-    # Global nodo
-    global_nodo = load_calibration(malla_path, "", nodo)
-    if global_nodo != DEFAULT_PARAMS:
-        chain.append(global_nodo)
+    # Global partition
+    global_partition = load_calibration(malla_path, "", partition)
+    if global_partition != DEFAULT_PARAMS:
+        chain.append(global_partition)
 
     # Default
     chain.append(DEFAULT_PARAMS)
@@ -318,6 +318,6 @@ def merge_calibrations(chain: list[CalibrationParams], alpha: float = 0.7) -> Ca
         calibrated_at=datetime.now(UTC).isoformat(),
         schema_version=SCHEMA_VERSION,
         tenant=chain[0].tenant,
-        nodo=chain[0].nodo,
+        partition=chain[0].partition,
         n_queries=sum(c.n_queries for c in chain),
     )

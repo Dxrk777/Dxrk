@@ -12,7 +12,7 @@ import warnings
 from . import malla as _malla
 from .backend import MallaNotFoundError, MallaRef
 from .malla import *  # noqa: F403
-from .types import FragmentoRecord as GlobuloRecord  # noqa: F401 (public legacy alias)
+from .types import RecallRecord as GlobuloRecord  # noqa: F401 (public legacy alias)
 
 warnings.warn(
     "dxrk.memory.sangre is deprecated; import from dxrk.memory.malla instead",

@@ -23,11 +23,11 @@ from dxrk.memory.sleep import (
 )
 
 
-def make_fragmento(did: str, nodo: str = "w", celda: str = "r", **kwargs):
-    """Create a mock fragmento for testing."""
+def make_recall(did: str, partition: str = "w", subgroup: str = "r", **kwargs):
+    """Create a mock recall for testing."""
     meta = {
-        "nodo": nodo,
-        "celda": celda,
+        "partition": partition,
+        "subgroup": subgroup,
         "filed_at": (datetime.now(UTC) - timedelta(days=60)).isoformat(),
         "S": 10.0,
         "D": 5.0,
@@ -43,44 +43,44 @@ def make_fragmento(did: str, nodo: str = "w", celda: str = "r", **kwargs):
     }
 
 
-def make_malla(fragmentos: list):
-    """Create a mock malla with given fragmentos."""
+def make_malla(recalls: list):
+    """Create a mock malla with given recalls."""
     malla = Mock()
     malla._path = "/tmp/malla"
-    malla.iter_fragmentos.return_value = fragmentos
+    malla.iter_recalls.return_value = recalls
 
-    def get_fragmento(did):
-        for d in fragmentos:
+    def get_recall(did):
+        for d in recalls:
             if d["id"] == did:
                 return d
         return None
 
-    malla.get_fragmento.side_effect = get_fragmento
-    malla.supersede_fragmento = Mock()
-    malla.update_fragmento = Mock()
+    malla.get_recall.side_effect = get_recall
+    malla.supersede_recall = Mock()
+    malla.update_recall = Mock()
     return malla
 
 
 class TestSleep:
     def test_is_protected_pinned(self) -> None:
-        """Pinned fragmentos are protected."""
-        fragmento = make_fragmento("d1", pinned=True)
-        assert is_protected(fragmento) is True
+        """Pinned recalls are protected."""
+        recall = make_recall("d1", pinned=True)
+        assert is_protected(recall) is True
 
     def test_is_protected_quarantined(self) -> None:
-        """Quarantined fragmentos are protected."""
-        fragmento = make_fragmento("d1", quarantined=True)
-        assert is_protected(fragmento) is True
+        """Quarantined recalls are protected."""
+        recall = make_recall("d1", quarantined=True)
+        assert is_protected(recall) is True
 
     def test_is_protected_recent_valid_to(self) -> None:
         """Recent valid_to protects."""
-        fragmento = make_fragmento("d1", valid_to=(datetime.now(UTC) - timedelta(days=3)).isoformat())
-        assert is_protected(fragmento) is True
+        recall = make_recall("d1", valid_to=(datetime.now(UTC) - timedelta(days=3)).isoformat())
+        assert is_protected(recall) is True
 
     def test_is_protected_old_valid_to(self) -> None:
         """Old valid_to does not protect."""
-        fragmento = make_fragmento("d1", valid_to=(datetime.now(UTC) - timedelta(days=10)).isoformat())
-        assert is_protected(fragmento) is False
+        recall = make_recall("d1", valid_to=(datetime.now(UTC) - timedelta(days=10)).isoformat())
+        assert is_protected(recall) is False
 
     def test_age_days(self) -> None:
         """Age calculation works."""
@@ -97,12 +97,12 @@ class TestSleep:
 
     def test_select_sleep_candidates_basic(self) -> None:
         """Select candidates based on PE, staleness, contradiction."""
-        fragmentos = [
-            make_fragmento("d1", score_ledger=[{"pe": 0.5}]),  # high PE
-            make_fragmento("d2", score_ledger=[{"pe": 0.1}]),  # low PE
-            make_fragmento("d3", superseded_count=2),  # contradiction
+        recalls = [
+            make_recall("d1", score_ledger=[{"pe": 0.5}]),  # high PE
+            make_recall("d2", score_ledger=[{"pe": 0.1}]),  # low PE
+            make_recall("d3", superseded_count=2),  # contradiction
         ]
-        malla = make_malla(fragmentos)
+        malla = make_malla(recalls)
         candidates = select_sleep_candidates(malla, limit=10)
         assert len(candidates) >= 2  # d1 (PE) and d3 (contradiction)
         # d1 should have reason "pe_high"
@@ -110,16 +110,16 @@ class TestSleep:
         assert "pe_high" in reasons or "contradiction" in reasons
 
     def test_select_sleep_candidates_excludes_protected(self) -> None:
-        """Protected fragmentos excluded."""
-        fragmentos = [
-            make_fragmento("d1", pinned=True),
-            make_fragmento("d2", quarantined=True),
-            make_fragmento("d3", valid_to=(datetime.now(UTC) - timedelta(days=3)).isoformat()),
-            make_fragmento("d4"),  # normal
+        """Protected recalls excluded."""
+        recalls = [
+            make_recall("d1", pinned=True),
+            make_recall("d2", quarantined=True),
+            make_recall("d3", valid_to=(datetime.now(UTC) - timedelta(days=3)).isoformat()),
+            make_recall("d4"),  # normal
         ]
-        malla = make_malla(fragmentos)
+        malla = make_malla(recalls)
         candidates = select_sleep_candidates(malla, limit=10)
-        ids = [c.fragmento_id for c in candidates]
+        ids = [c.recall_id for c in candidates]
         assert "d1" not in ids
         assert "d2" not in ids
         assert "d3" not in ids
@@ -127,8 +127,8 @@ class TestSleep:
 
     def test_stress_lowers_threshold(self) -> None:
         """Stress mode lowers selection threshold."""
-        fragmentos = [make_fragmento(f"d{i}", score_ledger=[{"pe": 0.15}]) for i in range(5)]
-        malla = make_malla(fragmentos)
+        recalls = [make_recall(f"d{i}", score_ledger=[{"pe": 0.15}]) for i in range(5)]
+        malla = make_malla(recalls)
 
         normal = select_sleep_candidates(malla, limit=10, stress_active=False)
         stress = select_sleep_candidates(malla, limit=10, stress_active=True)
@@ -136,8 +136,8 @@ class TestSleep:
 
     def test_consolidate_candidate_success(self) -> None:
         """Consolidation updates S/D/rd on success."""
-        fragmento = make_fragmento("d1", S=10.0, D=5.0, rd=100.0, score_ledger=[{"pe": 0.1}])
-        malla = make_malla([fragmento])
+        recall = make_recall("d1", S=10.0, D=5.0, rd=100.0, score_ledger=[{"pe": 0.1}])
+        malla = make_malla([recall])
 
         candidate = SleepCandidate("d1", priority=1.0, reason="pe_high")
         result = consolidate_candidate(malla, candidate)
@@ -145,23 +145,23 @@ class TestSleep:
         assert result["status"] == "consolidated"
         assert "S" in result
         assert "D" in result
-        malla.update_fragmento.assert_called()
+        malla.update_recall.assert_called()
 
     def test_consolidate_candidate_lapse(self) -> None:
         """Consolidation applies lapse on negative PE."""
-        fragmento = make_fragmento("d1", S=10.0, D=5.0, rd=100.0, score_ledger=[{"pe": -0.3}])
-        malla = make_malla([fragmento])
+        recall = make_recall("d1", S=10.0, D=5.0, rd=100.0, score_ledger=[{"pe": -0.3}])
+        malla = make_malla([recall])
 
         candidate = SleepCandidate("d1", priority=1.0, reason="pe_high")
         result = consolidate_candidate(malla, candidate)
 
         assert result["status"] == "consolidated"
-        malla.update_fragmento.assert_called()
+        malla.update_recall.assert_called()
 
     def test_consolidate_protected_skipped(self) -> None:
-        """Protected fragmentos skipped."""
-        fragmento = make_fragmento("d1", pinned=True)
-        malla = make_malla([fragmento])
+        """Protected recalls skipped."""
+        recall = make_recall("d1", pinned=True)
+        malla = make_malla([recall])
 
         candidate = SleepCandidate("d1", priority=1.0, reason="pe_high")
         result = consolidate_candidate(malla, candidate)
@@ -171,11 +171,11 @@ class TestSleep:
     def test_reorganize_near_dup_merge(self) -> None:
         """Near-duplicates merged in REM."""
         doc = "hello world this is a test document about memory consolidation hello world this is a test document about memory consolidation"
-        fragmentos = [
-            make_fragmento("d1", document=doc, S=10.0),
-            make_fragmento("d2", document=doc + " extra", S=5.0),  # similar
+        recalls = [
+            make_recall("d1", document=doc, S=10.0),
+            make_recall("d2", document=doc + " extra", S=5.0),  # similar
         ]
-        malla = make_malla(fragmentos)
+        malla = make_malla(recalls)
 
         candidate = SleepCandidate("d1", priority=1.0, reason="near_dup")
         result = reorganize_candidate(malla, candidate)
@@ -183,16 +183,16 @@ class TestSleep:
         # Should merge - might not if similarity < 0.85, so check both
         assert result["status"] in ("merged", "no_merge")
         if result["status"] == "merged":
-            malla.supersede_fragmento.assert_called()
+            malla.supersede_recall.assert_called()
 
-    def test_reorganize_no_merge_different_nodo(self) -> None:
-        """Different nodo = no merge."""
+    def test_reorganize_no_merge_different_partition(self) -> None:
+        """Different partition = no merge."""
         doc = "hello world"
-        fragmentos = [
-            make_fragmento("d1", document=doc, nodo="w1"),
-            make_fragmento("d2", document=doc, nodo="w2"),
+        recalls = [
+            make_recall("d1", document=doc, partition="w1"),
+            make_recall("d2", document=doc, partition="w2"),
         ]
-        malla = make_malla(fragmentos)
+        malla = make_malla(recalls)
 
         candidate = SleepCandidate("d1", priority=1.0, reason="near_dup")
         result = reorganize_candidate(malla, candidate)
@@ -201,8 +201,8 @@ class TestSleep:
 
     def test_sleep_cycle_stats(self, tmp_path: Path) -> None:
         """Sleep cycle returns stats."""
-        fragmentos = [make_fragmento(f"d{i}", score_ledger=[{"pe": 0.5}]) for i in range(5)]
-        malla = make_malla(fragmentos)
+        recalls = [make_recall(f"d{i}", score_ledger=[{"pe": 0.5}]) for i in range(5)]
+        malla = make_malla(recalls)
         malla._path = str(tmp_path)
 
         stats = sleep_cycle(malla, limit=5, stress_active=False)
@@ -229,10 +229,10 @@ class TestSleep:
         assert loaded.total_consolidated == 0
 
     def test_reconsolidate_labile(self) -> None:
-        """Labile fragmentos decay if not reconsolidated."""
-        fragmento = make_fragmento("d1", labile_until=(datetime.now(UTC) - timedelta(hours=1)).isoformat())
-        malla = make_malla([fragmento])
+        """Labile recalls decay if not reconsolidated."""
+        recall = make_recall("d1", labile_until=(datetime.now(UTC) - timedelta(hours=1)).isoformat())
+        malla = make_malla([recall])
 
         count = reconsolidate_labile(malla)
         assert count == 1
-        malla.update_fragmento.assert_called()
+        malla.update_recall.assert_called()

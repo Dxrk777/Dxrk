@@ -3,7 +3,7 @@
 
 Covers the three legacy generations (palace/wing/room/drawer,
 crypt/chamber/relic and sangre/vena/capilar/globulo) migrating to
-malla/nodo/celda/fragmento, plus the deprecated module shims and the MCP
+malla/partition/subgroup/recall, plus the deprecated module shims and the MCP
 argument aliases.
 """
 
@@ -40,13 +40,13 @@ def _create_legacy_db(
         "crypt": ("crypt_id", "dxrk_relics", "wing", "chamber", "relic"),
         "sangre": ("sangre_id", "dxrk_globulos", "vena", "capilar", "globulo"),
     }
-    id_column, collection, nodo_key, celda_key, fragmento_key = columns[generation]
+    id_column, collection, partition_key, subgroup_key, recall_key = columns[generation]
     default_id = str(path.parent / generation)
     stored_id = legacy_id if legacy_id is not None else default_id
     extra_column = f",\n            {id_column} TEXT NOT NULL" if with_id_column else ""
     insert_columns = f", {id_column}" if with_id_column else ""
     insert_value = f", '{stored_id}'" if with_id_column else ""
-    metadata = json.dumps({nodo_key: "w", celda_key: "code", fragmento_key: "d-1"})
+    metadata = json.dumps({partition_key: "w", subgroup_key: "code", recall_key: "d-1"})
     conn = sqlite3.connect(path)
     conn.executescript(
         f"""
@@ -72,48 +72,48 @@ def _create_legacy_db(
 class TestMetadataNormalization:
     def test_renames_oldest_generation(self) -> None:
         meta = {"wing": "w", "room": "code", "drawer": "d-1"}
-        assert legacy.normalize_meta_keys(meta) == {"nodo": "w", "celda": "code", "fragmento": "d-1"}
+        assert legacy.normalize_meta_keys(meta) == {"partition": "w", "subgroup": "code", "recall": "d-1"}
 
     def test_renames_crypt_generation(self) -> None:
         meta = {"wing": "w", "chamber": "code", "relic": "d-1", "relic_id": "r"}
         assert legacy.normalize_meta_keys(meta) == {
-            "nodo": "w",
-            "celda": "code",
-            "fragmento": "d-1",
-            "fragmento_id": "r",
+            "partition": "w",
+            "subgroup": "code",
+            "recall": "d-1",
+            "recall_id": "r",
         }
 
     def test_renames_sangre_generation(self) -> None:
         meta = {"vena": "w", "capilar": "code", "globulo": "g", "globulo_ids": ["a"]}
         assert legacy.normalize_meta_keys(meta) == {
-            "nodo": "w",
-            "celda": "code",
-            "fragmento": "g",
-            "fragmento_ids": ["a"],
+            "partition": "w",
+            "subgroup": "code",
+            "recall": "g",
+            "recall_ids": ["a"],
         }
 
     def test_canonical_key_wins(self) -> None:
         meta = {
-            "nodo": "new",
+            "partition": "new",
             "wing": "old",
-            "celda": "new-celda",
-            "room": "old-celda",
-            "fragmento": "new-fragmento",
-            "drawer": "old-fragmento",
+            "subgroup": "new-subgroup",
+            "room": "old-subgroup",
+            "recall": "new-recall",
+            "drawer": "old-recall",
         }
         assert legacy.normalize_meta_keys(meta) == {
-            "nodo": "new",
-            "celda": "new-celda",
-            "fragmento": "new-fragmento",
+            "partition": "new",
+            "subgroup": "new-subgroup",
+            "recall": "new-recall",
         }
 
     def test_newest_legacy_generation_wins(self) -> None:
-        assert legacy.normalize_meta_keys({"wing": "old", "vena": "new"}) == {"nodo": "new"}
-        assert legacy.normalize_meta_keys({"room": "old", "chamber": "mid", "capilar": "new"}) == {"celda": "new"}
-        assert legacy.normalize_meta_keys({"drawer": "old", "relic": "mid", "globulo": "new"}) == {"fragmento": "new"}
+        assert legacy.normalize_meta_keys({"wing": "old", "vena": "new"}) == {"partition": "new"}
+        assert legacy.normalize_meta_keys({"room": "old", "chamber": "mid", "capilar": "new"}) == {"subgroup": "new"}
+        assert legacy.normalize_meta_keys({"drawer": "old", "relic": "mid", "globulo": "new"}) == {"recall": "new"}
 
     def test_no_legacy_keys_returns_same_object(self) -> None:
-        meta = {"nodo": "w", "celda": "code"}
+        meta = {"partition": "w", "subgroup": "code"}
         assert legacy.normalize_meta_keys(meta) is meta
 
     def test_ids_and_paths_are_normalized(self) -> None:
@@ -126,15 +126,15 @@ class TestMetadataNormalization:
             "sangre_path": "/s",
         }
         assert legacy.normalize_meta_keys(meta) == {
-            "nodo_id": "w1",
-            "celda_id": "c1",
-            "fragmento_ids": ["d1"],
+            "partition_id": "w1",
+            "subgroup_id": "c1",
+            "recall_ids": ["d1"],
             "malla": "p",
             "malla_path": "/s",
         }
 
     def test_parse_meta_exposes_canonical_keys(self) -> None:
-        assert _parse_meta('{"room": "code", "drawer": "d-1"}') == {"celda": "code", "fragmento": "d-1"}
+        assert _parse_meta('{"room": "code", "drawer": "d-1"}') == {"subgroup": "code", "recall": "d-1"}
 
     def test_parse_meta_bad_json_is_empty(self) -> None:
         assert _parse_meta("{not json") == {}
@@ -143,19 +143,19 @@ class TestMetadataNormalization:
 
 class TestWhereFallback:
     def test_canonical_filter_matches_three_generations(self) -> None:
-        sql, params = _where_to_sql({"nodo": "w"})
-        assert "nodo" in sql and "vena" in sql and "wing" in sql
-        assert params == ["w", "w", "w"]
+        sql, params = _where_to_sql({"partition": "w"})
+        assert "partition" in sql and "nodo" in sql and "vena" in sql and "wing" in sql
+        assert params == ["w", "w", "w", "w"]
 
     def test_legacy_filter_key_maps_to_canonical(self) -> None:
         sql, params = _where_to_sql({"room": "code"})
-        assert "celda" in sql and "room" in sql and "chamber" in sql and "capilar" in sql
-        assert params == ["code", "code", "code", "code"]
+        assert "subgroup" in sql and "celda" in sql and "room" in sql and "chamber" in sql and "capilar" in sql
+        assert params == ["code", "code", "code", "code", "code"]
 
     def test_in_operator_expands_every_spelling(self) -> None:
-        sql, params = _where_to_sql({"fragmento": {"$in": ["a", "b"]}})
-        assert "fragmento" in sql and "globulo" in sql and "relic" in sql and "drawer" in sql
-        assert params == ["a", "b", "a", "b", "a", "b", "a", "b"]
+        sql, params = _where_to_sql({"recall": {"$in": ["a", "b"]}})
+        assert "recall" in sql and "fragmento" in sql and "globulo" in sql and "relic" in sql and "drawer" in sql
+        assert params == ["a", "b"] * 5
 
     def test_non_legacy_key_stays_single_clause(self) -> None:
         sql, params = _where_to_sql({"source_file": "/tmp/x"})
@@ -163,13 +163,13 @@ class TestWhereFallback:
         assert params == ["/tmp/x"]
 
     def test_in_with_empty_list_matches_nothing(self) -> None:
-        assert _where_to_sql({"nodo": {"$in": []}}) == (" AND (1=0)", [])
+        assert _where_to_sql({"partition": {"$in": []}}) == (" AND (1=0)", [])
 
     def test_unsupported_operator_raises(self) -> None:
         from dxrk.memory.backend.base import UnsupportedFilterError
 
         with pytest.raises(UnsupportedFilterError):
-            _where_to_sql({"nodo": {"$gt": 1}})
+            _where_to_sql({"partition": {"$gt": 1}})
 
     def test_unsupported_top_level_operator_raises(self) -> None:
         from dxrk.memory.backend.base import UnsupportedFilterError
@@ -178,9 +178,9 @@ class TestWhereFallback:
             _where_to_sql({"$or": []})
 
     def test_and_list_and_non_dict_entries(self) -> None:
-        sql, params = _where_to_sql({"$and": [{"nodo": "w"}, "ignored", {"celda": "c"}]})
-        assert "nodo" in sql and "celda" in sql
-        assert params == ["w", "w", "w", "c", "c", "c", "c"]
+        sql, params = _where_to_sql({"$and": [{"partition": "w"}, "ignored", {"subgroup": "c"}]})
+        assert "partition" in sql and "subgroup" in sql
+        assert params == ["w"] * 4 + ["c"] * 5
 
     def test_and_without_conditions_is_empty(self) -> None:
         assert _where_to_sql({"$and": ["ignored"]}) == ("", [])
@@ -432,9 +432,9 @@ class TestCollectionMigration:
         )
         conn.commit()
         assert legacy.migrate_legacy_collections(conn) == 4
-        assert conn.execute("SELECT DISTINCT collection FROM embeddings").fetchall() == [("dxrk_fragmentos",)]
+        assert conn.execute("SELECT DISTINCT collection FROM embeddings").fetchall() == [("dxrk_recalls",)]
         assert conn.execute("SELECT COUNT(*) FROM collections WHERE name='dxrk_drawers'").fetchone()[0] == 0
-        assert conn.execute("SELECT id FROM collections").fetchall() == [("dxrk_fragmentos",)]
+        assert conn.execute("SELECT id FROM collections").fetchall() == [("dxrk_recalls",)]
         assert legacy.migrate_legacy_collections(conn) == 0
 
 
@@ -449,7 +449,7 @@ class TestMetadataMigration:
                 ('{"wing": "w", "drawer": "d"}',),
                 ('{"chamber": "code", "relic": "r"}',),
                 ('{"vena": "v", "capilar": "c", "globulo": "g"}',),
-                ('{"nodo": "already"}',),
+                ('{"partition": "already"}',),
                 ("{not json",),
                 ("[]",),
                 (None,),
@@ -458,11 +458,11 @@ class TestMetadataMigration:
         )
         assert legacy.migrate_legacy_metadata(conn) == 4
         rows = conn.execute("SELECT metadata FROM embeddings WHERE metadata IS NOT NULL AND metadata != ''").fetchall()
-        assert json.loads(rows[0][0]) == {"celda": "code"}
-        assert json.loads(rows[1][0]) == {"nodo": "w", "fragmento": "d"}
-        assert json.loads(rows[2][0]) == {"celda": "code", "fragmento": "r"}
-        assert json.loads(rows[3][0]) == {"nodo": "v", "celda": "c", "fragmento": "g"}
-        assert json.loads(rows[4][0]) == {"nodo": "already"}
+        assert json.loads(rows[0][0]) == {"subgroup": "code"}
+        assert json.loads(rows[1][0]) == {"partition": "w", "recall": "d"}
+        assert json.loads(rows[2][0]) == {"subgroup": "code", "recall": "r"}
+        assert json.loads(rows[3][0]) == {"partition": "v", "subgroup": "c", "recall": "g"}
+        assert json.loads(rows[4][0]) == {"partition": "already"}
         assert legacy.migrate_legacy_metadata(conn) == 0
 
     def test_rolls_back_on_sqlite_error(self) -> None:
@@ -486,7 +486,7 @@ class TestBackendIntegration:
         try:
             col = backend.get_collection(
                 malla=MallaRef(id=str(tmp_path), local_path=str(tmp_path)),
-                collection_name="dxrk_fragmentos",
+                collection_name="dxrk_recalls",
             )
             assert (tmp_path / "malla.db").is_file()
             assert not (tmp_path / db_name).exists()
@@ -495,9 +495,9 @@ class TestBackendIntegration:
             backend.close()
         assert got.ids == ["fragment-1"]
         meta = got.metadatas[0]
-        assert meta["nodo"] == "w"
-        assert meta["celda"] == "code"
-        assert meta["fragmento"] == "d-1"
+        assert meta["partition"] == "w"
+        assert meta["subgroup"] == "code"
+        assert meta["recall"] == "d-1"
         assert not any(
             key in meta for key in ("wing", "room", "drawer", "chamber", "relic", "vena", "capilar", "globulo")
         )
@@ -508,13 +508,13 @@ class TestBackendIntegration:
         try:
             col = backend.get_collection(
                 malla=MallaRef(id=str(tmp_path), local_path=str(tmp_path)),
-                collection_name="dxrk_fragmentos",
+                collection_name="dxrk_recalls",
             )
             got = col.get(ids=["fragment-1"], include=["metadatas"])
         finally:
             backend.close()
         assert got.ids == ["fragment-1"]
-        assert got.metadatas[0]["celda"] == "code"
+        assert got.metadatas[0]["subgroup"] == "code"
 
     def test_detect_accepts_legacy_filenames(self, tmp_path: Path) -> None:
         palace_db = tmp_path / "sqlite_palace.db"
@@ -551,7 +551,7 @@ class TestModuleShims:
         assert shim.mine_crypt_lock is malla_module.mine_malla_lock
         assert shim.CryptRef is MallaRef
         assert shim.CryptNotFoundError is MallaNotFoundError
-        assert shim.RelicRecord is malla_module.FragmentoRecord
+        assert shim.RelicRecord is malla_module.RecallRecord
         assert shim.migrate_legacy_crypt is legacy.migrate_legacy_malla
         assert shim.__getattr__("CryptConfig") is malla_module.MallaConfig
         assert shim.__getattr__("mine_malla_lock") is malla_module.mine_malla_lock
@@ -566,7 +566,7 @@ class TestModuleShims:
         assert shim.DxrkPalace is malla_module.DxrkMalla
         assert shim.PalaceConfig is malla_module.MallaConfig
         assert shim.mine_palace_lock is malla_module.mine_malla_lock
-        assert shim.DrawerRecord is malla_module.FragmentoRecord
+        assert shim.DrawerRecord is malla_module.RecallRecord
         assert shim.__getattr__("PalaceConfig") is malla_module.MallaConfig
         assert shim.__getattr__("mine_malla_lock") is malla_module.mine_malla_lock
         with pytest.raises(AttributeError):
@@ -582,7 +582,7 @@ class TestModuleShims:
         assert shim.mine_sangre_lock is malla_module.mine_malla_lock
         assert shim.SangreRef is MallaRef
         assert shim.SangreNotFoundError is MallaNotFoundError
-        assert shim.GlobuloRecord is malla_module.FragmentoRecord
+        assert shim.GlobuloRecord is malla_module.RecallRecord
         assert shim.__getattr__("SangreConfig") is malla_module.MallaConfig
         assert shim.__getattr__("mine_malla_lock") is malla_module.mine_malla_lock
         with pytest.raises(AttributeError):
@@ -590,37 +590,37 @@ class TestModuleShims:
 
     def test_legacy_method_aliases(self) -> None:
         cls = malla_module.DxrkMemory
-        assert cls.add_drawer is cls.add_fragmento
-        assert cls.get_drawer is cls.get_fragmento
-        assert cls.list_drawers is cls.list_fragmentos
-        assert cls.pin_drawer is cls.pin_fragmento
-        assert cls.quarantine_drawer is cls.quarantine_fragmento
-        assert cls.consolidate_drawers is cls.consolidate_fragmentos
-        assert cls.add_relic is cls.add_fragmento
-        assert cls.list_relics is cls.list_fragmentos
-        assert cls.add_globulo is cls.add_fragmento
-        assert cls.list_globulos is cls.list_fragmentos
-        assert cls.list_rooms is cls.list_celdas
-        assert cls.list_chambers is cls.list_celdas
-        assert cls.list_wings is cls.list_nodos
-        assert cls.wing_usage is cls.nodo_usage
-        assert cls.enforce_wing_cap is cls.enforce_nodo_cap
+        assert cls.add_drawer is cls.add_recall
+        assert cls.get_drawer is cls.get_recall
+        assert cls.list_drawers is cls.list_recalls
+        assert cls.pin_drawer is cls.pin_recall
+        assert cls.quarantine_drawer is cls.quarantine_recall
+        assert cls.consolidate_drawers is cls.consolidate_recalls
+        assert cls.add_relic is cls.add_recall
+        assert cls.list_relics is cls.list_recalls
+        assert cls.add_globulo is cls.add_recall
+        assert cls.list_globulos is cls.list_recalls
+        assert cls.list_rooms is cls.list_subgroups
+        assert cls.list_chambers is cls.list_subgroups
+        assert cls.list_wings is cls.list_partitions
+        assert cls.wing_usage is cls.partition_usage
+        assert cls.enforce_wing_cap is cls.enforce_partition_cap
 
 
 class TestMcpAliases:
     def test_normalize_every_legacy_generation(self) -> None:
         assert _normalize_tool_args(
             {"wing": "w", "room": "code", "drawer": "d", "drawer_id": "id", "drawer_ids": ["ids"]}
-        ) == {"nodo": "w", "celda": "code", "fragmento": "d", "fragmento_id": "id", "fragmento_ids": ["ids"]}
+        ) == {"partition": "w", "subgroup": "code", "recall": "d", "recall_id": "id", "recall_ids": ["ids"]}
         assert _normalize_tool_args(
             {"wing": "w", "chamber": "code", "relic": "r", "relic_id": "id", "relic_ids": ["ids"]}
-        ) == {"nodo": "w", "celda": "code", "fragmento": "r", "fragmento_id": "id", "fragmento_ids": ["ids"]}
+        ) == {"partition": "w", "subgroup": "code", "recall": "r", "recall_id": "id", "recall_ids": ["ids"]}
         assert _normalize_tool_args(
             {"vena": "v", "capilar": "c", "globulo": "g", "globulo_id": "id", "globulo_ids": ["ids"]}
-        ) == {"nodo": "v", "celda": "c", "fragmento": "g", "fragmento_id": "id", "fragmento_ids": ["ids"]}
+        ) == {"partition": "v", "subgroup": "c", "recall": "g", "recall_id": "id", "recall_ids": ["ids"]}
 
     def test_canonical_key_wins(self) -> None:
-        assert _normalize_tool_args({"room": "old", "celda": "new"}) == {"celda": "new"}
+        assert _normalize_tool_args({"room": "old", "subgroup": "new"}) == {"subgroup": "new"}
         assert _normalize_tool_args({"sangre": "old", "malla": "new"}) == {"malla": "new"}
 
     def test_path_aliases(self) -> None:
@@ -629,7 +629,7 @@ class TestMcpAliases:
         assert _normalize_tool_args({"sangre_path": "/s"}) == {"malla_path": "/s"}
 
     def test_no_alias_returns_copy(self) -> None:
-        args = {"nodo": "w"}
+        args = {"partition": "w"}
         normalized = _normalize_tool_args(args)
         assert normalized == args
         assert normalized is not args
@@ -641,9 +641,9 @@ class TestMcpAliases:
             calls.append(args)
             return {"ok": True}
 
-        monkeypatch.setitem(TOOL_HANDLERS, "dxrk_memory_list_celdas", stub)
-        assert _handle_tool("dxrk_memory_list_celdas", {"room": "code", "sangre": str(tmp_path)}) == {"ok": True}
-        assert calls[0]["celda"] == "code"
+        monkeypatch.setitem(TOOL_HANDLERS, "dxrk_memory_list_subgroups", stub)
+        assert _handle_tool("dxrk_memory_list_subgroups", {"room": "code", "sangre": str(tmp_path)}) == {"ok": True}
+        assert calls[0]["subgroup"] == "code"
         assert calls[0]["malla"] == str(tmp_path)
         assert "room" not in calls[0]
 
@@ -656,7 +656,7 @@ class TestMcpAliases:
             calls.append(malla_path)
             return {"ok": True}
 
-        monkeypatch.setitem(TOOL_HANDLERS, "dxrk_memory_list_celdas", stub)
+        monkeypatch.setitem(TOOL_HANDLERS, "dxrk_memory_list_subgroups", stub)
         response = _dispatch(
             {
                 "jsonrpc": "2.0",
@@ -674,8 +674,8 @@ class TestMcpAliases:
 
     def test_tool_names_are_stable(self) -> None:
         assert len(TOOLS) == 35
-        assert "dxrk_memory_add_fragmento" in TOOLS
-        assert "dxrk_memory_list_celdas" in TOOLS
+        assert "dxrk_memory_add_recall" in TOOLS
+        assert "dxrk_memory_list_subgroups" in TOOLS
         assert "dxrk_memory_add_drawer" not in TOOLS
         assert "dxrk_memory_add_globulo" not in TOOLS
 

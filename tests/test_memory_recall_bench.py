@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 """Smoke + regression net for the public recall benchmark.
 
-Pins ``benchmarks/bench_recall.py``: the corpus builds intact (60 fragmentos,
+Pins ``benchmarks/bench_recall.py``: the corpus builds intact (60 recalls,
 no dedupe collapse), every metric lands in [0, 1], and the published
 ordering holds (hybrid P@1 >= each ablation — the numbers in
 docs/benchmarks.md are measured from this code path).

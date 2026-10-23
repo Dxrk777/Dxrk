@@ -207,7 +207,7 @@ class TestRecordJudgment:
     def test_record_judgment_context(self) -> None:
         """Context is stored in introspection log."""
         state = MetacogState()
-        ctx = {"nodo": "test", "type": "code"}
+        ctx = {"partition": "test", "type": "code"}
         new_state = record_judgment(state, 0.7, 1.0, context=ctx)
         assert new_state.introspection_log[0]["context"] == ctx
 
@@ -238,12 +238,12 @@ class TestBiasDetection:
         """Category bias detected from context."""
         state = MetacogState()
         for _ in range(20):
-            state = record_judgment(state, 0.9, 0.0, context={"nodo": "code"})
+            state = record_judgment(state, 0.9, 0.0, context={"partition": "code"})
         for _ in range(20):
-            state = record_judgment(state, 0.5, 1.0, context={"nodo": "docs"})
+            state = record_judgment(state, 0.5, 1.0, context={"partition": "docs"})
         bias = detect_bias(state)
-        assert "nodo=code" in bias["category_bias"]
-        assert "nodo=docs" in bias["category_bias"]
+        assert "partition=code" in bias["category_bias"]
+        assert "partition=docs" in bias["category_bias"]
 
 
 class TestCalibrateConfidence:

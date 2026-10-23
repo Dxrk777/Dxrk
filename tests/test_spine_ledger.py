@@ -14,8 +14,8 @@ def _dm(tmp_path: Path, **kwargs):  # type: ignore[no-untyped-def]
     return dm
 
 
-DOC_A = "Ledger alpha fragmento with zephyrquinox content for lapse dynamics."
-DOC_B = "Ledger beta fragmento with quixoticbadger content for lapse dynamics."
+DOC_A = "Ledger alpha recall with zephyrquinox content for lapse dynamics."
+DOC_B = "Ledger beta recall with quixoticbadger content for lapse dynamics."
 
 
 def _raw_meta(dm, did: str) -> dict:  # type: ignore[no-untyped-def]
@@ -31,7 +31,7 @@ class TestRecordLapse:
 
         dm = _dm(tmp_path)
         try:
-            did = dm.add_fragmento("w", "r", DOC_A, "/a.md", 0)
+            did = dm.add_recall("w", "r", DOC_A, "/a.md", 0)
             # Lower rd off its 350 ceiling so the lapse bump is observable.
             col = dm._collection(create=False)
             seeded = dict(_raw_meta(dm, did))
@@ -53,10 +53,10 @@ class TestRecordLapse:
         finally:
             dm.close()
 
-    def test_missing_fragmento(self, tmp_path: Path) -> None:
+    def test_missing_recall(self, tmp_path: Path) -> None:
         dm = _dm(tmp_path)
         try:
-            assert dm.record_lapse("fragmento_missing") is False
+            assert dm.record_lapse("recall_missing") is False
         finally:
             dm.close()
 
@@ -65,7 +65,7 @@ class TestRecordLapse:
 
         dm = _dm(tmp_path)
         try:
-            did = dm.add_fragmento("w", "r", DOC_A, "/a.md", 0)
+            did = dm.add_recall("w", "r", DOC_A, "/a.md", 0)
             for _ in range(LEDGER_CAP + 5):
                 assert dm.record_lapse(did, reason="repeated") is True
             after = _raw_meta(dm, did)
@@ -83,9 +83,9 @@ class TestLapseHooks:
 
         dm = _dm(tmp_path)
         try:
-            old = dm.add_fragmento("w", "r", DOC_A, "/a.md", 0)
+            old = dm.add_recall("w", "r", DOC_A, "/a.md", 0)
             s0 = float(_raw_meta(dm, old)["S"])
-            dm.add_fragmento("w", "r", DOC_B, "/b.md", 0, supersedes=old)
+            dm.add_recall("w", "r", DOC_B, "/b.md", 0, supersedes=old)
             meta = _raw_meta(dm, old)
             assert meta.get("valid_to")
             assert float(meta["S"]) < s0
@@ -100,9 +100,9 @@ class TestLapseHooks:
     def test_forget_path_lapses_row(self, tmp_path: Path) -> None:
         dm = _dm(tmp_path)
         try:
-            did = dm.add_fragmento("w", "r", DOC_A, "/a.md", 0)
+            did = dm.add_recall("w", "r", DOC_A, "/a.md", 0)
             s0 = float(_raw_meta(dm, did)["S"])
-            res = dm.forget(fragmento_ids=[did])
+            res = dm.forget(recall_ids=[did])
             assert res["soft_forgotten"] == 1
             meta = _raw_meta(dm, did)
             assert meta.get("forgotten") is True

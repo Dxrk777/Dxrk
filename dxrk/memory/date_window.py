@@ -2,12 +2,12 @@
 """Shared date-window parsing for read-path filters.
 
 DxrkMemory date windowing — stdlib only, wall-clock inclusive/exclusive.
-``since``/``before`` bounds are compared against fragmento ``filed_at`` metadata.
+``since``/``before`` bounds are compared against recall ``filed_at`` metadata.
 Semantics: ``since`` inclusive, ``before`` exclusive: ``[since, before)``.
 Comparison is wall-clock and timezone-naive. ``filed_at`` values are written
 as naive local ISO strings (``datetime.now().isoformat()``) or aware UTC;
 the offset is dropped for wall-clock comparison.
-A fragmento whose ``filed_at`` is missing or unparseable is EXCLUDED whenever
+A recall whose ``filed_at`` is missing or unparseable is EXCLUDED whenever
 a bound is active.
 """
 
@@ -21,7 +21,7 @@ def parse_date_bound(value: str | None = None, field_name: str = "date") -> date
 
     Accepts a date (``"2026-04-01"``), a naive timestamp
     (``"2026-04-01T09:30:00"``), or one carrying a ``Z``/``+HH:MM`` offset.
-    Returns a naive ``datetime`` for wall-clock comparison against fragmento
+    Returns a naive ``datetime`` for wall-clock comparison against recall
     ``filed_at`` values. Any timezone offset on the input is dropped so an
     aware bound never raises ``TypeError`` against a naive ``filed_at``.
     Blank / whitespace-only means "no filter" (``None``).
@@ -63,10 +63,10 @@ def parse_window(since: str | None = None, before: str | None = None) -> tuple[d
 def filed_at_in_window(
     filed_at: object, since_dt: datetime | None, before_dt: datetime | None
 ) -> bool:
-    """True if a fragmento's ``filed_at`` falls in ``[since, before)``.
+    """True if a recall's ``filed_at`` falls in ``[since, before)``.
 
     ``since`` is inclusive and ``before`` is exclusive.
-    A fragmento whose ``filed_at`` is missing or unparseable is EXCLUDED
+    A recall whose ``filed_at`` is missing or unparseable is EXCLUDED
     whenever a bound is active — a date-filtered result must never
     silently include rows of unknown age.
     """

@@ -479,8 +479,8 @@ def test_hooks_cli_helpers(tmp_path, monkeypatch):
     # _pid_alive
     assert hc._pid_alive(os.getpid()) is True
     assert hc._pid_alive(999999) is False
-    # _nodo_from_transcript_path
-    w = hc._nodo_from_transcript_path("")
+    # _partition_from_transcript_path
+    w = hc._partition_from_transcript_path("")
     assert isinstance(w, str)
     # ensure_hook_configs idempotent
     # patch home to tmp

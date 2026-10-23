@@ -22,14 +22,14 @@ Este documento es el **plan ejecutable** para llevar a Dxrk a **Top1 GitHub DX**
 
 ## 1. Benchmarks comparativos — DxrkMemory vs mem0 / Zep / Chroma
 
-### 1.1 Tabla honesta (corpus 1k–10k fragmentos, laptop M3 / Ubuntu 22.04, Python 3.13)
+### 1.1 Tabla honesta (corpus 1k–10k recalls, laptop M3 / Ubuntu 22.04, Python 3.13)
 
 | Métrica | **DxrkMemory 2.0** (stdlib-only) | **mem0** (`mem0ai`) | **Zep** (cloud) | **Chroma** (`chromadb` 1.x) |
 |---|---:|---:|---:|---:|
 | **Recall@10** (LOCOMO subset, 500 Q) | **0.72** BM25 + closet boost + date_window | 0.84 (dense + rerank) | 0.86 (temporal graph + embeddings) | 0.88 (HNSW `ef=200`) |
 | **Recall@10 + vector plugin futuro** | 0.83 (BM25 + optional `VectorBackend`) | — | — | — |
-| **Latencia `search` 1k fragmentos** (p50) | **35 ms** (FTS5 trigram + BM25) | 78 ms (sqlite+vector+openai local) | 140 ms + network | 12 ms (HNSW in-mem) |
-| **Latencia `search` 10k fragmentos** | 68 ms | 145 ms | 180 ms + network | 18 ms |
+| **Latencia `search` 1k recalls** (p50) | **35 ms** (FTS5 trigram + BM25) | 78 ms (sqlite+vector+openai local) | 140 ms + network | 12 ms (HNSW in-mem) |
+| **Latencia `search` 10k recalls** | 68 ms | 145 ms | 180 ms + network | 18 ms |
 | **Latencia `wake_up()` L0+L1 600–900 tok** | **<50 ms cold** (WAL, sin ONNX) | 220 ms (model warmup) | n/a (API call) | n/a |
 | **Cold start import** | **<80 ms** (`import dxrk.memory`) | 620 ms (onnx load) | 0 (sdk) | 480 ms |
 | **Install size** (deps extra) | **0 MB** (stdlib `sqlite3`) | ~180 MB (`chromadb` 120 + `onnx` 60) | 0 MB sdk / cloud cost | ~120 MB (`chromadb`) |
@@ -110,7 +110,7 @@ README actual ya es bueno (Release v0.1.2, License MIT, Python 3.13, Platform, C
 
 ```bash
 uv tool install git+https://github.com/Dxrk777/Dxrk.git  # 1) instala + detecta agentes
-dxrk memory mine --nodo dxrk --celda code   # 2) indexa el repo (800/100 chunk, FTS5 trigram+WAL)
+dxrk memory mine --partition dxrk --subgroup code   # 2) indexa el repo (800/100 chunk, FTS5 trigram+WAL)
 dxrk query "¿qué arquitectura decidimos para memoria?"  # 3) BM25 + Graph temporal, <50ms cold
 # Python
 from dxrk.memory import Malla

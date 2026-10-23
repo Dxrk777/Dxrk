@@ -36,7 +36,7 @@ class TenantInfo:
     path: str
     role: Literal["admin", "dev", "readonly"]
     is_current: bool
-    fragmento_count: int = 0
+    recall_count: int = 0
     last_accessed: str = ""
     size_mb: float = 0.0
 
@@ -77,14 +77,14 @@ def _get_tenant_details(tenant_id: str) -> TenantInfo:
     except Exception:
         path = f"~/.dxrk/tenants/{tenant_id}"
 
-    # Get fragmento count (quick estimate)
-    fragmento_count = 0
+    # Get recall count (quick estimate)
+    recall_count = 0
     try:
         from dxrk.memory.malla import DxrkMemory
 
         dm = DxrkMemory(str(Path(path).expanduser()))
         dm.init()
-        fragmento_count = dm.count()
+        recall_count = dm.count()
         dm.close()
     except Exception:
         pass
@@ -94,7 +94,7 @@ def _get_tenant_details(tenant_id: str) -> TenantInfo:
         path=path,
         role=role,
         is_current=is_current,
-        fragmento_count=fragmento_count,
+        recall_count=recall_count,
     )
 
 
@@ -256,7 +256,7 @@ class TenantCard(Static):
 
                 # Stats row
                 with Horizontal(classes="card-stats"):
-                    yield Label(f"󰈙 {self.info.fragmento_count} fragmentos", classes="stat-item")
+                    yield Label(f"󰈙 {self.info.recall_count} recuerdos", classes="stat-item")
                     if self.info.size_mb > 0:
                         yield Label(f"󰋊 {self.info.size_mb:.1f} MB", classes="stat-item")
                     if self.info.last_accessed:
@@ -363,7 +363,7 @@ class PreviewPane(Static):
 [bold]Tenant:[/] {info.id}
 [bold]Rol:[/] {role_icons.get(info.role, "")} {info.role.upper()}
 [bold]Ruta:[/] {info.path}
-[bold]Fragmentos:[/] {info.fragmento_count}
+[bold]Recalls:[/] {info.recall_count}
 [bold]Tamaño:[/] {info.size_mb:.1f} MB
 [bold]Estado:[/] {"󰄬 ACTIVO" if info.is_current else "󰚰 Inactivo"}
             """.strip()
@@ -702,7 +702,7 @@ class TenantSwitcherScreen(ModalScreen[None]):
                 "path": info.path,
                 "role": info.role,
                 "is_current": info.is_current,
-                "fragmento_count": info.fragmento_count,
+                "recall_count": info.recall_count,
                 "size_mb": info.size_mb,
             }
 
@@ -723,7 +723,7 @@ class TenantSwitcherScreen(ModalScreen[None]):
             "path": info.path,
             "role": info.role,
             "is_current": info.is_current,
-            "fragmento_count": info.fragmento_count,
+            "recall_count": info.recall_count,
             "size_mb": info.size_mb,
         }
         try:
@@ -817,7 +817,7 @@ class TenantSwitcherScreen(ModalScreen[None]):
                     path=details.get("path", ""),
                     role=details.get("role", "readonly"),
                     is_current=is_current,
-                    fragmento_count=details.get("fragmento_count", 0),
+                    recall_count=details.get("recall_count", 0),
                     size_mb=details.get("size_mb", 0.0),
                 ),
                 index=i,
@@ -890,7 +890,7 @@ class TenantSwitcherScreen(ModalScreen[None]):
                 tenant_path = details.get("path", "")
                 tenant_role = details.get("role", "readonly")
                 is_current = details.get("is_current", False)
-                fragmento_count = details.get("fragmento_count", 0)
+                recall_count = details.get("recall_count", 0)
                 size_mb = details.get("size_mb", 0.0)
 
                 info = TenantInfo(
@@ -898,7 +898,7 @@ class TenantSwitcherScreen(ModalScreen[None]):
                     path=tenant_path,
                     role=tenant_role,
                     is_current=is_current,
-                    fragmento_count=fragmento_count,
+                    recall_count=recall_count,
                     size_mb=size_mb,
                 )
                 preview.update_preview(info)

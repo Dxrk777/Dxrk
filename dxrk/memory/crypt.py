@@ -13,7 +13,7 @@ from . import malla as _malla
 from .backend import MallaNotFoundError, MallaRef
 from .legacy import migrate_legacy_crypt  # noqa: F401 (public legacy alias)
 from .malla import *  # noqa: F403
-from .types import FragmentoRecord as RelicRecord  # noqa: F401 (public legacy alias)
+from .types import RecallRecord as RelicRecord  # noqa: F401 (public legacy alias)
 
 warnings.warn(
     "dxrk.memory.crypt is deprecated; import from dxrk.memory.malla instead",

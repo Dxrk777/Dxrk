@@ -55,28 +55,28 @@ def thompson_select(
     return [item_id for item_id, _ in scored[:n]]
 
 
-def thompson_select_fragmentos(
+def thompson_select_recalls(
     malla,
     n: int = 10,
     min_visits: int = 0,
 ) -> list[str]:
     """
-    Select fragmentos for evaluation using Thompson Sampling.
+    Select recalls for evaluation using Thompson Sampling.
 
-    Prioritizes fragmentos with high uncertainty (low visits) for exploration,
-    while still exploiting known high-value fragmentos.
+    Prioritizes recalls with high uncertainty (low visits) for exploration,
+    while still exploiting known high-value recalls.
 
     Args:
         malla: DxrkMemory instance
-        n: number of fragmentos to select
+        n: number of recalls to select
         min_visits: minimum access_count_total to consider
 
     Returns:
-        List of fragmento_ids
+        List of recall_ids
     """
     candidates = []
-    for fragmento in malla.iter_fragmentos():
-        meta = fragmento.get("metadata", {})
+    for recall in malla.iter_recalls():
+        meta = recall.get("metadata", {})
         visits = meta.get("access_count_total", meta.get("access_count", 0))
         if visits < min_visits:
             continue
@@ -89,7 +89,7 @@ def thompson_select_fragmentos(
         misses = meta.get("irt_misses", 0)
         alpha = hits + 1.0
         beta = misses + 1.0
-        candidates.append((fragmento["id"], alpha, beta))
+        candidates.append((recall["id"], alpha, beta))
 
     return thompson_select(candidates, n)
 
@@ -127,8 +127,8 @@ def select_evaluation_candidates(
         config = ThompsonConfig()
 
     items = []
-    for fragmento in malla.iter_fragmentos():
-        meta = fragmento.get("metadata", {})
+    for recall in malla.iter_recalls():
+        meta = recall.get("metadata", {})
         if meta.get("quarantined") or meta.get("pinned"):
             continue
 
@@ -139,6 +139,6 @@ def select_evaluation_candidates(
         alpha = hits + config.alpha_prior
         beta = misses + config.beta_prior
 
-        items.append((fragmento["id"], alpha, beta))
+        items.append((recall["id"], alpha, beta))
 
     return thompson_select(items, n, config.exploration_bonus)

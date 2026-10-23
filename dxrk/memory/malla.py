@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""DxrkMemory orchestrator — malla of nodos / celdas / fragmentos.
+"""DxrkMemory orchestrator — malla of partitions / subgroups / recalls.
 
 Stdlib-only DxrkMemory engine with chunk logic.
 Provides DxrkMemory class plus pid-aware locks with re-mine honesty,
@@ -45,7 +45,11 @@ from .migrate import (
 from .migrate import SCHEMA_VERSION as SPINE_SCHEMA_VERSION
 from .scoring import parse_dt as _parse_dt
 from .scoring import r_fsrs, score_meta, update_lapse, update_success
-from .types import FragmentoRecord
+from .types import DxrkPartition, DxrkRecall, DxrkSubgroup
+
+# Public legacy aliases imported through this module by older call sites.
+RecallRecord = DxrkRecall
+FragmentoRecord = DxrkRecall
 from .vectors import cosine as _vec_cosine
 from .vectors import embed_counts as _vec_embed_counts
 
@@ -55,7 +59,7 @@ MIN_CHUNK_SIZE = 50
 NORMALIZE_VERSION = 2
 ENTITY_METADATA_LIMIT = 25
 ENTITY_EXTRACT_WINDOW = 5000
-FRAGMENTO_UPSERT_BATCH_SIZE = 500
+RECALL_UPSERT_BATCH_SIZE = 500
 MAX_FILE_SIZE = 500 * 1024 * 1024
 
 # ---------------------------------------------------------------------------
@@ -70,22 +74,22 @@ DEDUPE_SIM_THRESHOLD = 0.85
 # information (contradiction → supersede instead of overwrite).
 DEDUPE_OVERLAP_THRESHOLD = 0.7
 CONTRADICTION_OVERLAP_THRESHOLD = 0.5
-# Bounded default so sangres cannot grow unbounded: per-nodo cap enforced on
+# Bounded default so sangres cannot grow unbounded: per-partition cap enforced on
 # write (lowest rank_score evicted first, superseded rows first).
-DEFAULT_MAX_ENTRIES_PER_NODO = 1000
-# Upper bound on the nodo snapshot scanned per write for dedupe/cap.
-NODO_SNAPSHOT_LIMIT = 2000
-NODO_EVICT_SCAN = 1000
-# Upper bound on eviction passes per enforce_nodo_cap call: one pass only
-# sees cap + NODO_EVICT_SCAN rows, so each pass evicts at most
-# NODO_EVICT_SCAN rows — 100 passes converge nodos ~100k rows over cap.
-_NODO_CAP_MAX_PASSES = 100
+DEFAULT_MAX_ENTRIES_PER_PARTITION = 1000
+# Upper bound on the partition snapshot scanned per write for dedupe/cap.
+PARTITION_SNAPSHOT_LIMIT = 2000
+PARTITION_EVICT_SCAN = 1000
+# Upper bound on eviction passes per enforce_partition_cap call: one pass only
+# sees cap + PARTITION_EVICT_SCAN rows, so each pass evicts at most
+# PARTITION_EVICT_SCAN rows — 100 passes converge partitions ~100k rows over cap.
+_PARTITION_CAP_MAX_PASSES = 100
 # Bounded scan for status/budget and timeline views (usage counts flag
-# `truncated` when the nodo exceeds the scan so callers know the count is
+# `truncated` when the partition exceeds the scan so callers know the count is
 # a lower bound rather than silently exact).
 STATUS_SCAN_LIMIT = 10000
 TIMELINE_SCAN_LIMIT = 5000
-# Phase 3: extractive distillation bounds — the consolidated fragmento never
+# Phase 3: extractive distillation bounds — the consolidated recall never
 # exceeds these, no matter how many sources feed it.
 MAX_CONSOLIDATED_CHARS = 2000
 MAX_CONSOLIDATED_SENTENCES = 12
@@ -569,7 +573,7 @@ def _maybe_reap_stale_dxrk_locks(tenant_id: str | None = None) -> None:
 
 @contextlib.contextmanager
 def mine_lock(source_file: str, tenant_id: str | None = None) -> Generator[None]:
-    """Per-file lock to avoid duplicate fragmentos on concurrent mine.
+    """Per-file lock to avoid duplicate recalls on concurrent mine.
 
     Includes opportunistic orphan reap (throttled) and safe cleanup on release.
     Tenant-aware: uses tenant lock dir when tenant_id or DXRK_TENANT present.
@@ -673,7 +677,7 @@ def chunk_text(
     chunk_overlap: int = CHUNK_OVERLAP,
     min_chunk_size: int = MIN_CHUNK_SIZE,
 ) -> list[dict[str, object]]:
-    """Split content into fragmento-sized chunks (paragraph-aware)."""
+    """Split content into recall-sized chunks (paragraph-aware)."""
     if not isinstance(chunk_size, int) or chunk_size <= 0:
         raise ValueError(f"chunk_size must be positive int, got {chunk_size!r}")
     if not isinstance(chunk_overlap, int) or chunk_overlap < 0:
@@ -732,9 +736,9 @@ def _extract_entities(content: str) -> str:
     return ";".join(matched[:ENTITY_METADATA_LIMIT])
 
 
-def _build_fragmento_metadata(
-    nodo: str,
-    celda: str,
+def _build_recall_metadata(
+    partition: str,
+    subgroup: str,
     source_file: str,
     chunk_index: int,
     agent: str,
@@ -746,8 +750,8 @@ def _build_fragmento_metadata(
     importance: float | None = None,
 ) -> dict[str, object]:
     meta: dict[str, object] = {
-        "nodo": nodo,
-        "celda": celda,
+        "partition": partition,
+        "subgroup": subgroup,
         "source_file": source_file,
         "chunk_index": chunk_index,
         "added_by": agent,
@@ -766,7 +770,7 @@ def _build_fragmento_metadata(
             meta["importance"] = float(importance)
         except (TypeError, ValueError):
             pass
-    # RDU spine (schema v2): every new fragmento is born migrated — stability,
+    # RDU spine (schema v2): every new recall is born migrated — stability,
     # difficulty, rating deviation, integrity checksum, quarantine flags,
     # hash-chained score ledger, and capped access history.
     meta["schema_version"] = SPINE_SCHEMA_VERSION
@@ -945,7 +949,7 @@ def _one_line(text: str, max_chars: int) -> str:
 
 
 def _filed_before(filed_at: object, before_dt: datetime) -> bool:
-    """True when a fragmento's ``filed_at`` is strictly older than ``before``.
+    """True when a recall's ``filed_at`` is strictly older than ``before``.
 
     Missing/unparseable timestamps never match — forget-by-date must not
     erase rows of unknown age.
@@ -987,9 +991,9 @@ def classify_content_pair(new_text: str, old_text: str) -> str:
 
 
 def _is_dead_meta(meta: object) -> bool:
-    """True when a fragmento row is superseded, forgotten, or quarantined (history only).
+    """True when a recall row is superseded, forgotten, or quarantined (history only).
 
-    Dead rows stay on disk readable via ``get_fragmento`` but are invisible
+    Dead rows stay on disk readable via ``get_recall`` but are invisible
     to search / L1 / L2 — and must be invisible to the write-time
     lifecycle scan too, or re-added content duplicating a dead row would
     collapse back onto the dead id and stay invisible everywhere.
@@ -999,10 +1003,10 @@ def _is_dead_meta(meta: object) -> bool:
     return bool(meta.get("valid_to") or meta.get("forgotten") or meta.get("quarantined"))
 
 
-def _fail_closed_stub(fragmento_id: str, meta: dict[str, object]) -> dict[str, object]:
-    """Fail-closed view of a quarantined fragmento: flags + reason, no document."""
+def _fail_closed_stub(recall_id: str, meta: dict[str, object]) -> dict[str, object]:
+    """Fail-closed view of a quarantined recall: flags + reason, no document."""
     return {
-        "id": fragmento_id,
+        "id": recall_id,
         "metadata": meta,
         "quarantined": True,
         "quarantine_reason": str(meta.get("quarantine_reason") or ""),
@@ -1010,7 +1014,7 @@ def _fail_closed_stub(fragmento_id: str, meta: dict[str, object]) -> dict[str, o
 
 
 def _apply_access(meta: dict[str, object], now_iso: str) -> dict[str, object]:
-    """Apply the success outcome of a fragmento read (in place).
+    """Apply the success outcome of a recall read (in place).
 
     Appends ``access_history`` (capped), bumps ``access_count_total`` (and
     the legacy ``access_count``), grows stability via ``update_success``,
@@ -1090,14 +1094,16 @@ def _apply_quarantine(meta: dict[str, object], reason: str, now_iso: str) -> dic
     return meta
 
 
-def _nodo_snapshot(col: BaseCollection, nodo: str, limit: int = NODO_SNAPSHOT_LIMIT) -> list[dict[str, object]]:
-    """Fetch live nodo fragmentos as {id, doc, meta} for lifecycle scans (best-effort).
+def _partition_snapshot(
+    col: BaseCollection, partition: str, limit: int = PARTITION_SNAPSHOT_LIMIT
+) -> list[dict[str, object]]:
+    """Fetch live partition recalls as {id, doc, meta} for lifecycle scans (best-effort).
 
     Superseded/forgotten rows are excluded: they are history, never
     dedupe/supersede candidates.
     """
     try:
-        got = col.get(where={"nodo": nodo}, include=["documents", "metadatas"], limit=limit)
+        got = col.get(where={"partition": partition}, include=["documents", "metadatas"], limit=limit)
     except Exception:
         return []
     out: list[dict[str, object]] = []
@@ -1120,7 +1126,7 @@ def _best_lifecycle_candidate(
     """Highest-similarity live snapshot entry at/above DEDUPE_SIM_THRESHOLD.
 
     Dead (superseded/forgotten) candidates are skipped defensively: most
-    snapshots come pre-filtered from :func:`_nodo_snapshot`, but callers
+    snapshots come pre-filtered from :func:`_partition_snapshot`, but callers
     assembling their own lists (e.g. the mine ``running`` pool) must not
     match history rows either.
     """
@@ -1156,11 +1162,20 @@ def _best_lifecycle_candidate(
 @dataclass(slots=True)
 class MallaConfig:
     malla_path: str
-    nodo: str = "default"
+    partition: str = "default"
+
+    @property
+    def nodo(self) -> str:
+        """Deprecated alias for :attr:`partition`."""
+        return self.partition
+
+    @nodo.setter
+    def nodo(self, value: str) -> None:
+        self.partition = value
 
 
 class DxrkMemory:
-    """DxrkMemory — nodos / celdas / fragmentos orchestrator backed by SqliteBackend.
+    """DxrkMemory — partitions / subgroups / recalls orchestrator backed by SqliteBackend.
 
     Canonical name for the fused engine. ``Malla`` remains as alias for
     backward compatibility with earlier DxrkMemory drafts.
@@ -1172,11 +1187,15 @@ class DxrkMemory:
         malla_path: str | Path | None = None,
         backend: SqliteBackend | None = None,
         tenant_id: str | None = None,
-        max_entries_per_nodo: int = DEFAULT_MAX_ENTRIES_PER_NODO,
+        max_entries_per_partition: int = DEFAULT_MAX_ENTRIES_PER_PARTITION,
         kg_path: str | None = None,
         auto_kg: bool = True,
         agent: str = "dxrk",
+        *,
+        max_entries_per_nodo: int | None = None,
     ) -> None:
+        if max_entries_per_nodo is not None:
+            max_entries_per_partition = max_entries_per_nodo
         self.tenant_id: str = _effective_tenant_id(tenant_id)
         self.agent: str = agent
         resolved = _resolve_tenant_path(tenant_id, malla_path)
@@ -1190,15 +1209,15 @@ class DxrkMemory:
                 self.malla_path = str(Path(resolved).expanduser())
         self._backend = backend or SqliteBackend()
         self._ref = MallaRef(id=self.malla_path, local_path=self.malla_path)
-        # Phase 2 bounded default: 0 disables, >0 caps each nodo on write.
+        # Phase 2 bounded default: 0 disables, >0 caps each partition on write.
         try:
-            self._max_entries_per_nodo = int(max_entries_per_nodo)
+            self._max_entries_per_partition = int(max_entries_per_partition)
         except (TypeError, ValueError):
-            self._max_entries_per_nodo = DEFAULT_MAX_ENTRIES_PER_NODO
+            self._max_entries_per_partition = DEFAULT_MAX_ENTRIES_PER_PARTITION
         self._kg_path = kg_path
         self._auto_kg = bool(auto_kg)
 
-    def _collection(self, name: str = "dxrk_fragmentos", *, create: bool = True) -> BaseCollection:
+    def _collection(self, name: str = "dxrk_recalls", *, create: bool = True) -> BaseCollection:
         return self._backend.get_collection(malla=self._ref, collection_name=name, create=create)
 
     def init(self) -> None:
@@ -1210,10 +1229,10 @@ class DxrkMemory:
         # touch DB by getting collection
         self._collection(create=True)
 
-    def add_fragmento(
+    def add_recall(
         self,
-        nodo: str,
-        celda: str,
+        partition: str,
+        subgroup: str,
         content: str,
         source_file: str,
         chunk_index: int,
@@ -1223,20 +1242,20 @@ class DxrkMemory:
         supersedes: str | None = None,
         importance: float | None = None,
     ) -> str:
-        """Add a fragmento with Phase 2 write-time lifecycle.
+        """Add a recall with Phase 2 write-time lifecycle.
 
         - Same deterministic id → direct version update (idempotent re-mine).
-        - Explicit ``supersedes`` → old fragmento keeps its row with ``valid_to``
+        - Explicit ``supersedes`` → old recall keeps its row with ``valid_to``
           + ``superseded_by`` set (never overwritten); new row stamps
           ``supersedes``.
-        - Near-duplicate of a same-nodo fragmento (vector similarity >=
+        - Near-duplicate of a same-partition recall (vector similarity >=
           ``DEDUPE_SIM_THRESHOLD`` + token overlap >= 0.7 or containment) →
-          upsert-update the EXISTING fragmento (``last_seen``/``seen_count``
+          upsert-update the EXISTING recall (``last_seen``/``seen_count``
           bookkeeping) and return its id — no divergent copy.
         - Same bar but overlap < 0.5 → contradiction → supersede path above.
-        - Otherwise a normal insert. Nodo cap enforced on every new row.
+        - Otherwise a normal insert. Partition cap enforced on every new row.
         """
-        fragmento_id = FragmentoRecord.make_id(nodo, celda, source_file, chunk_index)
+        recall_id = DxrkRecall.make_id(partition, subgroup, source_file, chunk_index)
         try:
             source_mtime = os.path.getmtime(source_file)
         except OSError:
@@ -1245,13 +1264,13 @@ class DxrkMemory:
         col = self._collection(create=True)
         # 1) Same-id → direct version update (re-mine honesty path).
         try:
-            same = col.get(ids=[fragmento_id], include=["documents", "metadatas"])
+            same = col.get(ids=[recall_id], include=["documents", "metadatas"])
         except Exception:
             same = None
         if same is not None and same.ids:
-            meta = _build_fragmento_metadata(
-                nodo,
-                celda,
+            meta = _build_recall_metadata(
+                partition,
+                subgroup,
                 source_file,
                 chunk_index,
                 agent,
@@ -1261,15 +1280,15 @@ class DxrkMemory:
                 supersedes=supersedes,
                 importance=importance,
             )
-            col.upsert(documents=[content], ids=[fragmento_id], metadatas=[meta])  # type: ignore[arg-type]
-            self._enforce_nodo_cap(col, nodo)
-            return fragmento_id
+            col.upsert(documents=[content], ids=[recall_id], metadatas=[meta])  # type: ignore[arg-type]
+            self._enforce_partition_cap(col, partition)
+            return recall_id
         # 2) Explicit supersede signal → invalidate old, link new.
         if supersedes:
-            self._mark_superseded(col, supersedes, fragmento_id, now_iso)
-            meta = _build_fragmento_metadata(
-                nodo,
-                celda,
+            self._mark_superseded(col, supersedes, recall_id, now_iso)
+            meta = _build_recall_metadata(
+                partition,
+                subgroup,
                 source_file,
                 chunk_index,
                 agent,
@@ -1279,12 +1298,12 @@ class DxrkMemory:
                 supersedes=supersedes,
                 importance=importance,
             )
-            col.upsert(documents=[content], ids=[fragmento_id], metadatas=[meta])  # type: ignore[arg-type]
-            self._enforce_nodo_cap(col, nodo)
-            return fragmento_id
-        # 3) Lifecycle scan: dedupe hit updates the existing fragmento.
-        snapshot = _nodo_snapshot(col, nodo)
-        best, _sim = _best_lifecycle_candidate(snapshot, content, exclude_ids={fragmento_id})
+            col.upsert(documents=[content], ids=[recall_id], metadatas=[meta])  # type: ignore[arg-type]
+            self._enforce_partition_cap(col, partition)
+            return recall_id
+        # 3) Lifecycle scan: dedupe hit updates the existing recall.
+        snapshot = _partition_snapshot(col, partition)
+        best, _sim = _best_lifecycle_candidate(snapshot, content, exclude_ids={recall_id})
         if best is not None:
             verdict = classify_content_pair(content, str(best.get("doc", "")))
             if verdict == "duplicate":
@@ -1302,10 +1321,10 @@ class DxrkMemory:
                 return old_id
             if verdict == "contradiction":
                 old_id = str(best.get("id", ""))
-                self._mark_superseded(col, old_id, fragmento_id, now_iso)
-                meta = _build_fragmento_metadata(
-                    nodo,
-                    celda,
+                self._mark_superseded(col, old_id, recall_id, now_iso)
+                meta = _build_recall_metadata(
+                    partition,
+                    subgroup,
                     source_file,
                     chunk_index,
                     agent,
@@ -1315,13 +1334,13 @@ class DxrkMemory:
                     supersedes=old_id,
                     importance=importance,
                 )
-                col.upsert(documents=[content], ids=[fragmento_id], metadatas=[meta])  # type: ignore[arg-type]
-                self._enforce_nodo_cap(col, nodo)
-                return fragmento_id
+                col.upsert(documents=[content], ids=[recall_id], metadatas=[meta])  # type: ignore[arg-type]
+                self._enforce_partition_cap(col, partition)
+                return recall_id
         # 4) Distinct content → normal insert.
-        meta = _build_fragmento_metadata(
-            nodo,
-            celda,
+        meta = _build_recall_metadata(
+            partition,
+            subgroup,
             source_file,
             chunk_index,
             agent,
@@ -1330,9 +1349,9 @@ class DxrkMemory:
             chunk_total=chunk_total,
             importance=importance,
         )
-        col.upsert(documents=[content], ids=[fragmento_id], metadatas=[meta])  # type: ignore[arg-type]
-        self._enforce_nodo_cap(col, nodo)
-        return fragmento_id
+        col.upsert(documents=[content], ids=[recall_id], metadatas=[meta])  # type: ignore[arg-type]
+        self._enforce_partition_cap(col, partition)
+        return recall_id
 
     def _require_rbac(self, op: str) -> None:
         """Require RBAC op for current tenant and user.
@@ -1356,7 +1375,7 @@ class DxrkMemory:
     def _mark_superseded(
         col: BaseCollection, old_id: str, new_id: str, now_iso: str
     ) -> tuple[bool, dict[str, object] | None]:
-        """Stamp valid_to/superseded_by on a live fragmento.
+        """Stamp valid_to/superseded_by on a live recall.
 
         Returns ``(marked, pre_image)``: ``marked`` False when the row is
         absent or already dead; ``pre_image`` is the exact stored metadata
@@ -1391,20 +1410,22 @@ class DxrkMemory:
             return False, None
         return True, pre_image
 
-    def _enforce_nodo_cap_once(self, col: BaseCollection, nodo: str, cap: int) -> tuple[int, int, bool]:
+    def _enforce_partition_cap_once(self, col: BaseCollection, partition: str, cap: int) -> tuple[int, int, bool]:
         """One eviction pass; returns ``(evicted, remaining, scan_full)``.
 
         ``remaining`` is exact only when the scan window was NOT full
-        (``scan_full`` False); a full window means the nodo may hold more
+        (``scan_full`` False); a full window means the partition may hold more
         rows than observed. ``evicted == 0`` with ``remaining > cap``
         means no progress is possible (only pinned rows left, or every
         delete failed).
         """
         try:
-            got = col.get(where={"nodo": nodo}, include=["documents", "metadatas"], limit=cap + NODO_EVICT_SCAN)
+            got = col.get(
+                where={"partition": partition}, include=["documents", "metadatas"], limit=cap + PARTITION_EVICT_SCAN
+            )
         except Exception:
             return 0, 0, False
-        scan_full = len(got.ids) >= cap + NODO_EVICT_SCAN
+        scan_full = len(got.ids) >= cap + PARTITION_EVICT_SCAN
         if len(got.ids) <= cap:
             return 0, len(got.ids), scan_full
         over = len(got.ids) - cap
@@ -1421,75 +1442,75 @@ class DxrkMemory:
         candidates.sort(key=lambda t: (not t[0], t[1]))
         victims = [rid for _, _, rid in candidates[:over]]
         evicted = 0
-        for i in range(0, len(victims), FRAGMENTO_UPSERT_BATCH_SIZE):
+        for i in range(0, len(victims), RECALL_UPSERT_BATCH_SIZE):
             try:
-                col.delete(ids=victims[i : i + FRAGMENTO_UPSERT_BATCH_SIZE])
-                evicted += len(victims[i : i + FRAGMENTO_UPSERT_BATCH_SIZE])
+                col.delete(ids=victims[i : i + RECALL_UPSERT_BATCH_SIZE])
+                evicted += len(victims[i : i + RECALL_UPSERT_BATCH_SIZE])
             except Exception:
-                logger.debug("Nodo-cap eviction failed for %s", nodo, exc_info=True)
+                logger.debug("Partition-cap eviction failed for %s", partition, exc_info=True)
                 break
         return evicted, len(got.ids) - evicted, scan_full
 
-    def _enforce_nodo_cap(self, col: BaseCollection, nodo: str) -> int:
-        """Evict lowest-ranked fragmentos past the per-nodo cap (best-effort).
+    def _enforce_partition_cap(self, col: BaseCollection, partition: str) -> int:
+        """Evict lowest-ranked recalls past the per-partition cap (best-effort).
 
         Superseded/forgotten rows (``valid_to`` set) go first, then lowest
-        ``score_meta``. Pinned rows are NEVER evicted — when the nodo is
-        over cap and only pinned rows remain, nothing is deleted (the nodo
+        ``score_meta``. Pinned rows are NEVER evicted — when the partition is
+        over cap and only pinned rows remain, nothing is deleted (the partition
         stays over budget until unpinned). Returns rows deleted.
         Cap <= 0 disables (legacy unbounded).
 
         Loops until under budget or no progress: a single pass only sees
-        ``cap + NODO_EVICT_SCAN`` rows, so a massively-over-cap nodo needs
-        several passes to converge. Bounded by ``_NODO_CAP_MAX_PASSES``.
+        ``cap + PARTITION_EVICT_SCAN`` rows, so a massively-over-cap partition needs
+        several passes to converge. Bounded by ``_PARTITION_CAP_MAX_PASSES``.
         """
-        cap = self._max_entries_per_nodo
+        cap = self._max_entries_per_partition
         if cap <= 0:
             return 0
         total = 0
-        for _ in range(_NODO_CAP_MAX_PASSES):
-            evicted, remaining, scan_full = self._enforce_nodo_cap_once(col, nodo, cap)
+        for _ in range(_PARTITION_CAP_MAX_PASSES):
+            evicted, remaining, scan_full = self._enforce_partition_cap_once(col, partition, cap)
             total += evicted
             if evicted == 0:
                 break
             # A full scan window hides rows beyond it: the remaining
             # estimate is a lower bound, so keep passing until a pass
-            # sees the whole nodo under budget.
+            # sees the whole partition under budget.
             if not scan_full and remaining <= cap:
                 break
         return total
 
-    def enforce_nodo_cap(self, nodo: str) -> int:
-        """Public wrapper: enforce the per-nodo budget now, return rows evicted."""
-        return self._enforce_nodo_cap(self._collection(create=False), nodo)
+    def enforce_partition_cap(self, partition: str) -> int:
+        """Public wrapper: enforce the per-partition budget now, return rows evicted."""
+        return self._enforce_partition_cap(self._collection(create=False), partition)
 
     # ------------------------------------------------------------------
     # Phase 3: agent-managed memory — consolidate / forget / pin
     # ------------------------------------------------------------------
 
-    def consolidate_fragmentos(
+    def consolidate_recalls(
         self,
-        fragmento_ids: list[str],
-        nodo: str | None = None,
-        celda: str | None = None,
+        recall_ids: list[str],
+        partition: str | None = None,
+        subgroup: str | None = None,
         agent: str = "consolidate",
     ) -> dict[str, object]:
-        """Merge fragmentos into one distilled fragmento that supersedes them.
+        """Merge recalls into one distilled recall that supersedes them.
 
         Heuristic extractive distillation (no LLM, deterministic): pool the
         source texts, split into sentences, keep the highest-signal ones up
         to ``MAX_CONSOLIDATED_CHARS`` / ``MAX_CONSOLIDATED_SENTENCES``.
         Every live source is marked superseded (``valid_to`` +
-        ``superseded_by``, never overwritten); the new fragmento stamps
+        ``superseded_by``, never overwritten); the new recall stamps
         ``supersedes`` (first source) + ``consolidated_from`` (all sources).
 
-        Bypasses ``add_fragmento`` on purpose: the distillate is usually
+        Bypasses ``add_recall`` on purpose: the distillate is usually
         contained in a source, which the dedupe path would collapse back
-        onto the old row. The nodo cap is enforced after insert.
+        onto the old row. The partition cap is enforced after insert.
         """
-        ids = [str(d) for d in (fragmento_ids or []) if str(d).strip()]
+        ids = [str(d) for d in (recall_ids or []) if str(d).strip()]
         if len(ids) < 2:
-            raise ValueError(f"consolidate needs at least 2 fragmento ids, got {len(ids)}")
+            raise ValueError(f"consolidate needs at least 2 recall ids, got {len(ids)}")
         col = self._collection(create=True)
         try:
             got = col.get(ids=ids, include=["documents", "metadatas"])
@@ -1505,10 +1526,10 @@ class DxrkMemory:
             doc, meta = found[rid]
             live.append((rid, doc or "", meta if isinstance(meta, dict) else {}))
         if not live:
-            raise ValueError(f"consolidate found none of {len(ids)} fragmentos")
+            raise ValueError(f"consolidate found none of {len(ids)} recalls")
         first_meta = live[0][2]
-        target_nodo = nodo or str(first_meta.get("nodo") or "default")
-        target_celda = celda or str(first_meta.get("celda") or "general")
+        target_partition = partition or str(first_meta.get("partition") or "default")
+        target_subgroup = subgroup or str(first_meta.get("subgroup") or "general")
         distilled = _distill_sentences(
             [doc for _, doc, _ in live],
             max_chars=MAX_CONSOLIDATED_CHARS,
@@ -1517,7 +1538,7 @@ class DxrkMemory:
         if not distilled.strip():
             raise ValueError("consolidate produced empty distillate from sources")
         digest = hashlib.sha256("\n".join(sorted(ids)).encode()).hexdigest()[:12]
-        new_id = FragmentoRecord.make_id(target_nodo, target_celda, f"consolidated:{digest}", 0)
+        new_id = DxrkRecall.make_id(target_partition, target_subgroup, f"consolidated:{digest}", 0)
         now_iso = datetime.now(UTC).isoformat()
         for src_id, _, _ in live:
             if src_id != new_id:
@@ -1529,9 +1550,9 @@ class DxrkMemory:
                 importance = max(importance, imp)
             except (TypeError, ValueError):
                 pass
-        meta = _build_fragmento_metadata(
-            target_nodo,
-            target_celda,
+        meta = _build_recall_metadata(
+            target_partition,
+            target_subgroup,
             f"consolidated:{digest}",
             0,
             agent,
@@ -1544,11 +1565,11 @@ class DxrkMemory:
         meta["consolidated_from"] = [rid for rid, _, _ in live]
         meta["consolidated_at"] = now_iso
         col.upsert(documents=[distilled], ids=[new_id], metadatas=[meta])  # type: ignore[arg-type]
-        evicted = self._enforce_nodo_cap(col, target_nodo)
+        evicted = self._enforce_partition_cap(col, target_partition)
         return {
-            "fragmento_id": new_id,
-            "nodo": target_nodo,
-            "celda": target_celda,
+            "recall_id": new_id,
+            "partition": target_partition,
+            "subgroup": target_subgroup,
             "sources": len(live),
             "missing": missing,
             "chars": len(distilled),
@@ -1557,29 +1578,36 @@ class DxrkMemory:
 
     def forget(
         self,
-        fragmento_ids: list[str] | None = None,
-        nodo: str | None = None,
-        celda: str | None = None,
+        recall_ids: list[str] | None = None,
+        partition: str | None = None,
+        subgroup: str | None = None,
         before: str | None = None,
         hard: bool = False,
         include_kg: bool = False,
+        *,
+        nodo: str | None = None,
+        celda: str | None = None,
     ) -> dict[str, object]:
         """Scoped erase honoring the supersede model (never silent history loss).
 
         - Soft (default): stamp ``valid_to`` + ``forgotten`` on matched rows.
-          They stay on disk and readable via ``get_fragmento`` but vanish from
+          They stay on disk and readable via ``get_recall`` but vanish from
           search / L1 / L2 exactly like superseded rows.
-        - ``hard=True``: physically delete the fragmento rows.
+        - ``hard=True``: physically delete the recall rows.
         - KG history is NEVER deleted. ``include_kg=True`` supersedes (sets
           ``valid_to``, keeps rows) KG episodes for the matched source files;
           without it the KG is untouched.
-        - Scope is the union of ``fragmento_ids`` and the ``nodo``/``celda`` /
+        - Scope is the union of ``recall_ids`` and the ``partition``/``subgroup`` /
           ``before`` filter (``before`` = filed_at strictly older, exclusive).
           At least one selector is required.
         """
-        ids = [str(d) for d in (fragmento_ids or []) if str(d).strip()]
-        if not ids and nodo is None and before is None and celda is None:
-            raise ValueError("forget needs a scope: fragmento_ids, nodo/celda, or before")
+        if partition is None:
+            partition = nodo
+        if subgroup is None:
+            subgroup = celda
+        ids = [str(d) for d in (recall_ids or []) if str(d).strip()]
+        if not ids and partition is None and before is None and subgroup is None:
+            raise ValueError("forget needs a scope: recall_ids, partition/subgroup, or before")
         before_dt = parse_date_bound(before, "before") if before else None
         col = self._collection(create=False)
         matched: dict[str, dict[str, object]] = {}
@@ -1595,14 +1623,14 @@ class DxrkMemory:
                 for rid in ids:
                     if rid not in matched:
                         missing.append(rid)
-        if nodo is not None or celda is not None or before_dt is not None:
+        if partition is not None or subgroup is not None or before_dt is not None:
             where: dict[str, object] | None = None
-            if nodo is not None and celda is not None:
-                where = {"$and": [{"nodo": nodo}, {"celda": celda}]}
-            elif nodo is not None:
-                where = {"nodo": nodo}
-            elif celda is not None:
-                where = {"celda": celda}
+            if partition is not None and subgroup is not None:
+                where = {"$and": [{"partition": partition}, {"subgroup": subgroup}]}
+            elif partition is not None:
+                where = {"partition": partition}
+            elif subgroup is not None:
+                where = {"subgroup": subgroup}
             try:
                 scan = col.get(where=where, include=["metadatas"], limit=STATUS_SCAN_LIMIT)
             except Exception:
@@ -1618,10 +1646,10 @@ class DxrkMemory:
         deleted = 0
         if hard:
             victims = list(matched)
-            for i in range(0, len(victims), FRAGMENTO_UPSERT_BATCH_SIZE):
+            for i in range(0, len(victims), RECALL_UPSERT_BATCH_SIZE):
                 try:
-                    col.delete(ids=victims[i : i + FRAGMENTO_UPSERT_BATCH_SIZE])
-                    deleted += len(victims[i : i + FRAGMENTO_UPSERT_BATCH_SIZE])
+                    col.delete(ids=victims[i : i + RECALL_UPSERT_BATCH_SIZE])
+                    deleted += len(victims[i : i + RECALL_UPSERT_BATCH_SIZE])
                 except Exception:
                     logger.debug("Forget hard-delete failed", exc_info=True)
                     break
@@ -1665,11 +1693,11 @@ class DxrkMemory:
             "kg_superseded": kg_superseded,
         }
 
-    def pin_fragmento(self, fragmento_id: str) -> bool:
-        """Pin a fragmento: exempt from decay-eviction, always surfaced in wake_up."""
+    def pin_recall(self, recall_id: str) -> bool:
+        """Pin a recall: exempt from decay-eviction, always surfaced in wake_up."""
         col = self._collection(create=False)
         try:
-            got = col.get(ids=[fragmento_id], include=["documents", "metadatas"])
+            got = col.get(ids=[recall_id], include=["documents", "metadatas"])
         except Exception:
             return False
         if not got.ids:
@@ -1684,17 +1712,17 @@ class DxrkMemory:
         meta["pinned_at"] = datetime.now(UTC).isoformat()
         try:
             # upsert (replace), not update (merge) — merge would keep stale keys.
-            col.upsert(documents=[got.documents[0]], ids=[fragmento_id], metadatas=[meta])  # type: ignore[arg-type]
+            col.upsert(documents=[got.documents[0]], ids=[recall_id], metadatas=[meta])  # type: ignore[arg-type]
         except Exception:
-            logger.debug("Pin failed for %s", fragmento_id, exc_info=True)
+            logger.debug("Pin failed for %s", recall_id, exc_info=True)
             return False
         return True
 
-    def unpin_fragmento(self, fragmento_id: str) -> bool:
-        """Remove a fragmento pin; False when the fragmento does not exist."""
+    def unpin_recall(self, recall_id: str) -> bool:
+        """Remove a recall pin; False when the recall does not exist."""
         col = self._collection(create=False)
         try:
-            got = col.get(ids=[fragmento_id], include=["documents", "metadatas"])
+            got = col.get(ids=[recall_id], include=["documents", "metadatas"])
         except Exception:
             return False
         if not got.ids:
@@ -1708,24 +1736,24 @@ class DxrkMemory:
         try:
             # upsert (replace): base update() merges, which would resurrect
             # the popped pin keys from the stored row.
-            col.upsert(documents=[got.documents[0]], ids=[fragmento_id], metadatas=[meta])  # type: ignore[arg-type]
+            col.upsert(documents=[got.documents[0]], ids=[recall_id], metadatas=[meta])  # type: ignore[arg-type]
         except Exception:
-            logger.debug("Unpin failed for %s", fragmento_id, exc_info=True)
+            logger.debug("Unpin failed for %s", recall_id, exc_info=True)
             return False
         return True
 
-    def quarantine_fragmento(self, fragmento_id: str, reason: str = "") -> bool:
-        """Isolate a fragmento fail-closed: invisible everywhere, no document on read.
+    def quarantine_recall(self, recall_id: str, reason: str = "") -> bool:
+        """Isolate a recall fail-closed: invisible everywhere, no document on read.
 
         Upsert-replace preserving the document and the original ``valid_to``
         (quarantine never rewrites lineage). Quarantine is a lapse outcome,
         so stability collapses and the event lands in the score ledger.
         Idempotent for already-quarantined rows (first reason wins); False
-        when the fragmento does not exist.
+        when the recall does not exist.
         """
         col = self._collection(create=False)
         try:
-            got = col.get(ids=[fragmento_id], include=["documents", "metadatas"])
+            got = col.get(ids=[recall_id], include=["documents", "metadatas"])
         except Exception:
             return False
         if not got.ids:
@@ -1739,25 +1767,25 @@ class DxrkMemory:
         try:
             col.upsert(
                 documents=[doc if isinstance(doc, str) else ""],
-                ids=[fragmento_id],
+                ids=[recall_id],
                 metadatas=[meta],  # type: ignore[arg-type]
             )
         except Exception:
-            logger.debug("Quarantine failed for %s", fragmento_id, exc_info=True)
+            logger.debug("Quarantine failed for %s", recall_id, exc_info=True)
             return False
         return True
 
-    def unquarantine_fragmento(self, fragmento_id: str) -> bool:
-        """Release a fragmento from quarantine; False when it does not exist.
+    def unquarantine_recall(self, recall_id: str) -> bool:
+        """Release a recall from quarantine; False when it does not exist.
 
         Clears the flags (idempotent) but keeps the lapse dynamics — the
         stability lost to quarantine is learned, not refunded. The checksum
         still matches (quarantine never touches the document), so the next
-        read serves the fragmento live again.
+        read serves the recall live again.
         """
         col = self._collection(create=False)
         try:
-            got = col.get(ids=[fragmento_id], include=["documents", "metadatas"])
+            got = col.get(ids=[recall_id], include=["documents", "metadatas"])
         except Exception:
             return False
         if not got.ids:
@@ -1773,26 +1801,26 @@ class DxrkMemory:
         try:
             col.upsert(
                 documents=[doc if isinstance(doc, str) else ""],
-                ids=[fragmento_id],
+                ids=[recall_id],
                 metadatas=[meta],  # type: ignore[arg-type]
             )
         except Exception:
-            logger.debug("Unquarantine failed for %s", fragmento_id, exc_info=True)
+            logger.debug("Unquarantine failed for %s", recall_id, exc_info=True)
             return False
         return True
 
-    def record_lapse(self, fragmento_id: str, reason: str = "contradiction") -> bool:
-        """Apply a lapse outcome to a fragmento (contradiction / supersede / forget).
+    def record_lapse(self, recall_id: str, reason: str = "contradiction") -> bool:
+        """Apply a lapse outcome to a recall (contradiction / supersede / forget).
 
         Collapses stability, raises difficulty, bumps rd, and appends the
         event to the hash-chained score ledger; the row is replaced
         (document preserved). Time alone never moves S/D — this hook (and
         the supersede / forget / quarantine paths that share it) is the only
-        way stability falls. False when the fragmento does not exist.
+        way stability falls. False when the recall does not exist.
         """
         col = self._collection(create=False)
         try:
-            got = col.get(ids=[fragmento_id], include=["documents", "metadatas"])
+            got = col.get(ids=[recall_id], include=["documents", "metadatas"])
         except Exception:
             return False
         if not got.ids:
@@ -1804,34 +1832,34 @@ class DxrkMemory:
         try:
             col.upsert(
                 documents=[doc if isinstance(doc, str) else ""],
-                ids=[fragmento_id],
+                ids=[recall_id],
                 metadatas=[meta],  # type: ignore[arg-type]
             )
         except Exception:
-            logger.debug("Record-lapse failed for %s", fragmento_id, exc_info=True)
+            logger.debug("Record-lapse failed for %s", recall_id, exc_info=True)
             return False
         return True
 
-    def list_fragmentos(
+    def list_recalls(
         self,
-        nodo: str | None = None,
-        celda: str | None = None,
+        partition: str | None = None,
+        subgroup: str | None = None,
         limit: int = 20,
         include_quarantined: bool = False,
     ) -> list[dict[str, object]]:
-        """List fragmentos with nodo/celda filter; quarantined excluded by default.
+        """List recalls with partition/subgroup filter; quarantined excluded by default.
 
         Quarantined rows included via ``include_quarantined=True`` stay
         fail-closed (flags + reason, no document).
         """
         col = self._collection(create=False)
         where: dict[str, object] | None = None
-        if nodo and celda:
-            where = {"$and": [{"nodo": nodo}, {"celda": celda}]}
-        elif nodo:
-            where = {"nodo": nodo}
-        elif celda:
-            where = {"celda": celda}
+        if partition and subgroup:
+            where = {"$and": [{"partition": partition}, {"subgroup": subgroup}]}
+        elif partition:
+            where = {"partition": partition}
+        elif subgroup:
+            where = {"subgroup": subgroup}
         try:
             lim = max(1, int(limit))
         except (TypeError, ValueError):
@@ -1971,11 +1999,11 @@ class DxrkMemory:
         counters = self._read_spine_counters()
         return {"checksum_mismatches": counters.get("checksum_mismatches", 0)}
 
-    def nodo_usage(self, nodo: str) -> dict[str, object]:
-        """Current budget usage for one nodo: count vs cap + lifecycle mix."""
+    def partition_usage(self, partition: str) -> dict[str, object]:
+        """Current budget usage for one partition: count vs cap + lifecycle mix."""
         col = self._collection(create=False)
         try:
-            got = col.get(where={"nodo": nodo}, include=["metadatas"], limit=STATUS_SCAN_LIMIT)
+            got = col.get(where={"partition": partition}, include=["metadatas"], limit=STATUS_SCAN_LIMIT)
         except Exception:
             got = None
         count = 0
@@ -2000,9 +2028,9 @@ class DxrkMemory:
                     quarantined += 1
                 if not (isinstance(m.get("content_sha256"), str) and str(m.get("content_sha256")).strip()):
                     needs_rehash += 1
-        budget = self._max_entries_per_nodo
+        budget = self._max_entries_per_partition
         return {
-            "nodo": nodo,
+            "partition": partition,
             "count": count,
             "budget": budget,
             "remaining": max(0, budget - count) if budget > 0 else -1,
@@ -2017,22 +2045,22 @@ class DxrkMemory:
         }
 
     def budgets(self) -> dict[str, dict[str, object]]:
-        """Budget usage for every nodo (single bounded scan, grouped)."""
+        """Budget usage for every partition (single bounded scan, grouped)."""
         col = self._collection(create=False)
         try:
             got = col.get(include=["metadatas"], limit=STATUS_SCAN_LIMIT)
         except Exception:
             return {}
-        per_nodo: dict[str, dict[str, object]] = {}
+        per_partition: dict[str, dict[str, object]] = {}
         for meta in got.metadatas:
             m = meta if isinstance(meta, dict) else {}
-            w = m.get("nodo")
+            w = m.get("partition")
             if not isinstance(w, str) or not w:
                 continue
-            entry = per_nodo.setdefault(
+            entry = per_partition.setdefault(
                 w,
                 {
-                    "nodo": w,
+                    "partition": w,
                     "count": 0,
                     "pinned": 0,
                     "superseded": 0,
@@ -2052,21 +2080,21 @@ class DxrkMemory:
                 entry["quarantined"] = int(cast(Any, entry["quarantined"])) + 1
             if not (isinstance(m.get("content_sha256"), str) and str(m.get("content_sha256")).strip()):
                 entry["needs_rehash"] = int(cast(Any, entry["needs_rehash"])) + 1
-        budget = self._max_entries_per_nodo
-        for entry in per_nodo.values():
+        budget = self._max_entries_per_partition
+        for entry in per_partition.values():
             count = int(cast(Any, entry["count"]))
             entry["budget"] = budget
             entry["remaining"] = max(0, budget - count) if budget > 0 else -1
             entry["over"] = budget > 0 and count > budget
             entry["unbounded"] = budget <= 0
-        return per_nodo
+        return per_partition
 
     def status(self) -> dict[str, object]:
         """Malla-level spine status: integrity root, quarantine, rehash debt.
 
         - ``merkle_root``: sha256 over sorted non-empty ``content_sha256``
           (``""`` when nothing carries a checksum yet).
-        - ``quarantine_warning``: True when any fragmento is quarantined.
+        - ``quarantine_warning``: True when any recall is quarantined.
         - ``checksum_mismatches``: lifetime auto-quarantine events (sidecar).
         - ``needs_rehash``: rows without a usable checksum.
         """
@@ -2103,16 +2131,16 @@ class DxrkMemory:
         self,
         since: str | None = None,
         before: str | None = None,
-        nodo: str | None = None,
+        partition: str | None = None,
         limit: int = TIMELINE_DEFAULT_LIMIT,
     ) -> list[dict[str, object]]:
         """Cross-session episodic timeline: session summaries + KG file episodes + pins.
 
         One chronological (ascending) list of compact entries
-        ``{time, kind, summary, ref, nodo}`` where kind is
+        ``{time, kind, summary, ref, partition}`` where kind is
         ``session`` (hook_stop summaries, ``source_file=session:*``),
         ``file`` (KG episode per source_file+valid_from version), or ``pin``
-        (pinned fragmento / identity pin). Time filter reuses the
+        (pinned recall / identity pin). Time filter reuses the
         ``date_window [since, before)`` wall-clock semantics; output bounded
         to ``limit`` (clamped to ``TIMELINE_MAX_LIMIT``).
         """
@@ -2132,11 +2160,11 @@ class DxrkMemory:
         if got is not None:
             for rid, doc, meta in zip(got.ids, got.documents, got.metadatas):
                 m = meta if isinstance(meta, dict) else {}
-                # Quarantined fragmentos never surface in the timeline.
+                # Quarantined recalls never surface in the timeline.
                 if m.get("quarantined"):
                     continue
-                w = str(m.get("nodo") or "")
-                if nodo is not None and w != nodo:
+                w = str(m.get("partition") or "")
+                if partition is not None and w != partition:
                     continue
                 src = str(m.get("source_file") or "")
                 if src.startswith("session:"):
@@ -2151,7 +2179,7 @@ class DxrkMemory:
                             "kind": "session",
                             "summary": _one_line(doc or "", TIMELINE_SUMMARY_CHARS),
                             "ref": rid,
-                            "nodo": w,
+                            "partition": w,
                         }
                     )
                 elif m.get("pinned"):
@@ -2166,7 +2194,7 @@ class DxrkMemory:
                             "kind": "pin",
                             "summary": f"pinned: {_one_line(doc or '', TIMELINE_SUMMARY_CHARS - 8)}",
                             "ref": rid,
-                            "nodo": w,
+                            "partition": w,
                         }
                     )
         # KG file episodes (grouped per source_file + valid_from version).
@@ -2192,16 +2220,16 @@ class DxrkMemory:
                         continue
                     grouped.setdefault((src, vf), []).append(ep)
                 for (src, vf), eps in grouped.items():
-                    ep_nodo: str | None = None
-                    fragmento_ref = next(
-                        (str(e.get("source_fragmento_id") or "") for e in eps if e.get("source_fragmento_id")), ""
+                    ep_partition: str | None = None
+                    recall_ref = next(
+                        (str(e.get("source_recall_id") or "") for e in eps if e.get("source_recall_id")), ""
                     )
-                    if fragmento_ref and got is not None:
+                    if recall_ref and got is not None:
                         for rid, meta in zip(got.ids, got.metadatas):
-                            if rid == fragmento_ref and isinstance(meta, dict):
-                                ep_nodo = str(meta.get("nodo") or "") or None
+                            if rid == recall_ref and isinstance(meta, dict):
+                                ep_partition = str(meta.get("partition") or "") or None
                                 break
-                    if nodo is not None and ep_nodo != nodo:
+                    if partition is not None and ep_partition != partition:
                         continue
                     facts = sorted({f"{e.get('subject')} {e.get('predicate')} {e.get('object')}" for e in eps})
                     current = all(bool(e.get("current")) for e in eps)
@@ -2212,7 +2240,7 @@ class DxrkMemory:
                             "kind": "file",
                             "summary": summary[:TIMELINE_SUMMARY_CHARS],
                             "ref": src,
-                            "nodo": ep_nodo,
+                            "partition": ep_partition,
                             "current": current,
                         }
                     )
@@ -2221,10 +2249,10 @@ class DxrkMemory:
                     kg.close()  # type: ignore[attr-defined]
                 except Exception:
                     pass
-        # Identity pin (malla-level, nodo-agnostic — shown unless filtered).
+        # Identity pin (malla-level, partition-agnostic — shown unless filtered).
         pins = self._read_pins()
         ident = pins.get("identity")
-        if isinstance(ident, dict) and (nodo is None):
+        if isinstance(ident, dict) and (partition is None):
             pinned_at = ident.get("pinned_at")
             if isinstance(pinned_at, str) and pinned_at.strip():
                 if not bounds_active or filed_at_in_window(pinned_at, since_dt, before_dt):
@@ -2234,7 +2262,7 @@ class DxrkMemory:
                             "kind": "pin",
                             "summary": "pinned: L0 identity block",
                             "ref": "identity",
-                            "nodo": None,
+                            "partition": None,
                         }
                     )
         entries.sort(key=lambda e: str(e.get("time") or ""))
@@ -2267,14 +2295,14 @@ class DxrkMemory:
         kg: object,
         source_file: str,
         content: str,
-        fragmento_ids: list[str],
+        recall_ids: list[str],
     ) -> int:
         """Link entity_detector output to the KG: one episode per file version.
 
         Extracts candidates (>=3 mentions), diffs against the current episode
         for ``source_file``; identical sets are a no-op (idempotent re-mine),
         changed sets supersede the old episode via ``valid_to`` (never delete)
-        and open a new one with ``source_fragmento_id`` provenance. Returns the
+        and open a new one with ``source_recall_id`` provenance. Returns the
         number of triples added. Never raises — KG must not break mining.
         """
         try:
@@ -2291,7 +2319,7 @@ class DxrkMemory:
             now_iso = datetime.now(UTC).isoformat()
             kg.supersede_source(source_file, ended=now_iso)  # type: ignore[attr-defined]
             added = 0
-            first_fragmento = fragmento_ids[0] if fragmento_ids else None
+            first_recall = recall_ids[0] if recall_ids else None
             for name in names:
                 kg.add_triple(  # type: ignore[attr-defined]
                     name,
@@ -2299,7 +2327,7 @@ class DxrkMemory:
                     obj,
                     valid_from=now_iso,
                     source_file=source_file,
-                    source_fragmento_id=first_fragmento,
+                    source_recall_id=first_recall,
                     adapter_name="mine",
                 )
                 added += 1
@@ -2311,8 +2339,8 @@ class DxrkMemory:
     def mine(
         self,
         project_dir: str | Path,
-        nodo: str = "default",
-        celda: str = "general",
+        partition: str = "default",
+        subgroup: str = "general",
         agent: str = "dxrk",
         dry_run: bool = False,
     ) -> dict[str, object]:
@@ -2321,10 +2349,10 @@ class DxrkMemory:
         - Scans project via miner.scan_project (S_ISREG guard + gitignore)
         - For each file, uses mine_lock per file to avoid concurrent duplicate upserts
         - Reads file safely via O_NONBLOCK + S_ISREG (never blocks on FIFO)
-        - Stamps chunk_total on every fragmento so future file_already_mined can
+        - Stamps chunk_total on every recall so future file_already_mined can
           distinguish complete vs partial multi-batch mines (759b8f1 + 1654cd2).
         - Wraps multi-batch upsert in try/except that on failure deletes partial
-          fragmentos for that source_file and purges closets before re-raising,
+          recalls for that source_file and purges closets before re-raising,
           so next mine retries honestly (1654cd2).
         """
         # RBAC enforcement: require 'mine' op (write access)
@@ -2344,11 +2372,11 @@ class DxrkMemory:
             closets_col = self._collection(name="dxrk_closets", create=False)
         except Exception:
             closets_col = None
-        total_fragmentos = 0
+        total_recalls = 0
         files_mined = 0
         files_skipped = 0
-        fragmentos_deduped = 0
-        fragmentos_superseded = 0
+        recalls_deduped = 0
+        recalls_superseded = 0
         kg_triples = 0
         kg = None if dry_run else self._kg_or_none()
         try:
@@ -2375,32 +2403,32 @@ class DxrkMemory:
                     files_skipped += 1
                     continue
                 if dry_run:
-                    total_fragmentos += len(chunks)
+                    total_recalls += len(chunks)
                     files_mined += 1
                     continue
                 # Per-file lock (tenant-aware)
                 with mine_lock(source_file, tenant_id=self.tenant_id or None):
-                    # Nodo snapshot BEFORE the purge: other files' fragmentos inform
+                    # Partition snapshot BEFORE the purge: other files' recalls inform
                     # the Phase 2 lifecycle scan (same source_file excluded —
                     # its stale rows are about to be replaced wholesale).
                     snapshot = [
                         e
-                        for e in _nodo_snapshot(col, nodo)
+                        for e in _partition_snapshot(col, partition)
                         if str(cast(dict[str, object], e.get("meta", {})).get("source_file")) != source_file
                     ]
-                    # Purge stale fragmentos before re-inserting fresh chunks.
+                    # Purge stale recalls before re-inserting fresh chunks.
                     # If purge fails, abort this file and let next mine retry
                     # (leaves old mtime untouched so freshness check stays honest).
                     try:
                         col.delete(where={"source_file": source_file})
                     except Exception as exc:
-                        print(f"  ! [skip] {fp.name} stale-fragmento purge failed ({exc!r})", file=sys.stderr)
-                        logger.debug("Stale-fragmento purge failed for %s", source_file, exc_info=True)
+                        print(f"  ! [skip] {fp.name} stale-recall purge failed ({exc!r})", file=sys.stderr)
+                        logger.debug("Stale-recall purge failed for %s", source_file, exc_info=True)
                         files_skipped += 1
                         continue
                     chunk_total = len(chunks)
                     now_iso = datetime.now(UTC).isoformat()
-                    # Phase 2 partition: dedupe hits update the existing fragmento
+                    # Phase 2 partition: dedupe hits update the existing recall
                     # (no divergent copy), contradictions supersede it, the rest
                     # inserts fresh. `running` is frozen to OTHER files' rows:
                     # chunks of the same file are positional slices and must
@@ -2410,14 +2438,14 @@ class DxrkMemory:
                     batch_ids: list[str] = []
                     batch_metas: list[dict[str, object]] = []
                     supersede_marks: list[tuple[str, str, dict[str, object]]] = []  # (old,new,pre) for rollback
-                    file_fragmento_ids: list[str] = []
+                    file_recall_ids: list[str] = []
                     try:
                         for chunk in chunks:
                             _ci = chunk.get("chunk_index", 0)
                             ci = int(_ci) if isinstance(_ci, int) else int(str(_ci))  # type: ignore[arg-type]
-                            fragmento_id = FragmentoRecord.make_id(nodo, celda, source_file, ci)
+                            recall_id = DxrkRecall.make_id(partition, subgroup, source_file, ci)
                             text = str(chunk["content"])
-                            best, _sim = _best_lifecycle_candidate(running, text, exclude_ids={fragmento_id})
+                            best, _sim = _best_lifecycle_candidate(running, text, exclude_ids={recall_id})
                             if best is not None:
                                 verdict = classify_content_pair(text, str(best.get("doc", "")))
                                 if verdict == "duplicate":
@@ -2432,19 +2460,19 @@ class DxrkMemory:
                                         col.update(ids=[old_id], metadatas=[old_meta])
                                     except Exception:
                                         logger.debug("Mine dedupe touch failed for %s", old_id, exc_info=True)
-                                    fragmentos_deduped += 1
+                                    recalls_deduped += 1
                                     continue
                                 if verdict == "contradiction":
                                     old_id = str(best.get("id", ""))
-                                    marked, pre_image = self._mark_superseded(col, old_id, fragmento_id, now_iso)
+                                    marked, pre_image = self._mark_superseded(col, old_id, recall_id, now_iso)
                                     if marked and pre_image is not None:
-                                        supersede_marks.append((old_id, fragmento_id, pre_image))
+                                        supersede_marks.append((old_id, recall_id, pre_image))
                                     batch_docs.append(text)
-                                    batch_ids.append(fragmento_id)
+                                    batch_ids.append(recall_id)
                                     batch_metas.append(
-                                        _build_fragmento_metadata(
-                                            nodo,
-                                            celda,
+                                        _build_recall_metadata(
+                                            partition,
+                                            subgroup,
                                             source_file,
                                             ci,
                                             agent,
@@ -2454,15 +2482,15 @@ class DxrkMemory:
                                             supersedes=old_id,
                                         )
                                     )
-                                    fragmentos_superseded += 1
-                                    file_fragmento_ids.append(fragmento_id)
+                                    recalls_superseded += 1
+                                    file_recall_ids.append(recall_id)
                                     continue
                             batch_docs.append(text)
-                            batch_ids.append(fragmento_id)
+                            batch_ids.append(recall_id)
                             batch_metas.append(
-                                _build_fragmento_metadata(
-                                    nodo,
-                                    celda,
+                                _build_recall_metadata(
+                                    partition,
+                                    subgroup,
                                     source_file,
                                     ci,
                                     agent,
@@ -2471,17 +2499,17 @@ class DxrkMemory:
                                     chunk_total=chunk_total,
                                 )
                             )
-                            file_fragmento_ids.append(fragmento_id)
-                        fragmentos_added = 0
-                        for batch_start in range(0, len(batch_docs), FRAGMENTO_UPSERT_BATCH_SIZE):
+                            file_recall_ids.append(recall_id)
+                        recalls_added = 0
+                        for batch_start in range(0, len(batch_docs), RECALL_UPSERT_BATCH_SIZE):
                             col.upsert(
-                                documents=batch_docs[batch_start : batch_start + FRAGMENTO_UPSERT_BATCH_SIZE],
-                                ids=batch_ids[batch_start : batch_start + FRAGMENTO_UPSERT_BATCH_SIZE],
-                                metadatas=batch_metas[batch_start : batch_start + FRAGMENTO_UPSERT_BATCH_SIZE],  # type: ignore[arg-type]
+                                documents=batch_docs[batch_start : batch_start + RECALL_UPSERT_BATCH_SIZE],
+                                ids=batch_ids[batch_start : batch_start + RECALL_UPSERT_BATCH_SIZE],
+                                metadatas=batch_metas[batch_start : batch_start + RECALL_UPSERT_BATCH_SIZE],  # type: ignore[arg-type]
                             )
-                            fragmentos_added += len(batch_docs[batch_start : batch_start + FRAGMENTO_UPSERT_BATCH_SIZE])
+                            recalls_added += len(batch_docs[batch_start : batch_start + RECALL_UPSERT_BATCH_SIZE])
                     except Exception:
-                        # Clean partial fragmentos so next mine retries honestly.
+                        # Clean partial recalls so next mine retries honestly.
                         # Source lock prevents deleting another miner's work.
                         # Best-effort rollback of supersede marks we set: those
                         # old rows stay live (their replacement never landed).
@@ -2503,7 +2531,7 @@ class DxrkMemory:
                             col.delete(where={"source_file": source_file})
                         except Exception:
                             logger.warning(
-                                "Failed to clean partial fragmentos after upsert error for %s", source_file, exc_info=True
+                                "Failed to clean partial recalls after upsert error for %s", source_file, exc_info=True
                             )
                         if closets_col is not None:
                             try:
@@ -2519,17 +2547,17 @@ class DxrkMemory:
                             pass
                     # Phase 2 C: KG episode sync — one episode per file version.
                     if kg is not None:
-                        kg_triples += self._sync_file_episode(kg, source_file, content, file_fragmento_ids)
-                    total_fragmentos += fragmentos_added
+                        kg_triples += self._sync_file_episode(kg, source_file, content, file_recall_ids)
+                    total_recalls += recalls_added
                     files_mined += 1
             if not dry_run:
-                self._enforce_nodo_cap(col, nodo)
+                self._enforce_partition_cap(col, partition)
             return {
                 "files_mined": files_mined,
                 "files_skipped": files_skipped,
-                "fragmentos_added": total_fragmentos,
-                "fragmentos_deduped": fragmentos_deduped,
-                "fragmentos_superseded": fragmentos_superseded,
+                "recalls_added": total_recalls,
+                "recalls_deduped": recalls_deduped,
+                "recalls_superseded": recalls_superseded,
                 "kg_triples": kg_triples,
             }
         finally:
@@ -2542,25 +2570,32 @@ class DxrkMemory:
     def search(
         self,
         query: str,
-        nodo: str | None = None,
-        celda: str | None = None,
+        partition: str | None = None,
+        subgroup: str | None = None,
         n_results: int = 5,
         since: str | None = None,
         before: str | None = None,
+        *,
+        nodo: str | None = None,
+        celda: str | None = None,
     ) -> dict[str, object]:
         """Search via hybrid_search with optional date window (since/before)."""
+        if partition is None:
+            partition = nodo
+        if subgroup is None:
+            subgroup = celda
         # RBAC enforcement: require 'search' op (read access)
         self._require_rbac("search")
 
         from .search import build_where_filter, hybrid_search
 
-        where = build_where_filter(nodo, celda)
+        where = build_where_filter(partition, subgroup)
         col = self._collection(create=False)
         return hybrid_search(col, query, where=where or None, n_results=n_results, since=since, before=before)
 
-    def get_fragmento(self, fragmento_id: str) -> dict[str, object] | None:
+    def get_recall(self, recall_id: str) -> dict[str, object] | None:
         col = self._collection(create=False)
-        res = col.get(ids=[fragmento_id], include=["documents", "metadatas"])
+        res = col.get(ids=[recall_id], include=["documents", "metadatas"])
         if not res.ids:
             return None
         raw_meta = res.metadatas[0] if res.metadatas else {}
@@ -2580,10 +2615,10 @@ class DxrkMemory:
             now_iso = datetime.now(UTC).isoformat()
             try:
                 _apply_quarantine(meta, "checksum_mismatch", now_iso)
-                col.update(ids=[fragmento_id], metadatas=[meta])
+                col.update(ids=[recall_id], metadatas=[meta])
                 self._bump_spine_counter("checksum_mismatches")
             except Exception:
-                logger.debug("Fragmento auto-quarantine failed for %s", fragmento_id, exc_info=True)
+                logger.debug("Recall auto-quarantine failed for %s", recall_id, exc_info=True)
             return _fail_closed_stub(res.ids[0], meta)
         # Phase 2: access tracking feeds decay-aware ranking (B). Superseded
         # rows are readable history but do not accrue access counts. A live
@@ -2595,46 +2630,59 @@ class DxrkMemory:
             try:
                 _apply_access(meta, now_iso)
             except Exception:
-                logger.debug("RDU access update failed for %s", fragmento_id, exc_info=True)
+                logger.debug("RDU access update failed for %s", recall_id, exc_info=True)
                 try:
                     meta["access_count"] = int(cast(Any, meta.get("access_count", 0))) + 1
                 except (TypeError, ValueError):
                     meta["access_count"] = 1
                 meta["accessed_at"] = now_iso
             try:
-                col.update(ids=[fragmento_id], metadatas=[meta])
+                col.update(ids=[recall_id], metadatas=[meta])
             except Exception:
-                logger.debug("Fragmento access bump failed for %s", fragmento_id, exc_info=True)
+                logger.debug("Recall access bump failed for %s", recall_id, exc_info=True)
         else:
             # Dead rows still get their lazy migration persisted so later
             # scans score them with v2 priors (no access accrual, history only).
             try:
-                col.update(ids=[fragmento_id], metadatas=[meta])
+                col.update(ids=[recall_id], metadatas=[meta])
             except Exception:
-                logger.debug("Fragmento migration write-back failed for %s", fragmento_id, exc_info=True)
+                logger.debug("Recall migration write-back failed for %s", recall_id, exc_info=True)
         return {"id": res.ids[0], "document": doc, "metadata": meta}
 
-    def list_celdas(self, nodo: str | None = None) -> list[str]:
-        col = self._collection(create=False)
-        got = col.get(include=["metadatas"], limit=2000)
-        celdas: set[str] = set()
-        for m in got.metadatas:
-            if nodo is not None and m.get("nodo") != nodo:
-                continue
-            r = m.get("celda")
-            if isinstance(r, str):
-                celdas.add(r)
-        return sorted(celdas)
+    def list_partition_records(self) -> list[DxrkPartition]:
+        """Return typed partitions; the string API stays for compatibility."""
+        return [DxrkPartition(name) for name in self.list_partitions()]
 
-    def list_nodos(self) -> list[str]:
+    def list_subgroup_records(self, partition: str | None = None) -> list[DxrkSubgroup]:
+        """Return typed subgroups, optionally scoped to one partition."""
+        if partition is not None:
+            return [DxrkSubgroup(partition, name) for name in self.list_subgroups(partition)]
+        records: list[DxrkSubgroup] = []
+        for name in self.list_partitions():
+            records.extend(DxrkSubgroup(name, subgroup) for subgroup in self.list_subgroups(name))
+        return records
+
+    def list_subgroups(self, partition: str | None = None) -> list[str]:
         col = self._collection(create=False)
         got = col.get(include=["metadatas"], limit=2000)
-        nodos: set[str] = set()
+        subgroups: set[str] = set()
         for m in got.metadatas:
-            w = m.get("nodo")
+            if partition is not None and m.get("partition") != partition:
+                continue
+            r = m.get("subgroup")
+            if isinstance(r, str):
+                subgroups.add(r)
+        return sorted(subgroups)
+
+    def list_partitions(self) -> list[str]:
+        col = self._collection(create=False)
+        got = col.get(include=["metadatas"], limit=2000)
+        partitions: set[str] = set()
+        for m in got.metadatas:
+            w = m.get("partition")
             if isinstance(w, str):
-                nodos.add(w)
-        return sorted(nodos)
+                partitions.add(w)
+        return sorted(partitions)
 
     def count(self) -> int:
         col = self._collection(create=False)
@@ -2647,41 +2695,114 @@ class DxrkMemory:
     def close(self) -> None:
         self._backend.close_malla(self._ref)
 
+    # Deprecated hierarchy wrappers: malla/nodo/celda/fragmento generation.
+    # They keep old call sites working while the canonical API uses
+    # partition/subgroup/recall.
+    def add_fragmento(
+        self,
+        nodo: str,
+        celda: str,
+        content: str,
+        source_file: str,
+        chunk_index: int,
+        agent: str = "dxrk",
+        *,
+        chunk_total: int | None = None,
+        supersedes: str | None = None,
+        importance: float | None = None,
+    ) -> str:
+        return self.add_recall(
+            nodo,
+            celda,
+            content,
+            source_file,
+            chunk_index,
+            agent,
+            chunk_total=chunk_total,
+            supersedes=supersedes,
+            importance=importance,
+        )
+
+    def get_fragmento(self, fragmento_id: str) -> dict[str, object] | None:
+        return self.get_recall(fragmento_id)
+
+    def list_fragmentos(
+        self,
+        nodo: str | None = None,
+        celda: str | None = None,
+        limit: int = 20,
+        include_quarantined: bool = False,
+    ) -> list[dict[str, object]]:
+        return self.list_recalls(nodo, celda, limit, include_quarantined)
+
+    def pin_fragmento(self, fragmento_id: str) -> bool:
+        return self.pin_recall(fragmento_id)
+
+    def unpin_fragmento(self, fragmento_id: str) -> bool:
+        return self.unpin_recall(fragmento_id)
+
+    def quarantine_fragmento(self, fragmento_id: str, reason: str = "") -> bool:
+        return self.quarantine_recall(fragmento_id, reason)
+
+    def unquarantine_fragmento(self, fragmento_id: str) -> bool:
+        return self.unquarantine_recall(fragmento_id)
+
+    def consolidate_fragmentos(
+        self,
+        fragmento_ids: list[str],
+        nodo: str | None = None,
+        celda: str | None = None,
+        agent: str = "consolidate",
+    ) -> dict[str, object]:
+        return self.consolidate_recalls(fragmento_ids, nodo, celda, agent)
+
+    def list_nodos(self) -> list[str]:
+        return self.list_partitions()
+
+    def list_celdas(self, nodo: str | None = None) -> list[str]:
+        return self.list_subgroups(nodo)
+
+    def nodo_usage(self, nodo: str) -> dict[str, object]:
+        return self.partition_usage(nodo)
+
+    def enforce_nodo_cap(self, nodo: str) -> int:
+        return self.enforce_partition_cap(nodo)
+
     # Legacy vocabulary aliases (drawer/relic/globulo, room/chamber/capilar,
     # wing/vena) kept as plain name aliases so old call sites keep working.
-    add_drawer = add_fragmento
-    get_drawer = get_fragmento
-    list_drawers = list_fragmentos
-    pin_drawer = pin_fragmento
-    unpin_drawer = unpin_fragmento
-    quarantine_drawer = quarantine_fragmento
-    unquarantine_drawer = unquarantine_fragmento
-    consolidate_drawers = consolidate_fragmentos
-    add_relic = add_fragmento
-    get_relic = get_fragmento
-    list_relics = list_fragmentos
-    pin_relic = pin_fragmento
-    unpin_relic = unpin_fragmento
-    quarantine_relic = quarantine_fragmento
-    unquarantine_relic = unquarantine_fragmento
-    consolidate_relics = consolidate_fragmentos
-    add_globulo = add_fragmento
-    get_globulo = get_fragmento
-    list_globulos = list_fragmentos
-    pin_globulo = pin_fragmento
-    unpin_globulo = unpin_fragmento
-    quarantine_globulo = quarantine_fragmento
-    unquarantine_globulo = unquarantine_fragmento
-    consolidate_globulos = consolidate_fragmentos
-    list_rooms = list_celdas
-    list_chambers = list_celdas
-    list_capilares = list_celdas
-    list_wings = list_nodos
-    list_venas = list_nodos
-    wing_usage = nodo_usage
-    vena_usage = nodo_usage
-    enforce_wing_cap = enforce_nodo_cap
-    enforce_vena_cap = enforce_nodo_cap
+    add_drawer = add_recall
+    get_drawer = get_recall
+    list_drawers = list_recalls
+    pin_drawer = pin_recall
+    unpin_drawer = unpin_recall
+    quarantine_drawer = quarantine_recall
+    unquarantine_drawer = unquarantine_recall
+    consolidate_drawers = consolidate_recalls
+    add_relic = add_recall
+    get_relic = get_recall
+    list_relics = list_recalls
+    pin_relic = pin_recall
+    unpin_relic = unpin_recall
+    quarantine_relic = quarantine_recall
+    unquarantine_relic = unquarantine_recall
+    consolidate_relics = consolidate_recalls
+    add_globulo = add_recall
+    get_globulo = get_recall
+    list_globulos = list_recalls
+    pin_globulo = pin_recall
+    unpin_globulo = unpin_recall
+    quarantine_globulo = quarantine_recall
+    unquarantine_globulo = unquarantine_recall
+    consolidate_globulos = consolidate_recalls
+    list_rooms = list_subgroups
+    list_chambers = list_subgroups
+    list_capilares = list_subgroups
+    list_wings = list_partitions
+    list_venas = list_partitions
+    wing_usage = partition_usage
+    vena_usage = partition_usage
+    enforce_wing_cap = enforce_partition_cap
+    enforce_vena_cap = enforce_partition_cap
 
 
 # Public compatibility aliases. ``Malla`` is the hierarchy; ``DxrkMalla`` is

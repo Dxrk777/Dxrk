@@ -547,7 +547,7 @@ def _mk_malla(tmp_path: Path, name: str = "pal") -> Path:
     pal = tmp_path / name
     dm = DxrkMemory(str(pal))
     dm.init()
-    dm.add_fragmento("default", "general", "contenido base para busquedas de prueba " * 10, "/base.txt", 0)
+    dm.add_recall("default", "general", "contenido base para busquedas de prueba " * 10, "/base.txt", 0)
     try:
         dm.close()
     except Exception:
@@ -570,7 +570,7 @@ class TestMcpServerCov100:
     def test_project_meta_branches(self) -> None:
         from dxrk.memory.mcp_server import _project_meta_for_mcp
 
-        base = {"nodo": "w", "_embedding": [1, 2], "other": 1}
+        base = {"partition": "w", "_embedding": [1, 2], "other": 1}
         out = _project_meta_for_mcp(base)
         assert "_embedding" not in out and base["_embedding"] == [1, 2]
         out2 = _project_meta_for_mcp({"access_history": [1, 2, 3], "x": 1})
@@ -606,7 +606,7 @@ class TestMcpServerCov100:
         assert st["count"] >= 1 and "malla_path" in st and "merkle_root" in st
         se = _handle_tool(
             "dxrk_memory_search",
-            {"malla": str(pal), "query": "contenido base", "nodo": "default", "n_results": 2},
+            {"malla": str(pal), "query": "contenido base", "partition": "default", "n_results": 2},
         )
         assert "result" in se
         se2 = _handle_tool(
@@ -620,60 +620,60 @@ class TestMcpServerCov100:
         mi = _handle_tool("dxrk_memory_mine", {"malla": str(pal), "project_dir": str(proj), "dry_run": True})
         assert "malla_path" in mi
         mi2 = _handle_tool("dxrk_memory_mine", {"malla": str(pal), "project_dir": str(proj)})
-        assert mi2.get("fragmentos_added", 0) >= 1
+        assert mi2.get("recalls_added", 0) >= 1
 
-    def test_add_fragmento_importance(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_add_recall_importance(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         from dxrk.memory.mcp_server import _handle_tool
 
         _iso_home(tmp_path, monkeypatch)
         pal = _mk_malla(tmp_path, "pal_add")
         r1 = _handle_tool(
-            "dxrk_memory_add_fragmento",
+            "dxrk_memory_add_recall",
             {
                 "malla": str(pal),
-                "nodo": "w",
-                "celda": "r",
+                "partition": "w",
+                "subgroup": "r",
                 "content": "texto con importancia " * 5,
                 "source_file": "/a.txt",
                 "importance": 0.9,
                 "supersedes": "old-id",
             },
         )
-        assert "fragmento_id" in r1
+        assert "recall_id" in r1
         r2 = _handle_tool(
-            "dxrk_memory_add_fragmento",
+            "dxrk_memory_add_recall",
             {
                 "malla": str(pal),
-                "nodo": "w",
-                "celda": "r",
+                "partition": "w",
+                "subgroup": "r",
                 "content": "sin importancia " * 5,
                 "source_file": "/b.txt",
                 "importance": "no-numero",
             },
         )
-        assert "fragmento_id" in r2
+        assert "recall_id" in r2
         r3 = _handle_tool(
-            "dxrk_memory_add_fragmento",
-            {"malla": str(pal), "nodo": "w", "celda": "r", "content": "normal " * 5, "source_file": "/c.txt"},
+            "dxrk_memory_add_recall",
+            {"malla": str(pal), "partition": "w", "subgroup": "r", "content": "normal " * 5, "source_file": "/c.txt"},
         )
-        assert "fragmento_id" in r3
+        assert "recall_id" in r3
 
-    def test_get_fragmento_branches(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_get_recall_branches(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         from dxrk.memory.mcp_server import _handle_tool
 
         _iso_home(tmp_path, monkeypatch)
         pal = _mk_malla(tmp_path, "pal_get")
         added = _handle_tool(
-            "dxrk_memory_add_fragmento",
-            {"malla": str(pal), "nodo": "w", "celda": "r", "content": "para get fragmento " * 8, "source_file": "/g.txt"},
+            "dxrk_memory_add_recall",
+            {"malla": str(pal), "partition": "w", "subgroup": "r", "content": "para get recall " * 8, "source_file": "/g.txt"},
         )
-        did = added["fragmento_id"]
-        got = _handle_tool("dxrk_memory_get_fragmento", {"malla": str(pal), "fragmento_id": did})
-        assert got["fragmento"] is not None and got["fragmento"]["metadata"]["nodo"] == "w"
-        missing = _handle_tool("dxrk_memory_get_fragmento", {"malla": str(pal), "fragmento_id": "no-existe"})
-        assert missing["fragmento"] is None
+        did = added["recall_id"]
+        got = _handle_tool("dxrk_memory_get_recall", {"malla": str(pal), "recall_id": did})
+        assert got["recall"] is not None and got["recall"]["metadata"]["partition"] == "w"
+        missing = _handle_tool("dxrk_memory_get_recall", {"malla": str(pal), "recall_id": "no-existe"})
+        assert missing["recall"] is None
 
-    def test_list_fragmentos_quarantine_doc(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_list_recalls_quarantine_doc(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         from dxrk.memory.malla import DxrkMemory
         from dxrk.memory.mcp_server import _handle_tool
 
@@ -681,60 +681,60 @@ class TestMcpServerCov100:
         pal = _mk_malla(tmp_path, "pal_list")
         dm = DxrkMemory(str(pal))
         dm.init()
-        did = dm.add_fragmento("w", "r", "para cuarentena lista " * 6, "/q.txt", 0)
-        dm.quarantine_fragmento(did, reason="test")
+        did = dm.add_recall("w", "r", "para cuarentena lista " * 6, "/q.txt", 0)
+        dm.quarantine_recall(did, reason="test")
         try:
             dm.close()
         except Exception:
             pass
-        out = _handle_tool("dxrk_memory_list_fragmentos", {"malla": str(pal), "limit": 20})
+        out = _handle_tool("dxrk_memory_list_recalls", {"malla": str(pal), "limit": 20})
         assert out["count"] >= 1
         out2 = _handle_tool(
-            "dxrk_memory_list_fragmentos",
-            {"malla": str(pal), "nodo": "w", "celda": "r", "limit": 5, "include_quarantined": True},
+            "dxrk_memory_list_recalls",
+            {"malla": str(pal), "partition": "w", "subgroup": "r", "limit": 5, "include_quarantined": True},
         )
         assert out2["count"] >= 1
-        assert any(d.get("quarantined") for d in out2["fragmentos"])
-        out3 = _handle_tool("dxrk_memory_list_fragmentos", {"malla": str(pal), "nodo": "", "celda": ""})
-        assert "fragmentos" in out3
+        assert any(d.get("quarantined") for d in out2["recalls"])
+        out3 = _handle_tool("dxrk_memory_list_recalls", {"malla": str(pal), "partition": "", "subgroup": ""})
+        assert "recalls" in out3
 
-    def test_update_fragmento_all(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_update_recall_all(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         from dxrk.memory.mcp_server import _handle_tool
 
         _iso_home(tmp_path, monkeypatch)
         pal = _mk_malla(tmp_path, "pal_upd")
-        nf = _handle_tool("dxrk_memory_update_fragmento", {"malla": str(pal), "fragmento_id": "missing"})
+        nf = _handle_tool("dxrk_memory_update_recall", {"malla": str(pal), "recall_id": "missing"})
         assert "not found" in nf.get("error", "")
         added = _handle_tool(
-            "dxrk_memory_add_fragmento",
+            "dxrk_memory_add_recall",
             {
                 "malla": str(pal),
-                "nodo": "w1",
-                "celda": "r1",
+                "partition": "w1",
+                "subgroup": "r1",
                 "content": "actualizable contenido " * 6,
                 "source_file": "/u.txt",
             },
         )
-        did = added["fragmento_id"]
-        # sin cambios (mismo contenido) + cambio de nodo/celda
-        same = _handle_tool("dxrk_memory_update_fragmento", {"malla": str(pal), "fragmento_id": did, "nodo": "w2"})
+        did = added["recall_id"]
+        # sin cambios (mismo contenido) + cambio de partition/subgroup
+        same = _handle_tool("dxrk_memory_update_recall", {"malla": str(pal), "recall_id": did, "partition": "w2"})
         assert same.get("updated") is True
         ch = _handle_tool(
-            "dxrk_memory_update_fragmento",
-            {"malla": str(pal), "fragmento_id": did, "celda": "r2", "content": "actualizable contenido revisado " * 6},
+            "dxrk_memory_update_recall",
+            {"malla": str(pal), "recall_id": did, "subgroup": "r2", "content": "actualizable contenido revisado " * 6},
         )
         assert ch.get("updated") is True
-        got = _handle_tool("dxrk_memory_get_fragmento", {"malla": str(pal), "fragmento_id": did})
-        assert got["fragmento"]["metadata"]["nodo"] == "w2"
-        assert got["fragmento"]["metadata"]["celda"] == "r2"
-        # enforce_nodo_cap que falla no rompe el update
+        got = _handle_tool("dxrk_memory_get_recall", {"malla": str(pal), "recall_id": did})
+        assert got["recall"]["metadata"]["partition"] == "w2"
+        assert got["recall"]["metadata"]["subgroup"] == "r2"
+        # enforce_partition_cap que falla no rompe el update
         from dxrk.memory.malla import DxrkMemory
 
-        orig = DxrkMemory.enforce_nodo_cap
-        monkeypatch.setattr(DxrkMemory, "enforce_nodo_cap", lambda self, w: (_ for _ in ()).throw(RuntimeError("cap")))
-        ok = _handle_tool("dxrk_memory_update_fragmento", {"malla": str(pal), "fragmento_id": did, "content": "otro " * 6})
+        orig = DxrkMemory.enforce_partition_cap
+        monkeypatch.setattr(DxrkMemory, "enforce_partition_cap", lambda self, w: (_ for _ in ()).throw(RuntimeError("cap")))
+        ok = _handle_tool("dxrk_memory_update_recall", {"malla": str(pal), "recall_id": did, "content": "otro " * 6})
         assert ok.get("updated") is True
-        monkeypatch.setattr(DxrkMemory, "enforce_nodo_cap", orig)
+        monkeypatch.setattr(DxrkMemory, "enforce_partition_cap", orig)
 
     def test_delete_and_duplicate(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         from dxrk.memory.mcp_server import _handle_tool
@@ -742,11 +742,11 @@ class TestMcpServerCov100:
         _iso_home(tmp_path, monkeypatch)
         pal = _mk_malla(tmp_path, "pal_dup")
         _handle_tool(
-            "dxrk_memory_add_fragmento",
+            "dxrk_memory_add_recall",
             {
                 "malla": str(pal),
-                "nodo": "w",
-                "celda": "r",
+                "partition": "w",
+                "subgroup": "r",
                 "content": "el zorro marron salta sobre el perro " * 4,
                 "source_file": "/z.txt",
             },
@@ -769,11 +769,11 @@ class TestMcpServerCov100:
         )
         assert fresh["duplicate"] is False
         added = _handle_tool(
-            "dxrk_memory_add_fragmento",
-            {"malla": str(pal), "nodo": "w", "celda": "r", "content": "para borrar " * 5, "source_file": "/d.txt"},
+            "dxrk_memory_add_recall",
+            {"malla": str(pal), "partition": "w", "subgroup": "r", "content": "para borrar " * 5, "source_file": "/d.txt"},
         )
-        dl = _handle_tool("dxrk_memory_delete_fragmento", {"malla": str(pal), "fragmento_id": added["fragmento_id"]})
-        assert dl["deleted"] == added["fragmento_id"]
+        dl = _handle_tool("dxrk_memory_delete_recall", {"malla": str(pal), "recall_id": added["recall_id"]})
+        assert dl["deleted"] == added["recall_id"]
 
     def test_duplicate_nonlist_hits(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         from dxrk.memory import mcp_server as ms
@@ -792,22 +792,22 @@ class TestMcpServerCov100:
         out2 = ms._handle_tool("dxrk_memory_check_duplicate", {"malla": str(pal), "content": "algo con contenido"})
         assert out2["duplicate"] is False
 
-    def test_nodos_celdas_taxonomy_graph(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_partitions_subgroups_taxonomy_graph(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         from dxrk.memory.mcp_server import _handle_tool
 
         _iso_home(tmp_path, monkeypatch)
         pal = _mk_malla(tmp_path, "pal_tax")
-        assert "default" in _handle_tool("dxrk_memory_list_nodos", {"malla": str(pal)})["nodos"]
-        celdas = _handle_tool("dxrk_memory_list_celdas", {"malla": str(pal), "nodo": "default"})
-        assert "general" in celdas["celdas"]
-        celdas2 = _handle_tool("dxrk_memory_list_celdas", {"malla": str(pal)})
-        assert isinstance(celdas2["celdas"], list)
-        celdas3 = _handle_tool("dxrk_memory_list_celdas", {"malla": str(pal), "nodo": 123})
-        assert isinstance(celdas3["celdas"], list)
+        assert "default" in _handle_tool("dxrk_memory_list_partitions", {"malla": str(pal)})["partitions"]
+        subgroups = _handle_tool("dxrk_memory_list_subgroups", {"malla": str(pal), "partition": "default"})
+        assert "general" in subgroups["subgroups"]
+        subgroups2 = _handle_tool("dxrk_memory_list_subgroups", {"malla": str(pal)})
+        assert isinstance(subgroups2["subgroups"], list)
+        subgroups3 = _handle_tool("dxrk_memory_list_subgroups", {"malla": str(pal), "partition": 123})
+        assert isinstance(subgroups3["subgroups"], list)
         tax = _handle_tool("dxrk_memory_taxonomy", {"malla": str(pal)})
         assert "default" in tax["taxonomy"]
         gs = _handle_tool("dxrk_memory_graph_stats", {"malla": str(pal)})
-        assert gs["total_fragmentos"] >= 1 and gs["nodos"] >= 1
+        assert gs["total_recalls"] >= 1 and gs["partitions"] >= 1
 
     def test_kg_timeline_none_and_traverse(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         from dxrk.memory.mcp_server import _handle_tool
@@ -850,34 +850,34 @@ class TestMcpServerCov100:
         _iso_home(tmp_path, monkeypatch)
         pal = _mk_malla(tmp_path, "pal_cf")
         d1 = _handle_tool(
-            "dxrk_memory_add_fragmento",
+            "dxrk_memory_add_recall",
             {
                 "malla": str(pal),
-                "nodo": "w",
-                "celda": "r",
+                "partition": "w",
+                "subgroup": "r",
                 "content": "consolidar uno contenido " * 6,
                 "source_file": "/1.txt",
             },
-        )["fragmento_id"]
+        )["recall_id"]
         d2 = _handle_tool(
-            "dxrk_memory_add_fragmento",
+            "dxrk_memory_add_recall",
             {
                 "malla": str(pal),
-                "nodo": "w",
-                "celda": "r",
+                "partition": "w",
+                "subgroup": "r",
                 "content": "consolidar dos contenido " * 6,
                 "source_file": "/2.txt",
             },
-        )["fragmento_id"]
+        )["recall_id"]
         co = _handle_tool(
-            "dxrk_memory_consolidate", {"malla": str(pal), "fragmento_ids": [d1, d2], "nodo": "w", "celda": "r"}
+            "dxrk_memory_consolidate", {"malla": str(pal), "recall_ids": [d1, d2], "partition": "w", "subgroup": "r"}
         )
         assert "malla_path" in co
-        co2 = _handle_tool("dxrk_memory_consolidate", {"malla": str(pal), "fragmento_ids": "no-lista"})
+        co2 = _handle_tool("dxrk_memory_consolidate", {"malla": str(pal), "recall_ids": "no-lista"})
         assert "malla_path" in co2
-        fg = _handle_tool("dxrk_memory_forget", {"malla": str(pal), "fragmento_ids": [d1], "hard": False})
+        fg = _handle_tool("dxrk_memory_forget", {"malla": str(pal), "recall_ids": [d1], "hard": False})
         assert "malla_path" in fg
-        fg2 = _handle_tool("dxrk_memory_forget", {"malla": str(pal), "nodo": "w", "before": "2100-01-01"})
+        fg2 = _handle_tool("dxrk_memory_forget", {"malla": str(pal), "partition": "w", "before": "2100-01-01"})
         assert "malla_path" in fg2
         fg3 = _handle_tool("dxrk_memory_forget", {"malla": str(pal)})
         assert "malla_path" in fg3
@@ -888,20 +888,20 @@ class TestMcpServerCov100:
         _iso_home(tmp_path, monkeypatch)
         pal = _mk_malla(tmp_path, "pal_ptq")
         did = _handle_tool(
-            "dxrk_memory_add_fragmento",
+            "dxrk_memory_add_recall",
             {
                 "malla": str(pal),
-                "nodo": "w",
-                "celda": "r",
+                "partition": "w",
+                "subgroup": "r",
                 "content": "pineable contenido " * 6,
                 "source_file": "/p.txt",
             },
-        )["fragmento_id"]
-        assert _handle_tool("dxrk_memory_pin", {"malla": str(pal)})["error"].startswith("fragmento_id")
-        assert "not found" in _handle_tool("dxrk_memory_pin", {"malla": str(pal), "fragmento_id": "missing"})["error"]
-        assert _handle_tool("dxrk_memory_pin", {"malla": str(pal), "fragmento_id": did, "pinned": True})["pinned"] is True
+        )["recall_id"]
+        assert _handle_tool("dxrk_memory_pin", {"malla": str(pal)})["error"].startswith("recall_id")
+        assert "not found" in _handle_tool("dxrk_memory_pin", {"malla": str(pal), "recall_id": "missing"})["error"]
+        assert _handle_tool("dxrk_memory_pin", {"malla": str(pal), "recall_id": did, "pinned": True})["pinned"] is True
         assert (
-            _handle_tool("dxrk_memory_pin", {"malla": str(pal), "fragmento_id": did, "pinned": False})["pinned"] is False
+            _handle_tool("dxrk_memory_pin", {"malla": str(pal), "recall_id": did, "pinned": False})["pinned"] is False
         )
         ident = _handle_tool("dxrk_memory_pin", {"malla": str(pal), "scope": "identity", "pinned": True})
         assert "malla_path" in ident
@@ -911,22 +911,22 @@ class TestMcpServerCov100:
         assert tl["count"] >= 0
         tl2 = _handle_tool(
             "dxrk_memory_timeline",
-            {"malla": str(pal), "limit": "mal", "since": "2000-01-01", "before": "2100-01-01", "nodo": "default"},
+            {"malla": str(pal), "limit": "mal", "since": "2000-01-01", "before": "2100-01-01", "partition": "default"},
         )
         assert "entries" in tl2
-        assert _handle_tool("dxrk_memory_quarantine", {"malla": str(pal)})["error"] == "fragmento_id required"
+        assert _handle_tool("dxrk_memory_quarantine", {"malla": str(pal)})["error"] == "recall_id required"
         assert (
-            "not found" in _handle_tool("dxrk_memory_quarantine", {"malla": str(pal), "fragmento_id": "missing"})["error"]
+            "not found" in _handle_tool("dxrk_memory_quarantine", {"malla": str(pal), "recall_id": "missing"})["error"]
         )
         assert (
             "not found"
             in _handle_tool(
-                "dxrk_memory_quarantine", {"malla": str(pal), "fragmento_id": "missing", "unquarantine": True}
+                "dxrk_memory_quarantine", {"malla": str(pal), "recall_id": "missing", "unquarantine": True}
             )["error"]
         )
-        q = _handle_tool("dxrk_memory_quarantine", {"malla": str(pal), "fragmento_id": did, "reason": "r"})
+        q = _handle_tool("dxrk_memory_quarantine", {"malla": str(pal), "recall_id": did, "reason": "r"})
         assert q.get("quarantined") is True
-        uq = _handle_tool("dxrk_memory_quarantine", {"malla": str(pal), "fragmento_id": did, "unquarantine": True})
+        uq = _handle_tool("dxrk_memory_quarantine", {"malla": str(pal), "recall_id": did, "unquarantine": True})
         assert uq.get("quarantined") is False
 
     def test_fase2_eval(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -939,14 +939,14 @@ class TestMcpServerCov100:
         dm = DxrkMemory(str(pal))
         dm.init()
         for i in range(4):
-            dm.add_fragmento("evalw", "general", f"contenido evaluable numero {i} alpha beta gamma " * 8, f"/e{i}.txt", i)
+            dm.add_recall("evalw", "general", f"contenido evaluable numero {i} alpha beta gamma " * 8, f"/e{i}.txt", i)
         try:
             dm.close()
         except Exception:
             pass
-        rep = _handle_tool("dxrk_memory_eval_run", {"malla": str(pal), "nodo": "evalw", "n_queries": 2})
-        assert "report" in rep and rep["report"]["nodo"] == "evalw"
-        syn = _handle_tool("dxrk_memory_eval_synthetic", {"malla": str(pal), "nodo": "evalw", "n": 2})
+        rep = _handle_tool("dxrk_memory_eval_run", {"malla": str(pal), "partition": "evalw", "n_queries": 2})
+        assert "report" in rep and rep["report"]["partition"] == "evalw"
+        syn = _handle_tool("dxrk_memory_eval_synthetic", {"malla": str(pal), "partition": "evalw", "n": 2})
         assert "queries" in syn and len(syn["queries"]) <= 2
 
     def test_fase2_metacog_calibrate(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -955,19 +955,19 @@ class TestMcpServerCov100:
         _iso_home(tmp_path, monkeypatch)
         pal = _mk_malla(tmp_path, "pal_meta")
         pr = _handle_tool(
-            "dxrk_memory_metacog_predict", {"malla": str(pal), "query": "contenido base", "nodo": "default"}
+            "dxrk_memory_metacog_predict", {"malla": str(pal), "query": "contenido base", "partition": "default"}
         )
         assert "confidence" in pr and "difficulty" in pr
-        cf = _handle_tool("dxrk_memory_calibrate_fit", {"malla": str(pal), "nodo": "default", "method": "temperature"})
+        cf = _handle_tool("dxrk_memory_calibrate_fit", {"malla": str(pal), "partition": "default", "method": "temperature"})
         assert cf["method"] == "temperature" and "params" in cf
-        cf2 = _handle_tool("dxrk_memory_calibrate_fit", {"malla": str(pal), "nodo": "default", "method": "isotonic"})
+        cf2 = _handle_tool("dxrk_memory_calibrate_fit", {"malla": str(pal), "partition": "default", "method": "isotonic"})
         assert cf2["method"] == "isotonic"
         ct = _handle_tool(
             "dxrk_memory_calibrate_tenant",
             {
                 "malla": str(pal),
                 "tenant": "acme",
-                "nodo": "default",
+                "partition": "default",
                 "a": 1.0,
                 "b": 0.0,
                 "c": 1.0,
@@ -976,7 +976,7 @@ class TestMcpServerCov100:
             },
         )
         assert ct["saved"] is True and ct["params"]["score"] == 0.7
-        ch = _handle_tool("dxrk_memory_calibrate_chain", {"malla": str(pal), "tenant": "acme", "nodo": "default"})
+        ch = _handle_tool("dxrk_memory_calibrate_chain", {"malla": str(pal), "tenant": "acme", "partition": "default"})
         assert "chain" in ch and len(ch["chain"]) >= 1
 
     def test_fase2_production_judge(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -986,9 +986,9 @@ class TestMcpServerCov100:
         pal = _mk_malla(tmp_path, "pal_prod")
         cb = _handle_tool("dxrk_memory_circuit_breaker_status", {"malla": str(pal)})
         assert "breakers" in cb
-        slo = _handle_tool("dxrk_memory_slo_check", {"malla": str(pal), "nodo": "default"})
+        slo = _handle_tool("dxrk_memory_slo_check", {"malla": str(pal), "partition": "default"})
         assert "compliant" in slo
-        rb = _handle_tool("dxrk_memory_rollback_check", {"malla": str(pal), "nodo": "default"})
+        rb = _handle_tool("dxrk_memory_rollback_check", {"malla": str(pal), "partition": "default"})
         assert "should_rollback" in rb
         js = _handle_tool("dxrk_memory_judge_status", {"malla": str(pal)})
         assert "consecutive_passes" in js
@@ -1202,12 +1202,12 @@ class TestTenantSwitcherCov100:
         monkeypatch.setitem(_sys.modules, "dxrk.tenant.migration", None)
         info6 = _get_tenant_details("acme")
         assert "acme" in info6.path
-        # DxrkMemory que falla → fragmento_count 0
+        # DxrkMemory que falla → recall_count 0
         import dxrk.memory.malla as malla_mod
 
         monkeypatch.setattr(malla_mod, "DxrkMemory", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom")))
         info7 = _get_tenant_details("acme")
-        assert info7.fragmento_count == 0
+        assert info7.recall_count == 0
         _ = home
 
     def test_cards_compose_pilot(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1222,7 +1222,7 @@ class TestTenantSwitcherCov100:
             path=str(Path.home() / ".dxrk" / "tenants" / "a"),
             role="admin",
             is_current=True,
-            fragmento_count=3,
+            recall_count=3,
             size_mb=1.5,
             last_accessed="ayer",
         )
@@ -1474,7 +1474,7 @@ class TestTenantSwitcherCov100:
         s2._filtered = ["a"]
         s2.cursor = 0
         s2._details = {
-            "a": {"id": "a", "path": "/tmp/a", "role": "dev", "is_current": True, "fragmento_count": 1, "size_mb": 0.0}
+            "a": {"id": "a", "path": "/tmp/a", "role": "dev", "is_current": True, "recall_count": 1, "size_mb": 0.0}
         }
 
         def boom_nm(*a: Any, **k: Any) -> Any:
@@ -1484,7 +1484,7 @@ class TestTenantSwitcherCov100:
         s2._update_preview()
         # dict format en _filtered
         s2._filtered = [
-            {"id": "a", "path": "/tmp/a", "role": "dev", "is_current": False, "fragmento_count": 0, "size_mb": 0.0}
+            {"id": "a", "path": "/tmp/a", "role": "dev", "is_current": False, "recall_count": 0, "size_mb": 0.0}
         ]  # type: ignore[list-item]
         s2._update_preview()
         # vacío → preview None
@@ -1806,7 +1806,7 @@ class TestTenantSwitcherCov100:
                         path="/tmp/externo-x",
                         role="readonly",
                         is_current=False,
-                        fragmento_count=1,
+                        recall_count=1,
                         size_mb=3.0,
                         last_accessed="hoy",
                     ),
@@ -1823,13 +1823,13 @@ class TestTenantSwitcherCov100:
                     path=str(Path.home() / "t" / "acme"),
                     role="admin",
                     is_current=True,
-                    fragmento_count=2,
+                    recall_count=2,
                     size_mb=1.5,
                     last_accessed="ayer",
                 )
             )
             preview.update_preview(
-                TenantInfo(id="e", path="/tmp/externo", role="readonly", is_current=False, fragmento_count=0, size_mb=0.0)
+                TenantInfo(id="e", path="/tmp/externo", role="readonly", is_current=False, recall_count=0, size_mb=0.0)
             )
             preview.update_preview(None)
             assert preview.current_info is None

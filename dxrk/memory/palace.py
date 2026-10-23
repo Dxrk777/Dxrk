@@ -11,7 +11,7 @@ import warnings
 
 from . import malla as _malla
 from .malla import *  # noqa: F403
-from .types import FragmentoRecord as DrawerRecord  # noqa: F401 (public legacy alias)
+from .types import RecallRecord as DrawerRecord  # noqa: F401 (public legacy alias)
 
 warnings.warn(
     "dxrk.memory.palace is deprecated; import from dxrk.memory.malla instead",

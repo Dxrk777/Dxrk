@@ -32,16 +32,16 @@ class TestLayer1Rdu:
                 ids=["d-stale", "d-fresh"],
                 metadatas=[
                     {
-                        "nodo": "w",
-                        "celda": "r",
+                        "partition": "w",
+                        "subgroup": "r",
                         "source_file": "/s.txt",
                         "filed_at": _iso_days_ago(60),
                         "accessed_at": _iso_days_ago(60),
                         "importance": 4.5,
                     },
                     {
-                        "nodo": "w",
-                        "celda": "r",
+                        "partition": "w",
+                        "subgroup": "r",
                         "source_file": "/f.txt",
                         "filed_at": _iso_days_ago(0),
                         "accessed_at": _iso_days_ago(0),
@@ -49,7 +49,7 @@ class TestLayer1Rdu:
                     },
                 ],
             )
-            out = Layer1(str(tmp_path / "malla")).generate(nodo="w")
+            out = Layer1(str(tmp_path / "malla")).generate(partition="w")
             assert out.index("fresh filler") < out.index("stale filler")
         finally:
             dm.close()
@@ -66,8 +66,8 @@ class TestHybridRankNudge:
 
     def _stale_meta(self) -> dict[str, object]:
         return {
-            "nodo": "w",
-            "celda": "r",
+            "partition": "w",
+            "subgroup": "r",
             "source_file": "/s.txt",
             "filed_at": _iso_days_ago(400),
             "schema_version": 2,
@@ -81,8 +81,8 @@ class TestHybridRankNudge:
 
     def _fresh_meta(self) -> dict[str, object]:
         return {
-            "nodo": "w",
-            "celda": "r",
+            "partition": "w",
+            "subgroup": "r",
             "source_file": "/f.txt",
             "filed_at": _iso_days_ago(0),
             "schema_version": 2,
@@ -150,7 +150,7 @@ class TestPublicMeta:
             col.add(
                 documents=["history hiding body text here."],
                 ids=["h1"],
-                metadatas=[{"nodo": "w", "access_history": ["2026-01-01T00:00:00+00:00"] * 3}],
+                metadatas=[{"partition": "w", "access_history": ["2026-01-01T00:00:00+00:00"] * 3}],
             )
             q = col.query(query_texts=["history hiding"], n_results=5)
             meta = q.metadatas[0][0]
@@ -167,9 +167,9 @@ class TestSpineStatus:
 
         dm = _dm(tmp_path)
         try:
-            d1 = dm.add_fragmento("w", "r", "Status alpha fragmento body text here.", "/a.md", 0)
-            d2 = dm.add_fragmento("w", "r", "Beta entry covers unrelated deployment notes.", "/b.md", 0)
-            assert dm.quarantine_fragmento(d2, reason="status check") is True
+            d1 = dm.add_recall("w", "r", "Status alpha recall body text here.", "/a.md", 0)
+            d2 = dm.add_recall("w", "r", "Beta entry covers unrelated deployment notes.", "/b.md", 0)
+            assert dm.quarantine_recall(d2, reason="status check") is True
             st = dm.status()
             assert st["count"] == 2
             assert st["quarantined"] == 1
@@ -186,7 +186,7 @@ class TestSpineStatus:
                 if isinstance(m, dict)
             )
             assert st["merkle_root"] == hashlib.sha256("".join(shas).encode()).hexdigest()
-            usage = dm.nodo_usage("w")
+            usage = dm.partition_usage("w")
             assert usage["quarantined"] == 1
             assert usage["needs_rehash"] == 0
             assert dm.budgets()["w"]["quarantined"] == 1
@@ -196,10 +196,10 @@ class TestSpineStatus:
     def test_timeline_skips_quarantined(self, tmp_path: Path) -> None:
         dm = _dm(tmp_path)
         try:
-            did = dm.add_fragmento("w", "r", "Pinned but quarantined fragmento body.", "/p.md", 0)
-            assert dm.pin_fragmento(did) is True
+            did = dm.add_recall("w", "r", "Pinned but quarantined recall body.", "/p.md", 0)
+            assert dm.pin_recall(did) is True
             assert any(e["ref"] == did for e in dm.timeline())
-            assert dm.quarantine_fragmento(did, reason="timeline check") is True
+            assert dm.quarantine_recall(did, reason="timeline check") is True
             assert all(e["ref"] != did for e in dm.timeline())
         finally:
             dm.close()

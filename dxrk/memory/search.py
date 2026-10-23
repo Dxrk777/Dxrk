@@ -115,13 +115,13 @@ def _hybrid_rank(
     return results
 
 
-def build_where_filter(nodo: str | None = None, celda: str | None = None) -> dict[str, object]:
-    if nodo and celda:
-        return {"$and": [{"nodo": nodo}, {"celda": celda}]}
-    if nodo:
-        return {"nodo": nodo}
-    if celda:
-        return {"celda": celda}
+def build_where_filter(partition: str | None = None, subgroup: str | None = None) -> dict[str, object]:
+    if partition and subgroup:
+        return {"$and": [{"partition": partition}, {"subgroup": subgroup}]}
+    if partition:
+        return {"partition": partition}
+    if subgroup:
+        return {"subgroup": subgroup}
     return {}
 
 
@@ -143,7 +143,7 @@ def hybrid_search(
     """Hybrid BM25 + optional closet boost search.
 
     Returns dict with keys: query, filters, total_before_filter, results.
-    Each result: text, nodo, celda, source_file, distance, similarity, etc.
+    Each result: text, partition, subgroup, source_file, distance, similarity, etc.
     since/before are inclusive/exclusive ISO date bounds on filed_at
     (stdlib-only date windowing, inclusive since / exclusive before).
     """
@@ -164,7 +164,7 @@ def hybrid_search(
         if before is not None:
             filt["before"] = before
         return {"query": query, "filters": filt, "total_before_filter": 0, "results": []}
-    # fragmento search: over-fetch for rerank; widen when date window active
+    # recall search: over-fetch for rerank; widen when date window active
     pool_size = _candidate_pool_size(n_results, date_window_active)
     dkwargs: dict[str, object] = {
         "query_texts": [q],
@@ -173,14 +173,14 @@ def hybrid_search(
     }
     if where:
         dkwargs["where"] = where
-    fragmento_results = collection.query(**dkwargs)  # type: ignore[arg-type]
+    recall_results = collection.query(**dkwargs)  # type: ignore[arg-type]
 
     # extract first query outer list
     try:
-        ids = fragmento_results.ids[0] if fragmento_results.ids else []
-        docs = fragmento_results.documents[0] if fragmento_results.documents else []
-        metas = fragmento_results.metadatas[0] if fragmento_results.metadatas else []
-        dists = fragmento_results.distances[0] if fragmento_results.distances else []
+        ids = recall_results.ids[0] if recall_results.ids else []
+        docs = recall_results.documents[0] if recall_results.documents else []
+        metas = recall_results.metadatas[0] if recall_results.metadatas else []
+        dists = recall_results.distances[0] if recall_results.distances else []
     except (IndexError, AttributeError):
         ids, docs, metas, dists = [], [], [], []
 
@@ -213,11 +213,11 @@ def hybrid_search(
 
     scored: list[dict[str, object]] = []
     for i, (doc, meta, dist) in enumerate(zip(docs, metas, dists)):
-        fragmento_id = ids[i] if i < len(ids) else ""
+        recall_id = ids[i] if i < len(ids) else ""
         meta = meta or {}
         if not isinstance(meta, dict):
             meta = {}
-        # Dead fragmentos (superseded / forgotten / quarantined) stay on disk
+        # Dead recalls (superseded / forgotten / quarantined) stay on disk
         # for history but never rank — the live revision carries on.
         if _is_dead_meta(meta):
             continue
@@ -233,19 +233,19 @@ def hybrid_search(
             dist_f = 1.0
         source = str(meta.get("source_file", "")) if isinstance(meta.get("source_file"), str) else ""
         boost = 0.0
-        matched_via = "fragmento"
+        matched_via = "recall"
         if source in boost_by_source:
             rank, cdist, _preview = boost_by_source[source]
             if cdist <= CLOSET_DISTANCE_CAP and rank < len(CLOSET_RANK_BOOSTS):
                 boost = CLOSET_RANK_BOOSTS[rank]
-                matched_via = "fragmento+closet"
+                matched_via = "recall+closet"
         eff = max(0.0, min(2.0, dist_f - boost))
         scored.append(
             {
-                "id": fragmento_id,
+                "id": recall_id,
                 "text": doc_str,
-                "nodo": str(meta.get("nodo", "unknown")),
-                "celda": str(meta.get("celda", "unknown")),
+                "partition": str(meta.get("partition", "unknown")),
+                "subgroup": str(meta.get("subgroup", "unknown")),
                 "source_file": Path(source).name if source else "?",
                 "created_at": str(meta.get("filed_at", "unknown")),
                 "similarity": round(max(0.0, 1 - eff), 3),

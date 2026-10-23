@@ -28,8 +28,8 @@ def _malla_dir_for_cli() -> Path:
 def _cmd_mine(args: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="dxrk.memory mine")
     parser.add_argument("path", help="project dir to ingest")
-    parser.add_argument("--nodo", default="default", help="nodo name")
-    parser.add_argument("--celda", default="", help="celda name (auto if empty)")
+    parser.add_argument("--partition", default="default", help="nombre de la partición")
+    parser.add_argument("--subgroup", default="", help="nombre del subgrupo (auto si está vacío)")
     parser.add_argument("--dry-run", action="store_true")
     ns = parser.parse_args(args)
     try:
@@ -42,7 +42,7 @@ def _cmd_mine(args: list[str]) -> int:
         require_op(os.environ.get("DXRK_TENANT", ""), user, "mine")
         dm = DxrkMemory(_malla_dir_for_cli(), agent=user)
         dm.init()
-        result = dm.mine(ns.path, nodo=ns.nodo, celda=ns.celda or "general", dry_run=ns.dry_run)
+        result = dm.mine(ns.path, partition=ns.partition, subgroup=ns.subgroup or "general", dry_run=ns.dry_run)
         print(f"mine: {result}", file=sys.stderr)
         return 0
     except Exception as e:
@@ -59,7 +59,7 @@ def _cmd_hooks(args: list[str]) -> int:
 def _cmd_search(args: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="dxrk.memory search")
     parser.add_argument("query", help="search query")
-    parser.add_argument("--nodo", default="")
+    parser.add_argument("--partition", default="")
     parser.add_argument("--n", type=int, default=5)
     ns = parser.parse_args(args)
     try:
@@ -76,7 +76,7 @@ def _cmd_search(args: list[str]) -> int:
     # mismo malla que _cmd_mine (tenant-aware): sin path, AgentMemory queda
     # en modo solo-memoria y search siempre devuelve [] aunque haya datos.
     mem = AgentMemory(_malla_dir_for_cli())
-    res = mem.search(project_id=ns.nodo or "default", query=ns.query, limit=ns.n)
+    res = mem.search(project_id=ns.partition or "default", query=ns.query, limit=ns.n)
     import json
 
     for e in res:

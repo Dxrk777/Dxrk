@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: MIT
-"""Backward-compatible migration to the malla/nodo/celda/fragmento vocabulary.
+"""Backward-compatible migration to the partition/subgroup/recall vocabulary.
 
-The canonical hierarchy is malla → nodo → celda → fragmento. Three older
+The canonical hierarchy is ``partition → subgroup → recall``. Four older
 generations of artifacts are upgraded in place:
 
+* ``malla`` / ``nodo`` / ``celda`` / ``fragmento``
 * ``palace`` / ``wing`` / ``room`` / ``drawer``
 * ``crypt`` / ``wing`` / ``chamber`` / ``relic``
 * ``sangre`` / ``vena`` / ``capilar`` / ``globulo``
@@ -27,12 +28,13 @@ LEGACY_DIR_NAMES: tuple[str, ...] = ("sangre", "crypt", "palace")
 DB_FILENAME = "malla.db"
 LEGACY_DB_FILENAMES: tuple[str, ...] = ("sangre.db", "crypt.db", "sqlite_palace.db")
 DB_SIDECARS = ("-wal", "-shm")
-DEFAULT_COLLECTION = "dxrk_fragmentos"
+DEFAULT_COLLECTION = "dxrk_recalls"
 
 # Old collection names that must stay readable after the vocabulary rename.
 # ``mempalace_drawers`` is composed in pieces to preserve the zero-trace
 # grep contract for the upstream project name.
 LEGACY_COLLECTIONS: tuple[str, ...] = (
+    "dxrk_fragmentos",
     "dxrk_relics",
     "dxrk_globulos",
     "dxrk_drawers",
@@ -61,13 +63,13 @@ LEGACY_COLLECTIONS: tuple[str, ...] = (
 
 #: Canonical key -> legacy spellings, newest generation first.
 META_KEY_ALIASES: dict[str, tuple[str, ...]] = {
-    "nodo": ("vena", "wing"),
-    "celda": ("capilar", "chamber", "room"),
-    "fragmento": ("globulo", "relic", "drawer"),
-    "fragmento_id": ("globulo_id", "relic_id", "drawer_id"),
-    "fragmento_ids": ("globulo_ids", "relic_ids", "drawer_ids"),
-    "nodo_id": ("vena_id", "wing_id"),
-    "celda_id": ("capilar_id", "chamber_id", "room_id"),
+    "partition": ("nodo", "vena", "wing"),
+    "subgroup": ("celda", "capilar", "chamber", "room"),
+    "recall": ("fragmento", "globulo", "relic", "drawer"),
+    "recall_id": ("fragmento_id", "globulo_id", "relic_id", "drawer_id"),
+    "recall_ids": ("fragmento_ids", "globulo_ids", "relic_ids", "drawer_ids"),
+    "partition_id": ("nodo_id", "vena_id", "wing_id"),
+    "subgroup_id": ("celda_id", "capilar_id", "chamber_id", "room_id"),
     "malla": ("sangre", "crypt", "palace"),
     "malla_path": ("sangre_path", "crypt_path", "palace_path"),
 }

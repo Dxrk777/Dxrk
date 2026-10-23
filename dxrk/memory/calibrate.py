@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Calibrate nodo — QIEO + Thompson Sampling integration for FSRS parameters."""
+"""Calibrate partition — QIEO + Thompson Sampling integration for FSRS parameters."""
 
 from __future__ import annotations
 
@@ -15,13 +15,13 @@ from .scoring import r_fsrs
 from .thompson import ThompsonConfig, select_evaluation_candidates
 
 CALIBRATION_DIR = ".calibration"
-CALIBRATION_FILE = "{nodo}.json"
+CALIBRATION_FILE = "{partition}.json"
 SCHEMA_VERSION = 2
 
 
 @dataclass(frozen=True)
 class CalibrationParams:
-    """Calibrated FSRS parameters for a nodo."""
+    """Calibrated FSRS parameters for a partition."""
 
     a: float = 1.5  # growth rate
     b: float = 0.2  # stability decay
@@ -36,9 +36,9 @@ class CalibrationParams:
 DEFAULT_PARAMS = CalibrationParams()
 
 
-def load_calibration(malla_path: Path, nodo: str) -> CalibrationParams:
+def load_calibration(malla_path: Path, partition: str) -> CalibrationParams:
     """Load calibration from JSON file."""
-    path = malla_path / CALIBRATION_DIR / CALIBRATION_FILE.format(nodo=nodo)
+    path = malla_path / CALIBRATION_DIR / CALIBRATION_FILE.format(partition=partition)
     if not path.exists():
         return DEFAULT_PARAMS
     try:
@@ -57,18 +57,18 @@ def load_calibration(malla_path: Path, nodo: str) -> CalibrationParams:
         return DEFAULT_PARAMS
 
 
-def save_calibration(malla_path: Path, nodo: str, params: CalibrationParams) -> None:
+def save_calibration(malla_path: Path, partition: str, params: CalibrationParams) -> None:
     """Save calibration to JSON file (0o600)."""
     cal_dir = malla_path / CALIBRATION_DIR
     cal_dir.mkdir(exist_ok=True)
-    path = cal_dir / CALIBRATION_FILE.format(nodo=nodo)
+    path = cal_dir / CALIBRATION_FILE.format(partition=partition)
     path.write_text(json.dumps(asdict(params), indent=2))
     path.chmod(0o600)
 
 
 def evaluate_recall_at_k(
     malla,
-    nodo: str,
+    partition: str,
     params: CalibrationParams,
     k: int = 10,
     sample_size: int = 50,
@@ -77,29 +77,29 @@ def evaluate_recall_at_k(
     Evaluate recall@k using given FSRS parameters.
 
     Simulates queries against the malla and measures how often
-    the correct fragmento is in top-k.
+    the correct recall is in top-k.
     """
-    # Get fragmentos from this nodo
-    fragmentos = [d for d in malla.iter_fragmentos() if d.get("metadata", {}).get("nodo") == nodo]
-    if len(fragmentos) < 2:
+    # Get recalls from this partition
+    recalls = [d for d in malla.iter_recalls() if d.get("metadata", {}).get("partition") == partition]
+    if len(recalls) < 2:
         return 0.0
 
     # Sample queries
-    queries = random.sample(fragmentos, min(sample_size, len(fragmentos)))
+    queries = random.sample(recalls, min(sample_size, len(recalls)))
     hits = 0
 
-    for q_fragmento in queries:
-        q_id = q_fragmento["id"]
-        q_fragmento.get("metadata", {})
+    for q_recall in queries:
+        q_id = q_recall["id"]
+        q_recall.get("metadata", {})
 
         # Get true content for similarity
-        q_doc = q_fragmento.get("document", "")
+        q_doc = q_recall.get("document", "")
         if not q_doc:
             continue
 
-        # Score all fragmentos with these params
+        # Score all recalls with these params
         scored = []
-        for d in fragmentos:
+        for d in recalls:
             if d["id"] == q_id:
                 continue
             meta = d.get("metadata", {})
@@ -119,16 +119,16 @@ def evaluate_recall_at_k(
     return hits / len(queries) if queries else 0.0
 
 
-def calibrate_nodo(
+def calibrate_partition(
     malla,
-    nodo: str,
+    partition: str,
     qieo_config: QIEOConfig | None = None,
     thompson_config: ThompsonConfig | None = None,
     objective_k: int = 10,
     objective_samples: int = 30,
 ) -> CalibrationParams:
     """
-    Calibrate FSRS parameters for a nodo using QIEO + Thompson Sampling.
+    Calibrate FSRS parameters for a partition using QIEO + Thompson Sampling.
 
     Process:
     1. Thompson Sampling selects evaluation candidates (explore/exploit)
@@ -137,7 +137,7 @@ def calibrate_nodo(
 
     Args:
         malla: DxrkMemory instance
-        nodo: nodo name to calibrate
+        partition: partition name to calibrate
         qieo_config: QIEO configuration
         thompson_config: Thompson Sampling configuration
         objective_k: k for recall@k
@@ -157,11 +157,11 @@ def calibrate_nodo(
     if not candidate_ids:
         return DEFAULT_PARAMS
 
-    # Get candidate fragmentos
+    # Get candidate recalls
     candidates = []
-    for fragmento in malla.iter_fragmentos():
-        if fragmento["id"] in candidate_ids:
-            candidates.append(fragmento)
+    for recall in malla.iter_recalls():
+        if recall["id"] in candidate_ids:
+            candidates.append(recall)
 
     if len(candidates) < 2:
         return DEFAULT_PARAMS
@@ -170,7 +170,7 @@ def calibrate_nodo(
     def objective(params_list: list[float]) -> float:
         a, b, c, pe_lambda = params_list
         test_params = CalibrationParams(a=a, b=b, c=c, pe_lambda=pe_lambda)
-        return evaluate_recall_at_k(malla, nodo, test_params, k=objective_k, sample_size=objective_samples)
+        return evaluate_recall_at_k(malla, partition, test_params, k=objective_k, sample_size=objective_samples)
 
     # Bounds for parameters (based on FSRS literature)
     bounds = [
@@ -195,17 +195,17 @@ def calibrate_nodo(
         schema_version=SCHEMA_VERSION,
     )
 
-    save_calibration(Path(malla._path), nodo, result)
+    save_calibration(Path(malla._path), partition, result)
     return result
 
 
-def get_calibration_params(malla_path: Path, nodo: str) -> CalibrationParams:
-    """Get calibration params for a nodo (load from file or defaults)."""
-    return load_calibration(malla_path, nodo)
+def get_calibration_params(malla_path: Path, partition: str) -> CalibrationParams:
+    """Get calibration params for a partition (load from file or defaults)."""
+    return load_calibration(malla_path, partition)
 
 
-def list_calibrated_nodos(malla_path: Path) -> list[str]:
-    """List nodos that have calibration files."""
+def list_calibrated_partitions(malla_path: Path) -> list[str]:
+    """List partitions that have calibration files."""
     cal_dir = malla_path / CALIBRATION_DIR
     if not cal_dir.exists():
         return []

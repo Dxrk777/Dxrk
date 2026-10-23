@@ -2,9 +2,8 @@
 """Enriched memory types for DxrkMemory 2.0.
 
 Keeps backward compatibility with the original 3-value MemoryType
-(SEMANTIC=0, EPISODIC=1, PROCEDURAL=2) while exposing malla-native
-records (FragmentoRecord, ClosetRecord) used by the nodos/celdas/fragmentos
-hierarchy.
+(SEMANTIC=0, EPISODIC=1, PROCEDURAL=2) while exposing the canonical
+DxrkMemory hierarchy: DxrkPartition → DxrkSubgroup → DxrkRecall.
 """
 
 from __future__ import annotations
@@ -44,10 +43,35 @@ class MemoryEntry:
     title: str = ""
     scope: str = ""
     topic_key: str = ""
-    nodo: str = ""
-    celda: str = ""
-    fragmento_id: str = ""
+    partition: str = ""
+    subgroup: str = ""
+    recall_id: str = ""
     malla_path: str = ""
+
+    # Deprecated hierarchy aliases (kept for JSON and call-site compatibility).
+    @property
+    def nodo(self) -> str:
+        return self.partition
+
+    @nodo.setter
+    def nodo(self, value: str) -> None:
+        self.partition = value
+
+    @property
+    def celda(self) -> str:
+        return self.subgroup
+
+    @celda.setter
+    def celda(self, value: str) -> None:
+        self.subgroup = value
+
+    @property
+    def fragmento_id(self) -> str:
+        return self.recall_id
+
+    @fragmento_id.setter
+    def fragmento_id(self, value: str) -> None:
+        self.recall_id = value
 
 
 @dataclass
@@ -75,12 +99,27 @@ def top_by_importance(entries: list[MemoryEntry], limit: int) -> list[MemoryEntr
 
 
 @dataclass(frozen=True, slots=True)
-class FragmentoRecord:
-    """Immutable malla fragmento — verbatim chunk."""
+class DxrkPartition:
+    """Top-level namespace owned by a DxrkMemory instance."""
 
-    fragmento_id: str
-    nodo: str
-    celda: str
+    name: str
+
+
+@dataclass(frozen=True, slots=True)
+class DxrkSubgroup:
+    """Subdivision of a partition; cannot exist without one."""
+
+    partition: str
+    name: str
+
+
+@dataclass(frozen=True, slots=True)
+class DxrkRecall:
+    """Immutable recall — verbatim chunk stored under partition/subgroup."""
+
+    recall_id: str
+    partition: str
+    subgroup: str
     content: str
     source_file: str
     chunk_index: int
@@ -91,26 +130,58 @@ class FragmentoRecord:
     normalize_version: int = 2
 
     @staticmethod
-    def make_id(nodo: str, celda: str, source_file: str, chunk_index: int) -> str:
+    def make_id(partition: str, subgroup: str, source_file: str, chunk_index: int) -> str:
         h = hashlib.sha256(f"{source_file}{chunk_index}".encode()).hexdigest()[:24]
-        return f"fragmento_{nodo}_{celda}_{h}"
+        return f"recall_{partition}_{subgroup}_{h}"
+
+    # Deprecated hierarchy aliases (positional reads are safe).
+    @property
+    def fragmento_id(self) -> str:
+        return self.recall_id
+
+    @property
+    def nodo(self) -> str:
+        return self.partition
+
+    @property
+    def celda(self) -> str:
+        return self.subgroup
 
 
 @dataclass(frozen=True, slots=True)
 class ClosetRecord:
-    """Immutable closet — compact AAAK pointer to fragmentos."""
+    """Immutable closet — compact AAAK pointer to recalls."""
 
     closet_id: str
-    nodo: str
-    celda: str
+    partition: str
+    subgroup: str
     source_file: str
     content: str
-    fragmento_ids: tuple[str, ...]
+    recall_ids: tuple[str, ...]
     malla_path: str
     filed_at: str = ""
     normalize_version: int = 2
 
     @staticmethod
-    def make_base_id(nodo: str, celda: str, source_file: str) -> str:
+    def make_base_id(partition: str, subgroup: str, source_file: str) -> str:
         h = hashlib.sha256(source_file.encode()).hexdigest()[:24]
-        return f"closet_{nodo}_{celda}_{h}"
+        return f"closet_{partition}_{subgroup}_{h}"
+
+    # Deprecated hierarchy aliases.
+    @property
+    def fragmento_ids(self) -> tuple[str, ...]:
+        return self.recall_ids
+
+    @property
+    def nodo(self) -> str:
+        return self.partition
+
+    @property
+    def celda(self) -> str:
+        return self.subgroup
+
+
+# Previous public names remain importable for legacy shims and clients.
+RecallRecord = DxrkRecall
+FragmentoRecord = DxrkRecall
+Recall = DxrkRecall

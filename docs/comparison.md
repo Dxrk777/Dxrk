@@ -19,7 +19,7 @@ Las opciones habituales:
 | Setup multi-agente | 1 comando, 14 agentes, presets | Por agente, a mano | Por agente, a mano | Por agente, a mano |
 | Servidor MCP | Incluido (stdio, stdlib-only) | El del vendor | Lo construyes tú | No |
 | Coste operativo | 0 (local, MIT) | Suscripción + egress | Tu tiempo de ops | 0 |
-| Límite | Un nodo, tu disco | El del plan | Tu tuning | Tu memoria |
+| Límite | Una partición, tu disco | El del plan | Tu tuning | Tu memoria |
 
 ## Cuándo NO usar Dxrk
 

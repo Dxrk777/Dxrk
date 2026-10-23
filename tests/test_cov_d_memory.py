@@ -63,7 +63,7 @@ class TestSqliteHelpers:
     def test_where_in_empty_returns_no_rows(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "w1")
         try:
-            col.add(documents=["hello"], ids=["i1"], metadatas=[{"nodo": "w"}])
+            col.add(documents=["hello"], ids=["i1"], metadatas=[{"partition": "w"}])
             got = col.get(where={"chunk_index": {"$in": []}})
             assert got.ids == []
         finally:
@@ -72,7 +72,7 @@ class TestSqliteHelpers:
     def test_where_and_not_list_ignored(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "w2")
         try:
-            col.add(documents=["hello"], ids=["i1"], metadatas=[{"nodo": "w"}])
+            col.add(documents=["hello"], ids=["i1"], metadatas=[{"partition": "w"}])
             got = col.get(where={"$and": "oops"})  # type: ignore[dict-item]
             assert got.ids == ["i1"]
         finally:
@@ -81,8 +81,8 @@ class TestSqliteHelpers:
     def test_where_and_skip_non_dict(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "w3")
         try:
-            col.add(documents=["hello"], ids=["i1"], metadatas=[{"nodo": "w"}])
-            got = col.get(where={"$and": ["nope", {"nodo": "w"}]})  # type: ignore[list-item]
+            col.add(documents=["hello"], ids=["i1"], metadatas=[{"partition": "w"}])
+            got = col.get(where={"$and": ["nope", {"partition": "w"}]})  # type: ignore[list-item]
             assert got.ids == ["i1"]
         finally:
             be.close()
@@ -90,7 +90,7 @@ class TestSqliteHelpers:
     def test_where_and_empty_list(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "w4")
         try:
-            col.add(documents=["hello"], ids=["i1"], metadatas=[{"nodo": "w"}])
+            col.add(documents=["hello"], ids=["i1"], metadatas=[{"partition": "w"}])
             got = col.get(where={"$and": []})
             assert got.ids == ["i1"]
         finally:
@@ -100,7 +100,7 @@ class TestSqliteHelpers:
         be, _, col = _col(tmp_path, "w5")
         try:
             with pytest.raises(UnsupportedFilterError):
-                col.get(where={"$or": [{"nodo": "w"}]})
+                col.get(where={"$or": [{"partition": "w"}]})
         finally:
             be.close()
 
@@ -108,7 +108,7 @@ class TestSqliteHelpers:
         be, _, col = _col(tmp_path, "w6")
         try:
             with pytest.raises(UnsupportedFilterError):
-                col.get(where={"nodo": {"$gt": 1}})
+                col.get(where={"partition": {"$gt": 1}})
         finally:
             be.close()
 
@@ -149,7 +149,7 @@ class TestSqliteHelpers:
             col._conn.commit()  # type: ignore[attr-defined]
             assert col._ft5_available() is False  # type: ignore[attr-defined]
             # query still works via fallback
-            col.add(documents=["hello fallback"], ids=["f1"], metadatas=[{"nodo": "w"}])
+            col.add(documents=["hello fallback"], ids=["f1"], metadatas=[{"partition": "w"}])
             q = col.query(query_texts=["hello"], n_results=5)
             assert "f1" in q.ids[0]
         finally:
@@ -173,7 +173,7 @@ class TestSqliteHelpers:
             col.add(
                 documents=["doc emb"],
                 ids=["e1"],
-                metadatas=[{"nodo": "w"}],
+                metadatas=[{"partition": "w"}],
                 embeddings=[[0.1, 0.2, 0.3]],
             )
             got = col.get(ids=["e1"], include=["documents", "metadatas", "embeddings"])
@@ -192,7 +192,7 @@ class TestSqliteHelpers:
         try:
             col._conn.execute("DROP TABLE IF EXISTS embedding_fts")  # type: ignore[attr-defined]
             col._conn.commit()  # type: ignore[attr-defined]
-            col.add(documents=["no fts"], ids=["n1"], metadatas=[{"nodo": "w"}])
+            col.add(documents=["no fts"], ids=["n1"], metadatas=[{"partition": "w"}])
             assert col.count() == 1
         finally:
             be.close()
@@ -200,9 +200,9 @@ class TestSqliteHelpers:
     def test_add_duplicate_raises(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "dup")
         try:
-            col.add(documents=["a"], ids=["d1"], metadatas=[{"nodo": "w"}])
+            col.add(documents=["a"], ids=["d1"], metadatas=[{"partition": "w"}])
             with pytest.raises(ValueError, match="duplicate id"):
-                col.add(documents=["b"], ids=["d1"], metadatas=[{"nodo": "w"}])
+                col.add(documents=["b"], ids=["d1"], metadatas=[{"partition": "w"}])
         finally:
             be.close()
 
@@ -222,7 +222,7 @@ class TestSqliteHelpers:
             col.upsert(
                 documents=["u1"],
                 ids=["u1"],
-                metadatas=[{"nodo": "w"}],
+                metadatas=[{"partition": "w"}],
                 embeddings=[[1.0, 2.0]],
             )
             got = col.get(ids=["u1"], include=["documents", "metadatas", "embeddings"])
@@ -236,7 +236,7 @@ class TestSqliteHelpers:
         try:
             col._conn.execute("DROP TABLE IF EXISTS embedding_fts")  # type: ignore[attr-defined]
             col._conn.commit()  # type: ignore[attr-defined]
-            col.upsert(documents=["fresh"], ids=["fresh1"], metadatas=[{"nodo": "w"}])
+            col.upsert(documents=["fresh"], ids=["fresh1"], metadatas=[{"partition": "w"}])
             assert col.count() == 1
         finally:
             be.close()
@@ -252,7 +252,7 @@ class TestSqliteHelpers:
             bad_conn.cursor.return_value = bad_cur
             col._conn = bad_conn  # type: ignore[attr-defined]
             with pytest.raises(sqlite3.Error):
-                col.upsert(documents=["x"], ids=["x1"], metadatas=[{"nodo": "w"}])
+                col.upsert(documents=["x"], ids=["x1"], metadatas=[{"partition": "w"}])
             col._conn = real_conn  # type: ignore[attr-defined]
         finally:
             be.close()
@@ -260,8 +260,8 @@ class TestSqliteHelpers:
     def test_get_where_document_branches(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "wdoc")
         try:
-            col.add(documents=["hello world"], ids=["a"], metadatas=[{"nodo": "w"}])
-            col.add(documents=["goodbye"], ids=["b"], metadatas=[{"nodo": "w"}])
+            col.add(documents=["hello world"], ids=["a"], metadatas=[{"partition": "w"}])
+            col.add(documents=["goodbye"], ids=["b"], metadatas=[{"partition": "w"}])
             got = col.get(where_document={"$contains": "hello"})
             assert got.ids == ["a"]
             with pytest.raises(UnsupportedFilterError):
@@ -273,7 +273,7 @@ class TestSqliteHelpers:
         be, _, col = _col(tmp_path, "off")
         try:
             for i in range(3):
-                col.add(documents=[f"doc {i}"], ids=[f"id{i}"], metadatas=[{"nodo": "w"}])
+                col.add(documents=[f"doc {i}"], ids=[f"id{i}"], metadatas=[{"partition": "w"}])
             got = col.get(offset=1)
             assert [r for r in got.ids] == ["id1", "id2"]
             got2 = col.get(limit=1, offset=1)
@@ -284,7 +284,7 @@ class TestSqliteHelpers:
     def test_get_bad_json_and_include_variants(self, tmp_path: Path):
         be, ref, col = _col(tmp_path, "badjson")
         try:
-            col.add(documents=["ok"], ids=["ok1"], metadatas=[{"nodo": "w"}])
+            col.add(documents=["ok"], ids=["ok1"], metadatas=[{"partition": "w"}])
             # corrupt metadata directly
             col._conn.execute(  # type: ignore[attr-defined]
                 "UPDATE embeddings SET metadata=? WHERE id=?", ("{bad json", "ok1")
@@ -306,7 +306,7 @@ class TestSqliteHelpers:
     def test_query_embeddings_only_neutral(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "qemb")
         try:
-            col.add(documents=["alpha beta"], ids=["q1"], metadatas=[{"nodo": "w"}])
+            col.add(documents=["alpha beta"], ids=["q1"], metadatas=[{"partition": "w"}])
             q = col.query(query_embeddings=[[0.1, 0.2]], n_results=5)
             assert "q1" in q.ids[0]
             assert q.distances[0][0] == 0.5
@@ -316,8 +316,8 @@ class TestSqliteHelpers:
     def test_query_where_document_contains_fts_and_fallback(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "qwdoc")
         try:
-            col.add(documents=["hello mars"], ids=["m1"], metadatas=[{"nodo": "w"}])
-            col.add(documents=["hello venus"], ids=["m2"], metadatas=[{"nodo": "w"}])
+            col.add(documents=["hello mars"], ids=["m1"], metadatas=[{"partition": "w"}])
+            col.add(documents=["hello venus"], ids=["m2"], metadatas=[{"partition": "w"}])
             q = col.query(
                 query_texts=["hello"],
                 n_results=5,
@@ -339,7 +339,7 @@ class TestSqliteHelpers:
     def test_query_fts_error_falls_back(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "qerr")
         try:
-            col.add(documents=["hello world"], ids=["e1"], metadatas=[{"nodo": "w"}])
+            col.add(documents=["hello world"], ids=["e1"], metadatas=[{"partition": "w"}])
             col._conn.execute("DROP TABLE IF EXISTS embedding_fts")  # type: ignore[attr-defined]
             col._conn.commit()  # type: ignore[attr-defined]
             with mock.patch.object(col, "_ft5_available", return_value=True):  # type: ignore[attr-defined]
@@ -354,7 +354,7 @@ class TestSqliteHelpers:
             col.add(
                 documents=["hello include"],
                 ids=["k1"],
-                metadatas=[{"nodo": "w"}],
+                metadatas=[{"partition": "w"}],
                 embeddings=[[9.0]],
             )
             # corrupt one row to hit JSON error branches in query output
@@ -385,7 +385,7 @@ class TestSqliteHelpers:
         try:
             with pytest.raises(ValueError, match="delete requires"):
                 col.delete()
-            col.add(documents=["x"], ids=["x1"], metadatas=[{"nodo": "w"}])
+            col.add(documents=["x"], ids=["x1"], metadatas=[{"partition": "w"}])
             col.delete(ids=["nope"])
             assert col.count() == 1
             col.delete(ids=["x1"])
@@ -396,13 +396,13 @@ class TestSqliteHelpers:
     def test_delete_fts_missing_ok(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "delfts")
         try:
-            col.add(documents=["a"], ids=["a1"], metadatas=[{"nodo": "del"}])
+            col.add(documents=["a"], ids=["a1"], metadatas=[{"partition": "del"}])
             col._conn.execute("DROP TABLE IF EXISTS embedding_fts")  # type: ignore[attr-defined]
             col._conn.commit()  # type: ignore[attr-defined]
             col.delete(ids=["a1"])
             assert col.count() == 0
-            col.add(documents=["b"], ids=["b1"], metadatas=[{"nodo": "del"}])
-            col.delete(where={"nodo": "del"})
+            col.add(documents=["b"], ids=["b1"], metadatas=[{"partition": "del"}])
+            col.delete(where={"partition": "del"})
             assert col.count() == 0
         finally:
             be.close()
@@ -854,22 +854,22 @@ class TestSangreHelpers:
         assert "The" not in _extract_entities("The The The Alice Alice")
         assert _extract_entities("short") == ""
 
-    def test_build_fragmento_metadata_variants(self):
-        from dxrk.memory.malla import _build_fragmento_metadata
+    def test_build_recall_metadata_variants(self):
+        from dxrk.memory.malla import _build_recall_metadata
 
-        m1 = _build_fragmento_metadata("w", "r", "/a.txt", 0, "dxrk", "hello Alice Alice", 123.0, chunk_total=3)
-        assert m1["nodo"] == "w"
+        m1 = _build_recall_metadata("w", "r", "/a.txt", 0, "dxrk", "hello Alice Alice", 123.0, chunk_total=3)
+        assert m1["partition"] == "w"
         assert m1["source_mtime"] == 123.0
         assert m1["chunk_total"] == 3
-        m2 = _build_fragmento_metadata("w", "r", "/a.txt", 0, "dxrk", "short hi", None)
+        m2 = _build_recall_metadata("w", "r", "/a.txt", 0, "dxrk", "short hi", None)
         assert "source_mtime" not in m2
         assert "chunk_total" not in m2
 
     def test_dxrk_memory_init_variants(self, tmp_path: Path, monkeypatch):
         from dxrk.memory.malla import DxrkMemory, Malla, MallaConfig
 
-        cfg = MallaConfig(malla_path=str(tmp_path), nodo="w")
-        assert cfg.nodo == "w"
+        cfg = MallaConfig(malla_path=str(tmp_path), partition="w")
+        assert cfg.partition == "w"
         assert Malla is DxrkMemory
         # memory-only sentinel respected
         dm = DxrkMemory("memory-only")
@@ -887,17 +887,17 @@ class TestSangreHelpers:
         assert (tmp_path / "p2").is_dir()
         dm3.close()
 
-    def test_add_fragmento_missing_source(self, tmp_path: Path):
+    def test_add_recall_missing_source(self, tmp_path: Path):
         from dxrk.memory.malla import DxrkMemory
 
         dm = DxrkMemory(str(tmp_path / "padd"))
         dm.init()
         try:
-            did = dm.add_fragmento("w", "r", "content here", "/nonexistent_xyz/file.txt", 0)
-            assert did.startswith("fragmento_")
-            got = dm.get_fragmento(did)
+            did = dm.add_recall("w", "r", "content here", "/nonexistent_xyz/file.txt", 0)
+            assert did.startswith("recall_")
+            got = dm.get_recall(did)
             assert got is not None
-            assert dm.get_fragmento("missing_xyz") is None
+            assert dm.get_recall("missing_xyz") is None
         finally:
             dm.close()
 
@@ -974,8 +974,8 @@ class TestSangreHelpers:
         dm = pal.DxrkMemory(str(tmp_path / "rpal"))
         dm.init()
         try:
-            old_content = "victim fragmento original text " * 40
-            old_id = dm.add_fragmento("w", "r", old_content, "/victim.md", 0)
+            old_content = "victim recall original text " * 40
+            old_id = dm.add_recall("w", "r", old_content, "/victim.md", 0)
             col = dm._collection(create=True)
 
             def _snapshot() -> dict[str, tuple[str, dict[str, object]]]:
@@ -1010,7 +1010,7 @@ class TestSangreHelpers:
             with mock.patch.object(col, "upsert", side_effect=_boom_on_batch):
                 with mock.patch.object(dm, "_collection", return_value=col):
                     with pytest.raises(RuntimeError, match="batch upsert boom"):
-                        dm.mine(str(proj), nodo="w", celda="r")
+                        dm.mine(str(proj), partition="w", subgroup="r")
             assert calls["batch"] >= 1
             after = _snapshot()
             assert after == before
@@ -1025,23 +1025,23 @@ class TestSangreHelpers:
         dm = DxrkMemory(str(tmp_path / "lpal"))
         dm.init()
         try:
-            dm.add_fragmento("w1", "r1", "c1 hello", "/a1.txt", 0)
-            dm.add_fragmento("w1", "r2", "c2 hello", "/a2.txt", 0)
-            dm.add_fragmento("w2", "r1", "c3 hello", "/a3.txt", 0)
-            assert set(dm.list_nodos()) == {"w1", "w2"}
-            assert set(dm.list_celdas("w1")) == {"r1", "r2"}
-            assert set(dm.list_celdas()) == {"r1", "r2"}
+            dm.add_recall("w1", "r1", "c1 hello", "/a1.txt", 0)
+            dm.add_recall("w1", "r2", "c2 hello", "/a2.txt", 0)
+            dm.add_recall("w2", "r1", "c3 hello", "/a3.txt", 0)
+            assert set(dm.list_partitions()) == {"w1", "w2"}
+            assert set(dm.list_subgroups("w1")) == {"r1", "r2"}
+            assert set(dm.list_subgroups()) == {"r1", "r2"}
             h = dm.health()
             assert h["ok"] is True
             assert dm.count() == 3
-            # nodo filter with non-str celda ignored
+            # partition filter with non-str subgroup ignored
             col = dm._collection(create=False)
             col.upsert(
                 documents=["weird"],
                 ids=["weird1"],
-                metadatas=[{"nodo": "w1", "celda": 123}],
+                metadatas=[{"partition": "w1", "subgroup": 123}],
             )
-            assert "r1" in dm.list_celdas("w1")
+            assert "r1" in dm.list_subgroups("w1")
         finally:
             dm.close()
 
@@ -1123,9 +1123,9 @@ class TestLayersCov:
                 self.metadatas = metas
 
         batch1_docs = [f"doc {i} " * 10 for i in range(500)]
-        batch1_metas = [{"celda": "r", "source_file": f"/f{i}.txt", "importance": "bad"} for i in range(500)]
+        batch1_metas = [{"subgroup": "r", "source_file": f"/f{i}.txt", "importance": "bad"} for i in range(500)]
         batch2_docs = ["final doc hello"]
-        batch2_metas = [{"celda": "r", "source_file": "/final.txt", "importance": 9.0}]
+        batch2_metas = [{"subgroup": "r", "source_file": "/final.txt", "importance": 9.0}]
 
         class _FakeCol:
             def __init__(self):
@@ -1148,7 +1148,7 @@ class TestLayersCov:
             def get(self, include=None, limit=None, offset=None):
                 return _FakeRes(
                     ["x" * 500, "short"],
-                    ["notadict", {"celda": 123, "importance": 2.5}],
+                    ["notadict", {"subgroup": 123, "importance": 2.5}],
                 )
 
         with mock.patch.object(ly, "_get_collection", return_value=_FakeCol2()):
@@ -1159,7 +1159,7 @@ class TestLayersCov:
         class _FakeCol3:
             def get(self, include=None, limit=None, offset=None):
                 docs = [("long content word " * 30 + str(i)) for i in range(15)]
-                metas = [{"celda": "r", "source_file": "/a.txt", "importance": 5.0} for _ in range(15)]
+                metas = [{"subgroup": "r", "source_file": "/a.txt", "importance": 5.0} for _ in range(15)]
                 return _FakeRes(docs, metas)
 
         with mock.patch.object(ly, "_get_collection", return_value=_FakeCol3()):
@@ -1176,13 +1176,13 @@ class TestLayersCov:
         dm = DxrkMemory(str(pal))
         dm.init()
         try:
-            dm.add_fragmento("nodoA", "celda1", "unique l2 alpha " * 5, "/a.md", 0)
-            assert "unique l2 alpha" in Layer2(str(pal)).retrieve(nodo="nodoA", celda="celda1")
-            assert "L2" in Layer2(str(pal)).retrieve(nodo="nodoA")
-            assert "L2" in Layer2(str(pal)).retrieve(celda="celda1")
+            dm.add_recall("partitionA", "subgroup1", "unique l2 alpha " * 5, "/a.md", 0)
+            assert "unique l2 alpha" in Layer2(str(pal)).retrieve(partition="partitionA", subgroup="subgroup1")
+            assert "L2" in Layer2(str(pal)).retrieve(partition="partitionA")
+            assert "L2" in Layer2(str(pal)).retrieve(subgroup="subgroup1")
             assert "L2" in Layer2(str(pal)).retrieve()
-            assert "No fragmentos" in Layer2(str(pal)).retrieve(nodo="nowhere_xyz")
-            assert "celda=" in Layer2(str(pal)).retrieve(celda="nowhere_xyz")
+            assert "No recalls" in Layer2(str(pal)).retrieve(partition="nowhere_xyz")
+            assert "subgroup=" in Layer2(str(pal)).retrieve(subgroup="nowhere_xyz")
             # retrieval error
             with mock.patch.object(ly, "_get_collection", side_effect=RuntimeError("x")):
                 assert "No malla" in Layer2(str(pal)).retrieve()
@@ -1194,7 +1194,7 @@ class TestLayersCov:
             col.upsert(
                 documents=["z " * 200],
                 ids=["z1"],
-                metadatas=[{"nodo": "w", "celda": "r", "source_file": "/s.txt"}],
+                metadatas=[{"partition": "w", "subgroup": "r", "source_file": "/s.txt"}],
             )
             out = Layer2(str(pal)).retrieve()
             assert "L2" in out
@@ -1209,7 +1209,7 @@ class TestLayersCov:
         dm = DxrkMemory(str(pal))
         dm.init()
         try:
-            dm.add_fragmento("w", "r", "deep hello search " * 5, "/a.md", 0)
+            dm.add_recall("w", "r", "deep hello search " * 5, "/a.md", 0)
             assert "hello" in Layer3(str(pal)).search("hello").lower() or "SEARCH" in Layer3(str(pal)).search("hello")
             from dxrk.memory.malla import DxrkMemory as _DM
 
@@ -1218,9 +1218,9 @@ class TestLayersCov:
             _dm0.init()
             _dm0.close()
             assert "No results" in Layer3(str(_empty)).search("zzz_no_match_xyz_123")
-            assert "SEARCH" in Layer3(str(pal)).search("hello", nodo="w")
-            assert "SEARCH" in Layer3(str(pal)).search("hello", celda="r")
-            assert "SEARCH" in Layer3(str(pal)).search("hello", nodo="w", celda="r")
+            assert "SEARCH" in Layer3(str(pal)).search("hello", partition="w")
+            assert "SEARCH" in Layer3(str(pal)).search("hello", subgroup="r")
+            assert "SEARCH" in Layer3(str(pal)).search("hello", partition="w", subgroup="r")
             with mock.patch.object(ly, "_get_collection", side_effect=RuntimeError("x")):
                 assert "No malla" in Layer3(str(pal)).search("hello")
         finally:
@@ -1242,7 +1242,7 @@ class TestLayersCov:
         with mock.patch.object(ly2, "_get_collection", return_value=_FakeCol()):
             with mock.patch(
                 "dxrk.memory.search.hybrid_search",
-                return_value={"results": ["bad", {"nodo": "w", "celda": "r", "text": "t" * 400, "similarity": 1.0}]},
+                return_value={"results": ["bad", {"partition": "w", "subgroup": "r", "text": "t" * 400, "similarity": 1.0}]},
             ):
                 out = Layer3(str(pal)).search("hi")
                 assert "SEARCH" in out
@@ -1256,17 +1256,17 @@ class TestLayersCov:
         dm = DxrkMemory(str(pal))
         dm.init()
         try:
-            dm.add_fragmento("w", "r", "stack content hello " * 5, "/a.md", 0)
+            dm.add_recall("w", "r", "stack content hello " * 5, "/a.md", 0)
             ms = MemoryStack(malla_path=str(pal), identity_path=str(ident))
             assert "stack identity" in ms.wake_up()
-            assert "ESSENTIAL" in ms.wake_up(nodo="w")
-            assert "L2" in ms.recall(nodo="w")
+            assert "ESSENTIAL" in ms.wake_up(partition="w")
+            assert "L2" in ms.recall(partition="w")
             assert "SEARCH" in ms.search("hello") or "No results" in ms.search("hello")
             st = ms.status()
-            assert st["total_fragmentos"] == 1
+            assert st["total_recalls"] == 1
             assert st["L0_identity"]["exists"] is True
             ms2 = MemoryStack(malla_path=str(tmp_path / "missing_xyz"), identity_path=str(tmp_path / "noid"))
-            assert ms2.status()["total_fragmentos"] == 0
+            assert ms2.status()["total_recalls"] == 0
         finally:
             dm.close()
 
@@ -1518,8 +1518,8 @@ class TestSqliteExtra:
     def test_where_in_nonempty(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "ine")
         try:
-            col.add(documents=["a"], ids=["a1"], metadatas=[{"nodo": "w1", "chunk_index": 0}])
-            col.add(documents=["b"], ids=["b1"], metadatas=[{"nodo": "w1", "chunk_index": 1}])
+            col.add(documents=["a"], ids=["a1"], metadatas=[{"partition": "w1", "chunk_index": 0}])
+            col.add(documents=["b"], ids=["b1"], metadatas=[{"partition": "w1", "chunk_index": 1}])
             got = col.get(where={"chunk_index": {"$in": [0]}})
             assert got.ids == ["a1"]
         finally:
@@ -1528,8 +1528,8 @@ class TestSqliteExtra:
     def test_upsert_update_existing(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "updup")
         try:
-            col.add(documents=["first"], ids=["u1"], metadatas=[{"nodo": "w"}])
-            col.upsert(documents=["second"], ids=["u1"], metadatas=[{"nodo": "w2"}])
+            col.add(documents=["first"], ids=["u1"], metadatas=[{"partition": "w"}])
+            col.upsert(documents=["second"], ids=["u1"], metadatas=[{"partition": "w2"}])
             assert col.get(ids=["u1"]).documents[0] == "second"
             assert col.count() == 1
         finally:
@@ -1545,7 +1545,7 @@ class TestSqliteExtra:
     def test_query_both_none_neutral(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "bothnone")
         try:
-            col.add(documents=["hello"], ids=["n1"], metadatas=[{"nodo": "w"}])
+            col.add(documents=["hello"], ids=["n1"], metadatas=[{"partition": "w"}])
             q = col.query(n_results=5)
             assert "n1" in q.ids[0]
         finally:
@@ -1554,7 +1554,7 @@ class TestSqliteExtra:
     def test_query_where_document_empty_dict(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "wempty")
         try:
-            col.add(documents=["hello world"], ids=["w1"], metadatas=[{"nodo": "w"}])
+            col.add(documents=["hello world"], ids=["w1"], metadatas=[{"partition": "w"}])
             q = col.query(query_texts=["hello"], n_results=5, where_document={})
             assert "w1" in q.ids[0]
         finally:
@@ -1563,7 +1563,7 @@ class TestSqliteExtra:
     def test_query_non_dict_meta(self, tmp_path: Path):
         be, _, col = _col(tmp_path, "nondict")
         try:
-            col.add(documents=["hello"], ids=["d1"], metadatas=[{"nodo": "w"}])
+            col.add(documents=["hello"], ids=["d1"], metadatas=[{"partition": "w"}])
             col._conn.execute(  # type: ignore[attr-defined]
                 "UPDATE embeddings SET metadata=? WHERE id=?", ('"juststring"', "d1")
             )
@@ -1930,8 +1930,8 @@ class TestSangreExtraA:
             s = dm.search("closet")
             assert "results" in s
             col = dm._collection(create=False)
-            col.upsert(documents=["weirdw"], ids=["ww1"], metadatas=[{"nodo": 123, "celda": "r"}])
-            assert isinstance(dm.list_nodos(), list)
+            col.upsert(documents=["weirdw"], ids=["ww1"], metadatas=[{"partition": 123, "subgroup": "r"}])
+            assert isinstance(dm.list_partitions(), list)
         finally:
             dm.close()
 
@@ -1987,7 +1987,7 @@ class TestLayersMinerExtra:
         dm = DxrkMemory(str(pal))
         dm.init()
         try:
-            dm.add_fragmento("w", "r", "token hello " * 20, "/a.md", 0)
+            dm.add_recall("w", "r", "token hello " * 20, "/a.md", 0)
             l1 = Layer1(str(pal))
             assert l1.token_estimate() == len(l1.generate()) // 4
         finally:
@@ -1999,7 +1999,7 @@ class TestLayersMinerExtra:
         class _FakeRes:
             def __init__(self):
                 self.documents = ["doc hello", "x" * 500]
-                self.metadatas = ["notadict", {"celda": "r"}]
+                self.metadatas = ["notadict", {"subgroup": "r"}]
 
         class _FakeCol:
             def get(self, **k):
