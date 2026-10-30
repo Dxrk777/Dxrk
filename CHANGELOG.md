@@ -40,6 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `access_history` replaced by its length)
 - **judge:** External `dxrk/judge/` verifier (observe-only, auto-fix
   default-off, no autonomy coupling)
+- **omni:** `scripts/omni.py` MVP — topic to 30s vertical video (LLM script,
+  Edge-TTS, Pollinations/local images, synthesized music, FFmpeg + ASS
+  subtitles), with deterministic offline fallbacks
 
 ### Refactoring
 

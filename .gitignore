@@ -58,6 +58,10 @@ THIRD_PARTY_LICENSES
 dxrk.yaml
 entities.json
 
+# Generated media (keep the directory, ignore renders)
+outputs/*
+!outputs/.gitkeep
+
 # Mutation testing artifacts
 mutants/
 .mutmut-cache
