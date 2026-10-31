@@ -569,10 +569,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#nuevas-claves-en-metadata-del-drawer-schema_version3" class="md-nav__link">
+  <a href="#nuevas-claves-en-metadata-del-recall-schema_version3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Nuevas claves en metadata del drawer (schema_version=3)
+        Nuevas claves en metadata del recall (schema_version=3)
       
     </span>
   </a>
@@ -1333,12 +1333,12 @@ Metacognition, QIEO, Thompson Sampling, Stress/Cooperative Masking).</p>
 <tr>
 <td>28</td>
 <td><code>calibrate.py</code></td>
-<td>Integración QIEO + Thompson para calibrar FSRS por wing</td>
+<td>Integración QIEO + Thompson para calibrar FSRS por partición</td>
 <td>—</td>
 </tr>
 </tbody>
 </table>
-<h3 id="nuevas-claves-en-metadata-del-drawer-schema_version3">Nuevas claves en metadata del drawer (schema_version=3)</h3>
+<h3 id="nuevas-claves-en-metadata-del-recall-schema_version3">Nuevas claves en metadata del recall (schema_version=3)</h3>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
     <span class="c1"># ... Fase 0 keys (S, D, rd, score_ledger, etc.)</span>
     <span class="s2">&quot;S_fast&quot;</span><span class="p">:</span> <span class="mf">2.5</span><span class="p">,</span>           <span class="c1"># S/4 — copia rápida</span>
@@ -1353,17 +1353,17 @@ Metacognition, QIEO, Thompson Sampling, Stress/Cooperative Masking).</p>
 <li><code>.neuromod_state.json</code> — estado global DA/NE/5HT/ACh</li>
 <li><code>.sleep_state.json</code> — estado sleep engine</li>
 <li><code>.stress_state.json</code> — nivel estrés + <code>defenses_active</code></li>
-<li><code>.calibration/{wing}.json</code> — parámetros FSRS calibrados por wing</li>
+<li><code>.calibration/{partition}.json</code> — parámetros FSRS calibrados por partition</li>
 </ul>
 <h3 id="flujo-integrado">Flujo integrado</h3>
-<div class="highlight"><pre><span></span><code>USUARIO ACCEDE (get_drawer):
+<div class="highlight"><pre><span></span><code>USUARIO ACCEDE (get_recall):
   1. RDU scoring (Fase 0)
-  2. mark_labile(drawer)              ← Reconsolidation
+  2. mark_labile(recall)          ← Reconsolidation
   3. encode_mode(neuromod)            ← ACh up
   4. stdp_update(pre, post, dt)       ← Two-Factor
   5. TripleCopy update (S_fast/S_deep)← 3 copias
   6. confidence = propagate()          ← Bayesian
-  7. return drawer + adjusted_conf
+  7. return recall + adjusted_conf
 
 JUEZ EXTERNO (judge.verify_change):
   1. Eval harness recall@k
@@ -1377,9 +1377,9 @@ SLEEP CONSOLIDATION (sleep.cycle):
   3. candidates = select_sleep()       ← Sim-Selection por PE
   4. NREM: consolidate 70% (replay + PE)
   5. REM: reorganize 30% (merge near-dups)
-  6. reconsolidate(labile drawers)     ← 6h window
+  6. reconsolidate(labile recalls) ← 6h window
 
-CALIBRACIÓN (calibrate.wing):
+CALIBRACIÓN (calibrate.partition):
   1. candidates = thompson_select()    ← Active learning
   2. replay outcomes para candidatos
   3. qieo_optimize(recall@k)           ← QIEO
@@ -1467,7 +1467,7 @@ CALIBRACIÓN (calibrate.wing):
 <p><strong>Total Fase 1:</strong> ~140 tests nuevos, todos verdes.</p>
 <h3 id="cli-fase-1">CLI Fase 1</h3>
 <div class="highlight"><pre><span></span><code><span class="c1"># Calibración</span>
-dxrk<span class="w"> </span>memory<span class="w"> </span>calibrate<span class="w"> </span>--wing<span class="w"> </span>dxrk<span class="w"> </span>--samples<span class="w"> </span><span class="m">30</span><span class="w"> </span>--iter<span class="w"> </span><span class="m">50</span>
+dxrk<span class="w"> </span>memory<span class="w"> </span>calibrate<span class="w"> </span>--partition<span class="w"> </span>dxrk<span class="w"> </span>--samples<span class="w"> </span><span class="m">30</span><span class="w"> </span>--iter<span class="w"> </span><span class="m">50</span>
 
 <span class="c1"># Sleep consolidation</span>
 dxrk<span class="w"> </span>memory<span class="w"> </span>sleep<span class="w"> </span>--once<span class="w"> </span>--limit<span class="w"> </span><span class="m">50</span>
@@ -1481,7 +1481,7 @@ dxrk<span class="w"> </span>memory<span class="w"> </span>stress<span class="w">
 dxrk<span class="w"> </span>memory<span class="w"> </span>qieo<span class="w"> </span>--objective<span class="w"> </span>recall<span class="w"> </span>--bounds<span class="w"> </span><span class="s2">&quot;0.5,3.0 0.05,0.5 0.5,2.0 0.0,0.5&quot;</span>
 
 <span class="c1"># Ver estado</span>
-dxrk<span class="w"> </span>memory<span class="w"> </span>status<span class="w"> </span>--wing<span class="w"> </span>dxrk
+dxrk<span class="w"> </span>memory<span class="w"> </span>status<span class="w"> </span>--partition<span class="w"> </span>dxrk
 </code></pre></div>
 <h3 id="mcp-tools-fase-1-requieren-cap-memorymaintain">MCP Tools Fase 1 (requieren cap <code>memory.maintain</code>)</h3>
 <table>
@@ -1496,7 +1496,7 @@ dxrk<span class="w"> </span>memory<span class="w"> </span>status<span class="w">
 <tr>
 <td><code>dxrk_memory_calibrate</code></td>
 <td>write</td>
-<td><code>wing</code>, <code>samples</code>, <code>iter</code></td>
+<td><code>partition</code>, <code>samples</code>, <code>iter</code></td>
 </tr>
 <tr>
 <td><code>dxrk_memory_sleep</code></td>
@@ -1506,12 +1506,12 @@ dxrk<span class="w"> </span>memory<span class="w"> </span>status<span class="w">
 <tr>
 <td><code>dxrk_memory_stress</code></td>
 <td>read</td>
-<td><code>wing</code></td>
+<td><code>partition</code></td>
 </tr>
 <tr>
 <td><code>dxrk_memory_calibration_get</code></td>
 <td>read</td>
-<td><code>wing</code></td>
+<td><code>partition</code></td>
 </tr>
 </tbody>
 </table>
@@ -1582,7 +1582,7 @@ dxrk<span class="w"> </span>memory<span class="w"> </span>status<span class="w">
 </tr>
 <tr>
 <td><code>calibrate_v2.py</code></td>
-<td>calibración por tenant+wing con fallback (tenant+wing → global → default)</td>
+<td>calibración por tenant+partición con fallback (tenant+partición → global → default)</td>
 </tr>
 <tr>
 <td><code>production.py</code></td>

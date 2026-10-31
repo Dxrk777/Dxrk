@@ -951,10 +951,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#11-tabla-honesta-corpus-1k10k-drawers-laptop-m3-ubuntu-2204-python-313" class="md-nav__link">
+  <a href="#11-tabla-honesta-corpus-1k10k-recalls-laptop-m3-ubuntu-2204-python-313" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1.1 Tabla honesta (corpus 1k–10k drawers, laptop M3 / Ubuntu 22.04, Python 3.13)
+        1.1 Tabla honesta (corpus 1k–10k recalls, laptop M3 / Ubuntu 22.04, Python 3.13)
       
     </span>
   </a>
@@ -1421,7 +1421,7 @@
 </ol>
 <hr />
 <h2 id="1-benchmarks-comparativos-dxrkmemory-vs-mem0-zep-chroma">1. Benchmarks comparativos — DxrkMemory vs mem0 / Zep / Chroma</h2>
-<h3 id="11-tabla-honesta-corpus-1k10k-drawers-laptop-m3-ubuntu-2204-python-313">1.1 Tabla honesta (corpus 1k–10k drawers, laptop M3 / Ubuntu 22.04, Python 3.13)</h3>
+<h3 id="11-tabla-honesta-corpus-1k10k-recalls-laptop-m3-ubuntu-2204-python-313">1.1 Tabla honesta (corpus 1k–10k recalls, laptop M3 / Ubuntu 22.04, Python 3.13)</h3>
 <table>
 <thead>
 <tr>
@@ -1448,14 +1448,14 @@
 <td style="text-align: right;">—</td>
 </tr>
 <tr>
-<td><strong>Latencia <code>search</code> 1k drawers</strong> (p50)</td>
+<td><strong>Latencia <code>search</code> 1k recalls</strong> (p50)</td>
 <td style="text-align: right;"><strong>35 ms</strong> (FTS5 trigram + BM25)</td>
 <td style="text-align: right;">78 ms (sqlite+vector+openai local)</td>
 <td style="text-align: right;">140 ms + network</td>
 <td style="text-align: right;">12 ms (HNSW in-mem)</td>
 </tr>
 <tr>
-<td><strong>Latencia <code>search</code> 10k drawers</strong></td>
+<td><strong>Latencia <code>search</code> 10k recalls</strong></td>
 <td style="text-align: right;">68 ms</td>
 <td style="text-align: right;">145 ms</td>
 <td style="text-align: right;">180 ms + network</td>
@@ -1498,14 +1498,14 @@
 </tr>
 <tr>
 <td><strong>Persistencia</strong></td>
-<td style="text-align: right;"><code>~/.dxrk/palace/sqlite_palace.db</code> WAL <code>0o600</code> + <code>~/.dxrk/knowledge_graph.sqlite3</code></td>
+<td style="text-align: right;"><code>~/.dxrk/malla/malla.db</code> WAL <code>0o600</code> + <code>~/.dxrk/knowledge_graph.sqlite3</code></td>
 <td style="text-align: right;"><code>~/.mem0/chroma.sqlite3</code> + json</td>
 <td style="text-align: right;">Cloud PG</td>
 <td style="text-align: right;"><code>chroma.sqlite3</code> + HNSW bin</td>
 </tr>
 <tr>
 <td><strong>Multi-tenant</strong></td>
-<td style="text-align: right;"><code>palace_path</code> per tenant <code>chmod 0o600</code>, <code>RLock</code> + <code>mine_palace_lock</code> 900s</td>
+<td style="text-align: right;"><code>malla_path</code> per tenant <code>chmod 0o600</code>, <code>RLock</code> + <code>mine_malla_lock</code> 900s</td>
 <td style="text-align: right;"><code>user_id</code> string, single DB</td>
 <td style="text-align: right;">org/project API key</td>
 <td style="text-align: right;">collection per tenant</td>
@@ -1588,14 +1588,14 @@ uv<span class="w"> </span>run<span class="w"> </span>--with<span class="w"> </sp
 
 ```bash
 uv tool install git+https://github.com/Dxrk777/Dxrk.git  # 1) instala + detecta agentes
-dxrk memory mine --wing dxrk --room code   # 2) indexa el repo (800/100 chunk, FTS5 trigram+WAL)
+dxrk memory mine --partition dxrk --subgroup code   # 2) indexa el repo (800/100 chunk, FTS5 trigram+WAL)
 dxrk query &quot;¿qué arquitectura decidimos para memoria?&quot;  # 3) BM25 + Graph temporal, &lt;50ms cold
 <span class="gh"># Python</span>
-from dxrk.memory import Palace
-pal = Palace(&quot;~/.dxrk/palace&quot;); pal.search(&quot;hybrid BM25&quot;, n_results=5)
+from dxrk.memory import Malla
+pal = Malla(&quot;~/.dxrk/malla&quot;); pal.search(&quot;hybrid BM25&quot;, n_results=5)
 </code></pre></div>
 <blockquote>
-<p><strong>Por qué DxrkMemory 2.0:</strong> <code>sqlite3</code> FTS5 <code>trigram→porter→unicode61</code> + BM25 híbrido, Graph temporal <code>valid_from/valid_to</code>, AAAK 600–900 tok wake-up, Palace locks <code>~/.dxrk/locks</code> 900s, FIFO guard <code>O_NONBLOCK</code> — ver <a href="../memory/"><code>docs/memory.md</code></a> · <a href="../MIGRATION_3.3.5_3.7.1/"><code>docs/MIGRATION_3.3.5_3.7.1.md</code></a> · <a href="./"><code>docs/dx.md</code></a>
+<p><strong>Por qué DxrkMemory 2.0:</strong> <code>sqlite3</code> FTS5 <code>trigram→porter→unicode61</code> + BM25 híbrido, Graph temporal <code>valid_from/valid_to</code>, AAAK 600–900 tok wake-up, Malla locks <code>~/.dxrk/locks</code> 900s, FIFO guard <code>O_NONBLOCK</code> — ver <a href="../memory/"><code>docs/memory.md</code></a> · <a href="../MIGRATION_3.3.5_3.7.1/"><code>docs/MIGRATION_3.3.5_3.7.1.md</code></a> · <a href="./"><code>docs/dx.md</code></a>
 <div class="highlight"><pre><span></span><code>### 2.3 Checklist README hero (done = PR merged)
 
 - [ ] Badges: **Tests** (2760 passed), **Coverage 80%** (plan v0.2.0; v1.5.0 actual: 100%), **Python 3.13**, **License MIT**, **Release GitHub (sin PyPI)**, **Platform**, **Stars social** (7 badges, 1 línea).
@@ -1783,7 +1783,7 @@ tar<span class="w"> </span>tzf<span class="w"> </span>dist/dxrk-0.2.0.tar.gz<spa
 <span class="c1"># 7) test install from sdist (smoke)</span>
 uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span>--from<span class="w"> </span>dist/dxrk-0.2.0.tar.gz<span class="w"> </span>dxrk<span class="w"> </span>--force<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>tail
 dxrk-py<span class="w"> </span>--help<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-n<span class="w"> </span><span class="m">20</span>
-uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;from dxrk.memory import AgentMemory, Palace; print(&#39;memory ok&#39;)&quot;</span>
+uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;from dxrk.memory import AgentMemory, Malla; print(&#39;memory ok&#39;)&quot;</span>
 
 <span class="c1"># 8) tag + push (dispara .github/workflows/publish.yml)</span>
 git<span class="w"> </span>cliff<span class="w"> </span>--unreleased<span class="w"> </span>--tag<span class="w"> </span>v0.2.0<span class="w"> </span>--prepend<span class="w"> </span>CHANGELOG.md<span class="w">  </span><span class="c1"># o git-cliff manual</span>
@@ -1912,7 +1912,7 @@ uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </
 <h3 id="62-detalle-tactico-6-sin-gaming">6.2 Detalle táctico — 6 sin gaming</h3>
 <p><strong>1) Ejemplos (4 mínimo, cada uno &lt;40 líneas, <code>uv run</code> directo):</strong></p>
 <ul>
-<li><code>examples/memory-30s.py</code> — <code>Palace.mine</code> + <code>search</code> en 10 líneas.</li>
+<li><code>examples/memory-30s.py</code> — <code>Malla.mine</code> + <code>search</code> en 10 líneas.</li>
 <li><code>examples/graph-temporal.py</code> — <code>KnowledgeGraph</code> <code>valid_from</code>/<code>as_of</code> + <code>traverse</code>.</li>
 <li><code>examples/aaak-compress.py</code> — <code>Dialect.compress</code> 600–900 tok demo.</li>
 <li><code>examples/hybrid-search.py</code> — <code>hybrid_search</code> con <code>since</code>/<code>before</code> + <code>closet boost</code>.</li>
@@ -2120,7 +2120,7 @@ uv<span class="w"> </span>run<span class="w"> </span>mkdocs<span class="w"> </sp
 <hr />
 <h2 id="12-referencias">12. Referencias</h2>
 <ul>
-<li><code>memory.md</code> — DxrkMemory 2.0 flagship 13 módulos, FTS5, Palace locks, BM25, Graph, AAAK, Layers 600–900 tok</li>
+<li><code>memory.md</code> — DxrkMemory 2.0 flagship 13 módulos, FTS5, Malla locks, BM25, Graph, AAAK, Layers 600–900 tok</li>
 <li><code>MIGRATION_3.3.5_3.7.1.md</code> — delta 388 files, 6 parches portados, no-portados justificados</li>
 <li><code>adr/ADR-002-memory-separation.md</code> — aislamiento DxrkMemory / Learner / RAG</li>
 <li><code>adr/ADR-003-hybrid-vs-stdlib.md</code> — decisión stdlib-only vs hybrid (P5)</li>

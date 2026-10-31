@@ -1148,7 +1148,7 @@ Si algo difiere en tu máquina, abre un issue: el tutorial no miente.</p>
 <span class="c1"># o: pip install git+https://github.com/Dxrk777/Dxrk.git</span>
 dxrk-py<span class="w"> </span>--version<span class="w">   </span><span class="c1"># Dxrk v1.5.0</span>
 </code></pre></div>
-<p>Requisito: Python 3.13+.</p>
+<p>Requisito: Python 3.12+.</p>
 <h2 id="1-vista-previa-del-setup-1-min">1) Vista previa del setup (1 min)</h2>
 <p>Antes de tocar tu <code>~/.claude.json</code> o equivalentes, mira qué haría:</p>
 <div class="highlight"><pre><span></span><code>dxrk-py<span class="w"> </span>install<span class="w"> </span>--agent<span class="w"> </span>claude-code<span class="w"> </span>--preset<span class="w"> </span>full-dxrk<span class="w"> </span>--dry-run
@@ -1165,17 +1165,17 @@ El flag <code>--tenant</code> y la variable <code>DXRK_TENANT</code> son equival
 <code>tenant switch acme</code> lo deja como activo para no repetir el flag.</p>
 <h2 id="3-indexa-tu-codigo-2-min">3) Indexa tu código (2 min)</h2>
 <div class="highlight"><pre><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>dxrk.memory<span class="w"> </span>mine<span class="w"> </span>./mi-proyecto
-<span class="c1"># mine: {&#39;files_mined&#39;: 12, &#39;files_skipped&#39;: 3, &#39;drawers_added&#39;: 40}</span>
+<span class="c1"># mine: {&#39;files_mined&#39;: 12, &#39;files_skipped&#39;: 3, &#39;recalls_added&#39;: 40}</span>
 </code></pre></div>
 <p>Notas honestas:</p>
 <ul>
 <li>Indexa archivos de código (p. ej. <code>.py</code>); los <code>.txt</code> se omiten.</li>
-<li>Fragmentos de menos de ~50 caracteres se omiten (ruido).</li>
-<li>Todo queda en <code>~/.dxrk/memory/sqlite_palace.db</code> (SQLite FTS5, sin servidor).</li>
+<li>Recalls de menos de ~50 caracteres se omiten (ruido).</li>
+<li>Todo queda en <code>~/.dxrk/memory/malla.db</code> (SQLite FTS5, sin servidor).</li>
 </ul>
 <h2 id="4-busca-2-min">4) Busca (2 min)</h2>
 <div class="highlight"><pre><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>dxrk.memory<span class="w"> </span>search<span class="w"> </span><span class="s2">&quot;arquitectura memoria&quot;</span><span class="w"> </span>--n<span class="w"> </span><span class="m">5</span>
-<span class="c1"># {&quot;id&quot;: &quot;drawer_default_general_...&quot;, &quot;content&quot;: &quot;...&quot;, &quot;project&quot;: &quot;default&quot;}</span>
+<span class="c1"># {&quot;id&quot;: &quot;recall_default_general_...&quot;, &quot;content&quot;: &quot;...&quot;, &quot;project&quot;: &quot;default&quot;}</span>
 </code></pre></div>
 <p>Semántica: multi-palabra = <strong>AND de tokens</strong> (cada palabra debe aparecer en el
 documento, en cualquier orden). Una sola palabra basta para empezar.</p>

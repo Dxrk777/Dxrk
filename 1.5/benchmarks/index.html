@@ -1188,7 +1188,7 @@ pegar aquí. Hay baseline vía pytest opcional
 <tr>
 <td>mine throughput</td>
 <td>23.01 ms</td>
-<td>1304 drawers/s</td>
+<td>1304 recalls/s</td>
 </tr>
 <tr>
 <td>graph traverse depth2</td>
@@ -1212,7 +1212,7 @@ pegar aquí. Hay baseline vía pytest opcional
 </tr>
 </tbody>
 </table>
-<p>Config: warmup 5 queries, corpus 1k/10k drawers, <code>QUERY_SET</code> de 8 términos,
+<p>Config: warmup 5 queries, corpus 1k/10k recalls, <code>QUERY_SET</code> de 8 términos,
 BM25 (<code>k1=1.5 b=0.75</code>) + FTS5 trigram→porter, WAL <code>0o600</code>.</p>
 <h2 id="recall-hibrido-2026-09-27-bench_recall">Recall híbrido (2026-09-27, <code>bench_recall</code>)</h2>
 <p>Números públicos del recall híbrido (<code>0.6·cosine + 0.3·BM25 + 0.05·recency
@@ -1296,7 +1296,7 @@ sqlite + rerank.</p>
 <li>Latencias no estrictamente comparables: el híbrido se mide end-to-end
   (sqlite + rerank) y las ablaciones como scoring en Python sobre el corpus
   pre-cargado (fetch excluido); el corpus (60 docs) no predice latencia a
-  1k/10k drawers (ver baseline de arriba para escala).</li>
+  1k/10k recalls (ver baseline de arriba para escala).</li>
 <li>Una sola máquina / una sola corrida de calidad (determinista) — la
   latencia varía con el hardware; re-ejecutar localmente.</li>
 </ul>

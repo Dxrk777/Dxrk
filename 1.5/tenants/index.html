@@ -1140,7 +1140,7 @@ detallado en <code>adr/ADR-002-memory-separation.md</code>, roadmap §3.3).</p>
 │   ├── _registry.json        # {&quot;tenants&quot;: [{&quot;id&quot;, &quot;display_name&quot;, ...}]}
 │   ├── _active               # id del tenant activo (texto plano)
 │   └── {id}/
-│       ├── palace/           # DxrkMemory 2.0 (sqlite FTS5, WAL 0o600)
+│       ├── malla/            # DxrkMemory 2.0 (sqlite FTS5, WAL 0o600)
 │       ├── locks/            # locks de minería
 │       ├── learn/            # datos del learner
 │       └── sessions/         # sesiones del tenant
@@ -1174,7 +1174,7 @@ dxrk-py<span class="w"> </span>--tenant<span class="w"> </span>acme<span class="
 <p><code>create</code> duplicado es idempotente; <code>switch</code> a un tenant inexistente falla.</p>
 <h2 id="aislamiento-verificado">Aislamiento verificado</h2>
 <ul>
-<li><strong>Palace/vault/JWT/RBAC/CLI</strong>: <code>tests/test_tenant_e2e.py</code> (9 tests).</li>
+<li><strong>Malla/vault/JWT/RBAC/CLI</strong>: <code>tests/test_tenant_e2e.py</code> (9 tests).</li>
 <li><strong>RBAC por rol</strong>: <code>tests/test_enterprise_rbac_matrix.py</code> (25 tests).</li>
 <li><strong>JWT <code>tid</code> + vault HKDF</strong>: <code>tests/test_enterprise_jwt_vault.py</code> (18 tests).</li>
 <li><strong>CLI + migración + switcher TUI</strong>: <code>tests/test_enterprise_cli_migration.py</code>
@@ -1183,7 +1183,7 @@ dxrk-py<span class="w"> </span>--tenant<span class="w"> </span>acme<span class="
 <h2 id="api">API</h2>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">dxrk.tenant</span><span class="w"> </span><span class="kn">import</span> <span class="n">tenant_root</span><span class="p">,</span> <span class="n">ensure_tenant</span><span class="p">,</span> <span class="n">list_tenants</span><span class="p">,</span> <span class="n">is_migrated</span>
 
-<span class="n">root</span> <span class="o">=</span> <span class="n">ensure_tenant</span><span class="p">(</span><span class="s2">&quot;acme&quot;</span><span class="p">)</span>   <span class="c1"># crea skeleton palace/locks/learn/sessions</span>
+<span class="n">root</span> <span class="o">=</span> <span class="n">ensure_tenant</span><span class="p">(</span><span class="s2">&quot;acme&quot;</span><span class="p">)</span>   <span class="c1"># crea skeleton malla/locks/learn/sessions</span>
 </code></pre></div>
 <h2 id="vault-por-tenant">Vault por tenant</h2>
 <p><code>dxrk/vault/__init__.py</code> (<code>TenantVaultRegistry</code>): cada tenant deriva su clave

@@ -1421,7 +1421,7 @@
 <h1 id="roadmap-dxrk-v020-v100-matriz-impactoesfuerzo-plan-priorizado">Roadmap Dxrk v0.2.0 → v1.0.0 — Matriz Impacto/Esfuerzo &amp; Plan Priorizado</h1>
 <blockquote>
 <p><strong>Estado:</strong> v1.0.0 GA Done (salvo R14 diferido a v2.0) · <strong>Fecha:</strong> 2026-09-08 · <strong>Versión:</strong> 1.0.0-done<br />
-<strong>Alcance:</strong> Deuda Fase1 + Enterprise multi-tenant Fase2 + DX Top1 Fase4 → GA v1.0.0. <strong>Sin tocar <code>dxrk/memory/</code></strong> salvo via <code>palace_path</code> per-tenant (ADR-002).<br />
+<strong>Alcance:</strong> Deuda Fase1 + Enterprise multi-tenant Fase2 + DX Top1 Fase4 → GA v1.0.0. <strong>Sin tocar <code>dxrk/memory/</code></strong> salvo via <code>malla_path</code> per-tenant (ADR-002).
 <strong>Contexto flagship:</strong> DxrkMemory 2.0 cerrado — 14 módulos <code>dxrk/memory</code> + <code>backend/</code> (6303 LOC stdlib-only <code>sqlite3</code> FTS5 trigram→porter→unicode61, WAL <code>0o600</code>/<code>0o750</code>, 141 tests en <code>tests/test_memory*.py</code>, 2760+ totales), ADR-002 (aislamiento Memory/Learner/RAG) y ADR-003 (stdlib-only vs hybrid BM25 0.72 vs HNSW 0.88, 0 vs 420MB, P5 vence). Ver <code>docs/memory.md:1</code>, <code>docs/dx.md:1</code>, <code>docs/adr/ADR-002-memory-separation.md:1</code>, <code>docs/adr/ADR-003-hybrid-vs-stdlib.md:1</code>, <code>docs/MIGRATION_3.3.5_3.7.1.md:1</code>.<br />
 <strong>Nota 2026-10:</strong> sin PyPI por diseño (<code>.github/workflows/publish.yml:26-29</code>, commits <code>a396a00</code> y <code>3b1d235</code>). Las menciones a publish PyPI abajo son históricas del plan 0.2.0 y quedan sustituidas por release vía git + GitHub Releases; no ejecutar publish a PyPI.
 <strong>Versiones anteriores:</strong> <code>pyproject.toml:7</code> <code>0.1.2</code> → <code>0.2.0</code> (DX + flagship docs) → <code>0.3.0</code>/<code>0.5.0</code> enterprise beta → <code>1.0.0</code> GA multi-tenant. Commits base: <code>4c4ab3f</code> flagship 4652 LOC <code>979</code> replaces, <code>bf0d106</code> coverage 141 + ADR-002 + hooks <code>stdio</code>. <code>git status</code> clean tras <code>bf0d106</code> salvo untracked <code>docs/dx.md</code> (535L) + <code>docs/adr/ADR-003-hybrid-vs-stdlib.md</code> (76L) — este roadmap los integra.</p>
@@ -1553,7 +1553,7 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 <hr />
 <h2 id="2-tabla-priorizada-15-iniciativas-ordenadas-por-prioridad-desc">2. Tabla priorizada — 15 iniciativas (ordenadas por Prioridad desc)</h2>
 <blockquote>
-<p><strong>Owner convención:</strong> <code>DX</code> = docs/readme/mkdocs, <code>Memory/Core</code> = <code>dxrk/memory/*</code> (solo <code>palace_path</code> wiring, no tocar internals), <code>Config</code> = <code>dxrk/config/*</code>, <code>TUI</code> = <code>dxrk/tui/*</code>, <code>Security</code> = <code>dxrk/security/*</code> + <code>dxrk/vault/*</code>, <code>CLI</code> = <code>dxrk/commands/*</code> + <code>dxrk/__main__.py</code>, <code>Release</code> = <code>pyproject.toml</code> + <code>.github/workflows/*</code>.</p>
+<p><strong>Owner convención:</strong> <code>DX</code> = docs/readme/mkdocs, <code>Memory/Core</code> = <code>dxrk/memory/*</code> (solo <code>malla_path</code> wiring, no tocar internals), <code>Config</code> = <code>dxrk/config/*</code>, <code>TUI</code> = <code>dxrk/tui/*</code>, <code>Security</code> = <code>dxrk/security/*</code> + <code>dxrk/vault/*</code>, <code>CLI</code> = <code>dxrk/commands/*</code> + <code>dxrk/__main__.py</code>, <code>Release</code> = <code>pyproject.toml</code> + <code>.github/workflows/*</code>.</p>
 </blockquote>
 <table>
 <thead>
@@ -1610,14 +1610,14 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 <tr>
 <td><strong>R04</strong></td>
 <td><strong>Migration idempotente multi-tenant</strong></td>
-<td><code>~/.dxrk/palace/sqlite_palace.db</code> → <code>~/.dxrk/tenants/default/sqlite_palace.db</code> copy-on-first-run idempotente, <code>~/.dxrk/locks</code> → <code>~/.dxrk/tenants/{id}/locks</code>, <code>~/.dxrk/knowledge_graph.sqlite3</code> → per-tenant o shared con <code>tenant_id</code> col, rollback si <code>palace_path</code> custom</td>
+<td><code>~/.dxrk/malla/malla.db</code> → <code>~/.dxrk/tenants/default/malla/malla.db</code> copy-on-first-run idempotente, <code>~/.dxrk/locks</code> → <code>~/.dxrk/tenants/{id}/locks</code>, <code>~/.dxrk/knowledge_graph.sqlite3</code> → per-tenant o shared con <code>tenant_id</code> col, rollback si <code>malla_path</code> custom</td>
 <td><strong>5</strong></td>
 <td><strong>2</strong></td>
 <td><strong>2.50</strong></td>
 <td>Quick Win</td>
 <td>Memory/Core</td>
 <td>R09 tenant isolation spec</td>
-<td><code>dxrk/memory/palace.py:40</code> <code>~/.dxrk/locks</code> 900s; <code>MIGRATION_3.3.5_3.7.1.md:58</code> locks migration precedente</td>
+<td><code>dxrk/memory/malla.py:40</code> <code>~/.dxrk/locks</code> 900s; <code>MIGRATION_3.3.5_3.7.1.md:58</code> locks migration precedente</td>
 </tr>
 <tr>
 <td><strong>R05</strong></td>
@@ -1658,7 +1658,7 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 <tr>
 <td><strong>R08</strong></td>
 <td><strong>JWT tid claim</strong></td>
-<td><code>dxrk/security/jwt.py:2</code> <code>tid</code> claim injection/validation, <code>session_ingress</code> + <code>tid</code> → <code>palace_path</code> resolver, middleware <code>401 if tid missing</code> en MCP/<code>mcp_server.py</code>, tests <code>tests/test_jwt_tid.py</code></td>
+<td><code>dxrk/security/jwt.py:2</code> <code>tid</code> claim injection/validation, <code>session_ingress</code> + <code>tid</code> → <code>malla_path</code> resolver, middleware <code>401 if tid missing</code> en MCP/<code>mcp_server.py</code>, tests <code>tests/test_jwt_tid.py</code></td>
 <td><strong>4</strong></td>
 <td><strong>2</strong></td>
 <td><strong>2.00</strong></td>
@@ -1682,19 +1682,19 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 <tr>
 <td><strong>R10</strong></td>
 <td><strong>Tenant isolation filesystem</strong></td>
-<td><code>~/.dxrk/tenants/{id}/</code> (<code>palace/sqlite_palace.db</code> WAL <code>0o600</code>, <code>knowledge_graph.sqlite3</code>, <code>locks/</code> <code>0o750</code>, <code>config.json</code>, <code>memories.json</code> per-tenant), <code>pathlib</code> + <code>chmod</code> hardening, <code>RLock</code> per-tenant, <code>mine_palace_lock</code> namespaced <code>mine_palace_{tenant}_{sha16}</code></td>
+<td><code>~/.dxrk/tenants/{id}/</code> (<code>malla/malla.db</code> WAL <code>0o600</code>, <code>knowledge_graph.sqlite3</code>, <code>locks/</code> <code>0o750</code>, <code>config.json</code>, <code>memories.json</code> per-tenant), <code>pathlib</code> + <code>chmod</code> hardening, <code>RLock</code> per-tenant, <code>mine_malla_lock</code> namespaced <code>mine_malla_{tenant}_{sha16}</code></td>
 <td><strong>5</strong></td>
 <td><strong>3</strong></td>
 <td><strong>1.67</strong></td>
 <td>Major Project</td>
 <td>Memory/Core/Config</td>
 <td>R12 config unify (opcional)</td>
-<td><code>palace.py:628</code> <code>chmod 0o600</code> single DB; ADR-002 R5 multi-tenant ready</td>
+<td><code>malla.py:628</code> <code>chmod 0o600</code> single DB; ADR-002 R5 multi-tenant ready</td>
 </tr>
 <tr>
 <td><strong>R11</strong></td>
 <td><strong>TUI STATE→context DI</strong></td>
-<td><code>dxrk/tui/shared.py:15</code> <code>class AppState</code> + <code>STATE = AppState()</code> global → <code>AppContext(tenant_id, palace, config, vault)</code> inyectado vía <code>App.__init__(context)</code>, elimina <code>from dxrk.tui.shared import STATE</code> en <code>dxrk/tui/app.py:40,101,204</code> (~18 usos), tests <code>test_tui_context.py</code></td>
+<td><code>dxrk/tui/shared.py:15</code> <code>class AppState</code> + <code>STATE = AppState()</code> global → <code>AppContext(tenant_id, malla, config, vault)</code> inyectado vía <code>App.__init__(context)</code>, elimina <code>from dxrk.tui.shared import STATE</code> en <code>dxrk/tui/app.py:40,101,204</code> (~18 usos), tests <code>test_tui_context.py</code></td>
 <td><strong>4</strong></td>
 <td><strong>3</strong></td>
 <td><strong>1.33</strong></td>
@@ -1706,7 +1706,7 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 <tr>
 <td><strong>R12</strong></td>
 <td><strong>RBAC 3 roles</strong></td>
-<td><code>dxrk/security/permissions.py</code> + <code>dxrk/config/featureflags.py</code> roles <code>admin</code> (read+write+mine+manage tenants) / <code>dev</code> (read+write+mine) / <code>readonly</code> (search/recall only), <code>tenant_roles.json</code> matrix, enforcement en <code>Palace.mine/search</code> + <code>CLI</code> + <code>MCP</code>, tests <code>test_rbac_matrix.py</code> 12 combos</td>
+<td><code>dxrk/security/permissions.py</code> + <code>dxrk/config/featureflags.py</code> roles <code>admin</code> (read+write+mine+manage tenants) / <code>dev</code> (read+write+mine) / <code>readonly</code> (search/recall only), <code>tenant_roles.json</code> matrix, enforcement en <code>Malla.mine/search</code> + <code>CLI</code> + <code>MCP</code>, tests <code>test_rbac_matrix.py</code> 12 combos</td>
 <td><strong>4</strong></td>
 <td><strong>3</strong></td>
 <td><strong>1.33</strong></td>
@@ -1742,7 +1742,7 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 <tr>
 <td><strong>R15</strong></td>
 <td><strong>TUI switcher tenant selector</strong></td>
-<td><code>dxrk/tui/app.py</code> <code>TenantSwitcher</code> screen (<code>Ctrl+T</code>), <code>~/.dxrk/tenants/*/config.json</code> discovery, <code>palace_path</code> switch sin restart, <code>STATE.tenant</code> → <code>context.tenant_id</code> post-R11, breadcrumb <code>tenant: &lt;id&gt; · wing: dxrk</code></td>
+<td><code>dxrk/tui/app.py</code> <code>TenantSwitcher</code> screen (<code>Ctrl+T</code>), <code>~/.dxrk/tenants/*/config.json</code> discovery, <code>malla_path</code> switch sin restart, <code>STATE.tenant</code> → <code>context.tenant_id</code> post-R11, breadcrumb <code>tenant: &lt;id&gt; · partición: dxrk</code></td>
 <td><strong>3</strong></td>
 <td><strong>3</strong></td>
 <td><strong>1.00</strong></td>
@@ -1857,8 +1857,8 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 <tbody>
 <tr>
 <td><strong>Tenant isolation</strong></td>
-<td><code>~/.dxrk/tenants/{id}/</code> FS layout (<code>palace/</code>, <code>locks/</code>, <code>graph/</code>, <code>config.json</code>), <code>dxrk/memory/palace.py</code> <code>palace_path</code> resolver per-tenant, <code>chmod 0o600/0o750</code>, <code>RLock</code> per-tenant, <code>mine_palace_lock</code> namespaced</td>
-<td><code>Palace("/tmp/palace")</code> sigue funcionando; <code>Palace(tenant="acme")</code> → <code>~/.dxrk/tenants/acme/palace</code></td>
+<td><code>~/.dxrk/tenants/{id}/</code> FS layout (<code>malla/</code>, <code>locks/</code>, <code>graph/</code>, <code>config.json</code>), <code>dxrk/memory/malla.py</code> <code>malla_path</code> resolver per-tenant, <code>chmod 0o600/0o750</code>, <code>RLock</code> per-tenant, <code>mine_malla_lock</code> namespaced</td>
+<td><code>Malla("/tmp/malla")</code> sigue funcionando; <code>Malla(tenant="acme")</code> → <code>~/.dxrk/tenants/acme/malla</code></td>
 <td>R14 config unify</td>
 </tr>
 <tr>
@@ -1870,7 +1870,7 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 <tr>
 <td><strong>CLI --tenant</strong></td>
 <td><code>dxrk/__main__.py</code> global <code>--tenant</code> + <code>DXRK_TENANT</code> env, <code>Registry.execute(argv, tenant_id)</code> wiring, validación regex, help <code>dxrk --help</code> muestra <code>--tenant</code></td>
-<td><code>dxrk --tenant acme memory mine --wing acme --room code</code></td>
+<td><code>dxrk --tenant acme memory mine --partition acme --subgroup code</code></td>
 <td>R10</td>
 </tr>
 <tr>
@@ -1881,8 +1881,8 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 </tr>
 <tr>
 <td><strong>Migration beta</strong></td>
-<td><code>dxrk/memory/migration.py</code> <code>migrate_to_tenants(dry_run, backup)</code> idempotente (<code>~/.dxrk/palace</code> → <code>~/.dxrk/tenants/default/</code>), <code>~/.dxrk/migration.json</code> marker, <code>dxrk migrate --check</code> dry-run</td>
-<td>Si falla, rollback <code>mv tenants/default/palace → palace</code></td>
+<td><code>dxrk/memory/migration.py</code> <code>migrate_to_tenants(dry_run, backup)</code> idempotente (<code>~/.dxrk/malla</code> → <code>~/.dxrk/tenants/default/</code>), <code>~/.dxrk/migration.json</code> marker, <code>dxrk migrate --check</code> dry-run</td>
+<td>Si falla, rollback <code>mv tenants/default/malla → malla</code></td>
 <td>R10</td>
 </tr>
 </tbody>
@@ -1903,13 +1903,13 @@ Impacto 1 │  FILL-INS           │  MONEY PIT          │
 <tbody>
 <tr>
 <td><strong>RBAC</strong></td>
-<td><code>admin/dev/readonly</code> enforcement en <code>Palace.mine</code> (write), <code>Palace.search</code> (read), <code>CLI</code> dispatch, <code>tenant_roles.json</code> (<code>{tenant, user, role}</code>), <code>403 RBAC_DENIED</code></td>
+<td><code>admin/dev/readonly</code> enforcement en <code>Malla.mine</code> (write), <code>Malla.search</code> (read), <code>CLI</code> dispatch, <code>tenant_roles.json</code> (<code>{tenant, user, role}</code>), <code>403 RBAC_DENIED</code></td>
 <td><code>admin</code> puede <code>tenant create/delete</code>, <code>dev</code> no</td>
 <td>R09 + R10</td>
 </tr>
 <tr>
 <td><strong>TUI switcher</strong></td>
-<td><code>dxrk/tui/app.py</code> <code>TenantSwitcher</code> (<code>Ctrl+T</code>), discovery <code>~/.dxrk/tenants/*/config.json</code>, live switch <code>palace_path</code>, tests <code>test_tui_switcher.py</code> (no necesita <code>STATE</code> global gracias a R11)</td>
+<td><code>dxrk/tui/app.py</code> <code>TenantSwitcher</code> (<code>Ctrl+T</code>), discovery <code>~/.dxrk/tenants/*/config.json</code>, live switch <code>malla_path</code>, tests <code>test_tui_switcher.py</code> (no necesita <code>STATE</code> global gracias a R11)</td>
 <td>Breadcrumb <code>tenant: acme · 42 agents</code></td>
 <td><strong>R11</strong> + R10</td>
 </tr>
@@ -2087,7 +2087,7 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 <td><code>HKDF(salt=tenant_id, info=b"dxrk-vault-v1")</code> versionado <code>info</code> v1; <code>vault.enc</code> header <code>{"hkdf_version":1, "tenant":tid}</code>; doc rotación <code>dxrk vault rekey --tenant</code></td>
 </tr>
 <tr>
-<td>Migration <code>~/.dxrk/palace → tenants/default/</code> no idempotente (doble copy)</td>
+<td>Migration <code>~/.dxrk/malla → tenants/default/</code> no idempotente (doble copy)</td>
 <td>M</td>
 <td>Alto</td>
 <td>Marker <code>~/.dxrk/migration.json</code> <code>{"migrated":true, "at":"2026-11-20T00:00:00Z"}</code>; <code>migrate --check</code> dry-run + <code>backup ~/.dxrk.pre-0.5/</code>; tests <code>test_migration_idempotent.py</code> (run twice → same hash)</td>
@@ -2121,7 +2121,7 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 <td>RBAC matrix 12 combos sin tests → privilege escalation <code>readonly → mine</code></td>
 <td>M</td>
 <td>Crítico</td>
-<td><code>tests/test_rbac_matrix.py</code> 12 combos (<code>3 roles × 4 ops</code>) + fuzz <code>hypothesis</code> roles; <code>Palace.mine</code> check <code>if role=="readonly": raise PermissionError("RBAC_DENIED")</code> early</td>
+<td><code>tests/test_rbac_matrix.py</code> 12 combos (<code>3 roles × 4 ops</code>) + fuzz <code>hypothesis</code> roles; <code>Malla.mine</code> check <code>if role=="readonly": raise PermissionError("RBAC_DENIED")</code> early</td>
 </tr>
 <tr>
 <td>TUI switcher sin DI (R11) → race <code>STATE.tenant</code> global entre screens</td>
@@ -2207,13 +2207,13 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 <tr>
 <td><strong>No <code>dxrk/memory/</code> touch</strong></td>
 <td><code>git diff --stat main...HEAD -- dxrk/memory/ \| wc -l</code></td>
-<td><strong>0</strong> (salvo <code>palace_path</code> wiring per-tenant vía param, no internals)</td>
+<td><strong>0</strong> (salvo <code>malla_path</code> wiring per-tenant vía param, no internals)</td>
 <td>PR diffstat gate</td>
 </tr>
 </tbody>
 </table>
 <blockquote>
-<p><strong>Regla Fase1 deuda:</strong> ningún PR toca <code>dxrk/memory/</code> internals (Fidelity 3.7.1 <code>979</code> replaces + <code>1654cd2</code>/<code>759b8f1</code>/<code>db29959</code>/<code>27212e5</code>/<code>5036e3c</code> + <code>WAL</code> + <code>FTS5</code> locks). Solo <code>palace_path</code> per-tenant wiring.</p>
+<p><strong>Regla Fase1 deuda:</strong> ningún PR toca <code>dxrk/memory/</code> internals (Fidelity 3.7.1 <code>979</code> replaces + <code>1654cd2</code>/<code>759b8f1</code>/<code>db29959</code>/<code>27212e5</code>/<code>5036e3c</code> + <code>WAL</code> + <code>FTS5</code> locks). Solo <code>malla_path</code> per-tenant wiring.</p>
 </blockquote>
 <h3 id="62-dod-por-version-checklist-mergeable">6.2 DoD por versión (checklist mergeable)</h3>
 <blockquote>
@@ -2240,23 +2240,23 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 </ul>
 <h4 id="v050-done-enterprise-beta-6-semanas">v0.5.0 Done (Enterprise Beta) — 6 semanas</h4>
 <ul>
-<li>[x] <code>~/.dxrk/tenants/{id}/</code> FS isolation <code>Palace</code> per-tenant — <code>tests/test_tenant_e2e.py</code> 9 tests + <code>tests/test_enterprise_cli_migration.py</code> 42 tests</li>
+<li>[x] <code>~/.dxrk/tenants/{id}/</code> FS isolation <code>Malla</code> per-tenant — <code>tests/test_tenant_e2e.py</code> 9 tests + <code>tests/test_enterprise_cli_migration.py</code> 42 tests</li>
 <li>[x] <code>dxrk/vault</code> HKDF per-tenant — <code>tests/test_enterprise_jwt_vault.py</code> cross-tenant decrypt fail, <code>VaultConfig.path</code> templating <code>tenants/{id}/vault.enc</code></li>
 <li>[x] <code>CLI --tenant</code> + <code>DXRK_TENANT</code> env — <code>tests/test_enterprise_cli_migration.py</code> (flag, env fallback, ids inválidos), <code>dxrk --help</code> muestra flag</li>
 <li>[x] <code>JWT tid</code> claim — <code>tests/test_enterprise_jwt_vault.py</code> (<code>missing tid</code>, <code>mismatch 403</code>, roundtrip firmado), middleware en <code>mcp_server.py</code></li>
-<li>[x] <code>dxrk/tenant/migration.py</code> idempotente <code>palace → tenants/default/</code> — segunda corrida <code>copied == []</code>, <code>dxrk tenant migrate</code> + dry-run</li>
+<li>[x] <code>dxrk/tenant/migration.py</code> idempotente <code>malla → tenants/default/</code> — segunda corrida <code>copied == []</code>, <code>dxrk tenant migrate</code> + dry-run</li>
 <li>[x] <code>docs/tenants.md</code> + <code>docs/rbac.md</code> + <code>docs/migration.md</code> + <code>CHANGELOG.md</code> — <code>mkdocs build</code> 0 warnings</li>
 <li>[x] Releases enterprise vía tags <code>v0.2.3</code>/<code>v0.2.4</code> (colapsado: sin tag beta intermedio, release directo a <code>1.0.0</code> GA)</li>
 <li>[x] Gates universales §6.1 verdes + <code>uv audit</code> 0</li>
 </ul>
 <h4 id="v100-done-ga-4-semanas">v1.0.0 Done (GA) — 4 semanas</h4>
 <ul>
-<li>[x] <code>RBAC</code> 3 roles <code>admin/dev/readonly</code> matrix — <code>tests/test_enterprise_rbac_matrix.py</code> 25 + <code>tests/test_rbac_enforcement.py</code> 32 + <code>tests/test_memory_rbac.py</code> 30 + enforcement <code>Palace.mine/search</code> + <code>CLI</code> + <code>MCP</code> 403 <code>RBAC_DENIED</code></li>
+<li>[x] <code>RBAC</code> 3 roles <code>admin/dev/readonly</code> matrix — <code>tests/test_enterprise_rbac_matrix.py</code> 25 + <code>tests/test_rbac_enforcement.py</code> 32 + <code>tests/test_memory_rbac.py</code> 30 + enforcement <code>Malla.mine/search</code> + <code>CLI</code> + <code>MCP</code> 403 <code>RBAC_DENIED</code></li>
 <li>[x] <code>TUI switcher</code> <code>TenantSwitcher</code> — pilot TUI live switch (<code>tests/test_enterprise_cli_migration.py</code>), breadcrumb tenant, sin <code>STATE</code> global (R11 Done)</li>
 <li>[x] Hardening GA: <code>mypy</code> 0, <code>ruff</code> 0, <code>pytest --cov-fail-under=80</code> ✅ (85%+), <code>trace0</code> 0, <code>uv audit</code> 0, <code>site/assets/demo_tenant.gif</code> ✅ (30s, 327KB) + <code>OSSF Scorecard</code> <strong>7.0 real</strong> (target ≥8.5 no alcanzado: techo honesto — sin PR-required por decisión usuario, 1 contribuidor, repo &lt;90 días, sin CII/fuzzing; ver §9 nota)</li>
 <li>[x] Docs GA: <code>docs/tenants.md</code> ✅, <code>docs/rbac.md</code> ✅, <code>docs/migration-0.5-to-1.0.md</code> ✅, <code>README.md</code> enterprise ✅, <code>mike</code> <code>latest→1.0</code> ✅, <code>social</code> cards OG ✅ (plugin genera PNGs por página)</li>
 <li>[x] <code>pyproject.toml</code> <code>1.0.0</code> <code>Development Status :: 5 - Production/Stable</code> + <code>CHANGELOG.md</code> cliff + <code>git tag v1.0.0</code> → <code>publish.yml</code> GA + <code>gh release</code> notes + <code>SECURITY.md</code> <code>Supported: 1.0.x ✅, 0.2.x ✅</code></li>
-<li>[x] Manual smoke GA: <code>uv tool install git+https://github.com/Dxrk777/Dxrk.git --force</code> (1.0.0 vía git) + tenant create/whoami/list OK — encontró y arregló 3 bugs reales (search fresco <code>[]</code>, contaminación palace por <code>DEFAULT_PALACE_PATH</code> import-time, post-filtro frase contigua → token-AND)</li>
+<li>[x] Manual smoke GA: <code>uv tool install git+https://github.com/Dxrk777/Dxrk.git --force</code> (1.0.0 vía git) + tenant create/whoami/list OK — encontró y arregló 3 bugs reales (search fresco <code>[]</code>, contaminación malla por <code>DEFAULT_MALLA_PATH</code> import-time, post-filtro frase contigua → token-AND)</li>
 <li>[x] Gates universales §6.1 verdes en <code>main</code> tag <code>v1.0.0</code> (se re-verifican en gates finales)</li>
 </ul>
 <h4 id="v110-done-cortex-autonomous-enterprise-release-menor">v1.1.0 Done (Cortex + Autonomous + Enterprise) — release menor</h4>
@@ -2383,15 +2383,15 @@ abajo con las líneas correspondientes marcadas.</p>
 <hr />
 <h2 id="8-referencias-y-trazabilidad">8. Referencias y trazabilidad</h2>
 <ul>
-<li><strong>Flagship:</strong> <a href="../memory/"><code>docs/memory.md</code></a> — 13 módulos 4652 LOC (14 con <code>backend/</code>, 6303 LOC con <code>engine.py</code>/<code>__main__</code> per <code>AGENTS.md</code> total), FTS5 <code>trigram</code>+WAL, Palace locks <code>~/.dxrk/locks</code> 900s, BM25 <code>k1=1.5 b=0.75</code>, Graph <code>valid_from/valid_to</code>, AAAK <code>compress/decode</code>, Layers L0-L3 600–900 tok, miner <code>GitignoreMatcher</code> + <code>O_NONBLOCK</code>/<code>S_ISREG</code> <code>db29959</code> + <code>MAX_FILE_SIZE 500MiB</code>.</li>
+<li><strong>Flagship:</strong> <a href="../memory/"><code>docs/memory.md</code></a> — 13 módulos 4652 LOC (14 con <code>backend/</code>, 6303 LOC con <code>engine.py</code>/<code>__main__</code> per <code>AGENTS.md</code> total), FTS5 <code>trigram</code>+WAL, Malla locks <code>~/.dxrk/locks</code> 900s, BM25 <code>k1=1.5 b=0.75</code>, Graph <code>valid_from/valid_to</code>, AAAK <code>compress/decode</code>, Layers L0-L3 600–900 tok, miner <code>GitignoreMatcher</code> + <code>O_NONBLOCK</code>/<code>S_ISREG</code> <code>db29959</code> + <code>MAX_FILE_SIZE 500MiB</code>.</li>
 <li><strong>Migración:</strong> <a href="../MIGRATION_3.3.5_3.7.1/"><code>docs/MIGRATION_3.3.5_3.7.1.md</code></a> — delta 388 files 50+ commits <code>359c579</code>, 6 parches portados (<code>1654cd2</code>/<code>759b8f1</code>/<code>db29959</code>/<code>27212e5</code>/<code>5036e3c</code>/SIGTERM), no-portados <code>HNSW</code>/<code>numpy2</code>/<code>chroma cache</code>/<code>onnx</code> justificados stdlib-only.</li>
-<li><strong>Separación:</strong> <a href="../adr/ADR-002-memory-separation/"><code>docs/adr/ADR-002-memory-separation.md</code></a> — 3 sistemas aislados <code>memory</code> (Palace/WAL) vs <code>learner</code> (<code>.dxrk/memories.json</code>) vs <code>rag</code> (<code>VectorStore</code> dict), reglas R1–R6, puentes <code>hooks export</code> + <code>rag enrichment</code> sin storage coupling.</li>
+<li><strong>Separación:</strong> <a href="../adr/ADR-002-memory-separation/"><code>docs/adr/ADR-002-memory-separation.md</code></a> — 3 sistemas aislados <code>memory</code> (Malla/WAL) vs <code>learner</code> (<code>.dxrk/memories.json</code>) vs <code>rag</code> (<code>VectorStore</code> dict), reglas R1–R6, puentes <code>hooks export</code> + <code>rag enrichment</code> sin storage coupling.</li>
 <li><strong>Stdlib vs Hybrid:</strong> <a href="../adr/ADR-003-hybrid-vs-stdlib/"><code>docs/adr/ADR-003-hybrid-vs-stdlib.md</code></a> — P5 mandato, benchmarks 0.72 vs 0.88 recall, 0 vs 420MB, stdlib-only vence; <code>backend/vector.py</code> plugin extra opcional vía git post-v1.0.</li>
 <li><strong>DX plan:</strong> <a href="../dx/"><code>docs/dx.md</code></a> — 535L Top1 plan, benchmarks tabla §1, hero §2 (badges+30s quickstart), nav fix §3.2/§3.3, community §4, release checklist §5.2 (vía git, sin PyPI), star tactics §6, métricas §7, 30/60/90 days §8.</li>
 <li><strong>Config deuda:</strong> <code>dxrk/config/config.py:91</code> <code>HierarchicalConfig</code> 744L + <code>dxrk/config/settings.py:??</code> <code>SettingsManager</code> 223L dual, <code>dxrk/config/load.py:108</code> vault wiring.</li>
 <li><strong>TUI deuda:</strong> <code>dxrk/tui/shared.py:15</code> <code>AppState</code>/<code>STATE=AppState()</code> singleton + <code>dxrk/tui/app.py:40</code> 946L <code>STATE</code> 18 usos global.</li>
 <li><strong>Http deuda:</strong> <code>dxrk/utils/http.py:1</code> 1945L 192 defs 62% coverage min, <code>utils/image.py:1</code> 1157L 96% contraste.</li>
-<li><strong>Enterprise spec Fase2:</strong> <code>~/.dxrk/tenants/{id}/</code> + <code>vault HKDF</code> + <code>RBAC admin/dev/readonly</code> + <code>CLI --tenant</code> + <code>TUI switcher</code> + <code>JWT tid</code> + <code>migration idempotente</code> (filesystem isolation <code>0o600/0o750</code> ya probado <code>palace.py:628</code> + <code>vault/__init__.py:162</code>).</li>
+<li><strong>Enterprise spec Fase2:</strong> <code>~/.dxrk/tenants/{id}/</code> + <code>vault HKDF</code> + <code>RBAC admin/dev/readonly</code> + <code>CLI --tenant</code> + <code>TUI switcher</code> + <code>JWT tid</code> + <code>migration idempotente</code> (filesystem isolation <code>0o600/0o750</code> ya probado <code>malla.py:628</code> + <code>vault/__init__.py:162</code>).</li>
 <li><strong>Tooling:</strong> <code>pyproject.toml:7</code> <code>0.1.2→0.2.0→0.5.0→1.0.0</code>, <code>mkdocs.yml:48</code> <code>mkdocstrings.default</code> bug, <code>ci.yml:36</code> <code>cov-fail-under=80</code> non-Windows, <code>CONTRIBUTING.md:36</code> gate 80%, <code>CHANGELOG.md</code> cliff.</li>
 </ul>
 <hr />
@@ -2420,7 +2420,7 @@ git<span class="w"> </span>-c<span class="w"> </span>user.name<span class="o">=<
 git<span class="w"> </span>tag<span class="w"> </span>-a<span class="w"> </span>v0.2.0<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;v0.2.0 DxrkMemory 2.0 flagship + Top1 DX&quot;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>main<span class="w"> </span>--follow-tags
 </code></pre></div>
 <blockquote>
-<p><strong>No tocar <code>dxrk/memory/</code></strong> — verificación pre-merge: <code>git diff --stat origin/main...HEAD -- dxrk/memory/ | wc -l</code> debe ser 0 para todo PR v0.2.0–v1.0.0 salvo <code>palace_path</code> wiring documentado.</p>
+<p><strong>No tocar <code>dxrk/memory/</code></strong> — verificación pre-merge: <code>git diff --stat origin/main...HEAD -- dxrk/memory/ | wc -l</code> debe ser 0 para todo PR v0.2.0–v1.0.0 salvo <code>malla_path</code> wiring documentado.</p>
 </blockquote>
 <hr />
 <p><strong>DXRK // BEYOND LIMITS — Roadmap v0.2.0→v1.0.0 es contrato: Quick Wins en 2 semanas → Deuda en 4 → Enterprise Beta en 6 → GA en 4. Prioridad = I/E decide orden, cuadrante decide timing, Done gates deciden merge.</strong></p>
