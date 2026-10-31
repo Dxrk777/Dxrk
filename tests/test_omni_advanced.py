@@ -301,6 +301,31 @@ def test_group_word_timings_respects_punctuation_and_length() -> None:
     ]
 
 
+def test_group_word_timings_splits_long_pauses() -> None:
+    words = (
+        word_utils.WordTiming("Hola", 0.0, 0.2),
+        word_utils.WordTiming("mundo", 0.2, 0.4),
+        word_utils.WordTiming("Después", 8.0, 8.3),
+    )
+    groups = word_utils.group_word_timings(words, max_words=4)
+    assert [" ".join(word.text for word in group) for group in groups] == [
+        "Hola mundo",
+        "Después",
+    ]
+
+
+def test_build_word_ass_does_not_span_long_pauses() -> None:
+    words = (
+        word_utils.WordTiming("de", 0.0, 0.1),
+        word_utils.WordTiming("verdad", 0.1, 0.4),
+        word_utils.WordTiming("La", 8.0, 8.2),
+    )
+    ass = word_utils.build_word_ass(words)
+    assert "Dialogue: 0,0:00:00.00,0:00:00.40" in ass
+    assert "Dialogue: 0,0:00:08.00,0:00:08.20" in ass
+    assert r"{\kf760}" not in ass
+
+
 def test_build_word_ass_emits_karaoke_timing() -> None:
     words = (
         word_utils.WordTiming("Hola", 0.0, 0.4),

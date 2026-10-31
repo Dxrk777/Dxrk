@@ -84,14 +84,21 @@ def group_word_timings(
     *,
     max_words: int = 4,
     max_chars: int = 36,
+    max_gap: float = 0.75,
 ) -> tuple[tuple[WordTiming, ...], ...]:
-    """Group words into caption lines without breaking punctuation."""
+    """Group words into caption lines without breaking punctuation or pauses."""
     if max_words < 1:
         raise ValueError("max_words debe ser mayor que cero")
+    if max_gap < 0:
+        raise ValueError("max_gap no puede ser negativo")
     groups: list[tuple[WordTiming, ...]] = []
     current: list[WordTiming] = []
     current_chars = 0
     for word in words:
+        if current and word.start - current[-1].end > max_gap:
+            groups.append(tuple(current))
+            current = []
+            current_chars = 0
         if current and (len(current) >= max_words or current_chars + len(word.text) + 1 > max_chars):
             groups.append(tuple(current))
             current = []
