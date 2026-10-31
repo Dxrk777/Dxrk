@@ -43,6 +43,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **omni:** `scripts/omni.py` MVP — topic to 30s vertical video (LLM script,
   Edge-TTS, Pollinations/local images, synthesized music, FFmpeg + ASS
   subtitles), with deterministic offline fallbacks
+- **omni:** Local image backends — ComfyUI API + optional WebSocket progress
+  with history polling fallback, Stable Diffusion WebUI txt2img, custom
+  ComfyUI workflow templates, and `auto` local-first fallback to placeholder
+  cards
+- **omni:** Word-level subtitles — Edge-TTS `WordBoundary` capture, optional
+  faster-whisper transcription, proportional fallback, tempo-scaled timings,
+  karaoke ASS output, and `words.json` persistence
+- **omni:** Long-form mode — chapter/shot plans, per-chapter narration,
+  concatenated video/audio, global subtitle offsets, and one music bed for the
+  total duration
+- **omni:** Long-duration music — chunked MusicGen and Stable Audio Open
+  backends with FFmpeg crossfades, plus the dependency-free synth default
 
 ### Refactoring
 

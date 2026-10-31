@@ -127,7 +127,7 @@ Ver [docs/tenants.md](docs/tenants.md) y [docs/rbac.md](docs/rbac.md).
 - 🧰 **4 herramientas MCP de ciclo de vida** (`dxrk_memory_consolidate`, `dxrk_memory_forget`, `dxrk_memory_pin`, `dxrk_memory_timeline`; 35 tools) + budgets por partición (`partition_usage()`/`budgets()`, cap 1000, pinned exento de eviction) — ver [`docs/memory.md`](docs/memory.md)
 - 💾 **Sesiones durables** — escrituras atómicas (tmp + `fsync` + `os.replace`), índice con self-heal, fallback `.gz`, cuarentena `.quarantine/`, IDs sanitizados anti path-traversal; opt-in SQLite-WAL con `DXRK_SESSION_BACKEND=sqlite` — ver [`docs/session.md`](docs/session.md)
 - 🐝 **Swarm honesto** — dispatch real (least-loaded / work-stealing), health con probe pluggable (`StatusUnhealthy` alcanzable), event bus y linkage sesión↔swarm (`SwarmTaskStore`, `session_id` en tasks/results)
-- 🎬 **Dxrk Omni (MVP)** — `scripts/omni.py` convierte un tema en un short vertical de 30s: guion con LLM, Edge-TTS, imágenes Pollinations/locales, música sintetizada y montaje con FFmpeg — ver [`scripts/README.md`](scripts/README.md)
+- 🎬 **Dxrk Omni** — `scripts/omni.py` convierte un tema en un short vertical o un corto por capítulos: guion con LLM, Edge-TTS con subtítulos palabra por palabra, imágenes locales (ComfyUI / SD WebUI) con fallback, música sintetizada o generativa por chunks y montaje con FFmpeg — ver [`scripts/README.md`](scripts/README.md)
 
 ## Estructura del proyecto
 
