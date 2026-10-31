@@ -441,17 +441,19 @@ def placeholder_image(prompt: str, dest: Path, seed: int = 42) -> Path:
 
     draw = ImageDraw.Draw(image)
     try:
-        font_big = ImageFont.truetype("DejaVuSans-Bold.ttf", 76)
+        font_big = ImageFont.truetype("DejaVuSans-Bold.ttf", 58)
         font_small = ImageFont.truetype("DejaVuSans.ttf", 38)
     except OSError:
-        font_big = ImageFont.load_default(size=76)
+        font_big = ImageFont.load_default(size=58)
         font_small = ImageFont.load_default(size=38)
     draw.text((70, 90), "DXRK / OMNI", font=font_small, fill=accent)
-    wrapped = textwrap.wrap(prompt, width=24)[:6]
-    y = 1420
+    draw.text((70, 150), "PLACEHOLDER FRAME", font=font_small, fill=(150, 160, 180))
+    draw.line([(70, 760), (1010, 760)], fill=accent, width=4)
+    wrapped = textwrap.wrap(prompt, width=30)[:4]
+    y = 800
     for line in wrapped:
         draw.text((70, y), line, font=font_big, fill=(240, 240, 245))
-        y += 92
+        y += 74
     image.save(dest, "JPEG", quality=92)
     return dest
 
