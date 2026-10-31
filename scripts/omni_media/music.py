@@ -157,7 +157,9 @@ def concat_audio_tracks(
     list_file = out.with_suffix(".txt")
     list_file.write_text(
         "".join(
-            f"file '{track.as_posix().replace(chr(39), chr(39) + chr(92) + chr(39) + chr(39))}'\n" for track in tracks
+            # FFmpeg resolves relative concat entries against the list file directory.
+            f"file '{track.resolve().as_posix().replace(chr(39), chr(39) + chr(92) + chr(39) + chr(39))}'\n"
+            for track in tracks
         ),
         encoding="utf-8",
     )

@@ -8,6 +8,7 @@ import json
 import subprocess
 import sys
 import types
+from collections.abc import Sequence
 from io import BytesIO
 from pathlib import Path
 
@@ -29,8 +30,8 @@ def _png_bytes() -> bytes:
 
 
 def _fake_runner(commands: list[list[str]]):
-    def run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
-        commands.append(cmd)
+    def run(cmd: Sequence[str]) -> subprocess.CompletedProcess[str]:
+        commands.append(list(cmd))
         target = Path(cmd[-1])
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(b"artifact")
@@ -521,6 +522,19 @@ def test_build_music_generator_returns_requested_backend() -> None:
         music_backends.build_music_generator("stable-audio"),
         music_backends.StableAudioGenerator,
     )
+
+
+def test_concat_audio_tracks_writes_absolute_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    first = Path("chapter_01.m4a")
+    second = Path("chapter_02.m4a")
+    first.write_bytes(b"a")
+    second.write_bytes(b"b")
+    out = music_backends.concat_audio_tracks([first, second], tmp_path / "narration.m4a", runner=_fake_runner([]))
+    listing = (tmp_path / "narration.txt").read_text()
+    assert (tmp_path / "chapter_01.m4a").resolve().as_posix() in listing
+    assert (tmp_path / "chapter_02.m4a").resolve().as_posix() in listing
+    assert out.exists()
 
 
 def test_run_longform_pipeline_success(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

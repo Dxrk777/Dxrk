@@ -794,7 +794,8 @@ def build_scene_clip(
 
 
 def _concat_line(path: Path) -> str:
-    safe = path.as_posix().replace("'", "'\\''")
+    # FFmpeg resolves relative concat entries against the list file directory.
+    safe = path.resolve().as_posix().replace("'", "'\\''")
     return f"file '{safe}'\n"
 
 

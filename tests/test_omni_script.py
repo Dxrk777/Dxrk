@@ -335,6 +335,15 @@ def test_concat_clips_escapes_quotes(tmp_path: Path) -> None:
         omni.concat_clips([], tmp_path / "none.mp4", runner=_fake_runner(commands))
 
 
+def test_concat_clips_writes_absolute_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    clip = Path("clip.mp4")
+    clip.write_bytes(b"x")
+    omni.concat_clips([clip], tmp_path / "out.mp4", runner=_fake_runner([]))
+    listing = (tmp_path / "out.txt").read_text()
+    assert f"file '{(tmp_path / 'clip.mp4').resolve().as_posix()}'" in listing
+
+
 def test_mix_audio_with_and_without_music(tmp_path: Path) -> None:
     commands: list[list[str]] = []
     runner = _fake_runner(commands)
