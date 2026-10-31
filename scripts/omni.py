@@ -44,6 +44,71 @@ from typing import Any, Protocol
 
 import httpx
 
+if __package__:
+    from scripts.omni_media.images import (
+        DEFAULT_COMFY_CHECKPOINT,
+        DEFAULT_COMFY_URL,
+        DEFAULT_NEGATIVE_PROMPT,
+        DEFAULT_SDWEBUI_URL,
+        ComfyUIClient,
+        ImageResult,
+        SDWebUIClient,
+    )
+    from scripts.omni_media.longform import (
+        LongformPlan,
+        generate_longform_plan,
+        plan_to_dict,
+    )
+    from scripts.omni_media.music import (
+        build_music_generator,
+        concat_audio_tracks,
+        prepare_track,
+        synthesize_ambient,
+    )
+    from scripts.omni_media.words import (
+        NarrationResult,
+        WordTiming,
+        offset_timings,
+        proportional_timings,
+        scale_timings,
+        timings_from_edge_events,
+        transcribe_words,
+        words_to_dict,
+        write_word_ass,
+    )
+else:
+    from omni_media.images import (
+        DEFAULT_COMFY_CHECKPOINT,
+        DEFAULT_COMFY_URL,
+        DEFAULT_NEGATIVE_PROMPT,
+        DEFAULT_SDWEBUI_URL,
+        ComfyUIClient,
+        ImageResult,
+        SDWebUIClient,
+    )
+    from omni_media.longform import (
+        LongformPlan,
+        generate_longform_plan,
+        plan_to_dict,
+    )
+    from omni_media.music import (
+        build_music_generator,
+        concat_audio_tracks,
+        prepare_track,
+        synthesize_ambient,
+    )
+    from omni_media.words import (
+        NarrationResult,
+        WordTiming,
+        offset_timings,
+        proportional_timings,
+        scale_timings,
+        timings_from_edge_events,
+        transcribe_words,
+        words_to_dict,
+        write_word_ass,
+    )
+
 logger = logging.getLogger("dxrk.omni")
 
 VIDEO_WIDTH = 1080
@@ -90,7 +155,7 @@ class OmniConfig:
     duration: int = 30
     scene_count: int = 5
     voice: str = DEFAULT_VOICE
-    image_source: str = "pollinations"
+    image_source: str = "auto"
     images_dir: Path | None = None
     music_path: Path | None = None
     no_music: bool = False
@@ -100,27 +165,54 @@ class OmniConfig:
     llm_model: str = DEFAULT_LLM_MODEL
     llm_api_key: str = DEFAULT_LLM_API_KEY
     use_llm: bool = True
+    comfyui_url: str = DEFAULT_COMFY_URL
+    comfy_checkpoint: str = DEFAULT_COMFY_CHECKPOINT
+    comfy_workflow: Path | None = None
+    sdwebui_url: str = DEFAULT_SDWEBUI_URL
+    negative_prompt: str = DEFAULT_NEGATIVE_PROMPT
+    image_timeout: float = 300.0
+    subtitle_source: str = "edge"
+    whisper_model: str = "small"
+    music_source: str = "synth"
+    music_model: str = ""
+    music_prompt: str = ""
+    music_chunk_seconds: float = 30.0
+    longform: bool = False
+    chapters: int = 3
+    shots_per_chapter: int = 3
+    chapter_duration: int = 60
 
     def __post_init__(self) -> None:
         topic = self.topic.strip()
         if not topic:
             raise OmniError("el tema no puede estar vacío")
         object.__setattr__(self, "topic", topic)
-        if not 5 <= self.duration <= 180:
-            raise OmniError("la duración debe estar entre 5 y 180 segundos")
-        if not 2 <= self.scene_count <= 12:
-            raise OmniError("las escenas deben ser entre 2 y 12")
-        if self.image_source not in {"pollinations", "local", "placeholder"}:
-            raise OmniError("image_source debe ser pollinations, local o placeholder")
+        if self.longform:
+            if not 5 <= self.duration <= 14400:
+                raise OmniError("la duración longform debe estar entre 5 y 14400 segundos")
+            if not 2 <= self.chapters <= 24:
+                raise OmniError("los capítulos deben ser entre 2 y 24")
+            if not 1 <= self.shots_per_chapter <= 12:
+                raise OmniError("los shots por capítulo deben ser entre 1 y 12")
+            if not 15 <= self.chapter_duration <= 600:
+                raise OmniError("la duración por capítulo debe estar entre 15 y 600 segundos")
+        else:
+            if not 5 <= self.duration <= 180:
+                raise OmniError("la duración debe estar entre 5 y 180 segundos")
+            if not 2 <= self.scene_count <= 12:
+                raise OmniError("las escenas deben ser entre 2 y 12")
+        if self.image_source not in {"auto", "comfyui", "sdwebui", "pollinations", "local", "placeholder"}:
+            raise OmniError("image_source debe ser auto, comfyui, sdwebui, pollinations, local o placeholder")
         if self.image_source == "local" and self.images_dir is None:
             raise OmniError("image_source=local requiere --images-dir")
-
-
-@dataclass(frozen=True, slots=True)
-class ImageResult:
-    path: Path
-    source: str
-    error: str = ""
+        if self.subtitle_source not in {"edge", "whisper", "proportional"}:
+            raise OmniError("subtitle_source debe ser edge, whisper o proportional")
+        if self.music_source not in {"synth", "musicgen", "stable-audio", "file"}:
+            raise OmniError("music_source debe ser synth, musicgen, stable-audio o file")
+        if self.music_source == "file" and self.music_path is None:
+            raise OmniError("music_source=file requiere --music")
+        if self.music_chunk_seconds <= 0:
+            raise OmniError("music_chunk_seconds debe ser positivo")
 
 
 @dataclass(frozen=True, slots=True)
@@ -376,6 +468,20 @@ def prepare_image(src: Path, dest: Path, width: int = VIDEO_WIDTH, height: int =
     return dest
 
 
+def _load_workflow(path: Path | None) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    if not path.exists():
+        raise OmniError(f"no existe el workflow de ComfyUI: {path}")
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise OmniError(f"workflow de ComfyUI inválido: {exc}") from exc
+    if not isinstance(data, dict):
+        raise OmniError("el workflow de ComfyUI debe ser un objeto JSON")
+    return data
+
+
 def generate_image(
     prompt: str,
     dest: Path,
@@ -384,35 +490,84 @@ def generate_image(
     seed: int,
     client: httpx.Client | None = None,
     timeout: float = 60.0,
+    comfyui_url: str = DEFAULT_COMFY_URL,
+    comfy_checkpoint: str = DEFAULT_COMFY_CHECKPOINT,
+    comfy_workflow: Path | None = None,
+    sdwebui_url: str = DEFAULT_SDWEBUI_URL,
+    negative_prompt: str = DEFAULT_NEGATIVE_PROMPT,
+    width: int = VIDEO_WIDTH,
+    height: int = VIDEO_HEIGHT,
+    ws_connect: Any | None = None,
+    use_websocket: bool = True,
 ) -> ImageResult:
     if source == "placeholder":
         placeholder_image(prompt, dest, seed)
         return ImageResult(dest, "placeholder")
-    if source != "pollinations":
-        raise OmniError(f"fuente de imagen desconocida: {source}")
-    url = build_pollinations_url(prompt, seed)
-    try:
-        if client is None:
-            with httpx.Client(timeout=timeout, follow_redirects=True) as owned:
-                response = owned.get(url)
+    if source == "pollinations":
+        url = build_pollinations_url(prompt, seed)
+        try:
+            if client is None:
+                with httpx.Client(timeout=timeout, follow_redirects=True) as owned:
+                    response = owned.get(url)
+                    response.raise_for_status()
+                    payload = response.content
+            else:
+                response = client.get(url)
                 response.raise_for_status()
                 payload = response.content
-        else:
-            response = client.get(url)
-            response.raise_for_status()
-            payload = response.content
-        with tempfile.NamedTemporaryFile(suffix=".img", delete=False) as fh:
-            fh.write(payload)
-            tmp = Path(fh.name)
-        try:
-            prepare_image(tmp, dest)
-        finally:
-            tmp.unlink(missing_ok=True)
-        return ImageResult(dest, "pollinations")
-    except Exception as exc:
-        logger.warning("Pollinations failed (%s); using placeholder", exc)
+            with tempfile.NamedTemporaryFile(suffix=".img", delete=False) as fh:
+                fh.write(payload)
+                tmp = Path(fh.name)
+            try:
+                prepare_image(tmp, dest)
+            finally:
+                tmp.unlink(missing_ok=True)
+            return ImageResult(dest, "pollinations")
+        except Exception as exc:
+            logger.warning("Pollinations failed (%s); using placeholder", exc)
+            placeholder_image(prompt, dest, seed)
+            return ImageResult(dest, "placeholder", str(exc)[:200])
+    if source in {"comfyui", "sdwebui", "auto"}:
+        errors: list[str] = []
+        if source in {"comfyui", "auto"}:
+            try:
+                backend = ComfyUIClient(
+                    base_url=comfyui_url,
+                    checkpoint=comfy_checkpoint,
+                    workflow=_load_workflow(comfy_workflow),
+                    timeout=timeout,
+                    client=client,
+                    ws_connect=ws_connect,
+                    use_websocket=use_websocket,
+                )
+                return backend.generate(
+                    prompt,
+                    dest,
+                    seed=seed,
+                    negative_prompt=negative_prompt,
+                    width=width,
+                    height=height,
+                )
+            except Exception as exc:
+                errors.append(f"comfyui: {exc}")
+                logger.warning("ComfyUI failed (%s)", exc)
+        if source in {"sdwebui", "auto"}:
+            try:
+                backend = SDWebUIClient(base_url=sdwebui_url, timeout=timeout, client=client)
+                return backend.generate(
+                    prompt,
+                    dest,
+                    seed=seed,
+                    negative_prompt=negative_prompt,
+                    width=width,
+                    height=height,
+                )
+            except Exception as exc:
+                errors.append(f"sdwebui: {exc}")
+                logger.warning("SD WebUI failed (%s)", exc)
         placeholder_image(prompt, dest, seed)
-        return ImageResult(dest, "placeholder", str(exc)[:200])
+        return ImageResult(dest, "placeholder", "; ".join(errors)[:200])
+    raise OmniError(f"fuente de imagen desconocida: {source}")
 
 
 def list_local_images(images_dir: Path | None) -> list[Path]:
@@ -484,64 +639,107 @@ def tts_narrate(
     return dest
 
 
+def tts_narrate_with_timings(
+    text: str,
+    dest: Path,
+    voice: str,
+    *,
+    tts: Any | None = None,
+    whisper: Any | None = None,
+    whisper_model: str = "small",
+    fallback_duration: float | None = None,
+    prefer_whisper: bool = False,
+) -> NarrationResult:
+    """Generate narration and capture word-level timings.
+
+    Priority: Edge-TTS ``WordBoundary`` events, then Whisper word timestamps,
+    then a proportional model over the real audio duration.
+    """
+    if tts is not None:
+        result = tts(text, dest, voice)
+        if isinstance(result, NarrationResult):
+            return result
+        words = tuple(result or ())
+        if words and not prefer_whisper:
+            return NarrationResult(dest, words, "injected")
+        if whisper:
+            try:
+                whisper_words = transcribe_words(
+                    dest,
+                    model_size=whisper_model,
+                    transcriber=whisper if callable(whisper) else None,
+                )
+                if whisper_words:
+                    return NarrationResult(dest, whisper_words, "whisper")
+            except Exception as exc:
+                logger.warning("Whisper failed (%s)", exc)
+        if words:
+            return NarrationResult(dest, words, "injected")
+        duration = fallback_duration if fallback_duration is not None else probe_duration(dest)
+        return NarrationResult(dest, proportional_timings(text, duration), "proportional")
+
+    events: list[dict[str, Any]] = []
+    try:
+        import edge_tts  # type: ignore[import-not-found]
+
+        async def _stream() -> None:
+            try:
+                communicate = edge_tts.Communicate(text, voice, boundary="WordBoundary")
+            except TypeError:  # older edge-tts versions
+                communicate = edge_tts.Communicate(text, voice)
+            with dest.open("wb") as fh:
+                async for event in communicate.stream():
+                    kind = event.get("type")
+                    if kind == "audio":
+                        fh.write(event.get("data") or b"")
+                    elif kind == "WordBoundary":
+                        events.append(dict(event))
+
+        asyncio.run(_stream())
+    except Exception as exc:
+        logger.warning("Edge-TTS stream failed (%s); retrying save", exc)
+        if not dest.exists() or dest.stat().st_size == 0:
+            tts_narrate(text, dest, voice)
+    if not dest.exists() or dest.stat().st_size == 0:
+        raise OmniError("el TTS no generó audio")
+    words = timings_from_edge_events(events)
+    if words and not prefer_whisper:
+        return NarrationResult(dest, words, "edge-tts")
+    if whisper:
+        try:
+            whisper_words = transcribe_words(
+                dest,
+                model_size=whisper_model,
+                transcriber=whisper if callable(whisper) else None,
+            )
+            if whisper_words:
+                return NarrationResult(dest, whisper_words, "whisper")
+        except Exception as exc:
+            logger.warning("Whisper failed (%s)", exc)
+    if words:
+        return NarrationResult(dest, words, "edge-tts")
+    duration = fallback_duration if fallback_duration is not None else probe_duration(dest)
+    return NarrationResult(dest, proportional_timings(text, duration), "proportional")
+
+
+def narration_tempo(narration_duration: float, duration: float) -> float:
+    if duration <= 0:
+        raise OmniError("la duración objetivo debe ser positiva")
+    return max(1.0, min(2.0, narration_duration / duration))
+
+
 def generate_music(dest: Path, duration: int, runner: Any | None = None) -> Path:
     """Synthesize an original ambient bed with ffmpeg (no licensing issues)."""
-    run = runner or run_command
-    fade_out = max(0, duration - 2)
-    cmd = [
-        "ffmpeg",
-        "-y",
-        "-f",
-        "lavfi",
-        "-i",
-        f"sine=frequency=110:duration={duration}",
-        "-f",
-        "lavfi",
-        "-i",
-        f"sine=frequency=164.81:duration={duration}",
-        "-f",
-        "lavfi",
-        "-i",
-        f"sine=frequency=220:duration={duration}",
-        "-filter_complex",
-        (
-            "[0:a]volume=0.08[a0];[1:a]volume=0.05[a1];[2:a]volume=0.04[a2];"
-            "[a0][a1][a2]amix=inputs=3:duration=longest,"
-            f"afade=t=in:st=0:d=2,afade=t=out:st={fade_out}:d=2,"
-            "aecho=0.8:0.6:60:0.3[a]"
-        ),
-        "-map",
-        "[a]",
-        "-c:a",
-        "pcm_s16le",
-        str(dest),
-    ]
-    run(cmd)
-    return dest
+    return synthesize_ambient(dest, duration, runner)
 
 
 def prepare_music(src: Path, dest: Path, duration: int, runner: Any | None = None) -> Path:
-    if not src.exists():
-        raise OmniError(f"no existe la música: {src}")
-    run = runner or run_command
-    fade_out = max(0, duration - 2)
-    cmd = [
-        "ffmpeg",
-        "-y",
-        "-i",
-        str(src),
-        "-t",
-        str(duration),
-        "-af",
-        f"afade=t=in:st=0:d=1,afade=t=out:st={fade_out}:d=2",
-        "-ar",
-        "44100",
-        "-ac",
-        "2",
-        str(dest),
-    ]
-    run(cmd)
-    return dest
+    try:
+        return prepare_track(src, dest, duration, runner)
+    except Exception as exc:
+        if isinstance(exc, OmniError):
+            raise
+        raise OmniError(str(exc)) from exc
 
 
 # ---------------------------------------------------------------------------
@@ -629,14 +827,14 @@ def mix_audio(
     narration: Path,
     music: Path | None,
     out: Path,
-    duration: int,
+    duration: float,
     narration_duration: float,
     runner: Any | None = None,
 ) -> Path:
     if narration_duration <= 0:
         raise OmniError("la narración no tiene duración válida")
     run = runner or run_command
-    tempo = max(1.0, min(2.0, narration_duration / duration))
+    tempo = narration_tempo(narration_duration, duration)
     speed = f"atempo={tempo:.4f}," if tempo > 1.01 else ""
     if music is None:
         audio_filter = (
@@ -859,6 +1057,65 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(_jsonable(payload), ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def _probe(path: Path, probe: Any | None) -> float:
+    return (probe or probe_duration)(path)
+
+
+def _generate_image_for_scene(
+    prompt: str,
+    dest: Path,
+    config: OmniConfig,
+    image_client: httpx.Client | None,
+    seed: int,
+) -> ImageResult:
+    return generate_image(
+        prompt,
+        dest,
+        source=config.image_source,
+        seed=seed,
+        client=image_client,
+        timeout=config.image_timeout,
+        comfyui_url=config.comfyui_url,
+        comfy_checkpoint=config.comfy_checkpoint,
+        comfy_workflow=config.comfy_workflow,
+        sdwebui_url=config.sdwebui_url,
+        negative_prompt=config.negative_prompt,
+    )
+
+
+def _generate_music_track(
+    config: OmniConfig,
+    dest: Path,
+    duration: float,
+    runner: Any | None,
+    music_generator: Any | None,
+) -> Path | None:
+    if config.music_path is not None:
+        return prepare_music(config.music_path, dest, int(round(duration)), runner=runner)
+    if config.no_music:
+        return None
+    prompt = config.music_prompt or config.topic
+    if music_generator is not None:
+        return music_generator.generate(dest, duration, prompt)
+    if config.music_source == "synth":
+        return generate_music(dest, int(round(duration)), runner=runner)
+    generator = build_music_generator(
+        config.music_source,
+        model=config.music_model,
+        chunk_seconds=config.music_chunk_seconds,
+        runner=runner,
+    )
+    return generator.generate(dest, duration, prompt)
+
+
+def _plan_to_script(plan: LongformPlan) -> VideoScript:
+    scenes = tuple(
+        Scene(index=index + 1, narration=shot.narration, visual_prompt=shot.visual_prompt)
+        for index, shot in enumerate(plan.shots)
+    )
+    return VideoScript(topic=plan.topic, title=plan.title, scenes=scenes)
+
+
 def run_pipeline(
     config: OmniConfig,
     *,
@@ -867,7 +1124,18 @@ def run_pipeline(
     tts: Any | None = None,
     runner: Any | None = None,
     probe: Any | None = None,
+    music_generator: Any | None = None,
 ) -> PipelineResult:
+    if config.longform:
+        return run_longform_pipeline(
+            config,
+            llm=llm,
+            image_client=image_client,
+            tts=tts,
+            runner=runner,
+            probe=probe,
+            music_generator=music_generator,
+        )
     ensure_ffmpeg()
     workdir = unique_workdir(config.output_root, config.topic)
     assets = workdir / "assets"
@@ -903,12 +1171,12 @@ def run_pipeline(
                 prepare_image(local_images[i % len(local_images)], image_path)
                 result = ImageResult(image_path, "local")
             else:
-                result = generate_image(
+                result = _generate_image_for_scene(
                     scene.visual_prompt,
                     image_path,
-                    source=config.image_source,
-                    seed=config.seed + i,
-                    client=image_client,
+                    config,
+                    image_client,
+                    config.seed + i,
                 )
             image_results.append(result)
             build_scene_clip(
@@ -920,23 +1188,41 @@ def run_pipeline(
 
         stage = "narration"
         narration_path = assets / "narration.mp3"
-        tts_narrate(script.narration, narration_path, config.voice, tts=tts)
-        narration_duration = (probe or probe_duration)(narration_path)
+        whisper = True if config.subtitle_source == "whisper" else None
+        narration = tts_narrate_with_timings(
+            script.narration,
+            narration_path,
+            config.voice,
+            tts=tts,
+            whisper=whisper,
+            whisper_model=config.whisper_model,
+            fallback_duration=float(config.duration),
+            prefer_whisper=config.subtitle_source == "whisper",
+        )
+        narration_duration = _probe(narration.audio, probe)
         if narration_duration <= 0:
             raise OmniError("la narración no tiene duración válida")
-        logger.info("narration: %.1fs", narration_duration)
+        if config.subtitle_source == "proportional":
+            narration = NarrationResult(
+                narration.audio,
+                proportional_timings(script.narration, narration_duration),
+                "proportional",
+            )
+        logger.info("narration: %.1fs (%s words)", narration_duration, narration.source)
 
         stage = "music"
-        music_path: Path | None = None
-        if config.music_path is not None:
-            music_path = prepare_music(config.music_path, assets / "music.wav", config.duration, runner=runner)
-        elif not config.no_music:
-            music_path = generate_music(assets / "music.wav", config.duration, runner=runner)
+        music_path = _generate_music_track(
+            config,
+            assets / "music.wav",
+            float(config.duration),
+            runner,
+            music_generator,
+        )
         logger.info("music: %s", music_path.name if music_path is not None else "none")
 
         stage = "audio"
         audio_path = mix_audio(
-            narration_path,
+            narration.audio,
             music_path,
             assets / "audio.m4a",
             config.duration,
@@ -951,13 +1237,20 @@ def run_pipeline(
         logger.info("video: concatenated")
 
         stage = "subtitles"
+        tempo = narration_tempo(narration_duration, config.duration)
+        timed_words = scale_timings(narration.words, 1.0 / tempo)
+        if timed_words:
+            _write_json(assets / "words.json", {"source": narration.source, "words": words_to_dict(timed_words)})
         subtitles_path: Path | None = None
         if not config.no_subtitles:
-            subtitles_path = write_ass(
-                assets / "subtitles.ass",
-                caption_chunks(script.narration),
-                config.duration,
-            )
+            if timed_words:
+                subtitles_path = write_word_ass(assets / "subtitles.ass", timed_words)
+            else:
+                subtitles_path = write_ass(
+                    assets / "subtitles.ass",
+                    caption_chunks(script.narration),
+                    config.duration,
+                )
         logger.info("subtitles: %s", "on" if subtitles_path is not None else "off")
 
         stage = "mux"
@@ -972,6 +1265,9 @@ def run_pipeline(
                 "assets": assets,
                 "image_sources": [asdict(result) for result in image_results],
                 "narration_duration": narration_duration,
+                "narration_tempo": tempo,
+                "subtitle_source": narration.source,
+                "word_timings": words_to_dict(timed_words),
                 "music": music_path,
                 "subtitles": subtitles_path,
                 "scene_duration": scene_duration,
@@ -979,6 +1275,169 @@ def run_pipeline(
         )
         _write_json(manifest_path, manifest)
         return PipelineResult(workdir=workdir, video=final_path, script=script, manifest=manifest_path)
+    except Exception as exc:
+        manifest.update({"status": "failed", "stage": stage, "error": str(exc)})
+        _write_json(manifest_path, manifest)
+        if isinstance(exc, OmniError):
+            raise
+        raise OmniError(f"falló la etapa {stage}: {exc}") from exc
+
+
+def run_longform_pipeline(
+    config: OmniConfig,
+    *,
+    llm: LlmClient | None = None,
+    image_client: httpx.Client | None = None,
+    tts: Any | None = None,
+    runner: Any | None = None,
+    probe: Any | None = None,
+    music_generator: Any | None = None,
+) -> PipelineResult:
+    ensure_ffmpeg()
+    workdir = unique_workdir(config.output_root, config.topic)
+    assets = workdir / "assets"
+    assets.mkdir(parents=True)
+    logger.info("output: %s", workdir)
+    manifest_path = workdir / "manifest.json"
+    manifest: dict[str, Any] = {
+        "status": "running",
+        "topic": config.topic,
+        "longform": True,
+        "chapters": config.chapters,
+        "created_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    stage = "plan"
+    try:
+        plan = generate_longform_plan(
+            config.topic,
+            config.chapters,
+            config.shots_per_chapter,
+            config.chapter_duration,
+            llm if config.use_llm else None,
+        )
+        _write_json(workdir / "plan.json", plan_to_dict(plan))
+        manifest["longform"] = plan_to_dict(plan)
+        logger.info("plan: %s (%d chapters)", plan.title, len(plan.chapters))
+
+        chapter_videos: list[Path] = []
+        chapter_audios: list[Path] = []
+        chapter_durations: list[float] = []
+        image_results: list[ImageResult] = []
+        all_words: list[WordTiming] = []
+        offset = 0.0
+        for chapter in plan.chapters:
+            stage = f"chapter {chapter.index}"
+            chapter_dir = assets / f"chapter_{chapter.index:02d}"
+            chapter_dir.mkdir(parents=True, exist_ok=True)
+            narration_text = " ".join(shot.narration for shot in chapter.shots)
+            narration_path = chapter_dir / "narration.mp3"
+            whisper = True if config.subtitle_source == "whisper" else None
+            narration = tts_narrate_with_timings(
+                narration_text,
+                narration_path,
+                config.voice,
+                tts=tts,
+                whisper=whisper,
+                whisper_model=config.whisper_model,
+                fallback_duration=float(config.chapter_duration),
+                prefer_whisper=config.subtitle_source == "whisper",
+            )
+            narration_duration = _probe(narration.audio, probe)
+            if narration_duration <= 0:
+                raise OmniError(f"la narración del capítulo {chapter.index} no tiene duración válida")
+            chapter_duration = max(float(config.chapter_duration), narration_duration + 0.5)
+            shot_duration = chapter_duration / len(chapter.shots)
+            clips: list[Path] = []
+            for shot_index, shot in enumerate(chapter.shots):
+                image_path = chapter_dir / f"shot_{shot_index + 1:02d}.jpg"
+                result = _generate_image_for_scene(
+                    shot.visual_prompt,
+                    image_path,
+                    config,
+                    image_client,
+                    config.seed + shot_index,
+                )
+                image_results.append(result)
+                clips.append(
+                    build_scene_clip(
+                        image_path,
+                        chapter_dir / f"shot_{shot_index + 1:02d}.mp4",
+                        shot_duration,
+                        runner=runner,
+                    )
+                )
+            chapter_videos.append(concat_clips(clips, chapter_dir / "chapter.mp4", runner=runner))
+            chapter_audios.append(
+                mix_audio(
+                    narration.audio,
+                    None,
+                    chapter_dir / "chapter.m4a",
+                    chapter_duration,
+                    narration_duration,
+                    runner=runner,
+                )
+            )
+            chapter_durations.append(chapter_duration)
+            all_words.extend(offset_timings(narration.words, offset))
+            offset += chapter_duration
+            logger.info("chapter %d: %.1fs", chapter.index, chapter_duration)
+        total_duration = offset
+
+        stage = "video"
+        video_path = concat_clips(chapter_videos, assets / "video.mp4", runner=runner)
+        stage = "audio"
+        narration_full = concat_audio_tracks(chapter_audios, assets / "narration.m4a", runner=runner)
+        music_path = _generate_music_track(
+            config,
+            assets / "music.wav",
+            total_duration,
+            runner,
+            music_generator,
+        )
+        audio_path = mix_audio(
+            narration_full,
+            music_path,
+            assets / "audio.m4a",
+            total_duration,
+            total_duration,
+            runner=runner,
+        )
+        stage = "subtitles"
+        subtitles_path: Path | None = None
+        if all_words:
+            _write_json(assets / "words.json", {"source": "mixed", "words": words_to_dict(all_words)})
+        if not config.no_subtitles:
+            if all_words:
+                subtitles_path = write_word_ass(assets / "subtitles.ass", all_words)
+            else:
+                subtitles_path = write_ass(
+                    assets / "subtitles.ass",
+                    caption_chunks(" ".join(shot.narration for shot in plan.shots)),
+                    total_duration,
+                )
+        stage = "mux"
+        final_path = workdir / "final.mp4"
+        mux_video(video_path, audio_path, final_path, subtitles_path, runner=runner)
+        manifest.update(
+            {
+                "status": "ok",
+                "video": final_path,
+                "assets": assets,
+                "image_sources": [asdict(result) for result in image_results],
+                "chapter_durations": chapter_durations,
+                "total_duration": total_duration,
+                "word_timings": words_to_dict(all_words),
+                "music": music_path,
+                "subtitles": subtitles_path,
+            }
+        )
+        _write_json(manifest_path, manifest)
+        return PipelineResult(
+            workdir=workdir,
+            video=final_path,
+            script=_plan_to_script(plan),
+            manifest=manifest_path,
+        )
     except Exception as exc:
         manifest.update({"status": "failed", "stage": stage, "error": str(exc)})
         _write_json(manifest_path, manifest)
@@ -1004,15 +1463,51 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--voice", default=DEFAULT_VOICE, help="Voz de Edge-TTS")
     parser.add_argument(
         "--image-source",
-        choices=("pollinations", "local", "placeholder"),
-        default="pollinations",
-        help="Origen de las imágenes",
+        choices=("auto", "comfyui", "sdwebui", "pollinations", "local", "placeholder"),
+        default="auto",
+        help="Origen de las imágenes (auto prueba ComfyUI y SD WebUI antes del placeholder)",
     )
     parser.add_argument("--images-dir", help="Directorio con imágenes locales")
+    parser.add_argument("--comfyui-url", default=DEFAULT_COMFY_URL, help="URL de ComfyUI")
+    parser.add_argument("--comfy-checkpoint", default=DEFAULT_COMFY_CHECKPOINT, help="Checkpoint de ComfyUI")
+    parser.add_argument("--comfy-workflow", help="Workflow JSON de ComfyUI con placeholders {{PROMPT}}, {{SEED}}, etc.")
+    parser.add_argument("--sdwebui-url", default=DEFAULT_SDWEBUI_URL, help="URL de Stable Diffusion WebUI")
+    parser.add_argument("--negative-prompt", default=DEFAULT_NEGATIVE_PROMPT, help="Prompt negativo")
+    parser.add_argument("--image-timeout", type=float, default=300.0, help="Timeout por imagen en segundos")
+    parser.add_argument(
+        "--subtitle-source",
+        choices=("edge", "whisper", "proportional"),
+        default="edge",
+        help="Fuente de los timings de subtítulos",
+    )
+    parser.add_argument("--whisper-model", default="small", help="Modelo de faster-whisper")
+    parser.add_argument(
+        "--music-source",
+        choices=("synth", "musicgen", "stable-audio", "file"),
+        default="synth",
+        help="Backend de música de fondo",
+    )
+    parser.add_argument("--music-model", default="", help="Modelo de MusicGen o Stable Audio")
+    parser.add_argument("--music-prompt", default="", help="Prompt para el modelo de música")
+    parser.add_argument("--music-chunk-seconds", type=float, default=30.0, help="Duración de cada chunk de música")
     parser.add_argument("--music", help="Pista de música propia (si no, se sintetiza una)")
     parser.add_argument("--no-music", action="store_true", help="No agregar música de fondo")
     parser.add_argument("--no-subtitles", action="store_true", help="No quemar subtítulos")
     parser.add_argument("--no-llm", action="store_true", help="Usar el guion determinístico")
+    parser.add_argument("--longform", action="store_true", help="Generar un corto/película por capítulos")
+    parser.add_argument("--chapters", type=int, default=3, help="Capítulos para longform (default: 3)")
+    parser.add_argument(
+        "--shots-per-chapter",
+        type=int,
+        default=3,
+        help="Shots por capítulo para longform (default: 3)",
+    )
+    parser.add_argument(
+        "--chapter-duration",
+        type=int,
+        default=60,
+        help="Duración objetivo por capítulo en segundos (default: 60)",
+    )
     parser.add_argument("--seed", type=int, default=42, help="Semilla para imágenes")
     parser.add_argument("--llm-base-url", default=DEFAULT_LLM_BASE_URL, help="Endpoint OpenAI-compatible")
     parser.add_argument("--llm-model", default=DEFAULT_LLM_MODEL, help="Modelo del LLM")
@@ -1024,13 +1519,19 @@ def build_parser() -> argparse.ArgumentParser:
 def config_from_args(args: argparse.Namespace) -> OmniConfig:
     images_dir = Path(args.images_dir).expanduser() if args.images_dir else None
     music_path = Path(args.music).expanduser() if args.music else None
+    comfy_workflow_arg = getattr(args, "comfy_workflow", None)
+    comfy_workflow = Path(comfy_workflow_arg).expanduser() if comfy_workflow_arg else None
+    longform = bool(getattr(args, "longform", False))
+    chapters = int(getattr(args, "chapters", 3))
+    chapter_duration = int(getattr(args, "chapter_duration", 60))
+    duration = chapters * chapter_duration if longform else int(args.duration)
     return OmniConfig(
         topic=str(args.topic),
         output_root=Path(args.output_dir).expanduser(),
-        duration=int(args.duration),
+        duration=duration,
         scene_count=int(args.scenes),
         voice=str(args.voice),
-        image_source=str(args.image_source),
+        image_source=str(getattr(args, "image_source", "auto")),
         images_dir=images_dir,
         music_path=music_path,
         no_music=bool(args.no_music),
@@ -1040,6 +1541,22 @@ def config_from_args(args: argparse.Namespace) -> OmniConfig:
         llm_model=str(args.llm_model),
         llm_api_key=str(args.llm_api_key),
         use_llm=not bool(args.no_llm),
+        comfyui_url=str(getattr(args, "comfyui_url", DEFAULT_COMFY_URL)),
+        comfy_checkpoint=str(getattr(args, "comfy_checkpoint", DEFAULT_COMFY_CHECKPOINT)),
+        comfy_workflow=comfy_workflow,
+        sdwebui_url=str(getattr(args, "sdwebui_url", DEFAULT_SDWEBUI_URL)),
+        negative_prompt=str(getattr(args, "negative_prompt", DEFAULT_NEGATIVE_PROMPT)),
+        image_timeout=float(getattr(args, "image_timeout", 300.0)),
+        subtitle_source=str(getattr(args, "subtitle_source", "edge")),
+        whisper_model=str(getattr(args, "whisper_model", "small")),
+        music_source=str(getattr(args, "music_source", "synth")),
+        music_model=str(getattr(args, "music_model", "")),
+        music_prompt=str(getattr(args, "music_prompt", "")),
+        music_chunk_seconds=float(getattr(args, "music_chunk_seconds", 30.0)),
+        longform=longform,
+        chapters=chapters,
+        shots_per_chapter=int(getattr(args, "shots_per_chapter", 3)),
+        chapter_duration=chapter_duration,
     )
 
 

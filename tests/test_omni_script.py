@@ -418,8 +418,15 @@ def _patch_success_pipeline(monkeypatch: pytest.MonkeyPatch, calls: list[str]) -
     )
     monkeypatch.setattr(
         omni,
-        "tts_narrate",
-        lambda text, dest, voice, **kwargs: (dest.write_bytes(b"voice"), dest)[1],
+        "tts_narrate_with_timings",
+        lambda text, dest, voice, **kwargs: (
+            dest.write_bytes(b"voice"),
+            omni.NarrationResult(
+                dest,
+                (omni.WordTiming("Hola", 0.0, 0.5),),
+                "edge-tts",
+            ),
+        )[1],
     )
     monkeypatch.setattr(omni, "probe_duration", lambda path: 10.0)
     monkeypatch.setattr(
@@ -504,7 +511,7 @@ def test_run_pipeline_failure_writes_manifest(tmp_path: Path, monkeypatch: pytes
     def boom(*args, **kwargs):
         raise omni.OmniError("sin voz")
 
-    monkeypatch.setattr(omni, "tts_narrate", boom)
+    monkeypatch.setattr(omni, "tts_narrate_with_timings", boom)
     config = omni.OmniConfig(
         topic="tema",
         output_root=tmp_path,
