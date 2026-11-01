@@ -25,7 +25,7 @@ class Content:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "Content":
+    def from_dict(cls, data: dict) -> Content:
         return cls(
             id=data.get("id", ""),
             role=data.get("role", ""),
@@ -193,7 +193,7 @@ class Snapshot:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "Snapshot":
+    def from_dict(cls, data: dict) -> Snapshot:
         return cls(
             id=data.get("id", ""),
             created_at=datetime.fromisoformat(data.get("created_at", "")),

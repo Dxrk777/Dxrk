@@ -33,7 +33,7 @@ class Span:
 
 
 class Tracer:
-    def __init__(self, provider: "TracerProvider", name: str) -> None:
+    def __init__(self, provider: TracerProvider, name: str) -> None:
         self._provider = provider
         self._name = name
 

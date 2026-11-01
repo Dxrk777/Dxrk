@@ -21,7 +21,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with:
-          python-version: "3.13"
+          python-version: "3.14"
 
       # Nota: sin publicación a PyPI. La distribución es vía git
       # (uv tool install git+https://github.com/Dxrk777/Dxrk.git) y

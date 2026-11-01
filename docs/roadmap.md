@@ -4,6 +4,7 @@
 > **Alcance:** Deuda Fase1 + Enterprise multi-tenant Fase2 + DX Top1 Fase4 → GA v1.0.0. **Sin tocar `dxrk/memory/`** salvo via `malla_path` per-tenant (ADR-002).
 > **Contexto flagship:** DxrkMemory 2.0 cerrado — 14 módulos `dxrk/memory` + `backend/` (6303 LOC stdlib-only `sqlite3` FTS5 trigram→porter→unicode61, WAL `0o600`/`0o750`, 141 tests en `tests/test_memory*.py`, 2760+ totales), ADR-002 (aislamiento Memory/Learner/RAG) y ADR-003 (stdlib-only vs hybrid BM25 0.72 vs HNSW 0.88, 0 vs 420MB, P5 vence). Ver `docs/memory.md:1`, `docs/dx.md:1`, `docs/adr/ADR-002-memory-separation.md:1`, `docs/adr/ADR-003-hybrid-vs-stdlib.md:1`, `docs/MIGRATION_3.3.5_3.7.1.md:1`.  
 > **Nota 2026-10:** sin PyPI por diseño (`.github/workflows/publish.yml:26-29`, commits `a396a00` y `3b1d235`). Las menciones a publish PyPI abajo son históricas del plan 0.2.0 y quedan sustituidas por release vía git + GitHub Releases; no ejecutar publish a PyPI.
+> **Nota 2026-11:** el gate de cobertura vigente es **100%** (ver §6.1 y `pyproject.toml`). Las menciones a 80% en las secciones históricas de v0.2.0/v0.3.0 se conservan como registro del plan original y no describen el estado actual.
 > **Versiones anteriores:** `pyproject.toml:7` `0.1.2` → `0.2.0` (DX + flagship docs) → `0.3.0`/`0.5.0` enterprise beta → `1.0.0` GA multi-tenant. Commits base: `4c4ab3f` flagship 4652 LOC `979` replaces, `bf0d106` coverage 141 + ADR-002 + hooks `stdio`. `git status` clean tras `bf0d106` salvo untracked `docs/dx.md` (535L) + `docs/adr/ADR-003-hybrid-vs-stdlib.md` (76L) — este roadmap los integra.
 
 Este documento es el **plan priorizado con matriz Impacto×Esfuerzo**, roadmap por versión, Gantt, riesgos y Done gates. Ejecuta exactamente lo que quedó pendiente de Fase1 (deuda) + Fase2 (enterprise) + Fase4 (DX) sin reabrir `dxrk/memory/` internamente.
@@ -282,13 +283,13 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 
 | Gate | Comando | Umbral | Dónde |
 |------|---------|--------|-------|
-| **Tests** | `uv run python -m pytest -q` | `2760+ passed, 3 skipped` min (141 `test_memory*.py` + suites relacionadas) | local + CI `ubuntu/macos/windows` |
-| **Coverage** | `uv run python -m pytest -q --cov=dxrk --cov-report=term --cov-fail-under=80` | **≥80%** non-Windows; Windows `pytest -q` sin cov | `ci.yml:36` gate solo `RUNNER_OS != Windows` |
-| **Ruff** | `uvx ruff check dxrk tests` | **0 errors** | `ci.yml:31` + pre-commit |
-| **Mypy** | `uv run mypy dxrk` | **0 errors, 218+ files, `python_version 3.13`** | `ci.yml:34` excluye `tests/` |
+| **Tests** | `uv run python -m pytest -q` | `7395+ passed, 1 skipped` (suite completa) | local + CI `ubuntu/macos/windows` |
+| **Coverage** | `uv run python -m pytest -q --cov=dxrk --cov-report=term --cov-fail-under=100` | **100%** non-Windows; Windows `pytest -q` sin cov | `ci.yml` gate solo `RUNNER_OS != Windows` |
+| **Ruff** | `uvx ruff check dxrk tests` | **0 errors** | `ci.yml` + pre-commit |
+| **Mypy** | `uv run mypy dxrk` | **0 errors, 367+ files, `python_version 3.14`** | `ci.yml` excluye `tests/` |
 | **Trace0** | `grep -rn "engram\|mempal" --include="*.py" \| wc -l` | **0** global; `grep -rn "engram\|mempal" dxrk/memory →0` (LEGACY `chr-join` permitido) | `docs/memory.md:205` verify; CI opcional `grep` step |
 | **Docs build** | `uv run mkdocs build` | **0 warnings** (`pages not in nav` 0, `Unrecognised configuration` 0) | `mkdocs.yml` nav incluye `dx.md`+`ADR-003`+`roadmap.md` post-v0.2.0 |
-| **Audit** | `uv audit` | **0 vulns** | `ci.yml:28` `ubuntu-latest` |
+| **Audit** | `uv audit` | **0 vulns** | `ci.yml` `ubuntu-latest` |
 | **No `dxrk/memory/` touch** | `git diff --stat main...HEAD -- dxrk/memory/ \| wc -l` | **0** (salvo `malla_path` wiring per-tenant vía param, no internals) | PR diffstat gate |
 
 > **Regla Fase1 deuda:** ningún PR toca `dxrk/memory/` internals (Fidelity 3.7.1 `979` replaces + `1654cd2`/`759b8f1`/`db29959`/`27212e5`/`5036e3c` + `WAL` + `FTS5` locks). Solo `malla_path` per-tenant wiring.
@@ -402,8 +403,8 @@ uv run mkdocs build  # post-PR2 debe ser 0 warnings
 
 # PR v0.2.0-3..5 — README hero, benchmarks stub, coverage http — cada uno con:
 uvx ruff check dxrk tests           # 0 errors
-uv run mypy dxrk                    # 0 errors, python_version 3.13
-uv run python -m pytest -q --cov=dxrk --cov-report=term --cov-fail-under=80  # ≥80% non-Windows
+uv run mypy dxrk                    # 0 errors, python_version 3.14
+uv run python -m pytest -q --cov=dxrk --cov-report=term --cov-fail-under=100  # 100% non-Windows
 grep -rn "engram\|mempal" --include="*.py" | wc -l  # 0
 
 # Release v0.2.0

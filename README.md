@@ -6,7 +6,7 @@
 
 [![Release](https://img.shields.io/badge/Release-v1.5.0-blue)](https://github.com/Dxrk777/Dxrk/releases/latest)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.13%2B-3776AB)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/badge/Python-3.14%2B-3776AB)](https://www.python.org/downloads/)
 [![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)](docs/platforms.md)
 [![CI](https://img.shields.io/github/actions/workflow/status/Dxrk777/Dxrk/ci.yml)](https://github.com/Dxrk777/Dxrk/actions)
 [![Stars](https://img.shields.io/github/stars/Dxrk777/Dxrk)](https://github.com/Dxrk777/Dxrk)
@@ -30,14 +30,14 @@ python -m dxrk.memory search "arquitectura memoria"             # 4) busca (AND 
 ```
 > **Por qué DxrkMemory 2.0:** `sqlite3` FTS5 `trigram→porter→unicode61` + BM25 híbrido, Graph temporal `valid_from/valid_to`, AAAK 600–900 tok wake-up, Malla locks `~/.dxrk/locks` 900s — ver [`docs/memory.md`](docs/memory.md) · [`docs/MIGRATION_3.3.5_3.7.1.md`](docs/MIGRATION_3.3.5_3.7.1.md) · [`docs/dx.md`](docs/dx.md)
 
-- 🐍 **Python 3.12+** con TUI moderna basada en [Textual](https://textual.textualize.io/)
+- 🐍 **Python 3.14+** con TUI moderna basada en [Textual](https://textual.textualize.io/)
 - 🤖 Configura **14 agentes** con un solo comando
 - 🧠 **DxrkMemory 2.0 — Flagship local-first stdlib-only** (sin `chromadb`, sin `onnx`) — `sqlite3` FTS5 `trigram`+WAL, 37 módulos 14228 LOC, hybrid BM25, Malla locks, Graph temporal, dialecto AAAK, wake-up **600–900 tok** (paridad con el motor legado 3.7.1) — ver [`docs/memory.md`](docs/memory.md)
 - ⚡ Conmutador de proveedores y modelos con asignación por fase vía `dxrk-py model` (`list`/`current`/`set`)
 
 ## Instalación
 
-> Requisito: **Python 3.12+**
+> Requisito: **Python 3.14+**
 >
 > Dxrk no se publica en PyPI: se instala directo desde GitHub.
 

@@ -1122,6 +1122,7 @@ class TestMinerRemainder:
         monkeypatch.undo()
         monkeypatch.setattr(_os, "fstat", lambda fd: (_ for _ in ()).throw(OSError("ro")))
         assert miner._is_regular_source_file(p, tmp_path) is False
+        monkeypatch.undo()
 
     def test_read_no_follow_variants(self, tmp_path, monkeypatch):
         import errno
@@ -1627,7 +1628,9 @@ class TestSleepRemainder:
 
         assert reorganize_candidate(_malla_rows([]), SleepCandidate("no", 1.0, "near_dup")) == {"status": "not_found"}
         prot = _recall_row("d", pinned=True)
-        assert reorganize_candidate(_malla_rows([prot]), SleepCandidate("d", 1.0, "near_dup")) == {"status": "protected"}
+        assert reorganize_candidate(_malla_rows([prot]), SleepCandidate("d", 1.0, "near_dup")) == {
+            "status": "protected"
+        }
         doc = "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu"
         a = _recall_row("a", document=doc, S=5.0)
         b = _recall_row("b", document=doc, S=10.0)
@@ -2020,7 +2023,7 @@ class TestTenantMigrationRemainder:
         fifo.parent.mkdir(parents=True)
         try:
             _os.mkfifo(str(fifo))
-        except (OSError, AttributeError):
+        except OSError, AttributeError:
             fifo.mkdir()
         monkeypatch.setattr(mig, "LEGACY_PATHS", [(fifo, __import__("pathlib").Path("myfifo"))])
         res = mig.migrate_legacy_to_default(dry_run=False)
@@ -2238,7 +2241,9 @@ class TestMetacogV2Remainder:
 
         w = m2.MetacognitionV2(SimpleNamespace())
         assert str(w._malla_path) == "."
-        malla = SimpleNamespace(_path=str(tmp_path), search=lambda query, partition, n_results: {"results": [{"id": "a"}]})
+        malla = SimpleNamespace(
+            _path=str(tmp_path), search=lambda query, partition, n_results: {"results": [{"id": "a"}]}
+        )
         w2 = m2.MetacognitionV2(malla)
         pred = w2.predict("hola")
         assert 0.0 <= pred.confidence <= 1.0

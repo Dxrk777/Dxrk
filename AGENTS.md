@@ -1,12 +1,12 @@
 # AGENTS.md
 
-Instrucciones para agentes de IA que trabajan en **Dxrk** (configurador/orquestador de ecosistemas para agentes de IA, Python 3.13+).
+Instrucciones para agentes de IA que trabajan en **Dxrk** (configurador/orquestador de ecosistemas para agentes de IA, Python 3.14+).
 
 ## Comandos
 
-- Setup: `uv sync --all-extras --dev` (requiere Python 3.13+ y uv)
+- Setup: `uv sync --all-extras --dev` (requiere Python 3.14+ y uv)
 - Test SIEMPRE: `uv run python -m pytest -q` — **nunca `uv run pytest`** (resuelve a `/usr/bin/pytest` del sistema, que no ve `textual` ni el venv)
-- Test con cobertura: `uv run python -m pytest -q --cov=dxrk --cov-report=term-missing --cov-fail-under=80`
+- Test con cobertura: `uv run python -m pytest -q --cov=dxrk --cov-report=term-missing --cov-fail-under=100`
 - Lint: `uvx ruff check dxrk tests` (regla `--fix` también usada)
 - Typecheck: `uv run mypy dxrk` (excluye `tests/`)
 - Audit de dependencias: `uv audit`
@@ -27,7 +27,7 @@ Instrucciones para agentes de IA que trabajan en **Dxrk** (configurador/orquesta
 - `pytest.ini_options` en `pyproject.toml`: `testpaths=["tests"]`, `pythonpath=["."]`, `asyncio_mode="auto"` (no hace falta `@pytest.mark.asyncio`).
 - Tests por módulo espejo de `dxrk/`: `tests/test_<modulo>.py`, helpers en `tests/test_utils_*.py`. Fixture global `temp_dir` en `tests/conftest.py`.
 - Tests de adapters usan markers (`.claude`, `.opencode`, etc.) definidos en `pyproject.toml`.
-- Gate de cobertura: **80%** (`.github/workflows/ci.yml:48`, `CONTRIBUTING.md:36`). CI corre en ubuntu/macos/windows; tests POSIX-only se marcan `skipif(win32)`; el gate de coverage solo aplica en non-Windows.
+- Gate de cobertura: **100%** (`.github/workflows/ci.yml`, `CONTRIBUTING.md`). CI corre en ubuntu/macos/windows; tests POSIX-only se marcan `skipif(win32)`; el gate de coverage solo aplica en non-Windows.
 - Gotchas httpx: `httpx.Timeout` no tiene atributo `.timeout` (usar `.connect`/`.read` o `isinstance`); `httpx.Headers` no tiene `.append` (construir con lista de pares).
 - Tests de `dxrk/commands/session.py`: para simular errores de I/O monkeypatch `builtins.open` (no `dxrk.commands.session.open`) y `dxrk.commands.session.os.listdir` con `lambda *a: (_ for _ in ()).throw(OSError())`; los IDs en salida de list se truncan a 8 chars (`s.id[:8]`).
 

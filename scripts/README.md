@@ -16,7 +16,7 @@ must not weaken the core package's test and coverage contract.
 
 ## Requirements
 
-- Python 3.12+
+- Python 3.14+
 - `ffmpeg` and `ffprobe` available on `PATH`
 - The optional `omni` Python extra:
 

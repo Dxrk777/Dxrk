@@ -40,7 +40,7 @@ class InstallState:
         return out
 
     @classmethod
-    def _from_dict(cls, data: dict) -> "InstallState":
+    def _from_dict(cls, data: dict) -> InstallState:
         ma = data.get("model_assignments") or {}
         return cls(
             installed_agents=list(data.get("installed_agents") or []),

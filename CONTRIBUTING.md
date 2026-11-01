@@ -11,7 +11,7 @@
 
 ## Entorno de desarrollo
 
-Requisitos: **Python 3.13+** y [uv](https://docs.astral.sh/uv/).
+Requisitos: **Python 3.14+** y [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync --all-extras --dev
@@ -24,7 +24,7 @@ Antes de pushear, todo debe pasar en verde:
 ```bash
 uvx ruff check dxrk tests     # lint
 uv run mypy dxrk              # type check
-uv run pytest -q              # tests (2760+)
+uv run pytest -q              # tests (suite completa)
 uv audit                      # seguridad de dependencias
 ```
 
@@ -33,7 +33,7 @@ Los mismos checks corren en CI (ubuntu, macos, windows) — si pasa local, pasa 
 ## Convenciones
 
 - **Commits**: [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `ci:`, `chore:`)
-- **Tests**: escribí tests para cambios de comportamiento; el gate de cobertura es 80% (los tests POSIX-only se marcan `skipif(win32)`)
+- **Tests**: escribí tests para cambios de comportamiento; el gate de cobertura es 100% (los tests POSIX-only se marcan `skipif(win32)`)
 - **Tipos**: TypeScript estricto no aplica (Python), pero mypy estricto sí — sin `Any` innecesarios
 - **Nombres**: descriptivos, en inglés (excepto strings de UI)
 - **Documentación**: cambios de API o CLI se reflejan en `docs/` (mkdocs + mkdocstrings)

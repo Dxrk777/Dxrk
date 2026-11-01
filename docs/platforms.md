@@ -5,12 +5,12 @@
 | Plataforma | Estado | Detalles |
 | --- | --- | --- |
 | macOS | Soportado | Homebrew recomendado; detección automática de `brew` |
-| Linux | Soportado | apt/dnf/pacman detectados; requiere Python 3.12+ |
+| Linux | Soportado | apt/dnf/pacman detectados; requiere Python 3.14+ |
 | Windows | Soportado | scoop/winget detectados; uso de `goos` para paths y comandos |
 
 ## Requisitos
 
-- Python 3.12 o superior.
+- Python 3.14 o superior.
 - Opcional: Pillow (procesamiento de imágenes). La memoria persistente es
   nativa 100% Python stdlib-only, sin binarios externos.
 
@@ -19,21 +19,21 @@
 ### macOS
 
 ```bash
-brew install python@3.13
+brew install python@3.14
 uv tool install --from git+https://github.com/Dxrk777/Dxrk.git dxrk
 ```
 
 ### Linux
 
 ```bash
-sudo apt install python3.13   # o equivalente
+sudo apt install python3.14   # o equivalente
 uv tool install --from git+https://github.com/Dxrk777/Dxrk.git dxrk
 ```
 
 ### Windows
 
 ```powershell
-winget install Python.Python.3.13
+winget install Python.Python.3.14
 uv tool install --from git+https://github.com/Dxrk777/Dxrk.git dxrk
 ```
 
