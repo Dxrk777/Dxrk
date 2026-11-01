@@ -49,7 +49,7 @@ dxrk-py = "dxrk.__main__:main"
 
 [project.optional-dependencies]
 dev = ["pytest>=9.1.1", "pytest-cov>=7.1.0", "pytest-asyncio>=0.24"]
-typecheck = ["mypy>=2.4.0", "pytest>=9.1.1"]
+typecheck = ["mypy>=2.4.1", "pytest>=9.1.1"]
 swe = ["fire>=0.7.1", "python-dotenv>=1.2.4"]
 bench = ["pytest-benchmark>=4.0"]
 omni = ["edge-tts>=7.2.3,<8", "Pillow>=13.0.0,<14", "websockets>=13,<16"]
@@ -120,7 +120,7 @@ dev = [
     "mkdocs-material[imaging]>=9.7.7,<10",
     "mkdocstrings-python>=2.0.9",
     "mike>=2.2.0",
-    "mypy>=2.4.0",
+    "mypy>=2.4.1",
 ]
 bench = [
     "pytest-benchmark>=4.0",
