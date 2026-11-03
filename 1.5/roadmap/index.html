@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/dxrk-icon.jpg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -31,10 +31,10 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -1424,6 +1424,7 @@
 <strong>Alcance:</strong> Deuda Fase1 + Enterprise multi-tenant Fase2 + DX Top1 Fase4 → GA v1.0.0. <strong>Sin tocar <code>dxrk/memory/</code></strong> salvo via <code>malla_path</code> per-tenant (ADR-002).
 <strong>Contexto flagship:</strong> DxrkMemory 2.0 cerrado — 14 módulos <code>dxrk/memory</code> + <code>backend/</code> (6303 LOC stdlib-only <code>sqlite3</code> FTS5 trigram→porter→unicode61, WAL <code>0o600</code>/<code>0o750</code>, 141 tests en <code>tests/test_memory*.py</code>, 2760+ totales), ADR-002 (aislamiento Memory/Learner/RAG) y ADR-003 (stdlib-only vs hybrid BM25 0.72 vs HNSW 0.88, 0 vs 420MB, P5 vence). Ver <code>docs/memory.md:1</code>, <code>docs/dx.md:1</code>, <code>docs/adr/ADR-002-memory-separation.md:1</code>, <code>docs/adr/ADR-003-hybrid-vs-stdlib.md:1</code>, <code>docs/MIGRATION_3.3.5_3.7.1.md:1</code>.<br />
 <strong>Nota 2026-10:</strong> sin PyPI por diseño (<code>.github/workflows/publish.yml:26-29</code>, commits <code>a396a00</code> y <code>3b1d235</code>). Las menciones a publish PyPI abajo son históricas del plan 0.2.0 y quedan sustituidas por release vía git + GitHub Releases; no ejecutar publish a PyPI.
+<strong>Nota 2026-11:</strong> el gate de cobertura vigente es <strong>100%</strong> (ver §6.1 y <code>pyproject.toml</code>). Las menciones a 80% en las secciones históricas de v0.2.0/v0.3.0 se conservan como registro del plan original y no describen el estado actual.
 <strong>Versiones anteriores:</strong> <code>pyproject.toml:7</code> <code>0.1.2</code> → <code>0.2.0</code> (DX + flagship docs) → <code>0.3.0</code>/<code>0.5.0</code> enterprise beta → <code>1.0.0</code> GA multi-tenant. Commits base: <code>4c4ab3f</code> flagship 4652 LOC <code>979</code> replaces, <code>bf0d106</code> coverage 141 + ADR-002 + hooks <code>stdio</code>. <code>git status</code> clean tras <code>bf0d106</code> salvo untracked <code>docs/dx.md</code> (535L) + <code>docs/adr/ADR-003-hybrid-vs-stdlib.md</code> (76L) — este roadmap los integra.</p>
 </blockquote>
 <p>Este documento es el <strong>plan priorizado con matriz Impacto×Esfuerzo</strong>, roadmap por versión, Gantt, riesgos y Done gates. Ejecuta exactamente lo que quedó pendiente de Fase1 (deuda) + Fase2 (enterprise) + Fase4 (DX) sin reabrir <code>dxrk/memory/</code> internamente.</p>
@@ -2165,26 +2166,26 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 <tr>
 <td><strong>Tests</strong></td>
 <td><code>uv run python -m pytest -q</code></td>
-<td><code>2760+ passed, 3 skipped</code> min (141 <code>test_memory*.py</code> + suites relacionadas)</td>
+<td><code>7395+ passed, 1 skipped</code> (suite completa)</td>
 <td>local + CI <code>ubuntu/macos/windows</code></td>
 </tr>
 <tr>
 <td><strong>Coverage</strong></td>
-<td><code>uv run python -m pytest -q --cov=dxrk --cov-report=term --cov-fail-under=80</code></td>
-<td><strong>≥80%</strong> non-Windows; Windows <code>pytest -q</code> sin cov</td>
-<td><code>ci.yml:36</code> gate solo <code>RUNNER_OS != Windows</code></td>
+<td><code>uv run python -m pytest -q --cov=dxrk --cov-report=term --cov-fail-under=100</code></td>
+<td><strong>100%</strong> non-Windows; Windows <code>pytest -q</code> sin cov</td>
+<td><code>ci.yml</code> gate solo <code>RUNNER_OS != Windows</code></td>
 </tr>
 <tr>
 <td><strong>Ruff</strong></td>
 <td><code>uvx ruff check dxrk tests</code></td>
 <td><strong>0 errors</strong></td>
-<td><code>ci.yml:31</code> + pre-commit</td>
+<td><code>ci.yml</code> + pre-commit</td>
 </tr>
 <tr>
 <td><strong>Mypy</strong></td>
 <td><code>uv run mypy dxrk</code></td>
-<td><strong>0 errors, 218+ files, <code>python_version 3.13</code></strong></td>
-<td><code>ci.yml:34</code> excluye <code>tests/</code></td>
+<td><strong>0 errors, 367+ files, <code>python_version 3.14</code></strong></td>
+<td><code>ci.yml</code> excluye <code>tests/</code></td>
 </tr>
 <tr>
 <td><strong>Trace0</strong></td>
@@ -2202,7 +2203,7 @@ Dependencia crítica:    R11 DI ──► R15 switcher (Money Pit si se invierte
 <td><strong>Audit</strong></td>
 <td><code>uv audit</code></td>
 <td><strong>0 vulns</strong></td>
-<td><code>ci.yml:28</code> <code>ubuntu-latest</code></td>
+<td><code>ci.yml</code> <code>ubuntu-latest</code></td>
 </tr>
 <tr>
 <td><strong>No <code>dxrk/memory/</code> touch</strong></td>
@@ -2407,8 +2408,8 @@ uv<span class="w"> </span>run<span class="w"> </span>mkdocs<span class="w"> </sp
 
 <span class="c1"># PR v0.2.0-3..5 — README hero, benchmarks stub, coverage http — cada uno con:</span>
 uvx<span class="w"> </span>ruff<span class="w"> </span>check<span class="w"> </span>dxrk<span class="w"> </span>tests<span class="w">           </span><span class="c1"># 0 errors</span>
-uv<span class="w"> </span>run<span class="w"> </span>mypy<span class="w"> </span>dxrk<span class="w">                    </span><span class="c1"># 0 errors, python_version 3.13</span>
-uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>-q<span class="w"> </span>--cov<span class="o">=</span>dxrk<span class="w"> </span>--cov-report<span class="o">=</span>term<span class="w"> </span>--cov-fail-under<span class="o">=</span><span class="m">80</span><span class="w">  </span><span class="c1"># ≥80% non-Windows</span>
+uv<span class="w"> </span>run<span class="w"> </span>mypy<span class="w"> </span>dxrk<span class="w">                    </span><span class="c1"># 0 errors, python_version 3.14</span>
+uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>-q<span class="w"> </span>--cov<span class="o">=</span>dxrk<span class="w"> </span>--cov-report<span class="o">=</span>term<span class="w"> </span>--cov-fail-under<span class="o">=</span><span class="m">100</span><span class="w">  </span><span class="c1"># 100% non-Windows</span>
 grep<span class="w"> </span>-rn<span class="w"> </span><span class="s2">&quot;engram\|mempal&quot;</span><span class="w"> </span>--include<span class="o">=</span><span class="s2">&quot;*.py&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>wc<span class="w"> </span>-l<span class="w">  </span><span class="c1"># 0</span>
 
 <span class="c1"># Release v0.2.0</span>
@@ -2519,10 +2520,10 @@ git<span class="w"> </span>tag<span class="w"> </span>-a<span class="w"> </span>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.top", "navigation.footer", "content.code.copy", "toc.integrate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.top", "navigation.footer", "content.code.copy", "toc.integrate"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
       
     
   </body>
