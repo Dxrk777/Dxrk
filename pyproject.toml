@@ -49,7 +49,7 @@ dxrk-py = "dxrk.__main__:main"
 dev = ["pytest>=9.2.0", "pytest-cov>=7.1.0", "coverage>=7.17.0", "pytest-asyncio>=0.24"]
 typecheck = ["mypy>=2.4.1", "pytest>=9.2.0"]
 swe = ["fire>=0.7.1", "python-dotenv>=1.2.4"]
-bench = ["pytest-benchmark>=4.0"]
+bench = ["pytest-benchmark>=5.3.0"]
 omni = ["edge-tts>=7.3.1,<8", "Pillow>=13.0.0,<14", "websockets>=13,<16"]
 
 [tool.mypy]
@@ -126,5 +126,5 @@ dev = [
     "mypy>=2.4.1",
 ]
 bench = [
-    "pytest-benchmark>=4.0",
+    "pytest-benchmark>=5.3.0",
 ]
