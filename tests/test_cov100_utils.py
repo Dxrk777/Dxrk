@@ -443,7 +443,7 @@ class TestFilemergeAtomic:
         import os
 
         (tmp_path / "out.txt").write_bytes(b"old")
-        monkeypatch.setattr(os, "rename", lambda *a, **k: (_ for _ in ()).throw(OSError("rboom")))
+        monkeypatch.setattr(os, "replace", lambda *a, **k: (_ for _ in ()).throw(OSError("rboom")))
         with pytest.raises(OSError, match="replace .* atomically"):
             write_file_atomic(str(tmp_path / "out.txt"), b"new")
 
@@ -481,6 +481,15 @@ class TestFilemergeAtomic:
 
         monkeypatch.setattr(os, "open", lambda *a, **k: (_ for _ in ()).throw(OSError("denied")))
         with pytest.raises(OSError, match="open parent directory"):
+            fa._default_sync_dir("/nonexistent-xyz")
+
+    def test_default_sync_dir_permission_fail(self, monkeypatch):
+        import os
+
+        from dxrk.utils import filemerge_atomic as fa
+
+        monkeypatch.setattr(os, "open", lambda *a, **k: (_ for _ in ()).throw(PermissionError("denied")))
+        with pytest.raises(PermissionError, match="open parent directory"):
             fa._default_sync_dir("/nonexistent-xyz")
 
 
@@ -661,7 +670,7 @@ class TestFileopsPath:
     def test_resolve_path_explicit_workdir(self):
         path, err = resolve_path("rel.txt", "/wd")
         assert err is None
-        assert path == "/wd/rel.txt"
+        assert path == os.path.join("/wd", "rel.txt")
 
     def test_safe_join_no_elems_raises(self):
         # os.path.join() requires at least one arg, so the len(elems)==0
@@ -1478,6 +1487,14 @@ class TestPermissionsPolicy:
         assert policy is None
         assert err is not None
 
+    def test_project_policy_listdir_oserror(self, tmp_path, monkeypatch):
+        from dxrk.utils import permissions_policy
+
+        monkeypatch.setattr(permissions_policy.os, "listdir", lambda p: (_ for _ in ()).throw(OSError("boom")))
+        policy, err = permissions_policy.load_project_policy(str(tmp_path))
+        assert policy is None
+        assert err is not None
+
     def test_user_policy_is_dir(self, tmp_path):
         from dxrk.utils.permissions_policy import load_user_policy
 
@@ -1636,7 +1653,13 @@ class TestSessionStorage:
         from dxrk.utils.session_storage import _atomic_write_bytes
 
         target = tmp_path / "f.bin"
-        monkeypatch.setattr(os, "close", lambda fd: (_ for _ in ()).throw(OSError("c")))
+        real_close = os.close
+
+        def _close_then_raise(fd):
+            real_close(fd)
+            raise OSError("c")
+
+        monkeypatch.setattr(os, "close", _close_then_raise)
         _atomic_write_bytes(str(target), b"data")
         assert target.read_bytes() == b"data"
         monkeypatch.undo()

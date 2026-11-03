@@ -21,6 +21,8 @@ class WriteResult:
 def _default_sync_dir(dir: str) -> None:
     try:
         fd = os.open(dir, os.O_RDONLY)
+    except PermissionError as exc:
+        raise PermissionError(f"open parent directory {dir!r}: {exc}") from exc
     except OSError as exc:
         raise OSError(f"open parent directory {dir!r}: {exc}") from exc
     try:
@@ -107,7 +109,7 @@ def write_file_atomic(path: str, content: bytes, perm: int = 0o600) -> WriteResu
             raise OSError(f"write temp file for {path!r}: {exc}") from exc
 
         try:
-            os.rename(tmp_path, path)
+            os.replace(tmp_path, path)
         except OSError as exc:
             raise OSError(f"replace {path!r} atomically: {exc}") from exc
 

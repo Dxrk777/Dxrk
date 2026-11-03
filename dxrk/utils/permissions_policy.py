@@ -333,7 +333,10 @@ LayerMerge = layer_merge
 def load_project_policy(directory: str) -> tuple[Policy | None, Exception | None]:
     """Load a policy from a ``.dxrk/policies/`` directory. Reads all JSON files
     and merges them."""
-    policy_dir = os.path.join(directory, ".dxrk", "policies")
+    project_dir = os.path.join(directory, ".dxrk")
+    if os.path.exists(project_dir) and not os.path.isdir(project_dir):
+        return None, Exception(f"read project policies dir: {project_dir!r} is not a directory")
+    policy_dir = os.path.join(project_dir, "policies")
     try:
         entries = sorted(os.listdir(policy_dir))
     except FileNotFoundError:
