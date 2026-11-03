@@ -2450,7 +2450,11 @@ class TestCov100Round2:
 
         class _FakeMem:
             def __enter__(self):
-                return ["MemTotal:        4024548 kB\n", "MemAvailable:    1024000 kB\n"]
+                return [
+                    "MemFree:         123456 kB\n",
+                    "MemTotal:        4024548 kB\n",
+                    "MemAvailable:    1024000 kB\n",
+                ]
 
             def __exit__(self, *a):
                 return False
