@@ -2040,6 +2040,26 @@ class TestMemoryCommandsFull:
         monkeypatch.setattr("builtins.open", _fake_open)
         assert mem_mod._process_rss_kb() >= 0
 
+    def test_process_rss_reads_vmrss(self, monkeypatch):
+        import dxrk.commands.memory as mem_mod
+
+        real_open = open
+
+        class _FakeStatus:
+            def __enter__(self):
+                return ["Name:\tpython\n", "VmRSS:\t2048 kB\n"]
+
+            def __exit__(self, *a):
+                return False
+
+        def _fake_open(path, *a, **k):
+            if "/proc/" in str(path):
+                return _FakeStatus()
+            return real_open(path, *a, **k)
+
+        monkeypatch.setattr("builtins.open", _fake_open)
+        assert mem_mod._process_rss_kb() == 2048
+
     def test_memory_parent_deny(self, monkeypatch, tmp_path):
         monkeypatch.setattr(
             "dxrk.commands.memory.require_op",
@@ -2054,6 +2074,12 @@ class TestMemoryCommandsFull:
         code, out, _ = _run(_reg(), ["memory"], str(tmp_path))
         assert code == 0
         assert "desconocido" in out
+
+    def test_memory_parent_known_system(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("dxrk.commands.memory._meminfo", lambda: (2048, 1024))
+        code, out, _ = _run(_reg(), ["memory"], str(tmp_path))
+        assert code == 0
+        assert "Sistema:" in out
 
     def _deny(self, monkeypatch):
         monkeypatch.setattr(
@@ -2416,6 +2442,26 @@ class TestCov100Round2:
 
         monkeypatch.setattr("builtins.open", _fake_open)
         assert mem_mod._meminfo() == (4024548, 0)
+
+    def test_meminfo_full_content(self, monkeypatch):
+        import dxrk.commands.memory as mem_mod
+
+        real_open = open
+
+        class _FakeMem:
+            def __enter__(self):
+                return ["MemTotal:        4024548 kB\n", "MemAvailable:    1024000 kB\n"]
+
+            def __exit__(self, *a):
+                return False
+
+        def _fake_open(path, *a, **k):
+            if str(path) == "/proc/meminfo":
+                return _FakeMem()
+            return real_open(path, *a, **k)
+
+        monkeypatch.setattr("builtins.open", _fake_open)
+        assert mem_mod._meminfo() == (4024548, 1024000)
 
     def test_plan_add_creates_then_appends(self, tmp_path):
         code, _, _ = _run(_reg(), ["plan", "add", "first"], str(tmp_path))

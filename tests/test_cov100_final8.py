@@ -1171,6 +1171,31 @@ class TestSystemDetectDeps:
                 res = detect()
         assert res.system.profile.linux_distro == "unknown"
 
+    def test_detect_linux_os_release_readable(self):
+        from dxrk.system import detect
+
+        real_open = open
+
+        class _FakeOsRelease:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+            def read(self):
+                return 'ID=ubuntu\nVERSION_ID="24.04"\n'
+
+        def guarded_open(path, *args, **kwargs):
+            if str(path) == "/etc/os-release":
+                return _FakeOsRelease()
+            return real_open(path, *args, **kwargs)
+
+        with mock.patch("platform.system", return_value="Linux"):
+            with mock.patch("builtins.open", guarded_open):
+                res = detect()
+        assert res.system.profile.linux_distro == "ubuntu"
+
 
 class TestSystemPath:
     def test_add_to_process_path_empty(self, monkeypatch):
