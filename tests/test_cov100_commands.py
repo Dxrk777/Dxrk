@@ -872,6 +872,30 @@ class TestCostDoctorEnterpriseExport:
         assert code == 0
         assert "git: OK" in out
 
+    def test_doctor_config_present(self, tmp_path, monkeypatch):
+        from types import SimpleNamespace
+
+        import dxrk.commands.doctor as doctor_mod
+        from dxrk.commands.doctor import DoctorReport, run_doctor
+        from dxrk.commands.registry import CommandContext
+
+        ctx = CommandContext(args=[], flags={}, out=io.StringIO(), err=io.StringIO(), cwd=str(tmp_path))
+        home = tmp_path / "home"
+        (home / ".dxrk").mkdir(parents=True)
+        (home / ".dxrk" / "config.yaml").write_text("project: {}\n")
+        monkeypatch.setattr(doctor_mod.os.path, "expanduser", lambda p: str(home))
+        monkeypatch.setattr(doctor_mod, "detect_gh", lambda: True)
+        monkeypatch.setattr(doctor_mod, "git_dir", lambda wd: SimpleNamespace(ok=True))
+
+        def _run_checks(checks):
+            for check in checks:
+                check.run()
+            return SimpleNamespace(output=[])
+
+        monkeypatch.setattr(doctor_mod, "run_checks", _run_checks)
+        report = run_doctor(ctx, DoctorReport())
+        assert report.checks == []
+
     def test_doctor_config_missing_and_empty_report(self, tmp_path, monkeypatch):
         from dxrk.commands import doctor as doctor_mod
 

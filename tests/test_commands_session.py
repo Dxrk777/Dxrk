@@ -409,3 +409,15 @@ def test_healthy_gz_sibling_never_quarantined(sdir, monkeypatch):
     assert [x.id for x in got] == ["sess-aaa"]
     assert quarantined == 0
     assert not os.path.exists(os.path.join(sdir, ".quarantine"))
+
+
+def test_plain_sibling_wins_over_gz(sdir, monkeypatch):
+    import gzip
+
+    monkeypatch.delenv("DXRK_SESSION_BACKEND", raising=False)
+    _mk("both", title="Plain")
+    _write_bytes(os.path.join(sdir, "both.json.gz"), gzip.compress(b"{}"))
+    got, quarantined = list_session_files_with_quarantine()
+    assert [s.id for s in got] == ["both"]
+    assert quarantined == 0
+    assert os.path.exists(os.path.join(sdir, "both.json.gz"))

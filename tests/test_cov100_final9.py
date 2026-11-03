@@ -314,6 +314,18 @@ class TestGgaRemainder:
         gga.ensure_dxrk_guardian_shim(str(tmp_path))
         assert (Path(str(tmp_path)) / ".local" / "bin" / "DXRK_GUARDIAN").exists() or True
 
+    def test_ensure_shim_existing_link_skips(self, tmp_path, monkeypatch):
+        from dxrk.components import gga
+
+        fake_bin = tmp_path / "gga"
+        fake_bin.write_text("x")
+        link = tmp_path / ".local" / "bin" / "DXRK_GUARDIAN"
+        link.parent.mkdir(parents=True)
+        link.write_text("existing")
+        monkeypatch.setattr("shutil.which", lambda x: str(fake_bin))
+        gga.ensure_dxrk_guardian_shim(str(tmp_path))
+        assert link.read_text() == "existing"
+
     def test_ensure_shim_symlink_fail_copies(self, tmp_path, monkeypatch):
         from dxrk.components import gga
 

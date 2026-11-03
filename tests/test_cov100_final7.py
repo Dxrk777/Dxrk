@@ -2883,6 +2883,13 @@ class TestConfigLoadRemainder:
         assert cfg.project.name == "p"
         assert len(cfg.providers) == 1
 
+    def test_empty_dict_defaults(self):
+        from dxrk.config.load import _load_config_dict
+
+        cfg = _load_config_dict({})
+        assert cfg.sandbox is not None
+        assert len(cfg.providers) == 4
+
     def test_to_dict_nones(self):
         from dxrk.config.load import Default, _config_to_dict
 

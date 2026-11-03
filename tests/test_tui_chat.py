@@ -49,6 +49,13 @@ class TestFindBinary:
         monkeypatch.setattr("os.path.expanduser", lambda p: str(tmp_path / "home"))
         assert find_opencode_binary() == ""
 
+    def test_which_found(self, monkeypatch):
+        import shutil
+
+        monkeypatch.delenv("DXRK_OPENCODE_BIN", raising=False)
+        monkeypatch.setattr(shutil, "which", lambda _: "/fake/opencode")
+        assert find_opencode_binary() == "/fake/opencode"
+
 
 class TestParseEvents:
     def test_text_delta(self):
