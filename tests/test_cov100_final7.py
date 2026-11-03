@@ -394,7 +394,8 @@ class TestSyncRemainder:
         with mock.patch("dxrk.cli.runtime_sync._resolve_adapters", return_value=[]):
             assert _sync_step(ComponentID.SKILLS, sel).run() is None
 
-    def test_discover_agents_empty_state(self, tmp_path):
+    def test_discover_agents_empty_state(self, tmp_path, monkeypatch):
+        monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
         from dxrk.cli.runtime_sync import discover_agents
 
         with mock.patch("dxrk.state.read", return_value=SimpleNamespace(installed_agents=[])):
