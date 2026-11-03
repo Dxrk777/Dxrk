@@ -87,6 +87,12 @@ def relative_path(path: str, base: str) -> tuple[str, FileopsError | None]:
 RelativePath = relative_path
 
 
+def snapshot_relpath(path: str) -> str:
+    """Return a snapshot-safe relative path, stripping drive and leading separators."""
+    _, tail = os.path.splitdrive(path)
+    return tail.lstrip("\\/")
+
+
 def expand_home(path: str) -> tuple[str, FileopsError | None]:
     """Replace a leading ~ with the user's home directory. Mirrors fileops.ExpandHome."""
     if not path.startswith("~"):

@@ -8,6 +8,7 @@ import os
 from typing import Any
 
 from dxrk.pipeline import RollbackStep
+from dxrk.utils.fileops_path import snapshot_relpath
 
 log = logging.getLogger("dxrk.cli.install")
 
@@ -43,7 +44,7 @@ class PrepareBackupStep(RollbackStep):
         manifest: dict[str, Any] = {"entries": []}
         for target in self._targets:
             if os.path.isfile(target):
-                rel = os.path.relpath(target, "/").lstrip("/")
+                rel = snapshot_relpath(target)
                 dest = os.path.join(self._snapshot_dir, rel)
                 os.makedirs(os.path.dirname(dest), exist_ok=True)
                 try:

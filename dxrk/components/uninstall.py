@@ -19,6 +19,7 @@ from dxrk.components import permissions as _permissions
 from dxrk.components import persona as _persona
 from dxrk.components import sdd as _sdd
 from dxrk.models import AgentID, ComponentID, DxrkMemoryUninstallScope
+from dxrk.utils.fileops_path import snapshot_relpath
 
 # ─── Constants ─────────────────────────────────────────────────────────────
 
@@ -196,7 +197,7 @@ class Service:
         manifest = {}
         for t in targets:
             if os.path.isfile(t):
-                dest = os.path.join(snapshot_dir, os.path.relpath(t, "/").lstrip("/"))
+                dest = os.path.join(snapshot_dir, snapshot_relpath(t))
                 os.makedirs(os.path.dirname(dest), exist_ok=True)
                 shutil.copy2(t, dest)
         manifest["source"] = "uninstall"

@@ -140,6 +140,7 @@ from dxrk.utils.fileops_path import real_path as real_path
 from dxrk.utils.fileops_path import relative_path as relative_path
 from dxrk.utils.fileops_path import resolve_path as resolve_path
 from dxrk.utils.fileops_path import safe_join as safe_join
+from dxrk.utils.fileops_path import snapshot_relpath as snapshot_relpath
 from dxrk.utils.fileops_path import split_path as split_path
 from dxrk.utils.fileops_path import tmp_dir as tmp_dir
 from dxrk.utils.fileops_path import tmp_file as tmp_file
