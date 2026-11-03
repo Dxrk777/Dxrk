@@ -2510,6 +2510,8 @@ class TestSangreRound3:
     def test_mine_malla_lock_nt_acquire_release(self, tmp_path, monkeypatch):
         import pathlib as pathlib_mod
 
+        if os.name == "nt":
+            pytest.skip("POSIX-only NT lock simulation")
         fake = self._fake_msvcrt(monkeypatch)
         monkeypatch.setattr("os.name", "nt")
         monkeypatch.setattr(pal, "Path", pathlib_mod.PosixPath)
@@ -2523,6 +2525,8 @@ class TestSangreRound3:
 
         import pytest
 
+        if os.name == "nt":
+            pytest.skip("POSIX-only NT lock simulation")
         fake = self._fake_msvcrt(monkeypatch)
         fake.locking.side_effect = OSError("held by another")
         monkeypatch.setattr("os.name", "nt")

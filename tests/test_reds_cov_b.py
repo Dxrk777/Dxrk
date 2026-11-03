@@ -390,7 +390,7 @@ def test_sdd_profile_names():
     keys = sdd.profile_agent_keys("team")
     assert keys[0] == "sdd-orchestrator-team" and len(keys) == 11
     assert sdd.shared_prompt_phases() == sdd.profile_phase_order()
-    assert sdd.shared_prompt_dir("/h") == "/h/.config/opencode/prompts/sdd"
+    assert sdd.shared_prompt_dir("/h") == os.path.join("/h", ".config", "opencode", "prompts", "sdd")
     cmds = sdd.opencode_commands()
     assert len(cmds) > 5 and all(c.name and c.body for c in cmds)
 

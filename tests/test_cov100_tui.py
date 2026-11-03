@@ -542,6 +542,8 @@ def test_chat_backend_guess_session_id():
 def test_chat_backend_env_override_not_executable(tmp_path, monkeypatch):
     import shutil
 
+    if os.name == "nt":
+        pytest.skip("POSIX-only executable bit")
     fake = tmp_path / "opencode"
     fake.write_text("#!/bin/sh\n")
     fake.chmod(stat.S_IMODE(os.stat(fake).st_mode) & ~stat.S_IEXEC)

@@ -1183,7 +1183,7 @@ class TestSystemPath:
     def test_path_contains_posix(self, monkeypatch):
         from dxrk.system import _path_contains
 
-        monkeypatch.setenv("PATH", "/a:/b")
+        monkeypatch.setenv("PATH", os.pathsep.join(["/a", "/b"]))
         assert _path_contains("/b") is True
         assert _path_contains("/c") is False
 

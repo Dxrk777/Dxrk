@@ -678,13 +678,13 @@ class TestComponentMemoryRemainder:
         assert mem._is_DXRK_MEMORY_command("DXRK_MEMORY") is True
         assert mem._is_DXRK_MEMORY_command("") is False
         assert mem._is_DXRK_MEMORY_command("/bin/DXRK_MEMORY") is True
-        assert mem._is_absolute_DXRK_MEMORY_path("/bin/DXRK_MEMORY") is True
+        assert mem._is_absolute_DXRK_MEMORY_path(os.path.abspath("/bin/DXRK_MEMORY")) is True
         assert mem._is_absolute_DXRK_MEMORY_path("DXRK_MEMORY") is False
         assert mem._is_versioned_homebrew_cellar_path("/opt/homebrew/Cellar/DXRK_MEMORY/1/bin/DXRK_MEMORY") is True
         assert mem._is_stable_homebrew_DXRK_MEMORY_path("/opt/homebrew/bin/DXRK_MEMORY") is True
         assert mem._is_stable_homebrew_DXRK_MEMORY_path("/tmp/DXRK_MEMORY") is False
 
-    def test_download_helpers(self, monkeypatch):
+    def test_download_helpers(self, monkeypatch, tmp_path):
         from dxrk.components import memory as mem
 
         assert mem._normalize_arch() in ("amd64", "arm64", __import__("platform").machine().lower())
@@ -700,7 +700,7 @@ class TestComponentMemoryRemainder:
         assert mem._github_token() == ""
         d = mem._DXRK_MEMORY_install_dir("windows")
         assert "DXRK_MEMORY" in d
-        assert mem._is_writable_dir("/tmp") is True
+        assert mem._is_writable_dir(str(tmp_path)) is True
         assert mem._is_writable_dir("/no-existe-zzz") is False
 
     def test_download_tar_and_zip(self, tmp_path, monkeypatch):
@@ -2015,6 +2015,8 @@ class TestTenantMigrationRemainder:
     def test_migrate_special_and_errors(self, tmp_path, monkeypatch):
         import os as _os
 
+        if _os.name == "nt":
+            pytest.skip("POSIX-only FIFO")
         import dxrk.tenant.migration as mig
 
         home = tmp_path / "home"

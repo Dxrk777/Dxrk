@@ -1975,6 +1975,8 @@ class TestMemoryCommandsFull:
     def test_process_rss_branches(self, monkeypatch):
         import dxrk.commands.memory as mem_mod
 
+        if os.name == "nt":
+            pytest.skip("POSIX-only /proc/resource")
         assert mem_mod._process_rss_kb() > 0
         real_open = open
 

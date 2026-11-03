@@ -1753,7 +1753,7 @@ class TestRuntimeRunRem:
         assert _go_install_bin_dir() == "/gobin"
         monkeypatch.delenv("GOBIN", raising=False)
         monkeypatch.setenv("GOPATH", "/gopath")
-        assert _go_install_bin_dir() == "/gopath/bin"
+        assert _go_install_bin_dir() == os.path.join("/gopath", "bin")
         monkeypatch.delenv("GOPATH", raising=False)
         monkeypatch.setattr(os.path, "expanduser", lambda p: str(tmp_path))
         assert _go_install_bin_dir().endswith("go/bin")

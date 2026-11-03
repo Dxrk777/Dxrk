@@ -1747,6 +1747,8 @@ class TestFileSettingsDelete:
 
 class TestMcpTimeoutSend:
     def test_send_with_timeout(self):
+        if os.name == "nt":
+            pytest.skip("POSIX-only socketpair/cat")
         from dxrk.mcp import StdioTransport
 
         t = StdioTransport("cat", timeout=5.0)
@@ -2362,13 +2364,13 @@ class TestInstallcmdRemainder:
             mock.patch.object(ic, "_cmd_look_path", return_value="/x/cmd/git"),
             mock.patch.object(ic, "_file_exists", side_effect=[False, True]),
         ):
-            assert ic._git_bash_path() == "/x/cmd/bash.exe"
+            assert ic._git_bash_path() == os.path.join("/x/cmd", "bash.exe")
         with (
             mock.patch.object(ic, "_cmd_look_path", return_value=None),
             mock.patch.object(ic, "_file_exists", return_value=True),
             mock.patch.dict("os.environ", {"ProgramFiles": "/pfx", "ProgramFiles(x86)": ""}),
         ):
-            assert ic._git_bash_path() == "/pfx/Git/bin/bash.exe"
+            assert ic._git_bash_path() == os.path.join("/pfx", "Git", "bin", "bash.exe")
         with (
             mock.patch.object(ic, "_cmd_look_path", return_value=None),
             mock.patch.object(ic, "_file_exists", return_value=False),
@@ -2771,8 +2773,13 @@ class TestHooksCliRemainder:
 
         from dxrk.memory.hooks_cli import _is_trusted_python
 
-        assert _is_trusted_python(sys.prefix + "/bin/coverage") is True
-        assert _is_trusted_python("/tmp/nope/python") is False
+        with (
+            mock.patch("dxrk.memory.hooks_cli.os.path.realpath", side_effect=lambda p: p),
+            mock.patch("dxrk.memory.hooks_cli.os.path.isfile", return_value=True),
+            mock.patch("dxrk.memory.hooks_cli.os.access", return_value=True),
+        ):
+            assert _is_trusted_python(os.path.join(sys.prefix, "bin", "coverage")) is True
+            assert _is_trusted_python("/tmp/nope/python") is False
 
     def test_realpath_failure(self):
         import dxrk.memory.hooks_cli as hooks

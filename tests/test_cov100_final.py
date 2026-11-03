@@ -56,9 +56,9 @@ class TestAdaptersTrivialGetters:
         from dxrk.agents.kimi.adapter import KimiAdapter
         from dxrk.agents.kiro.adapter import KiroAdapter
 
-        assert KimiAdapter().sub_agents_dir("/h") == os.path.join("/h", ".kimi", "agents")
+        assert KimiAdapter().sub_agents_dir("/h") == os.path.normpath(os.path.join("/h", ".kimi", "agents"))
         assert KimiAdapter().embedded_sub_agents_dir() == "kimi/agents"
-        assert KiroAdapter().sub_agents_dir("/h") == os.path.join("/h", ".kiro", "agents")
+        assert KiroAdapter().sub_agents_dir("/h") == os.path.normpath(os.path.join("/h", ".kiro", "agents"))
         assert KiroAdapter().embedded_sub_agents_dir() == "kiro/agents"
 
     def test_qwen_kilocode_empty(self):
@@ -236,7 +236,7 @@ class TestBackupRootEdge:
         s = Snapshotter()
         # "/" normalizes to "/" -> lstrip("/") == "" -> "root" branch (line 327)
         mentry, aentry = s._build_entry("/")
-        assert mentry.original_path == "/"
+        assert mentry.original_path == os.path.normpath("/")
         # root is a dir -> early return, but exercise lstrip logic via mock stat
         with mock.patch("dxrk.backup.os.stat") as st, mock.patch("dxrk.backup.stat_is_dir", return_value=False):
             st.return_value = SimpleNamespace(st_mode=0o100644)
