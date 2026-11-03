@@ -1756,7 +1756,7 @@ class TestRuntimeRunRem:
         assert _go_install_bin_dir() == os.path.join("/gopath", "bin")
         monkeypatch.delenv("GOPATH", raising=False)
         monkeypatch.setattr(os.path, "expanduser", lambda p: str(tmp_path))
-        assert _go_install_bin_dir().endswith("go/bin")
+        assert _go_install_bin_dir().endswith(os.path.join("go", "bin"))
         monkeypatch.setenv("PATH", f"/a{os.pathsep}/b")
         assert _is_in_path("/a") is True
         assert _is_in_path("/zzz") is False

@@ -289,7 +289,7 @@ class TestGgaRemainder:
         from dxrk.components import gga
 
         assert b"PROVIDER=" in gga.build_config("claude")
-        assert gga.config_path("/h") == "/h/.config/DXRK_GUARDIAN/config"
+        assert gga.config_path("/h") == os.path.join("/h", ".config", "DXRK_GUARDIAN", "config")
         assert gga.agents_template_path("/h").endswith("AGENTS.md")
 
     def test_inject_roundtrip(self, tmp_path):

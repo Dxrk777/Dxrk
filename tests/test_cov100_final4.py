@@ -388,7 +388,7 @@ class TestComponentPermissions:
         sp = tmp_path / "s.json"
         sp.write_text('{"a": 1}')
         pf = tmp_path / "kiro.json"
-        pf.write_text(P._KIRO_PERMISSIONS_YAML)
+        pf.write_bytes(P._KIRO_PERMISSIONS_YAML.encode("utf-8"))
         fa = FlexAdapter(home, agent=AgentID.KIRO_IDE, settings_path=str(sp), permissions_file=str(pf))
         svc = _svc(home)
         ops, _ = svc._component_operations(fa, ComponentID.PERMISSIONS)
