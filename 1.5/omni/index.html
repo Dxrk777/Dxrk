@@ -437,6 +437,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#ejemplo-desde-python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ejemplo desde Python
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#backends-visuales" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1282,6 +1293,12 @@
 <div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/omni.py<span class="w"> </span><span class="s2">&quot;prueba&quot;</span><span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--duration<span class="w"> </span><span class="m">10</span><span class="w"> </span>--scenes<span class="w"> </span><span class="m">2</span><span class="w"> </span>--image-source<span class="w"> </span>placeholder<span class="w"> </span>--no-llm
 </code></pre></div>
+<h2 id="ejemplo-desde-python">Ejemplo desde Python</h2>
+<p>El script <a href="https://github.com/Dxrk777/Dxrk/blob/main/examples/quick_omni_demo.py"><code>examples/quick_omni_demo.py</code></a> muestra cómo invocar el pipeline sin pasar por la CLI:</p>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>examples/quick_omni_demo.py
+uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>examples/quick_omni_demo.py<span class="w"> </span>--longform
+</code></pre></div>
+<p>Usa <code>OmniConfig</code> + <code>run_pipeline()</code> y un tema de tecnología/ciencia preconfigurado. El demo es determinista (sin LLM, placeholders, synth, subtítulos proporcionales); solo la narración con Edge-TTS necesita red.</p>
 <h2 id="backends-visuales">Backends visuales</h2>
 <h3 id="comfyui">ComfyUI</h3>
 <div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/omni.py<span class="w"> </span><span class="s2">&quot;mi tema&quot;</span><span class="w"> </span><span class="se">\</span>
