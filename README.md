@@ -301,6 +301,16 @@ dxrk-py sync --agent claude-code --dry-run
 dxrk-py tui
 ```
 
+### 6. Invocar Omni desde Python
+
+El ejemplo [`examples/quick_omni_demo.py`](examples/quick_omni_demo.py) usa `OmniConfig` + `run_pipeline()` y se corre con:
+
+```bash
+uv run python examples/quick_omni_demo.py
+```
+
+La variante long-form está disponible con `--longform`. Ver [`examples/README.md`](examples/README.md).
+
 ### Flags principales de Omni
 
 | Flag | Default | Propósito |
@@ -441,6 +451,7 @@ uv build
 | --- | --- |
 | [docs/omni.md](docs/omni.md) | Guía de Dxrk Omni: short-form, long-form, backends, audio y subtítulos. |
 | [scripts/README.md](scripts/README.md) | Referencia completa del pipeline y de todas las flags. |
+| [examples/README.md](examples/README.md) | Ejemplos ejecutables, incluido el quickstart de Omni desde Python. |
 | [docs/memory.md](docs/memory.md) | DxrkMemory 2.0: FTS5, BM25, grafo temporal, AAAK y layers. |
 | [docs/architecture.md](docs/architecture.md) | Arquitectura del core y del pipeline Omni. |
 | [docs/usage.md](docs/usage.md) | Guía de uso general de la CLI. |

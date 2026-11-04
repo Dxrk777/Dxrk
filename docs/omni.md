@@ -55,6 +55,17 @@ uv run python scripts/omni.py "prueba" \
   --duration 10 --scenes 2 --image-source placeholder --no-llm
 ```
 
+## Ejemplo desde Python
+
+El script [`examples/quick_omni_demo.py`](https://github.com/Dxrk777/Dxrk/blob/main/examples/quick_omni_demo.py) muestra cómo invocar el pipeline sin pasar por la CLI:
+
+```bash
+uv run python examples/quick_omni_demo.py
+uv run python examples/quick_omni_demo.py --longform
+```
+
+Usa `OmniConfig` + `run_pipeline()` y un tema de tecnología/ciencia preconfigurado. El demo es determinista (sin LLM, placeholders, synth, subtítulos proporcionales); solo la narración con Edge-TTS necesita red.
+
 ## Backends visuales
 
 ### ComfyUI
