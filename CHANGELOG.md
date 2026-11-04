@@ -4,7 +4,124 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
 ## [1.5.0-omni](https://github.com/Dxrk777/Dxrk/releases/tag/v1.5.0-omni) - 2026-11-04
+
+### Destacados
+
+- **Python 3.14:** runtime actualizado a `>=3.14`; CI matriz con Python 3.14
+  en Linux, macOS y Windows.
+- **Motor Omni multimedia:** pipeline de topic a video vertical para
+  short-form y long-form, con backends locales de imagen, música, narración
+  y subtítulos.
+- **100% de cobertura:** 7.406 tests passing, 1 skipped; gate de cobertura
+  elevado a 100%.
+- **Hardening de seguridad:** backlog de Dependabot cerrado (47 fixes, 0
+  abiertos), fix de Pillow 13.0.0 por advisories, rechazo de orígenes
+  localhost lookalike y cobertura de mutación para parsing/refresh de JWT.
+
+### Breaking Changes
+
+- **python:** Dxrk ahora requiere Python 3.14 o superior (`requires-python =
+  ">=3.14"`). Se deja de soportar Python 3.12/3.13 con el upgrade de runtime.
+
+### Features
+
+- **omni:** MVP de `scripts/omni.py` — topic a video vertical de 30s
+  (script LLM, Edge-TTS, imágenes Pollinations/locales, música sintetizada,
+  FFmpeg + subtítulos ASS), con fallbacks offline deterministas.
+- **omni:** Backends locales de imagen — API de ComfyUI + progreso WebSocket
+  opcional con fallback a polling de historial, txt2img de Stable Diffusion
+  WebUI, templates de workflow custom de ComfyUI y fallback `auto` local-first
+  a tarjetas placeholder.
+- **omni:** Subtítulos word-level — captura de `WordBoundary` de Edge-TTS,
+  transcripción opcional con faster-whisper, fallback proporcional, timings
+  escalados por tempo, salida ASS karaoke y persistencia de `words.json`.
+- **omni:** Modo long-form — planes de capítulos/shots, narración por
+  capítulo, video/audio concatenado, offsets globales de subtítulos y una
+  única cama musical para la duración total.
+- **omni:** Música de larga duración — backends chunked de MusicGen y Stable
+  Audio Open con crossfades de FFmpeg, más el synth default sin dependencias.
+- **memory:** Cap `memory.maintain` (denegado por default, grant explícito
+  por tenant) y tool MCP `dxrk_memory_quarantine` (35ª tool) gateada por ese
+  cap.
+- **memory:** `PolicyEngine` con triggers RBAC (`over_budget`,
+  `rescore_stale`, `checksum_sweep`, `quarantine_sweep`), throttling de 15min
+  en `<palace>/.policy_state.json`.
+- **memory:** MCP lee metadata del proyecto (score ledger últimos 5, raw
+  `access_history` reemplazado por su longitud).
+- **judge:** Verifier externo `dxrk/judge/` (observe-only, auto-fix
+  default-off, sin acoplamiento a autonomy).
+- **tui:** Paleta neon cyberpunk y fix del debounce del tenant switcher.
+- **examples:** `examples/quick_omni_demo.py` ejecutable con modos
+  short-form y `--longform`, más `examples/README.md`.
+
+### Bug Fixes
+
+- **omni:** Mantener el texto placeholder fuera de la zona de subtítulos;
+  cortar líneas de subtítulos en pausas largas; resolver paths absolutos en
+  la lista de concat.
+- **security:** Rechazar orígenes ingress localhost lookalike; agregar
+  cobertura de mutación para parsing y refresh de JWT.
+- **config:** Guardar `SettingsManager` vacío con error tipado; requerir
+  tenant existente para `set`/`migrate`; migrar tests fuera de aliases
+  CamelCase deprecados.
+- **windows:** Escrituras atómicas y carga de policy portables; corregir
+  assumptions de paths/newlines en tests; manejar snapshot paths cross-drive.
+- **ci:** Hacer coverage hermético entre runners; instalar ripgrep y aislar
+  Kiro discovery; cubrir líneas non-meminfo en macOS.
+- **tui:** Cancelar correctamente el timer de debounce del tenant switcher.
+- **planner:** Loguear el fallo de init de soft-pairs en vez de pasar
+  silenciosamente.
+- **update:** Actualizar Dxrk vía git sobre `uv`; sacar el path PyPI/Homebrew.
+- **http:** Agregar `__str__` a `LogLevel` y mantener el alias `String()`.
+- **commands:** Resolver export paths contra el cwd del comando.
+- **deps:** Bump de Pillow a 13.0.0 por security advisories y refresh de
+  certifi.
+
+### Refactoring
+
+- **autonomy:** Cull del engine self-update/self-learn (`autonomy`, `learner`,
+  `metrics`, `swarm`, `updater`, `evolution` removidos); solo sobrevive el
+  vocabulario de capabilities en `autonomy/permissions.py` (dead
+  `PermissionLevel` dropped, `memory.maintain` agregado).
+- **memory:** Renombrar jerarquía a partition/subgroup/recall; adoptar
+  vocabulario malla y split de handlers MCP.
+- **core:** Remover dead branches en core, CLI, security y TUI.
+- **utils:** Exponer aliases Go-style snake_case con re-exports de
+  compatibilidad.
+- **log:** Unificar el enum de levels en `dxrk.log`.
+
+### Testing
+
+- Full suite: 7.406 passed, 1 skipped, 100% coverage.
+- Suites `cov100` por front, cobertura de HTTP/update/R05 y
+  swarm-session/vault.
+- Cobertura de platform branches macOS y non-meminfo; coverage hermético
+  entre runners.
+- Tests de portabilidad Windows para paths/newlines.
+- Cobertura de mutación de seguridad para parsing y refresh de JWT.
+
+### Documentation
+
+- Overhaul del README para el motor Omni y Python 3.14, con badges,
+  quickstart, ejemplos de CLI, repo tree y sección de calidad/tests.
+- Nueva guía `docs/omni.md` con short-form, long-form, ComfyUI, Stable
+  Diffusion WebUI, subtítulos word-level y backends de música.
+- `examples/README.md` y demo Omni ejecutable.
+- RDU spine (`schema_version=2`), quarantine y policy en `docs/memory.md`;
+  grants de `memory.maintain` en `docs/rbac.md`.
+- ADR-005 de migración Go-to-Python y corrección de claims de PyPI/roadmap.
+
+### Chores
+
+- **deps:** 47 updates de Dependabot mergeados; 0 alertas abiertas.
+- **ci:** Matriz Python 3.14, alineación de pins de CodeQL, auto-merge para
+  Dependabot patch/minor con CI verde.
+- **build:** Upgrade de runtime a Python 3.14; `websockets` agregado para
+  streaming de ComfyUI.
+- **release:** Tag `v1.5.0-omni`; sin distribución a PyPI por diseño.
+
 ## [1.5.0](https://github.com/Dxrk777/Dxrk/releases/tag/v1.5.0) - 2026-10-08
 
 ### Features
@@ -27,47 +144,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **deps:** batch dependabot (fire, mkdocstrings, pytest-cov, mypy 2.x,
   pytest 9.x, pyyaml, beautifulsoup4, textual 8.x, CI actions) + urllib3 2.8.0
 - **release:** Bump version to 1.5.0
-
-## [Unreleased]
-
-### Features
-
-- **memory:** Cap `memory.maintain` (denied by default, explicit per-tenant
-  grant) and `dxrk_memory_quarantine` MCP tool (35th tool) gated by it
-- **memory:** `PolicyEngine` with RBAC-gated triggers (`over_budget`,
-  `rescore_stale`, `checksum_sweep`, `quarantine_sweep`), 15min throttling
-  in `<palace>/.policy_state.json`
-- **memory:** MCP reads project metadata (score ledger last 5, raw
-  `access_history` replaced by its length)
-- **judge:** External `dxrk/judge/` verifier (observe-only, auto-fix
-  default-off, no autonomy coupling)
-- **omni:** `scripts/omni.py` MVP — topic to 30s vertical video (LLM script,
-  Edge-TTS, Pollinations/local images, synthesized music, FFmpeg + ASS
-  subtitles), with deterministic offline fallbacks
-- **omni:** Local image backends — ComfyUI API + optional WebSocket progress
-  with history polling fallback, Stable Diffusion WebUI txt2img, custom
-  ComfyUI workflow templates, and `auto` local-first fallback to placeholder
-  cards
-- **omni:** Word-level subtitles — Edge-TTS `WordBoundary` capture, optional
-  faster-whisper transcription, proportional fallback, tempo-scaled timings,
-  karaoke ASS output, and `words.json` persistence
-- **omni:** Long-form mode — chapter/shot plans, per-chapter narration,
-  concatenated video/audio, global subtitle offsets, and one music bed for the
-  total duration
-- **omni:** Long-duration music — chunked MusicGen and Stable Audio Open
-  backends with FFmpeg crossfades, plus the dependency-free synth default
-
-### Refactoring
-
-- **autonomy:** Cull self-update/self-learn engine (`autonomy`, `learner`,
-  `metrics`, `swarm`, `updater`, `evolution` removed); only the capability
-  vocabulary survives in `autonomy/permissions.py` (dead `PermissionLevel`
-  dropped, `memory.maintain` added)
-
-### Documentation
-
-- RDU spine (`schema_version=2`), quarantine and policy in `docs/memory.md`;
-  `memory.maintain` grants in `docs/rbac.md`
 
 ## [1.4.0](https://github.com/Dxrk777/Dxrk/releases/tag/v1.4.0) - 2026-10-08
 
