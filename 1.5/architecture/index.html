@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Dxrk — local-first configurator for AI coding-agent ecosystems (14 agents, memory, SDD, MCP)">
+        <meta name="description" content="Dxrk — open-source automation and multimedia generation engine for AI agents (14 agents, memory, SDD, MCP, Omni)">
       
       
       
@@ -64,7 +64,7 @@
   
 <meta property="og:type" content="website" />
 <meta property="og:title" content="Arquitectura - Dxrk" />
-<meta property="og:description" content="Dxrk — local-first configurator for AI coding-agent ecosystems (14 agents, memory, SDD, MCP)" />
+<meta property="og:description" content="Dxrk — open-source automation and multimedia generation engine for AI agents (14 agents, memory, SDD, MCP, Omni)" />
 <meta property="og:image" content="https://dxrk777.github.io/Dxrk/1.5/assets/images/social/architecture.png" />
 <meta property="og:image:type" content="image/png" />
 <meta property="og:image:width" content="1200" />
@@ -72,7 +72,7 @@
 <meta property="og:url" content="https://dxrk777.github.io/Dxrk/1.5/architecture/" />
 <meta property="twitter:card" content="summary_large_image" />
 <meta property="twitter:title" content="Arquitectura - Dxrk" />
-<meta property="twitter:description" content="Dxrk — local-first configurator for AI coding-agent ecosystems (14 agents, memory, SDD, MCP)" />
+<meta property="twitter:description" content="Dxrk — open-source automation and multimedia generation engine for AI agents (14 agents, memory, SDD, MCP, Omni)" />
 <meta property="twitter:image" content="https://dxrk777.github.io/Dxrk/1.5/assets/images/social/architecture.png" />
 </head>
   
@@ -355,6 +355,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../omni/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dxrk Omni
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../comparison/" class="md-nav__link">
         
   
@@ -534,10 +561,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#paquetes" class="md-nav__link">
+  <a href="#paquetes-del-core" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Paquetes
+        Paquetes del core
       
     </span>
   </a>
@@ -545,13 +572,41 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#flujo-principal" class="md-nav__link">
+  <a href="#flujo-principal-del-core" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Flujo principal
+        Flujo principal del core
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline-de-dxrk-omni" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline de Dxrk Omni
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pipeline de Dxrk Omni">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#backends-y-fallbacks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backends y fallbacks
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1119,12 +1174,33 @@
 
 
 <h1 id="arquitectura">Arquitectura</h1>
-<p>Este documento describe la estructura interna de Dxrk.</p>
+<p>Este documento describe la estructura interna de Dxrk y de su pipeline multimedia.</p>
 <h2 id="vision-general">Visión general</h2>
-<p>Dxrk es un configurador y orquestador de ecosistemas para agentes de IA,
-escrito en Python 3.14+. Expone una CLI (<code>dxrk-py</code>) y una TUI (Textual), y se
-integra con agentes de código mediante hooks, permisos y sesiones.</p>
-<h2 id="paquetes">Paquetes</h2>
+<p>Dxrk es un motor open-source de automatización y generación multimedia para agentes de IA, escrito en Python 3.14+. Expone una CLI (<code>dxrk-py</code>) y una TUI (Textual), se integra con agentes de código mediante hooks, permisos y sesiones, y ofrece <strong>Dxrk Omni</strong> como pipeline multimedia aislado del paquete principal.</p>
+<p>La arquitectura separa dos dominios:</p>
+<table>
+<thead>
+<tr>
+<th>Dominio</th>
+<th>Ubicación</th>
+<th>Responsabilidad</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Core / agentes</strong></td>
+<td><code>dxrk/</code></td>
+<td>Instalación, configuración, memoria, MCP, SDD, permisos, TUI y workflows Git.</td>
+</tr>
+<tr>
+<td><strong>Omni / multimedia</strong></td>
+<td><code>scripts/</code></td>
+<td>Guion, imágenes, narración, subtítulos, música y montaje con FFmpeg.</td>
+</tr>
+</tbody>
+</table>
+<p>Omni no forma parte del paquete <code>dxrk</code>. Es un pipeline experimental con binarios y servicios externos; sus tests viven en <code>tests/test_omni_*.py</code> y no debilitan el contrato de cobertura del core.</p>
+<h2 id="paquetes-del-core">Paquetes del core</h2>
 <table>
 <thead>
 <tr>
@@ -1135,11 +1211,11 @@ integra con agentes de código mediante hooks, permisos y sesiones.</p>
 <tbody>
 <tr>
 <td><code>dxrk/autonomy/</code></td>
-<td>Solo vocabulario de capabilities (<code>permissions.py</code>, incluye <code>memory.maintain</code>); el loop self-update/self-verify/self-learn se elimino</td>
+<td>Solo vocabulario de capabilities (<code>permissions.py</code>, incluye <code>memory.maintain</code>); el loop self-update/self-verify/self-learn se eliminó</td>
 </tr>
 <tr>
 <td><code>dxrk/judge/</code></td>
-<td>Juez externo de verificacion (observe-only, auto-fix default-off)</td>
+<td>Juez externo de verificación (observe-only, auto-fix default-off)</td>
 </tr>
 <tr>
 <td><code>dxrk/cli/</code></td>
@@ -1155,7 +1231,7 @@ integra con agentes de código mediante hooks, permisos y sesiones.</p>
 </tr>
 <tr>
 <td><code>dxrk/mcp/</code></td>
-<td>Cliente de servidores MCP</td>
+<td>Cliente de servidores MCP sobre stdio y JSON-RPC</td>
 </tr>
 <tr>
 <td><code>dxrk/observe/</code></td>
@@ -1195,7 +1271,7 @@ integra con agentes de código mediante hooks, permisos y sesiones.</p>
 </tr>
 </tbody>
 </table>
-<h2 id="flujo-principal">Flujo principal</h2>
+<h2 id="flujo-principal-del-core">Flujo principal del core</h2>
 <ol>
 <li><code>dxrk.__main__:main</code> despacha el comando solicitado.</li>
 <li><code>dxrk/config</code> carga settings y perfiles (modelos por fase).</li>
@@ -1204,16 +1280,64 @@ integra con agentes de código mediante hooks, permisos y sesiones.</p>
 <li><code>dxrk/utils/hooks</code> y <code>dxrk/utils/permissions</code> controlan qué puede hacer el agente.</li>
 <li><code>dxrk/rag</code> y <code>dxrk/query</code> alimentan contexto desde la memoria.</li>
 </ol>
+<h2 id="pipeline-de-dxrk-omni">Pipeline de Dxrk Omni</h2>
+<div class="highlight"><pre><span></span><code>tema
+  └─&gt; guion (LLM opcional, fallback determinista)
+      └─&gt; imágenes (ComfyUI / SD WebUI / locales / placeholder)
+          └─&gt; narración (Edge-TTS) + word timings (Whisper / proporcional)
+              └─&gt; música (FFmpeg synth / MusicGen / Stable Audio / track)
+                  └─&gt; montaje FFmpeg
+                      └─&gt; final.mp4 (1080x1920, 30 fps, H.264/AAC)
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Módulo</th>
+<th>Responsabilidad</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>scripts/omni.py</code></td>
+<td>Orquestación, CLI, guion, montaje y manifest.</td>
+</tr>
+<tr>
+<td><code>scripts/omni_media/images.py</code></td>
+<td>ComfyUI, SD WebUI, Pollinations, imágenes locales y placeholders.</td>
+</tr>
+<tr>
+<td><code>scripts/omni_media/longform.py</code></td>
+<td>Plan de capítulos y shots para long-form.</td>
+</tr>
+<tr>
+<td><code>scripts/omni_media/music.py</code></td>
+<td>Synth con FFmpeg, MusicGen, Stable Audio y concatenación con crossfades.</td>
+</tr>
+<tr>
+<td><code>scripts/omni_media/words.py</code></td>
+<td>Word timings, ASS karaoke y transcripción con Whisper.</td>
+</tr>
+</tbody>
+</table>
+<p>Cada etapa escribe sus artefactos en <code>outputs/&lt;slug&gt;-&lt;timestamp&gt;/</code>. El <code>manifest.json</code> registra estado, timings, fuentes de imagen, errores y motivos de fallback. Los backends externos se cargan de forma lazy y solo cuando se seleccionan.</p>
+<h3 id="backends-y-fallbacks">Backends y fallbacks</h3>
+<ul>
+<li><strong>Imágenes:</strong> <code>auto</code> prueba ComfyUI, luego SD WebUI, luego placeholder. Pollinations se usa solo de forma explícita.</li>
+<li><strong>Subtítulos:</strong> <code>edge</code> usa <code>WordBoundary</code>; <code>whisper</code> usa <code>faster-whisper</code>; <code>proportional</code> distribuye por peso de caracteres.</li>
+<li><strong>Música:</strong> <code>synth</code> usa FFmpeg; <code>musicgen</code> y <code>stable-audio</code> generan por chunks con crossfades; <code>file</code> usa una pista propia.</li>
+<li><strong>Guion:</strong> LLM compatible con OpenAI (Ollama por defecto); si falla, se usa un plan determinista.</li>
+</ul>
 <h2 id="persistencia">Persistencia</h2>
-<p>La memoria persistente la provee DxrkMemory 2.0, implementación 100% Python
-stdlib-only (<code>dxrk/memory</code>: SQLite FTS5 + BM25, sin binarios externos).
-Los settings de usuario viven en el directorio de configuración del sistema
-(<code>~/.config/dxrk/</code> en Linux/macOS).</p>
+<p>La memoria persistente la provee DxrkMemory 2.0, implementación 100% Python stdlib-only (<code>dxrk/memory</code>: SQLite FTS5 + BM25, grafo temporal, AAAK y layers, sin binarios externos). Los settings de usuario viven en el directorio de configuración del sistema (<code>~/.config/dxrk/</code> en Linux/macOS).</p>
+<p>Los artefactos de Omni viven en <code>outputs/</code>, que está ignorado por Git.</p>
 <h2 id="tests">Tests</h2>
 <ul>
-<li><code>tests/</code> cubre adaptadores por agente, instalador, config, RAG y utils.</li>
-<li>Correr: <code>uv run python -m pytest -q</code>.</li>
-<li>Tipos: <code>uv run --with mypy mypy dxrk/</code> (201 archivos, sin errores).</li>
+<li><code>tests/</code> cubre adaptadores por agente, instalador, config, RAG, utils y el pipeline Omni.</li>
+<li>Correr la suite completa: <code>uv run python -m pytest</code>.</li>
+<li>Correr solo Omni: <code>uv run python -m pytest -q --no-cov tests/test_omni_script.py tests/test_omni_advanced.py</code>.</li>
+<li>Gate actual: <strong>7.406 passed, 1 skipped, 100.00% coverage</strong>.</li>
+<li>Tipos: <code>uv run mypy dxrk</code> (<strong>367 archivos</strong>, sin errores).</li>
+<li>Lint: <code>uvx ruff check dxrk tests</code>.</li>
 </ul>
 
 

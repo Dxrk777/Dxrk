@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Dxrk — local-first configurator for AI coding-agent ecosystems (14 agents, memory, SDD, MCP)">
+        <meta name="description" content="Dxrk — open-source automation and multimedia generation engine for AI agents (14 agents, memory, SDD, MCP, Omni)">
       
       
       
@@ -64,7 +64,7 @@
   
 <meta property="og:type" content="website" />
 <meta property="og:title" content="Uso - Dxrk" />
-<meta property="og:description" content="Dxrk — local-first configurator for AI coding-agent ecosystems (14 agents, memory, SDD, MCP)" />
+<meta property="og:description" content="Dxrk — open-source automation and multimedia generation engine for AI agents (14 agents, memory, SDD, MCP, Omni)" />
 <meta property="og:image" content="https://dxrk777.github.io/Dxrk/1.5/assets/images/social/usage.png" />
 <meta property="og:image:type" content="image/png" />
 <meta property="og:image:width" content="1200" />
@@ -72,7 +72,7 @@
 <meta property="og:url" content="https://dxrk777.github.io/Dxrk/1.5/usage/" />
 <meta property="twitter:card" content="summary_large_image" />
 <meta property="twitter:title" content="Uso - Dxrk" />
-<meta property="twitter:description" content="Dxrk — local-first configurator for AI coding-agent ecosystems (14 agents, memory, SDD, MCP)" />
+<meta property="twitter:description" content="Dxrk — open-source automation and multimedia generation engine for AI agents (14 agents, memory, SDD, MCP, Omni)" />
 <meta property="twitter:image" content="https://dxrk777.github.io/Dxrk/1.5/assets/images/social/usage.png" />
 </head>
   
@@ -384,6 +384,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#dxrk-omni" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dxrk Omni
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Dxrk Omni">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#short-form" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Short-form
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#long-form" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Long-form
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#backends-visuales" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backends visuales
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#configuracion-por-proyecto" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -466,6 +516,33 @@
     
   
     Demo (60 s)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../omni/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dxrk Omni
   
 
     
@@ -1157,7 +1234,7 @@
 <h3 id="desde-fuente">Desde fuente</h3>
 <div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Dxrk777/Dxrk.git
 <span class="nb">cd</span><span class="w"> </span>Dxrk
-uv<span class="w"> </span>sync<span class="w"> </span>--all-extras
+uv<span class="w"> </span>sync<span class="w"> </span>--all-extras<span class="w"> </span>--dev
 uv<span class="w"> </span>run<span class="w"> </span>dxrk-py<span class="w"> </span>--help
 </code></pre></div>
 <h2 id="comandos-rapidos">Comandos rápidos</h2>
@@ -1170,6 +1247,34 @@ uv<span class="w"> </span>run<span class="w"> </span>dxrk-py<span class="w"> </s
 <p>Sincronizar tu configuración (vista previa con <code>--dry-run</code>):</p>
 <div class="highlight"><pre><span></span><code>dxrk-py<span class="w"> </span>sync<span class="w"> </span>--agent<span class="w"> </span>claude-code<span class="w"> </span>--dry-run
 </code></pre></div>
+<h2 id="dxrk-omni">Dxrk Omni</h2>
+<p>Omni convierte un tema en un short vertical o en una producción long-form por capítulos. Requiere Python 3.14+, <code>ffmpeg</code>/<code>ffprobe</code> en <code>PATH</code> y el extra <code>omni</code>:</p>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>sync<span class="w"> </span>--extra<span class="w"> </span>omni
+</code></pre></div>
+<h3 id="short-form">Short-form</h3>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/omni.py<span class="w"> </span><span class="s2">&quot;el futuro de la IA en Tokio&quot;</span>
+</code></pre></div>
+<p>Modo offline y determinista:</p>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/omni.py<span class="w"> </span><span class="s2">&quot;el futuro de la IA en Tokio&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--no-llm<span class="w"> </span>--image-source<span class="w"> </span>placeholder<span class="w"> </span>--no-music<span class="w"> </span>--subtitle-source<span class="w"> </span>proportional
+</code></pre></div>
+<h3 id="long-form">Long-form</h3>
+<div class="highlight"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/omni.py<span class="w"> </span><span class="s2">&quot;el futuro de la IA en Tokio&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--longform<span class="w"> </span>--chapters<span class="w"> </span><span class="m">3</span><span class="w"> </span>--shots-per-chapter<span class="w"> </span><span class="m">3</span><span class="w"> </span>--chapter-duration<span class="w"> </span><span class="m">60</span>
+</code></pre></div>
+<h3 id="backends-visuales">Backends visuales</h3>
+<div class="highlight"><pre><span></span><code><span class="c1"># ComfyUI local</span>
+uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/omni.py<span class="w"> </span><span class="s2">&quot;mi tema&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--image-source<span class="w"> </span>comfyui<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--comfyui-url<span class="w"> </span>http://127.0.0.1:8188<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--comfy-checkpoint<span class="w"> </span>sd_xl_base_1.0.safetensors
+
+<span class="c1"># Stable Diffusion WebUI</span>
+uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/omni.py<span class="w"> </span><span class="s2">&quot;mi tema&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--image-source<span class="w"> </span>sdwebui<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--sdwebui-url<span class="w"> </span>http://127.0.0.1:7860
+</code></pre></div>
+<p>La guía completa está en <a href="../omni/">Dxrk Omni</a> y la referencia de flags en <a href="https://github.com/Dxrk777/Dxrk/blob/main/scripts/README.md"><code>scripts/README.md</code></a>.</p>
 <h2 id="configuracion-por-proyecto">Configuración por proyecto</h2>
 <ul>
 <li><code>/sdd-init</code>: inicia el workflow Spec-Driven Development en el proyecto.</li>

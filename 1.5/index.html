@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Dxrk — local-first configurator for AI coding-agent ecosystems (14 agents, memory, SDD, MCP)">
+        <meta name="description" content="Dxrk — open-source automation and multimedia generation engine for AI agents (14 agents, memory, SDD, MCP, Omni)">
       
       
       
@@ -62,7 +62,7 @@
   
 <meta property="og:type" content="website" />
 <meta property="og:title" content="Dxrk" />
-<meta property="og:description" content="Dxrk — local-first configurator for AI coding-agent ecosystems (14 agents, memory, SDD, MCP)" />
+<meta property="og:description" content="Dxrk — open-source automation and multimedia generation engine for AI agents (14 agents, memory, SDD, MCP, Omni)" />
 <meta property="og:image" content="https://dxrk777.github.io/Dxrk/1.5/assets/images/social/index.png" />
 <meta property="og:image:type" content="image/png" />
 <meta property="og:image:width" content="1200" />
@@ -70,7 +70,7 @@
 <meta property="og:url" content="https://dxrk777.github.io/Dxrk/1.5/" />
 <meta property="twitter:card" content="summary_large_image" />
 <meta property="twitter:title" content="Dxrk" />
-<meta property="twitter:description" content="Dxrk — local-first configurator for AI coding-agent ecosystems (14 agents, memory, SDD, MCP)" />
+<meta property="twitter:description" content="Dxrk — open-source automation and multimedia generation engine for AI agents (14 agents, memory, SDD, MCP, Omni)" />
 <meta property="twitter:image" content="https://dxrk777.github.io/Dxrk/1.5/assets/images/social/index.png" />
 </head>
   
@@ -327,6 +327,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#dxrk-omni" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dxrk Omni
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#documentacion" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -425,6 +436,33 @@
     
   
     Demo (60 s)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="omni/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dxrk Omni
   
 
     
@@ -1107,17 +1145,25 @@
 
 <h1 id="dxrk">Dxrk</h1>
 <p><img alt="Dxrk" src="assets/dxrk-icon.jpg" />{ width="120" align="right" }</p>
-<p><strong>Orquestador local-first de ecosistemas para agentes de IA: 14 agentes, memoria, SDD, MCP y multi-tenant</strong></p>
-<p><strong>Dxrk</strong> es un configurador y orquestador de ecosistemas para agentes de IA. En un solo comando instala, configura y sincroniza <strong>14 agentes de IA</strong>, memoria persistente, skills curadas, servidores MCP y conmutador de modelos para tu stack de desarrollo completo.</p>
+<p><strong>El motor open-source de automatización y generación multimedia para agentes de IA: 14 agentes, memoria local-first, SDD, MCP y Dxrk Omni.</strong></p>
+<p><strong>Dxrk</strong> combina un orquestador de ecosistemas para agentes de IA con un pipeline multimedia que convierte un tema en un short vertical o en una producción long-form por capítulos. Python 3.14+, 100% de cobertura y CI verde en Linux, macOS y Windows.</p>
 <ul>
 <li>🐍 <strong>Python 3.14+</strong> con TUI moderna basada en <a href="https://textual.textualize.io/">Textual</a></li>
 <li>🤖 Configura <strong>14 agentes</strong> con un solo comando</li>
-<li>🧠 <strong>DxrkMemory 2.0</strong> — memoria local con búsqueda híbrida FTS5 + BM25 y grafo temporal (sin embeddings, offline)</li>
+<li>🧠 <strong>DxrkMemory 2.0</strong> — memoria local con SQLite FTS5 + BM25, grafo temporal, AAAK y layers, sin <code>chromadb</code> ni <code>onnx</code></li>
+<li>🎬 <strong>Dxrk Omni</strong> — guion, imágenes, narración, subtítulos word-level, música y montaje FFmpeg en un solo pipeline</li>
+<li>🖼️ <strong>Backends visuales</strong> — ComfyUI local, SD WebUI, imágenes propias y placeholders con fallback automático</li>
+<li>🔊 <strong>Audio y música</strong> — Edge-TTS, Whisper, FFmpeg synth, MusicGen y Stable Audio</li>
 <li>🔄 Conmutador de proveedores y modelos con asignación por fase vía <code>dxrk-py model</code> (<code>list</code>/<code>current</code>/<code>set</code>)</li>
 <li>🛠️ Workflows de desarrollo completos (Git, commit, review, PR)</li>
 </ul>
 <h2 id="instalacion">Instalación</h2>
 <div class="highlight"><pre><span></span><code>uv<span class="w"> </span>tool<span class="w"> </span>install<span class="w"> </span>git+https://github.com/Dxrk777/Dxrk.git
+</code></pre></div>
+<p>Desde el código fuente:</p>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Dxrk777/Dxrk.git
+<span class="nb">cd</span><span class="w"> </span>Dxrk
+uv<span class="w"> </span>sync<span class="w"> </span>--all-extras<span class="w"> </span>--dev
 </code></pre></div>
 <h2 id="uso-rapido">Uso rápido</h2>
 <div class="highlight"><pre><span></span><code><span class="c1"># Instala y configura un agente con el preset completo</span>
@@ -1129,14 +1175,26 @@ python<span class="w"> </span>-m<span class="w"> </span>dxrk.memory<span class="
 <span class="c1"># Sincroniza tu configuracion (vista previa)</span>
 dxrk-py<span class="w"> </span>sync<span class="w"> </span>--agent<span class="w"> </span>claude-code<span class="w"> </span>--dry-run
 </code></pre></div>
+<h2 id="dxrk-omni">Dxrk Omni</h2>
+<div class="highlight"><pre><span></span><code><span class="c1"># Short vertical: 1080x1920, 30 fps, H.264/AAC</span>
+uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/omni.py<span class="w"> </span><span class="s2">&quot;el futuro de la IA en Tokio&quot;</span>
+
+<span class="c1"># Long-form por capítulos</span>
+uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/omni.py<span class="w"> </span><span class="s2">&quot;el futuro de la IA en Tokio&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--longform<span class="w"> </span>--chapters<span class="w"> </span><span class="m">3</span><span class="w"> </span>--shots-per-chapter<span class="w"> </span><span class="m">3</span><span class="w"> </span>--chapter-duration<span class="w"> </span><span class="m">60</span>
+</code></pre></div>
+<p>Requisitos: Python 3.14+, <code>ffmpeg</code>/<code>ffprobe</code> en <code>PATH</code> y el extra <code>omni</code> (<code>uv sync --extra omni</code>). La guía completa está en <a href="omni/">Dxrk Omni</a> y la referencia de flags en <a href="https://github.com/Dxrk777/Dxrk/blob/main/scripts/README.md"><code>scripts/README.md</code></a>.</p>
 <h2 id="documentacion">Documentación</h2>
 <ul>
+<li><a href="omni/">Dxrk Omni</a></li>
 <li><a href="usage/">Uso</a></li>
 <li><a href="intended-usage/">Uso previsto</a></li>
 <li><a href="agents/">Agentes soportados</a></li>
 <li><a href="components/">Componentes</a></li>
 <li><a href="architecture/">Arquitectura</a></li>
+<li><a href="memory/">DxrkMemory 2.0</a></li>
 <li><a href="platforms/">Plataformas</a></li>
+<li><a href="config/">Configuración</a></li>
 </ul>
 <h2 id="licencia">Licencia</h2>
 <p>MIT — consulta <a href="https://github.com/Dxrk777/Dxrk/blob/main/LICENSE">LICENSE</a>.</p>

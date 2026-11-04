@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="Dxrk — local-first configurator for AI coding-agent ecosystems (14 agents, memory, SDD, MCP)">
+        <meta name="description" content="Dxrk — open-source automation and multimedia generation engine for AI agents (14 agents, memory, SDD, MCP, Omni)">
       
       
       
@@ -64,7 +64,7 @@
   
 <meta property="og:type" content="website" />
 <meta property="og:title" content="Componentes - Dxrk" />
-<meta property="og:description" content="Dxrk — local-first configurator for AI coding-agent ecosystems (14 agents, memory, SDD, MCP)" />
+<meta property="og:description" content="Dxrk — open-source automation and multimedia generation engine for AI agents (14 agents, memory, SDD, MCP, Omni)" />
 <meta property="og:image" content="https://dxrk777.github.io/Dxrk/1.5/assets/images/social/components.png" />
 <meta property="og:image:type" content="image/png" />
 <meta property="og:image:width" content="1200" />
@@ -72,7 +72,7 @@
 <meta property="og:url" content="https://dxrk777.github.io/Dxrk/1.5/components/" />
 <meta property="twitter:card" content="summary_large_image" />
 <meta property="twitter:title" content="Componentes - Dxrk" />
-<meta property="twitter:description" content="Dxrk — local-first configurator for AI coding-agent ecosystems (14 agents, memory, SDD, MCP)" />
+<meta property="twitter:description" content="Dxrk — open-source automation and multimedia generation engine for AI agents (14 agents, memory, SDD, MCP, Omni)" />
 <meta property="twitter:image" content="https://dxrk777.github.io/Dxrk/1.5/assets/images/social/components.png" />
 </head>
   
@@ -355,6 +355,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../omni/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dxrk Omni
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../comparison/" class="md-nav__link">
         
   
@@ -544,6 +571,17 @@
     <span class="md-ellipsis">
       
         TUI
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dxrk-omni" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dxrk Omni
       
     </span>
   </a>
@@ -1174,10 +1212,21 @@ declara con nombre, comando y argumentos, y queda disponible para el agente.</p>
 <ul>
 <li><code>dxrk/tui/</code>: interfaz Textual con pantallas de detección, review, etc.</li>
 </ul>
+<h2 id="dxrk-omni">Dxrk Omni</h2>
+<ul>
+<li><code>scripts/omni.py</code>: orquestación del pipeline tema → video, CLI y manifest.</li>
+<li><code>scripts/omni_media/images.py</code>: ComfyUI, SD WebUI, Pollinations, imágenes locales y placeholders.</li>
+<li><code>scripts/omni_media/longform.py</code>: plan de capítulos y shots.</li>
+<li><code>scripts/omni_media/music.py</code>: FFmpeg synth, MusicGen, Stable Audio y crossfades.</li>
+<li><code>scripts/omni_media/words.py</code>: word timings, ASS karaoke y Whisper.</li>
+</ul>
+<p>Omni está aislado del paquete <code>dxrk</code>; su guía vive en <a href="../omni/">omni.md</a>.</p>
 <h2 id="autonomia">Autonomía</h2>
 <ul>
-<li><code>dxrk/autonomy/</code>: evolución de prompts del sistema, aprendizaje,
-  métricas y verificación automática de cambios.</li>
+<li><code>dxrk/autonomy/</code>: vocabulario de capabilities y permisos; el loop
+  self-update/self-verify/self-learn fue removido.</li>
+<li><code>dxrk/judge/</code>: juez externo observe-only, con auto-fix desactivado por
+  defecto.</li>
 </ul>
 <h2 id="conmutador-de-proveedores">Conmutador de proveedores</h2>
 <p>Dxrk centraliza la configuración de modelos en <code>config.yaml</code> (sección <code>model</code>,
