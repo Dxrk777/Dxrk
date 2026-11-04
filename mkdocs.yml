@@ -1,5 +1,5 @@
 site_name: Dxrk
-site_description: Dxrk — local-first configurator for AI coding-agent ecosystems (14 agents, memory, SDD, MCP)
+site_description: Dxrk — open-source automation and multimedia generation engine for AI agents (14 agents, memory, SDD, MCP, Omni)
 site_url: https://dxrk777.github.io/Dxrk/
 repo_url: https://github.com/Dxrk777/Dxrk
 edit_uri: blob/main/docs/
@@ -23,6 +23,7 @@ nav:
   - Uso: usage.md
   - Tutorial (10 min): tutorial.md
   - Demo (60 s): demo.md
+  - Dxrk Omni: omni.md
   - Comparativa: comparison.md
   - Uso previsto: intended-usage.md
   - Agentes: agents.md

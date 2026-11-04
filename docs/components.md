@@ -26,10 +26,22 @@ declara con nombre, comando y argumentos, y queda disponible para el agente.
 
 - `dxrk/tui/`: interfaz Textual con pantallas de detección, review, etc.
 
+## Dxrk Omni
+
+- `scripts/omni.py`: orquestación del pipeline tema → video, CLI y manifest.
+- `scripts/omni_media/images.py`: ComfyUI, SD WebUI, Pollinations, imágenes locales y placeholders.
+- `scripts/omni_media/longform.py`: plan de capítulos y shots.
+- `scripts/omni_media/music.py`: FFmpeg synth, MusicGen, Stable Audio y crossfades.
+- `scripts/omni_media/words.py`: word timings, ASS karaoke y Whisper.
+
+Omni está aislado del paquete `dxrk`; su guía vive en [omni.md](omni.md).
+
 ## Autonomía
 
-- `dxrk/autonomy/`: evolución de prompts del sistema, aprendizaje,
-  métricas y verificación automática de cambios.
+- `dxrk/autonomy/`: vocabulario de capabilities y permisos; el loop
+  self-update/self-verify/self-learn fue removido.
+- `dxrk/judge/`: juez externo observe-only, con auto-fix desactivado por
+  defecto.
 
 ## Conmutador de proveedores
 
