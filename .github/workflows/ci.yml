@@ -51,7 +51,7 @@ jobs:
         run: uv audit
 
       - name: Lint (ruff)
-        run: uvx ruff check dxrk tests
+        run: uvx ruff check dxrk tests scripts
 
       - name: Type check (mypy)
         run: uv run mypy dxrk
