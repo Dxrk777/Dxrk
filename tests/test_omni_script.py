@@ -17,6 +17,7 @@ import pytest
 from PIL import Image
 
 import scripts.omni as omni
+from scripts.omni_media import longform as longform_utils
 
 
 def _png_bytes() -> bytes:
@@ -65,6 +66,86 @@ def test_fallback_script_shapes() -> None:
         assert all(scene.visual_prompt for scene in script.scenes)
         assert [scene.index for scene in script.scenes] == list(range(1, count + 1))
     assert omni.fallback_script("  ", 2).topic == "el futuro"
+
+
+def test_fallback_script_uses_default_speaker() -> None:
+    script = omni.fallback_script("tema", 2, default_speaker="host")
+    assert {scene.speaker for scene in script.scenes} == {"host"}
+
+
+def test_parse_script_json_default_speaker_and_scene_inheritance() -> None:
+    raw = json.dumps(
+        {
+            "scenes": [
+                {
+                    "visual_prompt": "city",
+                    "speaker": "guest",
+                    "lines": [{"text": "Hola"}],
+                },
+                {"visual_prompt": "rain", "narration": "Chau"},
+            ]
+        }
+    )
+    script = omni.parse_script_json(raw, "tema", default_speaker="host")
+    assert script.scenes[0].speaker == "guest"
+    assert script.scenes[0].lines[0].speaker == "guest"
+    assert script.scenes[1].speaker == "host"
+
+
+def test_load_script_uses_default_speaker(tmp_path: Path) -> None:
+    path = tmp_path / "script.json"
+    path.write_text(
+        json.dumps(
+            {
+                "scenes": [
+                    {"visual_prompt": "city", "narration": "Uno"},
+                    {"visual_prompt": "rain", "narration": "Dos"},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    script = omni.load_script(path, default_speaker="host")
+    assert {scene.speaker for scene in script.scenes} == {"host"}
+
+
+def test_generate_script_uses_default_speaker() -> None:
+    fallback = omni.generate_script("tema", 2, 10, None, default_speaker="host")
+    assert {scene.speaker for scene in fallback.scenes} == {"host"}
+
+    class Llm:
+        def complete(self, prompt: str) -> str:
+            return json.dumps(
+                {
+                    "scenes": [
+                        {"visual_prompt": "city", "narration": "Uno"},
+                        {"visual_prompt": "rain", "narration": "Dos"},
+                    ]
+                }
+            )
+
+    script = omni.generate_script("tema", 2, 10, Llm(), default_speaker="host")
+    assert {scene.speaker for scene in script.scenes} == {"host"}
+
+
+def test_plan_to_script_uses_default_and_shot_speaker() -> None:
+    plan = longform_utils.LongformPlan(
+        topic="tema",
+        title="Tema",
+        chapters=(
+            longform_utils.Chapter(
+                index=1,
+                title="Uno",
+                shots=(
+                    longform_utils.Shot(1, "Uno", "city"),
+                    longform_utils.Shot(2, "Dos", "rain", speaker="guest"),
+                ),
+            ),
+        ),
+    )
+    script = omni._plan_to_script(plan, default_speaker="host")
+    assert script.scenes[0].speaker == "host"
+    assert script.scenes[1].speaker == "guest"
 
 
 def test_build_script_prompt_contains_constraints() -> None:
@@ -488,7 +569,7 @@ def test_run_pipeline_with_music_and_local_images(tmp_path: Path, monkeypatch: p
     monkeypatch.setattr(
         omni,
         "prepare_image",
-        lambda src, dest: (dest.write_bytes(b"local"), dest)[1],
+        lambda src, dest, *args, **kwargs: (dest.write_bytes(b"local"), dest)[1],
     )
     monkeypatch.setattr(
         omni,
