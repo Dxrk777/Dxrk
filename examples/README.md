@@ -60,6 +60,42 @@ La referencia completa del pipeline está en
 [`scripts/README.md`](../scripts/README.md) y la guía de usuario en
 [`docs/omni.md`](../docs/omni.md).
 
+## Multi-voz, 4K y preview
+
+`omni_multivoice_script.json` y `omni_voices.json` muestran un guion con
+`narrator` y `guest`, y el mapa de voces que usa cada speaker:
+
+```bash
+uv run python scripts/omni.py \
+  --script examples/omni_multivoice_script.json \
+  --voices examples/omni_voices.json \
+  --image-source placeholder --no-llm
+```
+
+Para renderizar en 4K con upscaling FFmpeg:
+
+```bash
+uv run python scripts/omni.py \
+  --script examples/omni_multivoice_script.json \
+  --voices examples/omni_voices.json \
+  --image-source placeholder --no-llm \
+  --resolution 4k --upscale auto --upscale-sharpen 0.6 \
+  --crf 18 --preset slow
+```
+
+El resultado incluye `contact_sheet.png`, `engine.log`, un ASS con un estilo
+por speaker y un manifest con `voices` y `voice_segments`.
+
+Para inspeccionar las corridas desde el navegador:
+
+```bash
+uv run python scripts/omni_preview.py --root outputs
+# http://127.0.0.1:8765/
+```
+
+El dashboard es read-only, bindea localhost por default y sirve video con
+soporte de `Range` y `HEAD`.
+
 ## Otros ejemplos
 
 | Archivo | Qué demuestra |
@@ -67,6 +103,8 @@ La referencia completa del pipeline está en
 | `mine_and_search.py` | Flujo `mine -> search` de DxrkMemory con un `HOME` aislado. |
 | `tenant_rbac_demo.py` | Aislamiento multi-tenant y denegación RBAC. |
 | `quick_omni_demo.py` | Pipeline Omni desde Python, short-form y long-form. |
+| `omni_multivoice_script.json` | Guion con diálogo multi-voz por escena y por línea. |
+| `omni_voices.json` | Mapa de voces Edge-TTS por speaker. |
 
 ```bash
 uv run python examples/mine_and_search.py

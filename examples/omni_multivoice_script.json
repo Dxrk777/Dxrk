@@ -1,0 +1,36 @@
+{
+  "title": "Multi-voice demo",
+  "scenes": [
+    {
+      "visual_prompt": "cinematic close-up of a neon city at night, rain reflections, vertical 9:16",
+      "lines": [
+        {
+          "speaker": "narrator",
+          "text": "Esto es lo que nadie te cuenta sobre construir con IA."
+        },
+        {
+          "speaker": "guest",
+          "text": "Y por eso la mayoría se queda en el tutorial."
+        }
+      ]
+    },
+    {
+      "visual_prompt": "engineer reviewing holographic architecture diagrams, dramatic rim light, vertical 9:16",
+      "lines": [
+        {
+          "speaker": "narrator",
+          "text": "La diferencia no es la herramienta."
+        },
+        {
+          "speaker": "guest",
+          "text": "Es entender qué problema estás resolviendo."
+        }
+      ]
+    },
+    {
+      "visual_prompt": "sunrise over a futuristic skyline, calm optimistic mood, vertical 9:16",
+      "speaker": "narrator",
+      "narration": "Empezá por los fundamentos y dejá que la IA ejecute."
+    }
+  ]
+}
