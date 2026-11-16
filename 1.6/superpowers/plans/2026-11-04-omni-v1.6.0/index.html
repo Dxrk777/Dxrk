@@ -1,0 +1,1277 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Dxrk — open-source automation and multimedia generation engine for AI agents (14 agents, memory, SDD, MCP, Omni)">
+      
+      
+      
+        <link rel="canonical" href="https://dxrk777.github.io/Dxrk/1.6/superpowers/plans/2026-11-04-omni-v1.6.0/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/dxrk-icon.jpg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
+    
+    
+      
+        <title>Omni v1.6.0 Implementation Plan - Dxrk</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Omni v1.6.0 Implementation Plan - Dxrk" />
+<meta property="og:description" content="Dxrk — open-source automation and multimedia generation engine for AI agents (14 agents, memory, SDD, MCP, Omni)" />
+<meta property="og:image" content="https://dxrk777.github.io/Dxrk/1.6/assets/images/social/superpowers/plans/2026-11-04-omni-v1.6.0.png" />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:url" content="https://dxrk777.github.io/Dxrk/1.6/superpowers/plans/2026-11-04-omni-v1.6.0/" />
+<meta property="twitter:card" content="summary_large_image" />
+<meta property="twitter:title" content="Omni v1.6.0 Implementation Plan - Dxrk" />
+<meta property="twitter:description" content="Dxrk — open-source automation and multimedia generation engine for AI agents (14 agents, memory, SDD, MCP, Omni)" />
+<meta property="twitter:image" content="https://dxrk777.github.io/Dxrk/1.6/assets/images/social/superpowers/plans/2026-11-04-omni-v1.6.0.png" />
+</head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="purple">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#omni-v160-implementation-plan" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="Dxrk" class="md-header__button md-logo" aria-label="Dxrk" data-md-component="logo">
+      
+  <img src="../../../assets/dxrk-icon.jpg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Dxrk
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Omni v1.6.0 Implementation Plan
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Dxrk777/Dxrk" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="Dxrk" class="md-nav__button md-logo" aria-label="Dxrk" data-md-component="logo">
+      
+  <img src="../../../assets/dxrk-icon.jpg" alt="logo">
+
+    </a>
+    Dxrk
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Dxrk777/Dxrk" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inicio
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uso
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial (10 min)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../demo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Demo (60 s)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../omni/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dxrk Omni
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparativa
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../intended-usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uso previsto
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agentes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Componentes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arquitectura
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DxrkMemory 2.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../enterprise/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Enterprise
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tenants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../rbac/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RBAC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migración a multi-tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../session/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sesiones
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../migration-0.5-to-1.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migración 0.5 → 1.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../benchmarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuración
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../adr/ADR-002-memory-separation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-002 Separación Memoria
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../adr/ADR-003-hybrid-vs-stdlib/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-003 Hybrid vs Stdlib
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../adr/ADR-004-config-unify/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-004 Unificación Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../adr/ADR-005-migracion-go-python/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-005 Migración Go → Python
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../MIGRATION_3.3.5_3.7.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migración 3.3.5 → 3.7.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../dx/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DX Top 1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../platforms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plataformas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../releases/v1.3.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release v1.3.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="omni-v160-implementation-plan">Omni v1.6.0 Implementation Plan</h1>
+<blockquote>
+<p><strong>For agentic workers:</strong> REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (<code>- [ ]</code>) syntax for tracking.</p>
+</blockquote>
+<p><strong>Goal:</strong> Ship multi-voice narration with karaoke subtitles, automatic 1080p/4K upscaling, and a local preview dashboard for Omni runs.</p>
+<p><strong>Architecture:</strong> Keep the existing single-voice pipeline untouched for backward compatibility. Add a multi-voice branch that synthesizes narration per scene/line first, derives clip durations from the real audio, then builds images/clips and merges the global word timeline. Upscaling is an image-stage transform plus parameterized resolution through image prep, clip building, ASS <code>PlayRes</code>, and mux. The preview server is stdlib-only, read-only, localhost-first, and serves the manifest/log/media catalog written by the pipeline.</p>
+<p><strong>Tech Stack:</strong> Python 3.14, dataclasses, httpx, Pillow, FFmpeg/ffprobe, <code>http.server.ThreadingHTTPServer</code>, pytest, ruff, mkdocs.</p>
+<p><strong>Spec:</strong> User request for v1.6.0 (multi-voice, 4K auto-upscaling, local preview dashboard, tests/docs/examples, commits, push to <code>origin/main</code>).</p>
+<h2 id="global-constraints">Global Constraints</h2>
+<ul>
+<li>Python <code>&gt;=3.14</code>; do not add FastAPI/uvicorn as a hard dependency. The preview server uses stdlib.</li>
+<li>No new mandatory runtime dependencies. <code>httpx</code> and Pillow are already Omni extras.</li>
+<li>Preserve the existing single-voice behavior and its tests.</li>
+<li>All new modules must reach 100% scoped coverage:
+  <code>scripts/omni_media/voices.py</code>, <code>scripts/omni_media/upscale.py</code>,
+  <code>scripts/omni_media/contact_sheet.py</code>, <code>scripts/omni_media/preview.py</code>,
+  <code>scripts/omni_preview.py</code>.</li>
+<li>Preview binds <code>127.0.0.1</code> by default, is read-only, validates <code>Host</code>, resolves media inside the run directory, and supports HTTP Range for video/audio.</li>
+<li>No secrets, no path traversal, no directory listings.</li>
+<li>Conventional commits, no <code>Co-Authored-By</code>, push to <code>origin/main</code> only after all gates pass.</li>
+<li>4K vertical means <code>2160x3840</code>, not <code>3840x2160</code>.</li>
+<li>FFmpeg has no <code>HQ5x</code> filter. Use Lanczos + unsharp; Real-ESRGAN/ComfyUI/SD WebUI are optional backends.</li>
+</ul>
+<h2 id="review-focus">Review Focus</h2>
+<ul>
+<li>A/V drift when narration is faster/slower than the target: scene durations must come from synthesized segment durations, not <code>duration / len(scenes)</code>.</li>
+<li>4K silently downscaled by <code>_prepare_image_bytes</code> or <code>prepare_image</code>: width/height must thread through every image backend.</li>
+<li>Mixed-resolution clips breaking <code>concat -c copy</code>: one target resolution per run.</li>
+<li>ASS <code>PlayRes</code> fixed at 1080x1920 while rendering 4K: parameterize it.</li>
+<li>Preview path traversal/symlink escape and Range handling: reject outside paths; return <code>206</code>/<code>416</code> correctly.</li>
+<li>Multi-voice ASS grouping across speaker changes: never merge words from different speakers into one caption line.</li>
+</ul>
+<hr />
+<h3 id="task-1-multi-voice-core">Task 1: Multi-voice core</h3>
+<p><strong>Files:</strong>
+- Create: <code>scripts/omni_media/voices.py</code>
+- Create: <code>tests/test_omni_voices.py</code>
+- Modify: <code>scripts/omni_media/words.py</code>
+- Modify: <code>tests/test_omni_advanced.py</code> (ASS speaker styles)</p>
+<p><strong>Interfaces:</strong>
+- <code>VoiceSpec(name, voice, rate="+0%", pitch="+0Hz", volume="+0%")</code>
+- <code>VoiceLine(speaker, text)</code>
+- <code>VoiceRequest(index, scene_index, speaker, text)</code>
+- <code>VoiceSegment(index, scene_index, speaker, text, audio, words, duration, start, end)</code>
+- <code>MultiVoiceNarration(audio, segments, words, source)</code>
+- <code>parse_voice_specs(values: Sequence[str]) -&gt; tuple[VoiceSpec, ...]</code>
+- <code>load_voice_map(path: Path | None) -&gt; dict[str, VoiceSpec]</code>
+- <code>resolve_voices(default_voice, specs, voice_map, default_speaker="narrator") -&gt; dict[str, VoiceSpec]</code>
+- <code>segment_scenes(scenes, default_speaker="narrator") -&gt; tuple[VoiceRequest, ...]</code>
+- <code>synthesize_requests(requests, out_dir, voices, *, tts=None, whisper=None, whisper_model="small", prefer_whisper=False) -&gt; MultiVoiceNarration</code>
+- <code>assign_scene_durations(segments, target_duration, tempo) -&gt; tuple[float, ...]</code>
+- <code>timeline_words(segments, scene_durations, tempo) -&gt; tuple[WordTiming, ...]</code>
+- <code>WordTiming.speaker: str = ""</code>; <code>build_word_ass(..., styles=None, play_res=(1080, 1920))</code>.</p>
+<ul>
+<li>[ ] Write failing tests for parsing, voice resolution, segmentation, synthesis with injected TTS, duration assignment, timeline offsets, speaker-grouped ASS, and no-speaker backward compatibility.</li>
+<li>[ ] Run <code>uv run python -m pytest tests/test_omni_voices.py -q</code>; expect failures.</li>
+<li>[ ] Implement <code>voices.py</code> and extend <code>words.py</code> with speaker-aware grouping and styles.</li>
+<li>[ ] Run the new tests and the existing ASS tests; expect pass.</li>
+<li>[ ] Commit: <code>feat(omni): add multi-voice narration core</code>.</li>
+</ul>
+<h3 id="task-2-multi-voice-pipeline-integration">Task 2: Multi-voice pipeline integration</h3>
+<p><strong>Files:</strong>
+- Modify: <code>scripts/omni.py</code>
+- Modify: <code>scripts/omni_media/longform.py</code>
+- Modify: <code>tests/test_omni_script.py</code>
+- Modify: <code>tests/test_omni_advanced.py</code></p>
+<p><strong>Interfaces:</strong>
+- <code>Scene(index, narration, visual_prompt, speaker="narrator", lines=())</code>
+- <code>OmniConfig(..., voice_map=(), script_path=None, default_speaker="narrator")</code>
+- <code>VideoScript</code> property <code>narration</code> uses <code>scene.text</code> (<code>lines</code> joined, else <code>narration</code>).
+- <code>parse_script_json</code> reads <code>speaker</code> and <code>lines</code>; <code>script_to_dict</code> emits them.
+- <code>load_script(path) -&gt; VideoScript</code>.
+- <code>run_pipeline</code> loads <code>--script</code> when present and dispatches to the multi-voice branch when any scene has a non-default speaker or <code>lines</code>.
+- Long-form <code>Shot</code>/<code>Chapter</code> carry <code>speaker</code>/<code>lines</code>; <code>plan_to_dict</code>/<code>parse_longform_json</code> preserve them.
+- CLI: optional <code>topic</code>, <code>--script</code>, repeatable <code>--voice speaker=voice</code>, <code>--voice-default</code>, <code>--voices PATH</code>.</p>
+<ul>
+<li>[ ] Write failing tests for script JSON round-trip, speaker dispatch, multi-voice short-form order (narration before clips), duration derivation, and long-form speaker preservation.</li>
+<li>[ ] Run the targeted tests; expect failures.</li>
+<li>[ ] Implement the models, loader, multi-voice short-form branch, and long-form segment synthesis.</li>
+<li>[ ] Run <code>tests/test_omni_script.py tests/test_omni_advanced.py tests/test_omni_voices.py</code>; expect pass.</li>
+<li>[ ] Commit: <code>feat(omni): integrate multi-voice pipeline</code>.</li>
+</ul>
+<h3 id="task-3-resolution-and-4k-upscaling">Task 3: Resolution and 4K upscaling</h3>
+<p><strong>Files:</strong>
+- Create: <code>scripts/omni_media/upscale.py</code>
+- Create: <code>tests/test_omni_upscale.py</code>
+- Modify: <code>scripts/omni_media/images.py</code>
+- Modify: <code>scripts/omni.py</code>
+- Modify: <code>tests/test_omni_script.py</code>
+- Modify: <code>tests/test_omni_advanced.py</code></p>
+<p><strong>Interfaces:</strong>
+- <code>Resolution(width, height, label)</code>
+- <code>parse_resolution(label, orientation="vertical") -&gt; Resolution</code>
+- <code>UpscaleConfig(enabled=False, backend="none", model="", sharpen=0.0)</code>
+- <code>ffmpeg_upscale_filter(target, sharpen=0.0) -&gt; str</code>
+- <code>upscale_image(src, dest, config, *, runner=None, client=None, comfyui_url=..., sdwebui_url=...) -&gt; Path</code>
+- <code>OmniConfig(..., resolution="1080p", upscale="none", upscale_model="", upscale_sharpen=0.0, video_crf=20, video_preset="veryfast")</code>
+- <code>generate_image(..., width, height)</code> threads dimensions to Pollinations/placeholder/prepare/backends.
+- <code>_prepare_image_bytes(payload, dest, width=1080, height=1920)</code>.
+- <code>build_scene_clip(..., width=1080, height=1920, fps=30, preset="veryfast", crf=20)</code>.
+- <code>mux_video(..., preset="veryfast", crf=20)</code>.
+- CLI: <code>--resolution</code>, <code>--upscale</code>, <code>--upscale-model</code>, <code>--upscale-sharpen</code>, <code>--video-crf</code>, <code>--video-preset</code>.</p>
+<ul>
+<li>[ ] Write failing tests for resolution parsing, filter strings, image dimensions, placeholder dimensions, clip command, mux preset/crf, and backend fallback.</li>
+<li>[ ] Run the targeted tests; expect failures.</li>
+<li>[ ] Implement <code>upscale.py</code> and thread dimensions through images/clip/mux/ASS.</li>
+<li>[ ] Run the targeted tests and a real 4K placeholder demo; inspect with <code>ffprobe</code>.</li>
+<li>[ ] Commit: <code>feat(omni): add resolution and 4K upscaling</code>.</li>
+</ul>
+<h3 id="task-4-run-observability-and-contact-sheets">Task 4: Run observability and contact sheets</h3>
+<p><strong>Files:</strong>
+- Create: <code>scripts/omni_media/contact_sheet.py</code>
+- Create: <code>tests/test_omni_contact_sheet.py</code>
+- Modify: <code>scripts/omni.py</code>
+- Modify: <code>tests/test_omni_script.py</code></p>
+<p><strong>Interfaces:</strong>
+- <code>build_contact_sheet(images, out, *, columns=3, thumb_width=360, thumb_height=640) -&gt; Path</code>
+- <code>contact_sheet_for_run(workdir, out=None) -&gt; Path</code>
+- <code>_write_json</code> is atomic (<code>tmp</code> + <code>os.replace</code>).
+- Manifest includes <code>status</code>, <code>stage</code>, <code>updated_at</code>, <code>progress</code>, <code>engine_log</code>, <code>contact_sheet</code>, <code>resolution</code>, <code>upscale</code>.
+- <code>engine.log</code> captures <code>dxrk.omni</code> logs per run.</p>
+<ul>
+<li>[ ] Write failing tests for contact-sheet grids, missing images, atomic JSON, manifest progress, and log capture.</li>
+<li>[ ] Run the targeted tests; expect failures.</li>
+<li>[ ] Implement contact sheets, atomic writes, stage updates, and per-run log handler.</li>
+<li>[ ] Run the targeted tests; expect pass.</li>
+<li>[ ] Commit: <code>feat(omni): add run observability and contact sheets</code>.</li>
+</ul>
+<h3 id="task-5-local-preview-dashboard">Task 5: Local preview dashboard</h3>
+<p><strong>Files:</strong>
+- Create: <code>scripts/omni_media/preview.py</code>
+- Create: <code>scripts/omni_preview.py</code>
+- Create: <code>tests/test_omni_preview.py</code></p>
+<p><strong>Interfaces:</strong>
+- <code>RunSummary(slug, workdir, status, topic, mode, stage, updated_at, video, contact_sheet)</code>
+- <code>discover_runs(root) -&gt; tuple[RunSummary, ...]</code>
+- <code>load_manifest(workdir) -&gt; dict</code>
+- <code>resolve_media_path(workdir, raw) -&gt; Path | None</code>
+- <code>read_log_tail(path, max_bytes=64_000) -&gt; str</code>
+- <code>make_server(root, host="127.0.0.1", port=8765) -&gt; ThreadingHTTPServer</code>
+- <code>serve(root, host, port) -&gt; None</code>
+- Endpoints: <code>/</code>, <code>/api/runs</code>, <code>/api/runs/{slug}</code>, <code>/api/runs/{slug}/log</code>, <code>/media/{slug}/{path}</code>, <code>/healthz</code>.</p>
+<ul>
+<li>[ ] Write failing tests for discovery, corrupt manifests, path traversal/symlink escape, log tail, 200/404, Host rejection, Range <code>206</code>/<code>416</code>, and media content types.</li>
+<li>[ ] Run the targeted tests; expect failures.</li>
+<li>[ ] Implement the stdlib server and catalog.</li>
+<li>[ ] Run the targeted tests; expect pass.</li>
+<li>[ ] Commit: <code>feat(omni): add local preview dashboard</code>.</li>
+</ul>
+<h3 id="task-6-quality-gates">Task 6: Quality gates</h3>
+<p><strong>Files:</strong>
+- Modify: <code>.github/workflows/ci.yml</code>
+- Modify: <code>pyproject.toml</code> (only if needed for pytest markers/coverage)
+- Modify: <code>tests/test_omni_*.py</code></p>
+<ul>
+<li>[ ] Run <code>uvx ruff check dxrk tests scripts</code>; fix new-module issues.</li>
+<li>[ ] Run the scoped coverage gate at 100%.</li>
+<li>[ ] Run <code>uv run python -m pytest -q</code> and <code>mkdocs build --strict</code>.</li>
+<li>[ ] Commit: <code>test(omni): enforce coverage for v1.6 modules</code>.</li>
+</ul>
+<h3 id="task-7-docs-examples-release">Task 7: Docs, examples, release</h3>
+<p><strong>Files:</strong>
+- Modify: <code>docs/omni.md</code>, <code>docs/architecture.md</code>, <code>docs/omni-preview.md</code> (new), <code>docs/omni-upscaling.md</code> (new), <code>docs/releases/v1.6.0.md</code> (new), <code>mkdocs.yml</code>, <code>README.md</code>, <code>scripts/README.md</code>, <code>examples/README.md</code>, <code>CHANGELOG.md</code>, <code>pyproject.toml</code>, <code>dxrk/__init__.py</code>
+- Create: <code>examples/omni_multi_voice_demo.py</code>, <code>examples/omni_4k_demo.py</code>, <code>examples/omni_preview_demo.py</code></p>
+<ul>
+<li>[ ] Write the docs and examples.</li>
+<li>[ ] Run the examples end-to-end.</li>
+<li>[ ] Bump version to <code>1.6.0</code>.</li>
+<li>[ ] Commit docs/examples and release bump separately.</li>
+<li>[ ] Push <code>origin/main</code> after all gates pass.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.top", "navigation.footer", "content.code.copy", "toc.integrate"], "search": "../../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      
+    
+  </body>
+</html>

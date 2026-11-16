@@ -1,0 +1,1559 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Dxrk — open-source automation and multimedia generation engine for AI agents (14 agents, memory, SDD, MCP, Omni)">
+      
+      
+      
+        <link rel="canonical" href="https://dxrk777.github.io/Dxrk/1.6/adr/ADR-005-migracion-go-python/">
+      
+      
+        <link rel="prev" href="../ADR-004-config-unify/">
+      
+      
+        <link rel="next" href="../../MIGRATION_3.3.5_3.7.1/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/dxrk-icon.jpg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.1">
+    
+    
+      
+        <title>ADR-005 Migración Go → Python - Dxrk</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  
+<meta property="og:type" content="website" />
+<meta property="og:title" content="ADR-005 Migración Go → Python - Dxrk" />
+<meta property="og:description" content="Dxrk — open-source automation and multimedia generation engine for AI agents (14 agents, memory, SDD, MCP, Omni)" />
+<meta property="og:image" content="https://dxrk777.github.io/Dxrk/1.6/assets/images/social/adr/ADR-005-migracion-go-python.png" />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:url" content="https://dxrk777.github.io/Dxrk/1.6/adr/ADR-005-migracion-go-python/" />
+<meta property="twitter:card" content="summary_large_image" />
+<meta property="twitter:title" content="ADR-005 Migración Go → Python - Dxrk" />
+<meta property="twitter:description" content="Dxrk — open-source automation and multimedia generation engine for AI agents (14 agents, memory, SDD, MCP, Omni)" />
+<meta property="twitter:image" content="https://dxrk777.github.io/Dxrk/1.6/assets/images/social/adr/ADR-005-migracion-go-python.png" />
+</head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="purple">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#adr-005-migracion-go-python-puro-cierre-de-la-era-go" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Dxrk" class="md-header__button md-logo" aria-label="Dxrk" data-md-component="logo">
+      
+  <img src="../../assets/dxrk-icon.jpg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Dxrk
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ADR-005 Migración Go → Python
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Dxrk777/Dxrk" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Dxrk" class="md-nav__button md-logo" aria-label="Dxrk" data-md-component="logo">
+      
+  <img src="../../assets/dxrk-icon.jpg" alt="logo">
+
+    </a>
+    Dxrk
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Dxrk777/Dxrk" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inicio
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uso
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial (10 min)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../demo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Demo (60 s)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../omni/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dxrk Omni
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparativa
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../intended-usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uso previsto
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agentes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../components/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Componentes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arquitectura
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../memory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DxrkMemory 2.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../enterprise/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Enterprise
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tenants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rbac/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RBAC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migración a multi-tenant
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../session/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sesiones
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migration-0.5-to-1.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migración 0.5 → 1.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../benchmarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuración
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ADR-002-memory-separation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-002 Separación Memoria
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ADR-003-hybrid-vs-stdlib/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-003 Hybrid vs Stdlib
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ADR-004-config-unify/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-004 Unificación Config
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-005 Migración Go → Python
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR-005 Migración Go → Python
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#contexto" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contexto
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Contexto">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#problema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Problema
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decisión
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#alternativas-consideradas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Alternativas consideradas
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consecuencias" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consecuencias
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Consecuencias">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#positivas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Positivas
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#negativas-costes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Negativas / Costes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#neutras" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Neutras
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#plan-de-migracion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Plan de migración
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Plan de migración">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rollback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rollback
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#referencias" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Referencias
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../MIGRATION_3.3.5_3.7.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migración 3.3.5 → 3.7.1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../dx/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DX Top 1
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../platforms/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plataformas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../releases/v1.3.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release v1.3.0
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="adr-005-migracion-go-python-puro-cierre-de-la-era-go">ADR-005: Migración Go → Python puro — cierre de la era Go</h1>
+<table>
+<thead>
+<tr>
+<th>Campo</th>
+<th>Valor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Título</strong></td>
+<td>Migración Go → Python puro: cierre de la era Go, 14 agentes curados, sin <code>agent/skills</code>, con <code>SECURITY.md</code></td>
+</tr>
+<tr>
+<td><strong>Estado</strong></td>
+<td><strong>Accepted</strong></td>
+</tr>
+<tr>
+<td><strong>Fecha</strong></td>
+<td>2026-10-10</td>
+</tr>
+<tr>
+<td><strong>Autores</strong></td>
+<td>Dxrk Core</td>
+</tr>
+<tr>
+<td><strong>Relacionado</strong></td>
+<td><code>docs/agents.md</code>, <code>SECURITY.md</code>, <code>dxrk/__main__.py</code>, <code>dxrk/commands/__init__.py</code>, <code>pyproject.toml</code>, <code>mkdocs.yml</code>, <code>ADR-003</code></td>
+</tr>
+<tr>
+<td><strong>Supersede</strong></td>
+<td>N/A (formaliza una migración ya consumada; no revierte ningún ADR previo)</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Status:</strong> Accepted</li>
+<li><strong>Date:</strong> 2026-10-10</li>
+<li><strong>Deciders:</strong> Dxrk Principal Architect</li>
+<li><strong>Context:</strong> Post-migración — el repo ya no contiene código Go; esta ADR lo declara formalmente y archiva la auditoría de la era Go.</li>
+</ul>
+<hr />
+<h2 id="contexto">Contexto</h2>
+<p>Hasta agosto de 2026 Dxrk era un proyecto <strong>Go</strong>: <code>go.mod</code> con piso mínimo Go 1.25.12,
+<code>internal/commands</code> (~6.028 líneas sin tests), <code>internal/cli</code>, <code>internal/tui</code>,
+<code>internal/webui/server.go</code>, binario externo <code>dxrk-memory</code> descargado vía
+<code>dxrk/components/memory.py:Download()</code>, 22 sitios de <code>exec.Command</code> en producción
+sin auditoría dedicada, y un sistema de skills <strong>96.9% contenido sin curar</strong>
+(import masivo de 4 fuentes externas). El conteo de agentes era inconsistente
+(28 vs 42 según la fuente) y no existía <code>SECURITY.md</code> ni proceso de reporte privado.</p>
+<p>La auditoría profunda del <strong>2026-08-09</strong> (<code>/home/dxrk/DXRK-AUDITORIA-2026-08-09.md</code>,
+externa al repo, commit <code>74d6280</code>) describe <strong>exclusivamente esa era Go</strong>:
+intento real de compilar Go 1.25.12 (§24), superficie <code>exec.Command</code> (§32),
+conteo de agentes con fecha exacta (§29), licencias de las 4 fuentes de skills (§31).
+Sus hallazgos P0–P3, scorecard y roadmap asumen <code>internal/</code>, <code>go.mod</code>, <code>web/src</code>
+y el binario <code>dxrk-memory</code> — ninguno de los cuales existe ya en <code>main</code>.</p>
+<p>El estado actual en <code>main</code> (verificado 2026-10-10):</p>
+<ul>
+<li><strong>Cero código Go</strong>: <code>find -name "*.go" -not -path "*/.git/*"</code> → <code>0</code> archivos.
+  No hay <code>go.mod</code>, ni <code>internal/</code>, ni <code>web/src</code>, ni binario sidecar.</li>
+<li><strong>Python puro <code>&gt;=3.13</code></strong>: paquete raíz <code>dxrk/</code> (<code>pyproject.toml: requires-python &gt;=3.13</code>),
+  entry point <code>dxrk/__main__.py</code> (<code>main()</code>), console script publicado <code>dxrk-py</code>
+  (no <code>dxrk</code>). El módulo <code>dxrk/commands/*.py</code> es espejo deliberado de los históricos
+  <code>internal/commands/*.go</code> (trazabilidad nominal, no código heredado).</li>
+<li><strong>14 agentes curados</strong>: <code>docs/agents.md</code> + <code>mkdocs.yml: site_description</code></li>
+<li><code>dxrk/agents/</code> con 14 adaptadores
+  (<code>antigravity, claude, codex, cursor, gemini, kilocode, kimi, kiro, openclaw, opencode, pi, qwen, vscode, windsurf</code>).
+  Cada módulo en <code>dxrk/commands/*.py</code> expone <code>register_&lt;name&gt;_command(reg: Registry)</code>
+  y se registra en <code>dxrk/commands/__init__.py</code> (<code>register_all</code>).</li>
+<li><strong>Sin <code>agent/</code> ni <code>skills/</code></strong>: no existe <code>agent/</code>, <code>skills/</code> ni <code>.agents/skills</code>
+  en el repo — decisión consciente contra el import masivo sin curar (§6 de la auditoría).
+  El único contenido bajo <code>.agents/</code> es <code>social-media-skills</code> (dominio acotado, no skills de agente).</li>
+<li><strong>Con <code>SECURITY.md</code></strong>: política de seguridad con versiones soportadas (1.5.x/1.4.x),
+  reporte privado vía GitHub Security Advisories (no issues públicos) y SLA de 48 h.</li>
+</ul>
+<h3 id="problema">Problema</h3>
+<p>Sin una declaración formal, la auditoría 2026-08-09 sigue circulando como
+"documento maestro" y sus recomendaciones (auditar los 22 <code>exec.Command</code>,
+testear <code>internal/commands</code>, reconciliar 28 vs 42 agentes, decidir sobre
+<code>dxrk-memory</code> como prerrequisito) parecen trabajo pendiente. Aplicarlas hoy
+sería teatro: <strong>el código que describen ya no existe</strong>. Además, futuros
+contribuyentes podrían reintroducir patrones Go (binario sidecar, <code>agent/skills</code>
+masivo) sin saber que fueron decisiones rechazadas, no olvidos.</p>
+<hr />
+<h2 id="decision">Decisión</h2>
+<p><strong>Cerrar la era Go. Python puro es el único stack. La auditoría 2026-08-09 queda archivada y obsoleta.</strong></p>
+<ol>
+<li><strong>Python puro <code>&gt;=3.13</code>, cero toolchain Go/Rust</strong>: sin <code>go.mod</code>, sin <code>internal/</code>,
+   sin binario sidecar, sin <code>cargo</code>. Consistente con <code>ADR-003</code> (stdlib-only,
+   rechazo de híbrido Rust/Go y de sidecar <code>dxrk-memory</code> para v1.0).</li>
+<li><strong>14 agentes curados, conteo canónico</strong>: la tabla de <code>docs/agents.md</code> es la
+   fuente de verdad. Ni 28 ni 42 (cifras de la era Go). Añadir un agente requiere
+   adaptador en <code>dxrk/agents/</code> + fila en <code>docs/agents.md</code> + comando registrado
+   en <code>dxrk/commands/__init__.py</code>.</li>
+<li><strong>Sin <code>agent/skills</code> masivo</strong>: no se reintroduce el import de skills externos
+   sin curaduría (§6 auditoría: 96.9% sin curar). Contenido de skills solo acotado
+   por dominio (precedente: <code>.agents/social-media-skills</code>).</li>
+<li><strong><code>SECURITY.md</code> como contrato</strong>: reporte privado obligatorio, sin issues públicos
+   para vulnerabilidades. Los 22 <code>exec.Command</code> de la era Go no se auditan porque
+   no existen; el código Python equivalente vive bajo <code>dxrk/</code> con <code>ruff</code> + <code>mypy</code></li>
+<li><code>pytest</code> en CI (ver <code>CONTRIBUTING.md</code>, <code>.github/workflows/ci.yml</code>).</li>
+<li><strong>Auditoría 2026-08-09 archivada/obsoleta</strong>: el archivo vive fuera del repo
+   (<code>/home/dxrk/DXRK-AUDITORIA-2026-08-09.md</code>) y <strong>no se importa a <code>docs/</code></strong>.
+   Su valor restante es histórico (entender por qué se migró), no operativo.
+   Ninguna de sus tablas P0–P3 aplica a <code>main</code>.</li>
+</ol>
+<hr />
+<h2 id="alternativas-consideradas">Alternativas consideradas</h2>
+<ul>
+<li><strong>Importar la auditoría a <code>docs/</code> como referencia viva</strong>: rechazado —
+  anclaría en la navegación un documento de ~90 KB que describe código inexistente
+  (<code>internal/</code>, <code>go.mod</code>, <code>web/src</code>) y confundiría a contribuyentes nuevos.
+  El archivo externo basta como archivo histórico.</li>
+<li><strong>Mantener compatibilidad nominal Go (shims, <code>internal/</code> vacío, alias <code>dxrk</code>)</strong>:
+  rechazado — el console script es <code>dxrk-py</code> por diseño; shims Go serían deuda
+  sin usuarios. La trazabilidad nominal (<code>dxrk/commands</code> espejo de
+  <code>internal/commands/*.go</code>) ya cubre la orientación histórica.</li>
+<li><strong>Re-migrar a Go/híbrido si Python no rinde</strong>: rechazado para v1.x —
+  ya decidido en <code>ADR-003</code> (re-evaluar solo en v2.0 con benchmarks &gt;3×).
+  Esta ADR no reabre ese debate, lo hereda.</li>
+</ul>
+<hr />
+<h2 id="consecuencias">Consecuencias</h2>
+<h3 id="positivas">Positivas</h3>
+<ul>
+<li><strong>Fin de la ambigüedad</strong>: nadie pierde tiempo aplicando hallazgos P0–P3 a código
+  que no existe; el conteo canónico es 14, no 28/42.</li>
+<li><strong>Coherencia con ADR-003</strong>: stdlib-only + <code>pip install dxrk</code> &lt;5 s + <code>mypy</code>/<code>ruff</code>/
+  <code>pytest</code> verdes, sin toolchain Go en CI (<code>ubuntu/macos/windows</code> con Python único).</li>
+<li><strong>Superficie de skills acotada</strong>: sin reimportación masiva; cada skill nuevo se
+  justifica por dominio, no por volumen.</li>
+<li><strong>Seguridad con proceso</strong>: <code>SECURITY.md</code> + advisories privados reemplazan el vacío
+  de la era Go (donde <code>exec.Command</code> ×22 no tenía auditoría dedicada).</li>
+</ul>
+<h3 id="negativas-costes">Negativas / Costes</h3>
+<ul>
+<li><strong>Pérdida de contexto histórico fino</strong>: quien quiera saber <em>por qué</em> se migró
+  debe leer el archivo externo (fuera del repo, no versionado). Mitigado: esta ADR
+  resume el antes/después y cita las secciones relevantes (§6, §24, §29, §31, §32).</li>
+<li><strong>Sin plan de rollback a Go</strong>: deliberado. Si v2.0 re-evalúa híbrido (vía ADR-003),
+  será como <em>plugin</em> (<code>dxrk/memory/backend/vector.py</code>), no como retorno a <code>internal/</code>.</li>
+</ul>
+<h3 id="neutras">Neutras</h3>
+<ul>
+<li><code>dxrk/commands</code> conserva nombres espejo de <code>internal/commands/*.go</code> solo como
+  convención de orientación; no implica compatibilidad ni deuda de port.</li>
+</ul>
+<hr />
+<h2 id="plan-de-migracion">Plan de migración</h2>
+<p>No hay migración pendiente — la migración <strong>ya ocurrió</strong> y esta ADR la formaliza.
+La verificación es de cierre, no de trabajo futuro:</p>
+<table>
+<thead>
+<tr>
+<th>Paso</th>
+<th>Acción</th>
+<th>Estado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Verificar cero Go: <code>find . -name "*.go" -not -path "*/.git/*"</code> → <code>0</code></td>
+<td>✅ Hecho (2026-10-10)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Verificar sin <code>go.mod</code> / <code>internal/</code> / <code>web/src</code> / binario sidecar</td>
+<td>✅ Hecho</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Verificar 14 adaptadores en <code>dxrk/agents/</code> + tabla en <code>docs/agents.md</code></td>
+<td>✅ Hecho</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Verificar ausencia de <code>agent/</code> / <code>skills/</code> / <code>.agents/skills</code></td>
+<td>✅ Hecho</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Verificar <code>SECURITY.md</code> con advisories privados + SLA 48 h</td>
+<td>✅ Hecho</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Declarar auditoría 2026-08-09 archivada/obsoleta (esta ADR, sin importar el archivo)</td>
+<td>✅ Esta ADR</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Añadir entrada <code>mkdocs.yml</code> <code>nav: ADR-005: adr/ADR-005-migracion-go-python.md</code></td>
+<td>✅ Esta ADR</td>
+</tr>
+<tr>
+<td>8</td>
+<td>No existe doc de migración Go→Python previa; esta ADR es el doc canónico</td>
+<td>✅ Esta ADR</td>
+</tr>
+</tbody>
+</table>
+<h3 id="rollback">Rollback</h3>
+<p>No hay rollback a Go. Si un futuro ADR propone híbrido, debe pasar por la
+re-evaluación prevista en <code>ADR-003</code> (benchmarks &gt;3×) y citar esta ADR como
+superseded parcial, no ignorarla.</p>
+<hr />
+<h2 id="referencias">Referencias</h2>
+<ul>
+<li><code>docs/agents.md</code> — tabla canónica de 14 agentes</li>
+<li><code>SECURITY.md</code> — política de reporte privado, versiones soportadas, SLA 48 h</li>
+<li><code>dxrk/__main__.py</code> — entry point <code>main()</code>, console script <code>dxrk-py</code></li>
+<li><code>dxrk/commands/__init__.py</code> — <code>register_all</code>, patrón <code>register_&lt;name&gt;_command</code></li>
+<li><code>dxrk/agents/</code> — 14 adaptadores (ver listado en Decisión)</li>
+<li><code>pyproject.toml</code> — <code>requires-python &gt;=3.13</code>, <code>[project.scripts] dxrk-py</code></li>
+<li><code>docs/adr/ADR-003-hybrid-vs-stdlib.md</code> — rechazo de híbrido Rust/Go y sidecar <code>dxrk-memory</code></li>
+<li><code>mkdocs.yml</code> — <code>nav</code> incluye <code>ADR-005</code>, <code>site_description</code> (14 agents)</li>
+<li>Archivo externo (NO importado, solo histórico): <code>/home/dxrk/DXRK-AUDITORIA-2026-08-09.md</code>
+  (§6 skills 96.9%, §24 compilación Go 1.25.12, §29 conteo de agentes, §31 licencias skills, §32 <code>exec.Command</code> ×22)</li>
+</ul>
+<blockquote>
+<p><strong>Verificación</strong>: <code>find . -name "*.go" -not -path "*/.git/*" | wc -l</code> → <code>0</code>;
+<code>ls dxrk/agents/</code> → 14 adaptadores; <code>ls agent/ skills/ .agents/skills</code> → no existen;
+<code>ls SECURITY.md docs/agents.md</code> → existen. <code>uvx ruff</code> no aplica a Markdown.</p>
+</blockquote>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../ADR-004-config-unify/" class="md-footer__link md-footer__link--prev" aria-label="Previous: ADR-004 Unificación Config">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                ADR-004 Unificación Config
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../../MIGRATION_3.3.5_3.7.1/" class="md-footer__link md-footer__link--next" aria-label="Next: Migración 3.3.5 → 3.7.1">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Migración 3.3.5 → 3.7.1
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.top", "navigation.footer", "content.code.copy", "toc.integrate"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      
+    
+  </body>
+</html>
