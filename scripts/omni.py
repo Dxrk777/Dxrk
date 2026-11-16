@@ -305,6 +305,27 @@ class OmniConfig:
     def resolution_size(self) -> Resolution:
         return parse_resolution(self.resolution)
 
+    @property
+    def base_resolution_size(self) -> Resolution:
+        """Resolution used before an optional upscale pass.
+
+        Generating 4K directly is slow and makes ``--upscale`` a no-op. When
+        upscaling is enabled above 1080p, generate/prepare at 1080p and let the
+        selected backend reach the target resolution.
+        """
+        target = self.resolution_size
+        if self.upscale == "none":
+            return target
+        short_side = min(target.width, target.height)
+        if short_side <= 1080:
+            return target
+        scale = 1080 / short_side
+        width = max(2, round(target.width * scale))
+        height = max(2, round(target.height * scale))
+        width -= width % 2
+        height -= height % 2
+        return Resolution(width, height, f"{width}x{height}")
+
 
 @dataclass(frozen=True, slots=True)
 class PipelineResult:
@@ -1263,7 +1284,7 @@ def _generate_image_for_scene(
     image_client: httpx.Client | None,
     seed: int,
 ) -> ImageResult:
-    resolution = config.resolution_size
+    resolution = config.base_resolution_size
     return generate_image(
         prompt,
         dest,

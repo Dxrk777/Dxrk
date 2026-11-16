@@ -298,11 +298,14 @@ def test_finalize_image_none_and_local(tmp_path: Path, monkeypatch: pytest.Monke
 
 
 def test_finalize_image_upscale_success_and_failures(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(
-        omni,
-        "generate_image",
-        lambda prompt, dest, **kwargs: (dest.write_bytes(_png_bytes()), omni.ImageResult(dest, "placeholder"))[1],
-    )
+    generated: list[dict] = []
+
+    def fake_generate(prompt, dest, **kwargs):
+        generated.append(kwargs)
+        dest.write_bytes(_png_bytes())
+        return omni.ImageResult(dest, "placeholder")
+
+    monkeypatch.setattr(omni, "generate_image", fake_generate)
     calls: list[dict] = []
 
     def upscale(src, dest, config, **kwargs):
@@ -317,6 +320,8 @@ def test_finalize_image_upscale_success_and_failures(tmp_path: Path, monkeypatch
     assert result.path.name == "a_upscaled.png"
     assert calls[0]["target"].width == 2160
     assert calls[0]["target"].height == 3840
+    assert generated[0]["width"] == 1080
+    assert generated[0]["height"] == 1920
 
     def boom(src, dest, config, **kwargs):
         raise RuntimeError("nope")
@@ -327,6 +332,17 @@ def test_finalize_image_upscale_success_and_failures(tmp_path: Path, monkeypatch
     explicit = omni.OmniConfig(topic="tema", upscale="ffmpeg")
     with pytest.raises(omni.OmniError, match="upscaling"):
         omni._finalize_image("prompt", tmp_path / "c.png", explicit, None, 1, None)
+
+
+def test_base_resolution_size() -> None:
+    default = omni.OmniConfig(topic="tema").base_resolution_size
+    assert (default.width, default.height) == (1080, 1920)
+    four_k = omni.OmniConfig(topic="tema", resolution="4k", upscale="ffmpeg")
+    assert (four_k.base_resolution_size.width, four_k.base_resolution_size.height) == (1080, 1920)
+    no_upscale = omni.OmniConfig(topic="tema", resolution="4k")
+    assert (no_upscale.base_resolution_size.width, no_upscale.base_resolution_size.height) == (2160, 3840)
+    horizontal = omni.OmniConfig(topic="tema", resolution="3840x2160", upscale="auto")
+    assert (horizontal.base_resolution_size.width, horizontal.base_resolution_size.height) == (1080, 1920)
 
 
 def test_is_multivoice_cases() -> None:

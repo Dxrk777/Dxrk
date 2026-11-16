@@ -123,8 +123,8 @@ uv run python scripts/omni.py "mi tema" \
 ```
 
 Valores aceptados: `1080p`, `1440p`, `4k`, o `WxH` (por ejemplo `1080x1920`).
-En orientación vertical, `1920x1080` se normaliza a `1080x1920`; usá
-`WxH` con el orden que quieras para forzar una orientación horizontal.
+Omni es vertical: `1920x1080` y `3840x2160` se normalizan a `1080x1920` y
+`2160x3840`.
 
 Backends de `--upscale`:
 

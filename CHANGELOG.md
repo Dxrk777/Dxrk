@@ -35,6 +35,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   tail de log y media con `Range`/`HEAD`; valida `Host`, rechaza traversal y
   symlinks que escapan del run, y nunca escribe en `outputs/`.
 
+### Bug Fixes
+
+- **omni:** Con `--upscale` activo, las imágenes se generan a una base 1080p
+  y se upscalean al target 1440p/4K; antes se generaban directamente al
+  tamaño final y el upscaling quedaba como una copia sin efecto.
+
 ### Tests
 
 - Nuevos tests unitarios e integración para voces, ASS multi-speaker,
