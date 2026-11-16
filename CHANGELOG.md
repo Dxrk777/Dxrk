@@ -5,6 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0](https://github.com/Dxrk777/Dxrk/releases/tag/v1.6.0) - 2026-11-16
+
+### Destacados
+
+- **Omni multi-voz:** guiones con `speaker` y `lines`, mapeo de voces por
+  speaker y un ASS karaoke con estilos separados, sin drift entre segmentos.
+- **Upscaling y 4K:** resolución objetivo configurable, backends FFmpeg,
+  Real-ESRGAN, SD WebUI y ComfyUI, y control de CRF/preset en clips y mux.
+- **Preview dashboard local:** servidor stdlib read-only para monitorear runs,
+  video final, contact sheet, audio y `engine.log` desde el navegador.
+
+### Features
+
+- **omni:** narración multi-voz por escena, personaje o línea; cada línea se
+  sintetiza como segmento y las duraciones de escena salen del audio real.
+  Tempo limitado a `2.0`, tiempo extra asignado a la última escena y timings
+  globales sin solapamientos.
+- **omni:** `--script`, `--voice-map`, `--voices` y `--default-speaker` para
+  asignar voces; `--voice` sigue siendo la voz por defecto.
+- **omni:** `--resolution` (`1080p`, `1440p`, `4k`, `WxH`) y `--upscale`
+  (`none`, `auto`, `ffmpeg`, `realesrgan`, `comfyui`, `sdwebui`) con
+  `--upscale-model` y `--upscale-sharpen`.
+- **omni:** `--crf` y `--preset` aplicados a los clips y al mux final.
+- **omni:** long-form con speakers por capítulo/shot y offsets globales de
+  subtítulos multi-voz.
+- **omni:** `contact_sheet.png` por corrida y `engine.log` por run.
+- **omni:** `scripts/omni_preview.py` con `/healthz`, catálogo de runs, detalle,
+  tail de log y media con `Range`/`HEAD`; valida `Host`, rechaza traversal y
+  symlinks que escapan del run, y nunca escribe en `outputs/`.
+
+### Tests
+
+- Nuevos tests unitarios e integración para voces, ASS multi-speaker,
+  upscaling, contact sheet, catálogo de preview, servidor HTTP y pipelines
+  short-form/long-form multi-voz.
+- Gate de cobertura específico al 100% para los módulos nuevos de Omni.
+
+### Docs
+
+- `docs/omni.md` y `scripts/README.md` documentan multi-voz, 4K/upscaling,
+  dashboard, flags y layout de salida.
+- Ejemplos `examples/omni_multivoice_script.json` y
+  `examples/omni_voices.json`.
+
 ## [1.5.0-omni](https://github.com/Dxrk777/Dxrk/releases/tag/v1.5.0-omni) - 2026-11-04
 
 ### Destacados
