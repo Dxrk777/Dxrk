@@ -16,6 +16,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from .voices import DEFAULT_SPEAKER, VoiceLine
+
 logger = logging.getLogger("dxrk.omni.longform")
 
 
@@ -28,6 +30,14 @@ class Shot:
     index: int
     narration: str
     visual_prompt: str
+    speaker: str = ""
+    lines: tuple[VoiceLine, ...] = ()
+
+    @property
+    def text(self) -> str:
+        if self.lines:
+            return " ".join(line.text for line in self.lines)
+        return self.narration
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,6 +45,7 @@ class Chapter:
     index: int
     title: str
     shots: tuple[Shot, ...]
+    speaker: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -124,8 +135,31 @@ def build_longform_prompt(topic: str, chapters: int, shots_per_chapter: int, cha
         "'narration' (español rioplatense, natural) y 'visual_prompt' "
         "(inglés, cinematográfico, vertical 9:16, sin texto ni logos).\n"
         "La narración del capítulo es la suma de sus shots. No repitas frases.\n"
+        "Opcional: cada capítulo o shot puede tener 'speaker'; un shot puede usar "
+        "'lines': [{'speaker': '...', 'text': '...'}] para diálogos.\n"
         'Formato: {"title": "...", "chapters": [{"title": "...", "shots": [{"narration": "...", "visual_prompt": "..."}]}]}'
     )
+
+
+def _parse_shot_lines(
+    raw_lines: Any,
+    shot_index: int,
+    default_speaker: str,
+) -> tuple[VoiceLine, ...]:
+    if raw_lines is None:
+        return ()
+    if not isinstance(raw_lines, list):
+        raise LongformError(f"las líneas del shot {shot_index} deben ser una lista")
+    lines: list[VoiceLine] = []
+    for line_index, item in enumerate(raw_lines):
+        if not isinstance(item, dict):
+            raise LongformError(f"la línea {line_index + 1} del shot {shot_index} no es un objeto")
+        speaker = str(item.get("speaker") or default_speaker).strip() or default_speaker
+        text = str(item.get("text") or item.get("narration") or "").strip()
+        if not text:
+            raise LongformError(f"la línea {line_index + 1} del shot {shot_index} está vacía")
+        lines.append(VoiceLine(speaker=speaker, text=text))
+    return tuple(lines)
 
 
 def parse_longform_json(raw: str, topic: str) -> LongformPlan:
@@ -154,25 +188,44 @@ def parse_longform_json(raw: str, topic: str) -> LongformPlan:
         raw_shots = chapter_item.get("shots")
         if not isinstance(raw_shots, list) or not 1 <= len(raw_shots) <= 12:
             raise LongformError(f"el capítulo {chapter_index + 1} debe traer entre 1 y 12 shots")
+        chapter_speaker = str(chapter_item.get("speaker") or "").strip()
         shots: list[Shot] = []
         for shot_item in raw_shots:
             if not isinstance(shot_item, dict):
                 raise LongformError("cada shot debe ser un objeto")
+            shot_index += 1
+            speaker = str(shot_item.get("speaker") or chapter_speaker).strip()
+            lines = _parse_shot_lines(
+                shot_item.get("lines"),
+                shot_index,
+                speaker or DEFAULT_SPEAKER,
+            )
             narration = str(shot_item.get("narration", "")).strip()
+            if not narration and lines:
+                narration = " ".join(line.text for line in lines)
             visual_prompt = str(shot_item.get("visual_prompt", "")).strip()
             if not narration or not visual_prompt:
                 raise LongformError("cada shot necesita narration y visual_prompt")
-            shot_index += 1
-            shots.append(Shot(index=shot_index, narration=narration, visual_prompt=visual_prompt))
+            shots.append(
+                Shot(
+                    index=shot_index,
+                    narration=narration,
+                    visual_prompt=visual_prompt,
+                    speaker=speaker,
+                    lines=lines,
+                )
+            )
         chapters.append(
             Chapter(
                 index=chapter_index + 1,
                 title=str(chapter_item.get("title") or f"Capítulo {chapter_index + 1}").strip(),
                 shots=tuple(shots),
+                speaker=chapter_speaker,
             )
         )
-    title = str(data.get("title") or topic).strip() or topic
-    return LongformPlan(topic=topic, title=title, chapters=tuple(chapters))
+    plan_topic = str(data.get("topic") or topic).strip() or topic or "Dxrk Omni"
+    title = str(data.get("title") or plan_topic).strip() or plan_topic
+    return LongformPlan(topic=plan_topic, title=title, chapters=tuple(chapters))
 
 
 def generate_longform_plan(
@@ -193,24 +246,31 @@ def generate_longform_plan(
 
 
 def plan_to_dict(plan: LongformPlan) -> dict[str, Any]:
+    chapters: list[dict[str, Any]] = []
+    for chapter in plan.chapters:
+        chapter_data: dict[str, Any] = {
+            "index": chapter.index,
+            "title": chapter.title,
+            "shots": [],
+        }
+        if chapter.speaker:
+            chapter_data["speaker"] = chapter.speaker
+        for shot in chapter.shots:
+            shot_data: dict[str, Any] = {
+                "index": shot.index,
+                "narration": shot.narration,
+                "visual_prompt": shot.visual_prompt,
+            }
+            if shot.speaker:
+                shot_data["speaker"] = shot.speaker
+            if shot.lines:
+                shot_data["lines"] = [{"speaker": line.speaker, "text": line.text} for line in shot.lines]
+            chapter_data["shots"].append(shot_data)
+        chapters.append(chapter_data)
     return {
         "topic": plan.topic,
         "title": plan.title,
-        "chapters": [
-            {
-                "index": chapter.index,
-                "title": chapter.title,
-                "shots": [
-                    {
-                        "index": shot.index,
-                        "narration": shot.narration,
-                        "visual_prompt": shot.visual_prompt,
-                    }
-                    for shot in chapter.shots
-                ],
-            }
-            for chapter in plan.chapters
-        ],
+        "chapters": chapters,
     }
 
 

@@ -65,12 +65,32 @@ if __package__:
         prepare_track,
         synthesize_ambient,
     )
+    from scripts.omni_media.upscale import (
+        Resolution,
+        UpscaleConfig,
+        parse_resolution,
+        upscale_image,
+    )
+    from scripts.omni_media.voices import (
+        DEFAULT_SPEAKER,
+        VoiceLine,
+        VoiceSpec,
+        assign_scene_durations,
+        load_voice_map,
+        parse_voice_specs,
+        resolve_voices,
+        segment_scenes,
+        synthesize_requests,
+        timeline_words,
+    )
     from scripts.omni_media.words import (
         NarrationResult,
         WordTiming,
+        ass_header,
         offset_timings,
         proportional_timings,
         scale_timings,
+        style_for_speaker,
         timings_from_edge_events,
         transcribe_words,
         words_to_dict,
@@ -97,12 +117,32 @@ else:
         prepare_track,
         synthesize_ambient,
     )
+    from omni_media.upscale import (
+        Resolution,
+        UpscaleConfig,
+        parse_resolution,
+        upscale_image,
+    )
+    from omni_media.voices import (
+        DEFAULT_SPEAKER,
+        VoiceLine,
+        VoiceSpec,
+        assign_scene_durations,
+        load_voice_map,
+        parse_voice_specs,
+        resolve_voices,
+        segment_scenes,
+        synthesize_requests,
+        timeline_words,
+    )
     from omni_media.words import (
         NarrationResult,
         WordTiming,
+        ass_header,
         offset_timings,
         proportional_timings,
         scale_timings,
+        style_for_speaker,
         timings_from_edge_events,
         transcribe_words,
         words_to_dict,
@@ -135,6 +175,14 @@ class Scene:
     index: int
     narration: str
     visual_prompt: str
+    speaker: str = DEFAULT_SPEAKER
+    lines: tuple[VoiceLine, ...] = ()
+
+    @property
+    def text(self) -> str:
+        if self.lines:
+            return " ".join(line.text for line in self.lines)
+        return self.narration
 
 
 @dataclass(frozen=True, slots=True)
@@ -145,7 +193,7 @@ class VideoScript:
 
     @property
     def narration(self) -> str:
-        return " ".join(scene.narration for scene in self.scenes)
+        return " ".join(scene.text for scene in self.scenes)
 
 
 @dataclass(frozen=True, slots=True)
@@ -155,6 +203,16 @@ class OmniConfig:
     duration: int = 30
     scene_count: int = 5
     voice: str = DEFAULT_VOICE
+    script_path: Path | None = None
+    default_speaker: str = DEFAULT_SPEAKER
+    voice_map: tuple[VoiceSpec, ...] = ()
+    voices_path: Path | None = None
+    resolution: str = "1080p"
+    upscale: str = "none"
+    upscale_model: str = ""
+    upscale_sharpen: float = 0.0
+    video_crf: int = 20
+    video_preset: str = "veryfast"
     image_source: str = "auto"
     images_dir: Path | None = None
     music_path: Path | None = None
@@ -184,9 +242,38 @@ class OmniConfig:
 
     def __post_init__(self) -> None:
         topic = self.topic.strip()
-        if not topic:
+        if not topic and self.script_path is None:
             raise OmniError("el tema no puede estar vacío")
         object.__setattr__(self, "topic", topic)
+        if self.longform and self.script_path is not None:
+            raise OmniError("--script no está soportado con --longform")
+        if not self.default_speaker.strip():
+            raise OmniError("default_speaker no puede estar vacío")
+        for spec in self.voice_map:
+            if not spec.name.strip() or not spec.voice.strip():
+                raise OmniError("voice_map tiene un speaker o una voz vacía")
+        try:
+            parse_resolution(self.resolution)
+        except Exception as exc:
+            raise OmniError(str(exc)) from exc
+        if self.upscale not in {"none", "ffmpeg", "realesrgan", "comfyui", "sdwebui", "auto"}:
+            raise OmniError("upscale debe ser none, ffmpeg, realesrgan, comfyui, sdwebui o auto")
+        if self.upscale_sharpen < 0:
+            raise OmniError("upscale_sharpen no puede ser negativo")
+        if not 0 <= self.video_crf <= 51:
+            raise OmniError("video_crf debe estar entre 0 y 51")
+        if self.video_preset not in {
+            "ultrafast",
+            "superfast",
+            "veryfast",
+            "faster",
+            "fast",
+            "medium",
+            "slow",
+            "slower",
+            "veryslow",
+        }:
+            raise OmniError("video_preset inválido")
         if self.longform:
             if not 5 <= self.duration <= 14400:
                 raise OmniError("la duración longform debe estar entre 5 y 14400 segundos")
@@ -213,6 +300,10 @@ class OmniConfig:
             raise OmniError("music_source=file requiere --music")
         if self.music_chunk_seconds <= 0:
             raise OmniError("music_chunk_seconds debe ser positivo")
+
+    @property
+    def resolution_size(self) -> Resolution:
+        return parse_resolution(self.resolution)
 
 
 @dataclass(frozen=True, slots=True)
@@ -269,7 +360,12 @@ _BEATS: tuple[tuple[str, str], ...] = (
 )
 
 
-def fallback_script(topic: str, scene_count: int = 5) -> VideoScript:
+def fallback_script(
+    topic: str,
+    scene_count: int = 5,
+    *,
+    default_speaker: str = DEFAULT_SPEAKER,
+) -> VideoScript:
     """Build a deterministic script when no LLM is available."""
     clean = topic.strip().rstrip(".!?") or "el futuro"
     if scene_count == 2:
@@ -285,6 +381,7 @@ def fallback_script(topic: str, scene_count: int = 5) -> VideoScript:
             visual_prompt=(
                 f"{visual.format(topic=clean)}. Topic: {clean}. Vertical 9:16, cinematic, ultra detailed, no text."
             ),
+            speaker=default_speaker,
         )
         for i, (narration, visual) in enumerate(chosen)
     )
@@ -306,7 +403,29 @@ def build_script_prompt(topic: str, scene_count: int, duration: int) -> str:
     )
 
 
-def parse_script_json(raw: str, topic: str) -> VideoScript:
+def _parse_scene_lines(raw_lines: Any, scene_index: int, default_speaker: str) -> tuple[VoiceLine, ...]:
+    if raw_lines is None:
+        return ()
+    if not isinstance(raw_lines, list):
+        raise OmniError(f"las líneas de la escena {scene_index} deben ser una lista")
+    lines: list[VoiceLine] = []
+    for line_index, item in enumerate(raw_lines):
+        if not isinstance(item, dict):
+            raise OmniError(f"la línea {line_index + 1} de la escena {scene_index} no es un objeto")
+        speaker = str(item.get("speaker") or default_speaker).strip() or default_speaker
+        text = str(item.get("text") or item.get("narration") or "").strip()
+        if not text:
+            raise OmniError(f"la línea {line_index + 1} de la escena {scene_index} está vacía")
+        lines.append(VoiceLine(speaker=speaker, text=text))
+    return tuple(lines)
+
+
+def parse_script_json(
+    raw: str,
+    topic: str,
+    *,
+    default_speaker: str = DEFAULT_SPEAKER,
+) -> VideoScript:
     """Parse an LLM response, tolerating markdown fences and surrounding prose."""
     text = raw.strip()
     fenced = re.search(r"```(?:json)?\s*(.*?)```", text, re.DOTALL)
@@ -329,24 +448,52 @@ def parse_script_json(raw: str, topic: str) -> VideoScript:
     for i, item in enumerate(raw_scenes):
         if not isinstance(item, dict):
             raise OmniError(f"la escena {i + 1} no es un objeto")
+        speaker = str(item.get("speaker") or default_speaker).strip() or default_speaker
+        lines = _parse_scene_lines(item.get("lines"), i + 1, speaker)
         narration = str(item.get("narration", "")).strip()
+        if not narration and lines:
+            narration = " ".join(line.text for line in lines)
         visual_prompt = str(item.get("visual_prompt", "")).strip()
         if not narration or not visual_prompt:
             raise OmniError(f"la escena {i + 1} necesita narration y visual_prompt")
-        scenes.append(Scene(index=i + 1, narration=narration, visual_prompt=visual_prompt))
-    title = str(data.get("title") or topic).strip() or topic
-    return VideoScript(topic=topic, title=title, scenes=tuple(scenes))
+        scenes.append(
+            Scene(
+                index=i + 1,
+                narration=narration,
+                visual_prompt=visual_prompt,
+                speaker=speaker,
+                lines=lines,
+            )
+        )
+    script_topic = str(data.get("topic") or topic).strip() or topic or "Dxrk Omni"
+    title = str(data.get("title") or script_topic).strip() or script_topic
+    return VideoScript(topic=script_topic, title=title, scenes=tuple(scenes))
 
 
-def generate_script(topic: str, scene_count: int, duration: int, llm: LlmClient | None) -> VideoScript:
+def load_script(path: Path, *, default_speaker: str = DEFAULT_SPEAKER) -> VideoScript:
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise OmniError(f"no pude leer el script {path}: {exc}") from exc
+    return parse_script_json(raw, "", default_speaker=default_speaker)
+
+
+def generate_script(
+    topic: str,
+    scene_count: int,
+    duration: int,
+    llm: LlmClient | None,
+    *,
+    default_speaker: str = DEFAULT_SPEAKER,
+) -> VideoScript:
     if llm is None:
-        return fallback_script(topic, scene_count)
+        return fallback_script(topic, scene_count, default_speaker=default_speaker)
     try:
         raw = llm.complete(build_script_prompt(topic, scene_count, duration))
-        return parse_script_json(raw, topic)
+        return parse_script_json(raw, topic, default_speaker=default_speaker)
     except Exception as exc:
         logger.warning("LLM script failed (%s); using deterministic fallback", exc)
-        return fallback_script(topic, scene_count)
+        return fallback_script(topic, scene_count, default_speaker=default_speaker)
 
 
 @dataclass(frozen=True, slots=True)
@@ -399,12 +546,14 @@ def unique_workdir(output_root: Path, topic: str, now: datetime | None = None) -
     return candidate
 
 
-def build_pollinations_url(prompt: str, seed: int) -> str:
+def build_pollinations_url(
+    prompt: str,
+    seed: int,
+    width: int = VIDEO_WIDTH,
+    height: int = VIDEO_HEIGHT,
+) -> str:
     encoded = urllib.parse.quote(prompt, safe="")
-    return (
-        f"https://image.pollinations.ai/prompt/{encoded}"
-        f"?width={VIDEO_WIDTH}&height={VIDEO_HEIGHT}&nologo=true&seed={seed}"
-    )
+    return f"https://image.pollinations.ai/prompt/{encoded}?width={width}&height={height}&nologo=true&seed={seed}"
 
 
 def _pillow() -> tuple[Any, Any, Any, Any]:
@@ -415,45 +564,65 @@ def _pillow() -> tuple[Any, Any, Any, Any]:
     return Image, ImageDraw, ImageFont, ImageOps
 
 
-def placeholder_image(prompt: str, dest: Path, seed: int = 42) -> Path:
+def placeholder_image(
+    prompt: str,
+    dest: Path,
+    seed: int = 42,
+    width: int = VIDEO_WIDTH,
+    height: int = VIDEO_HEIGHT,
+) -> Path:
     """Create a cinematic card so the pipeline still works offline."""
     Image, ImageDraw, ImageFont, _ = _pillow()
     rng = random.Random(seed)
     base = (rng.randint(4, 12), rng.randint(4, 12), rng.randint(10, 24))
     accent = (rng.randint(0, 60), rng.randint(180, 255), rng.randint(180, 255))
-    image = Image.new("RGB", (VIDEO_WIDTH, VIDEO_HEIGHT), base)
+    scale_x = width / VIDEO_WIDTH
+    scale_y = height / VIDEO_HEIGHT
+    image = Image.new("RGB", (width, height), base)
     draw = ImageDraw.Draw(image)
-    for y in range(VIDEO_HEIGHT):
-        t = y / (VIDEO_HEIGHT - 1)
+    for y in range(height):
+        t = y / max(1, height - 1)
         color = tuple(int(base[i] * (1 - t) + accent[i] * t * 0.28) for i in range(3))
-        draw.line([(0, y), (VIDEO_WIDTH, y)], fill=color)
+        draw.line([(0, y), (width, y)], fill=color)
 
-    overlay = Image.new("RGBA", (VIDEO_WIDTH, VIDEO_HEIGHT), (0, 0, 0, 0))
+    overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     grid = ImageDraw.Draw(overlay)
-    for x in range(0, VIDEO_WIDTH, 90):
-        grid.line([(x, 0), (x, VIDEO_HEIGHT)], fill=(*accent, 18), width=1)
-    for y in range(0, VIDEO_HEIGHT, 90):
-        grid.line([(0, y), (VIDEO_WIDTH, y)], fill=(*accent, 18), width=1)
-    for y in range(1180, VIDEO_HEIGHT):
-        alpha = int(190 * (y - 1180) / (VIDEO_HEIGHT - 1180))
-        grid.line([(0, y), (VIDEO_WIDTH, y)], fill=(0, 0, 0, alpha))
+    step_x = max(1, round(90 * scale_x))
+    step_y = max(1, round(90 * scale_y))
+    for x in range(0, width, step_x):
+        grid.line([(x, 0), (x, height)], fill=(*accent, 18), width=1)
+    for y in range(0, height, step_y):
+        grid.line([(0, y), (width, y)], fill=(*accent, 18), width=1)
+    gradient_start = round(height * 1180 / VIDEO_HEIGHT)
+    gradient_height = max(1, height - gradient_start)
+    for y in range(gradient_start, height):
+        alpha = int(190 * (y - gradient_start) / gradient_height)
+        grid.line([(0, y), (width, y)], fill=(0, 0, 0, alpha))
     image = Image.alpha_composite(image.convert("RGBA"), overlay).convert("RGB")
 
     draw = ImageDraw.Draw(image)
+    font_big_size = max(1, round(58 * scale_y))
+    font_small_size = max(1, round(38 * scale_y))
     try:
-        font_big = ImageFont.truetype("DejaVuSans-Bold.ttf", 58)
-        font_small = ImageFont.truetype("DejaVuSans.ttf", 38)
+        font_big = ImageFont.truetype("DejaVuSans-Bold.ttf", font_big_size)
+        font_small = ImageFont.truetype("DejaVuSans.ttf", font_small_size)
     except OSError:
-        font_big = ImageFont.load_default(size=58)
-        font_small = ImageFont.load_default(size=38)
-    draw.text((70, 90), "DXRK / OMNI", font=font_small, fill=accent)
-    draw.text((70, 150), "PLACEHOLDER FRAME", font=font_small, fill=(150, 160, 180))
-    draw.line([(70, 760), (1010, 760)], fill=accent, width=4)
+        font_big = ImageFont.load_default(size=font_big_size)
+        font_small = ImageFont.load_default(size=font_small_size)
+    left = round(70 * scale_x)
+    draw.text((left, round(90 * scale_y)), "DXRK / OMNI", font=font_small, fill=accent)
+    draw.text((left, round(150 * scale_y)), "PLACEHOLDER FRAME", font=font_small, fill=(150, 160, 180))
+    draw.line(
+        [(left, round(760 * scale_y)), (round(1010 * scale_x), round(760 * scale_y))],
+        fill=accent,
+        width=max(1, round(4 * scale_y)),
+    )
     wrapped = textwrap.wrap(prompt, width=30)[:4]
-    y = 800
+    y = round(800 * scale_y)
+    line_height = max(1, round(74 * scale_y))
     for line in wrapped:
-        draw.text((70, y), line, font=font_big, fill=(240, 240, 245))
-        y += 74
+        draw.text((left, y), line, font=font_big, fill=(240, 240, 245))
+        y += line_height
     image.save(dest, "JPEG", quality=92)
     return dest
 
@@ -503,10 +672,10 @@ def generate_image(
     use_websocket: bool = True,
 ) -> ImageResult:
     if source == "placeholder":
-        placeholder_image(prompt, dest, seed)
+        placeholder_image(prompt, dest, seed, width, height)
         return ImageResult(dest, "placeholder")
     if source == "pollinations":
-        url = build_pollinations_url(prompt, seed)
+        url = build_pollinations_url(prompt, seed, width, height)
         try:
             if client is None:
                 with httpx.Client(timeout=timeout, follow_redirects=True) as owned:
@@ -521,13 +690,13 @@ def generate_image(
                 fh.write(payload)
                 tmp = Path(fh.name)
             try:
-                prepare_image(tmp, dest)
+                prepare_image(tmp, dest, width, height)
             finally:
                 tmp.unlink(missing_ok=True)
             return ImageResult(dest, "pollinations")
         except Exception as exc:
             logger.warning("Pollinations failed (%s); using placeholder", exc)
-            placeholder_image(prompt, dest, seed)
+            placeholder_image(prompt, dest, seed, width, height)
             return ImageResult(dest, "placeholder", str(exc)[:200])
     if source in {"comfyui", "sdwebui", "auto"}:
         errors: list[str] = []
@@ -567,7 +736,7 @@ def generate_image(
             except Exception as exc:
                 errors.append(f"sdwebui: {exc}")
                 logger.warning("SD WebUI failed (%s)", exc)
-        placeholder_image(prompt, dest, seed)
+        placeholder_image(prompt, dest, seed, width, height)
         return ImageResult(dest, "placeholder", "; ".join(errors)[:200])
     raise OmniError(f"fuente de imagen desconocida: {source}")
 
@@ -754,15 +923,21 @@ def build_scene_clip(
     out: Path,
     duration: float,
     runner: Any | None = None,
+    *,
+    width: int = VIDEO_WIDTH,
+    height: int = VIDEO_HEIGHT,
+    fps: int = VIDEO_FPS,
+    preset: str = "veryfast",
+    crf: int = 20,
 ) -> Path:
     run = runner or run_command
     fade = min(0.2, max(0.05, duration / 10))
     fade_out = max(0.0, duration - fade)
     vf = (
-        f"scale={VIDEO_WIDTH}:{VIDEO_HEIGHT}:force_original_aspect_ratio=increase,"
-        f"crop={VIDEO_WIDTH}:{VIDEO_HEIGHT},"
+        f"scale={width}:{height}:force_original_aspect_ratio=increase,"
+        f"crop={width}:{height},"
         "zoompan=z='min(zoom+0.0007,1.12)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
-        f"d=1:s={VIDEO_WIDTH}x{VIDEO_HEIGHT}:fps={VIDEO_FPS},"
+        f"d=1:s={width}x{height}:fps={fps},"
         f"fade=t=in:st=0:d={fade:.3f},fade=t=out:st={fade_out:.3f}:d={fade:.3f},"
         "format=yuv420p"
     )
@@ -778,13 +953,13 @@ def build_scene_clip(
         "-vf",
         vf,
         "-r",
-        str(VIDEO_FPS),
+        str(fps),
         "-c:v",
         "libx264",
         "-preset",
-        "veryfast",
+        preset,
         "-crf",
-        "20",
+        str(crf),
         "-pix_fmt",
         "yuv420p",
         "-movflags",
@@ -906,6 +1081,9 @@ def mux_video(
     out: Path,
     subtitles: Path | None = None,
     runner: Any | None = None,
+    *,
+    preset: str = "veryfast",
+    crf: int = 20,
 ) -> Path:
     run = runner or run_command
     if subtitles is not None:
@@ -925,9 +1103,9 @@ def mux_video(
             "-c:v",
             "libx264",
             "-preset",
-            "veryfast",
+            preset,
             "-crf",
-            "20",
+            str(crf),
             "-pix_fmt",
             "yuv420p",
             "-c:a",
@@ -995,24 +1173,15 @@ def escape_ass(text: str) -> str:
     return text.replace("\\", r"\\").replace("{", r"\{").replace("}", r"\}").replace("\n", r"\N")
 
 
-def build_ass(chunks: Sequence[str], duration: float) -> str:
+def build_ass(
+    chunks: Sequence[str],
+    duration: float,
+    *,
+    play_res: tuple[int, int] = (VIDEO_WIDTH, VIDEO_HEIGHT),
+) -> str:
     if not chunks:
         raise OmniError("no hay texto para subtítulos")
-    header = (
-        "[Script Info]\n"
-        "ScriptType: v4.00+\n"
-        f"PlayResX: {VIDEO_WIDTH}\n"
-        f"PlayResY: {VIDEO_HEIGHT}\n"
-        "WrapStyle: 2\n"
-        "ScaledBorderAndShadow: yes\n\n"
-        "[V4+ Styles]\n"
-        "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, "
-        "Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
-        "Alignment, MarginL, MarginR, MarginV, Encoding\n"
-        "Style: Dxrk,DejaVu Sans,64,&H00FFFFFF,&H0000FFFF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,4,1,2,60,60,180,1\n\n"
-        "[Events]\n"
-        "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
-    )
+    header = ass_header(play_res=play_res)
     weights = [max(1, len(chunk)) for chunk in chunks]
     total = sum(weights)
     lines: list[str] = []
@@ -1027,8 +1196,14 @@ def build_ass(chunks: Sequence[str], duration: float) -> str:
     return header + "\n".join(lines) + "\n"
 
 
-def write_ass(path: Path, chunks: Sequence[str], duration: float) -> Path:
-    path.write_text(build_ass(chunks, duration), encoding="utf-8")
+def write_ass(
+    path: Path,
+    chunks: Sequence[str],
+    duration: float,
+    *,
+    play_res: tuple[int, int] = (VIDEO_WIDTH, VIDEO_HEIGHT),
+) -> Path:
+    path.write_text(build_ass(chunks, duration, play_res=play_res), encoding="utf-8")
     return path
 
 
@@ -1057,7 +1232,24 @@ def _jsonable(value: Any) -> Any:
 
 
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.write_text(json.dumps(_jsonable(payload), ensure_ascii=False, indent=2), encoding="utf-8")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(_jsonable(payload), ensure_ascii=False, indent=2), encoding="utf-8")
+    os.replace(tmp, path)
+
+
+def _touch_manifest(
+    manifest_path: Path,
+    manifest: dict[str, Any],
+    stage: str,
+    *,
+    progress: float | None = None,
+) -> None:
+    manifest["stage"] = stage
+    manifest["updated_at"] = datetime.now().isoformat(timespec="seconds")
+    if progress is not None:
+        manifest["progress"] = max(0.0, min(1.0, progress))
+    _write_json(manifest_path, manifest)
 
 
 def _probe(path: Path, probe: Any | None) -> float:
@@ -1071,6 +1263,7 @@ def _generate_image_for_scene(
     image_client: httpx.Client | None,
     seed: int,
 ) -> ImageResult:
+    resolution = config.resolution_size
     return generate_image(
         prompt,
         dest,
@@ -1083,6 +1276,8 @@ def _generate_image_for_scene(
         comfy_workflow=config.comfy_workflow,
         sdwebui_url=config.sdwebui_url,
         negative_prompt=config.negative_prompt,
+        width=resolution.width,
+        height=resolution.height,
     )
 
 
@@ -1111,12 +1306,347 @@ def _generate_music_track(
     return generator.generate(dest, duration, prompt)
 
 
-def _plan_to_script(plan: LongformPlan) -> VideoScript:
-    scenes = tuple(
-        Scene(index=index + 1, narration=shot.narration, visual_prompt=shot.visual_prompt)
-        for index, shot in enumerate(plan.shots)
+def _plan_to_script(plan: LongformPlan, *, default_speaker: str = DEFAULT_SPEAKER) -> VideoScript:
+    scenes: list[Scene] = []
+    index = 0
+    for chapter in plan.chapters:
+        for shot in chapter.shots:
+            index += 1
+            scenes.append(
+                Scene(
+                    index=index,
+                    narration=shot.narration,
+                    visual_prompt=shot.visual_prompt,
+                    speaker=(getattr(shot, "speaker", "") or getattr(chapter, "speaker", "") or default_speaker),
+                    lines=tuple(getattr(shot, "lines", ()) or ()),
+                )
+            )
+    return VideoScript(topic=plan.topic, title=plan.title, scenes=tuple(scenes))
+
+
+def _attach_run_logger(workdir: Path) -> logging.Handler:
+    handler = logging.FileHandler(workdir / "engine.log", encoding="utf-8")
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+    handler.setLevel(logging.DEBUG)
+    if logger.level == logging.NOTSET:
+        logger.setLevel(logging.INFO)
+    logger.addHandler(handler)
+    return handler
+
+
+def _detach_run_logger(handler: logging.Handler) -> None:
+    logger.removeHandler(handler)
+    handler.close()
+
+
+def _build_contact_sheet(workdir: Path) -> Path | None:
+    try:
+        if __package__:
+            from scripts.omni_media.contact_sheet import contact_sheet_for_run
+        else:
+            from omni_media.contact_sheet import contact_sheet_for_run
+    except Exception as exc:  # pragma: no cover - import guard
+        logger.warning("contact sheet import failed: %s", exc)
+        return None
+    try:
+        return contact_sheet_for_run(workdir)
+    except Exception as exc:
+        logger.warning("contact sheet failed: %s", exc)
+        return None
+
+
+def _finalize_image(
+    prompt: str,
+    dest: Path,
+    config: OmniConfig,
+    image_client: httpx.Client | None,
+    seed: int,
+    runner: Any | None,
+    local_source: Path | None = None,
+) -> ImageResult:
+    resolution = config.resolution_size
+    if local_source is not None:
+        prepare_image(local_source, dest, resolution.width, resolution.height)
+        result = ImageResult(dest, "local")
+    else:
+        result = _generate_image_for_scene(prompt, dest, config, image_client, seed)
+    if config.upscale == "none":
+        return result
+    upscaled = dest.with_name(f"{dest.stem}_upscaled{dest.suffix}")
+    upscale_config = UpscaleConfig(
+        enabled=True,
+        backend=config.upscale,
+        model=config.upscale_model,
+        sharpen=config.upscale_sharpen,
     )
-    return VideoScript(topic=plan.topic, title=plan.title, scenes=scenes)
+    try:
+        upscale_image(
+            result.path,
+            upscaled,
+            upscale_config,
+            target=resolution,
+            runner=runner,
+            client=image_client,
+            comfyui_url=config.comfyui_url,
+            sdwebui_url=config.sdwebui_url,
+            timeout=config.image_timeout,
+        )
+    except Exception as exc:
+        if config.upscale != "auto":
+            raise OmniError(f"falló el upscaling de {dest.name}: {exc}") from exc
+        logger.warning("upscaling failed for %s; keeping the original (%s)", dest.name, exc)
+        return result
+    logger.info("upscaled %s -> %s", dest.name, upscaled.name)
+    return ImageResult(upscaled, f"{result.source}+upscale")
+
+
+def _render_clips(
+    prompts: Sequence[str],
+    durations: Sequence[float],
+    out_dir: Path,
+    prefix: str,
+    config: OmniConfig,
+    image_client: httpx.Client | None,
+    runner: Any | None,
+    local_images: Sequence[Path] = (),
+    seed_offset: int = 0,
+) -> tuple[list[Path], list[ImageResult]]:
+    if len(prompts) != len(durations):
+        raise OmniError("prompts y durations no coinciden")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    resolution = config.resolution_size
+    clips: list[Path] = []
+    results: list[ImageResult] = []
+    for index, (prompt, duration) in enumerate(zip(prompts, durations, strict=True)):
+        logger.info("%s image %d/%d", prefix, index + 1, len(prompts))
+        image_path = out_dir / f"{prefix}_{index + 1:02d}.jpg"
+        local_source = local_images[index % len(local_images)] if local_images else None
+        result = _finalize_image(
+            prompt,
+            image_path,
+            config,
+            image_client,
+            config.seed + seed_offset + index,
+            runner,
+            local_source,
+        )
+        results.append(result)
+        clip_path = out_dir / f"{prefix}_{index + 1:02d}.mp4"
+        build_scene_clip(
+            result.path,
+            clip_path,
+            duration,
+            runner=runner,
+            width=resolution.width,
+            height=resolution.height,
+            fps=VIDEO_FPS,
+            preset=config.video_preset,
+            crf=config.video_crf,
+        )
+        clips.append(clip_path)
+    return clips, results
+
+
+def _speaker_styles(words: Sequence[WordTiming], play_res: tuple[int, int]) -> dict[str, Any]:
+    styles: dict[str, Any] = {}
+    for word in words:
+        if word.speaker and word.speaker not in styles:
+            styles[word.speaker] = style_for_speaker(word.speaker, len(styles), play_res)
+    return styles
+
+
+def _is_multivoice(script: VideoScript, config: OmniConfig) -> bool:
+    if config.voice_map or config.voices_path is not None:
+        return True
+    return any(scene.lines or scene.speaker != config.default_speaker for scene in script.scenes)
+
+
+def _run_multivoice_short(
+    config: OmniConfig,
+    script: VideoScript,
+    workdir: Path,
+    assets: Path,
+    manifest: dict[str, Any],
+    manifest_path: Path,
+    image_client: httpx.Client | None,
+    tts: Any | None,
+    runner: Any | None,
+    probe: Any | None,
+    music_generator: Any | None,
+) -> PipelineResult:
+    stage = "voices"
+    try:
+        voice_map = load_voice_map(config.voices_path)
+        voices = resolve_voices(
+            config.voice,
+            config.voice_map,
+            voice_map,
+            default_speaker=config.default_speaker,
+        )
+        requests = segment_scenes(script.scenes, default_speaker=config.default_speaker)
+        _touch_manifest(manifest_path, manifest, stage, progress=0.05)
+        fallback_duration = float(config.duration) / max(1, len(requests))
+
+        def synthesize(text: str, dest: Path, voice: str) -> NarrationResult:
+            result = tts_narrate_with_timings(
+                text,
+                dest,
+                voice,
+                tts=tts,
+                whisper=True if config.subtitle_source == "whisper" else None,
+                whisper_model=config.whisper_model,
+                fallback_duration=fallback_duration,
+                prefer_whisper=config.subtitle_source == "whisper",
+            )
+            if config.subtitle_source == "proportional":
+                duration = result.words[-1].end if result.words else _probe(result.audio, probe)
+                result = NarrationResult(
+                    result.audio,
+                    proportional_timings(text, duration),
+                    "proportional",
+                )
+            return result
+
+        narration = synthesize_requests(
+            requests,
+            assets / "voice",
+            voices,
+            synthesize=synthesize,
+            probe=lambda path: _probe(path, probe),
+            concat=lambda tracks, dest: concat_audio_tracks(tracks, dest, runner=runner),
+            default_speaker=config.default_speaker,
+        )
+        narration_duration = _probe(narration.audio, probe)
+        if narration_duration <= 0:
+            raise OmniError("la narración multi-voz no tiene duración válida")
+        tempo = narration_tempo(narration_duration, config.duration)
+        scene_durations = assign_scene_durations(narration.segments, float(config.duration), tempo)
+        timed_words = timeline_words(narration.segments, scene_durations, tempo)
+        speakers = {segment.speaker for segment in narration.segments}
+        logger.info(
+            "multi-voice: %d segments, %.1fs, %d speakers",
+            len(narration.segments),
+            narration_duration,
+            len(speakers),
+        )
+
+        stage = "images"
+        _touch_manifest(manifest_path, manifest, stage, progress=0.15)
+        local_images = list_local_images(config.images_dir) if config.image_source == "local" else []
+        clips, image_results = _render_clips(
+            [scene.visual_prompt for scene in script.scenes],
+            scene_durations,
+            assets,
+            "scene",
+            config,
+            image_client,
+            runner,
+            local_images=local_images,
+        )
+
+        stage = "music"
+        _touch_manifest(manifest_path, manifest, stage, progress=0.65)
+        music_path = _generate_music_track(
+            config,
+            assets / "music.wav",
+            float(config.duration),
+            runner,
+            music_generator,
+        )
+        stage = "audio"
+        _touch_manifest(manifest_path, manifest, stage, progress=0.72)
+        audio_path = mix_audio(
+            narration.audio,
+            music_path,
+            assets / "audio.m4a",
+            config.duration,
+            narration_duration,
+            runner=runner,
+        )
+        stage = "video"
+        _touch_manifest(manifest_path, manifest, stage, progress=0.82)
+        video_path = concat_clips(clips, assets / "video.mp4", runner=runner)
+
+        stage = "subtitles"
+        _touch_manifest(manifest_path, manifest, stage, progress=0.9)
+        resolution = config.resolution_size
+        play_res = (resolution.width, resolution.height)
+        subtitles_path: Path | None = None
+        if timed_words:
+            _write_json(
+                assets / "words.json",
+                {"source": narration.source, "words": words_to_dict(timed_words)},
+            )
+        if not config.no_subtitles:
+            if timed_words:
+                subtitles_path = write_word_ass(
+                    assets / "subtitles.ass",
+                    timed_words,
+                    styles=_speaker_styles(timed_words, play_res),
+                    play_res=play_res,
+                )
+            else:
+                subtitles_path = write_ass(
+                    assets / "subtitles.ass",
+                    caption_chunks(script.narration),
+                    config.duration,
+                    play_res=play_res,
+                )
+
+        stage = "mux"
+        _touch_manifest(manifest_path, manifest, stage, progress=0.95)
+        final_path = workdir / "final.mp4"
+        mux_video(
+            video_path,
+            audio_path,
+            final_path,
+            subtitles_path,
+            runner=runner,
+            preset=config.video_preset,
+            crf=config.video_crf,
+        )
+        contact_sheet = _build_contact_sheet(workdir)
+        manifest.update(
+            {
+                "status": "ok",
+                "video": final_path,
+                "assets": assets,
+                "image_sources": [asdict(result) for result in image_results],
+                "narration_duration": narration_duration,
+                "narration_tempo": tempo,
+                "subtitle_source": narration.source,
+                "word_timings": words_to_dict(timed_words),
+                "music": music_path,
+                "subtitles": subtitles_path,
+                "scene_durations": list(scene_durations),
+                "multi_voice": True,
+                "voices": [asdict(spec) for spec in voices.values()],
+                "voice_segments": [
+                    {
+                        "index": segment.index,
+                        "scene_index": segment.scene_index,
+                        "speaker": segment.speaker,
+                        "text": segment.text,
+                        "audio": segment.audio,
+                        "duration": segment.duration,
+                        "start": segment.start,
+                        "end": segment.end,
+                    }
+                    for segment in narration.segments
+                ],
+                "contact_sheet": contact_sheet,
+                "resolution": config.resolution,
+                "upscale": config.upscale,
+            }
+        )
+        _touch_manifest(manifest_path, manifest, "done", progress=1.0)
+        return PipelineResult(workdir=workdir, video=final_path, script=script, manifest=manifest_path)
+    except Exception as exc:
+        manifest.update({"status": "failed", "stage": stage, "error": str(exc)})
+        _write_json(manifest_path, manifest)
+        if isinstance(exc, OmniError):
+            raise
+        raise OmniError(f"falló la etapa {stage}: {exc}") from exc
 
 
 def run_pipeline(
@@ -1140,56 +1670,77 @@ def run_pipeline(
             music_generator=music_generator,
         )
     ensure_ffmpeg()
-    workdir = unique_workdir(config.output_root, config.topic)
+    try:
+        script = (
+            load_script(config.script_path, default_speaker=config.default_speaker)
+            if config.script_path is not None
+            else generate_script(
+                config.topic,
+                config.scene_count,
+                config.duration,
+                llm if config.use_llm else None,
+                default_speaker=config.default_speaker,
+            )
+        )
+    except Exception as exc:
+        if isinstance(exc, OmniError):
+            raise
+        raise OmniError(f"falló la etapa script: {exc}") from exc
+    topic = config.topic or script.topic
+    workdir = unique_workdir(config.output_root, topic)
     assets = workdir / "assets"
     assets.mkdir(parents=True)
     logger.info("output: %s", workdir)
     manifest_path = workdir / "manifest.json"
     manifest: dict[str, Any] = {
         "status": "running",
-        "topic": config.topic,
+        "topic": topic,
         "duration": config.duration,
         "created_at": datetime.now().isoformat(timespec="seconds"),
+        "engine_log": workdir / "engine.log",
+        "resolution": config.resolution,
+        "upscale": config.upscale,
     }
+    log_handler = _attach_run_logger(workdir)
     stage = "script"
     try:
-        script = generate_script(
-            config.topic,
-            config.scene_count,
-            config.duration,
-            llm if config.use_llm else None,
-        )
         _write_json(workdir / "script.json", script_to_dict(script))
         manifest["script"] = script_to_dict(script)
-        scene_duration = config.duration / len(script.scenes)
+        _touch_manifest(manifest_path, manifest, stage, progress=0.02)
         logger.info("script: %s (%d scenes)", script.title, len(script.scenes))
 
-        stage = "images"
-        local_images = list_local_images(config.images_dir) if config.image_source == "local" else []
-        image_results: list[ImageResult] = []
-        for i, scene in enumerate(script.scenes):
-            logger.info("image %d/%d", i + 1, len(script.scenes))
-            image_path = assets / f"scene_{i + 1:02d}.jpg"
-            if config.image_source == "local":
-                prepare_image(local_images[i % len(local_images)], image_path)
-                result = ImageResult(image_path, "local")
-            else:
-                result = _generate_image_for_scene(
-                    scene.visual_prompt,
-                    image_path,
-                    config,
-                    image_client,
-                    config.seed + i,
-                )
-            image_results.append(result)
-            build_scene_clip(
-                image_path,
-                assets / f"scene_{i + 1:02d}.mp4",
-                scene_duration,
-                runner=runner,
+        if _is_multivoice(script, config):
+            return _run_multivoice_short(
+                config,
+                script,
+                workdir,
+                assets,
+                manifest,
+                manifest_path,
+                image_client,
+                tts,
+                runner,
+                probe,
+                music_generator,
             )
 
+        scene_duration = config.duration / len(script.scenes)
+        stage = "images"
+        _touch_manifest(manifest_path, manifest, stage, progress=0.1)
+        local_images = list_local_images(config.images_dir) if config.image_source == "local" else []
+        clips, image_results = _render_clips(
+            [scene.visual_prompt for scene in script.scenes],
+            [scene_duration] * len(script.scenes),
+            assets,
+            "scene",
+            config,
+            image_client,
+            runner,
+            local_images=local_images,
+        )
+
         stage = "narration"
+        _touch_manifest(manifest_path, manifest, stage, progress=0.55)
         narration_path = assets / "narration.mp3"
         whisper = True if config.subtitle_source == "whisper" else None
         narration = tts_narrate_with_timings(
@@ -1214,6 +1765,7 @@ def run_pipeline(
         logger.info("narration: %.1fs (%s words)", narration_duration, narration.source)
 
         stage = "music"
+        _touch_manifest(manifest_path, manifest, stage, progress=0.65)
         music_path = _generate_music_track(
             config,
             assets / "music.wav",
@@ -1224,6 +1776,7 @@ def run_pipeline(
         logger.info("music: %s", music_path.name if music_path is not None else "none")
 
         stage = "audio"
+        _touch_manifest(manifest_path, manifest, stage, progress=0.72)
         audio_path = mix_audio(
             narration.audio,
             music_path,
@@ -1235,31 +1788,48 @@ def run_pipeline(
         logger.info("audio: mixed")
 
         stage = "video"
-        clips = [assets / f"scene_{i + 1:02d}.mp4" for i in range(len(script.scenes))]
+        _touch_manifest(manifest_path, manifest, stage, progress=0.82)
         video_path = concat_clips(clips, assets / "video.mp4", runner=runner)
         logger.info("video: concatenated")
 
         stage = "subtitles"
+        _touch_manifest(manifest_path, manifest, stage, progress=0.9)
         tempo = narration_tempo(narration_duration, config.duration)
         timed_words = scale_timings(narration.words, 1.0 / tempo)
+        resolution = config.resolution_size
+        play_res = (resolution.width, resolution.height)
         if timed_words:
-            _write_json(assets / "words.json", {"source": narration.source, "words": words_to_dict(timed_words)})
+            _write_json(
+                assets / "words.json",
+                {"source": narration.source, "words": words_to_dict(timed_words)},
+            )
         subtitles_path: Path | None = None
         if not config.no_subtitles:
             if timed_words:
-                subtitles_path = write_word_ass(assets / "subtitles.ass", timed_words)
+                subtitles_path = write_word_ass(assets / "subtitles.ass", timed_words, play_res=play_res)
             else:
                 subtitles_path = write_ass(
                     assets / "subtitles.ass",
                     caption_chunks(script.narration),
                     config.duration,
+                    play_res=play_res,
                 )
         logger.info("subtitles: %s", "on" if subtitles_path is not None else "off")
 
         stage = "mux"
+        _touch_manifest(manifest_path, manifest, stage, progress=0.95)
         final_path = workdir / "final.mp4"
-        mux_video(video_path, audio_path, final_path, subtitles_path, runner=runner)
+        mux_video(
+            video_path,
+            audio_path,
+            final_path,
+            subtitles_path,
+            runner=runner,
+            preset=config.video_preset,
+            crf=config.video_crf,
+        )
         logger.info("final: %s", final_path)
+        contact_sheet = _build_contact_sheet(workdir)
 
         manifest.update(
             {
@@ -1274,16 +1844,20 @@ def run_pipeline(
                 "music": music_path,
                 "subtitles": subtitles_path,
                 "scene_duration": scene_duration,
+                "contact_sheet": contact_sheet,
             }
         )
-        _write_json(manifest_path, manifest)
+        _touch_manifest(manifest_path, manifest, "done", progress=1.0)
         return PipelineResult(workdir=workdir, video=final_path, script=script, manifest=manifest_path)
     except Exception as exc:
-        manifest.update({"status": "failed", "stage": stage, "error": str(exc)})
-        _write_json(manifest_path, manifest)
+        if manifest.get("status") != "failed":
+            manifest.update({"status": "failed", "stage": stage, "error": str(exc)})
+            _write_json(manifest_path, manifest)
         if isinstance(exc, OmniError):
             raise
         raise OmniError(f"falló la etapa {stage}: {exc}") from exc
+    finally:
+        _detach_run_logger(log_handler)
 
 
 def run_longform_pipeline(
@@ -1308,7 +1882,11 @@ def run_longform_pipeline(
         "longform": True,
         "chapters": config.chapters,
         "created_at": datetime.now().isoformat(timespec="seconds"),
+        "engine_log": workdir / "engine.log",
+        "resolution": config.resolution,
+        "upscale": config.upscale,
     }
+    log_handler = _attach_run_logger(workdir)
     stage = "plan"
     try:
         plan = generate_longform_plan(
@@ -1320,55 +1898,135 @@ def run_longform_pipeline(
         )
         _write_json(workdir / "plan.json", plan_to_dict(plan))
         manifest["longform"] = plan_to_dict(plan)
+        _touch_manifest(manifest_path, manifest, stage, progress=0.02)
         logger.info("plan: %s (%d chapters)", plan.title, len(plan.chapters))
+
+        multi = _is_multivoice(_plan_to_script(plan, default_speaker=config.default_speaker), config)
+        voices: dict[str, VoiceSpec] | None = None
+        if multi:
+            voice_map = load_voice_map(config.voices_path)
+            voices = resolve_voices(
+                config.voice,
+                config.voice_map,
+                voice_map,
+                default_speaker=config.default_speaker,
+            )
 
         chapter_videos: list[Path] = []
         chapter_audios: list[Path] = []
         chapter_durations: list[float] = []
         image_results: list[ImageResult] = []
         all_words: list[WordTiming] = []
+        voice_segments: list[dict[str, Any]] = []
         offset = 0.0
         for chapter in plan.chapters:
             stage = f"chapter {chapter.index}"
+            progress = 0.05 + 0.8 * (chapter.index - 1) / max(1, len(plan.chapters))
+            _touch_manifest(manifest_path, manifest, stage, progress=progress)
             chapter_dir = assets / f"chapter_{chapter.index:02d}"
             chapter_dir.mkdir(parents=True, exist_ok=True)
-            narration_text = " ".join(shot.narration for shot in chapter.shots)
-            narration_path = chapter_dir / "narration.mp3"
-            whisper = True if config.subtitle_source == "whisper" else None
-            narration = tts_narrate_with_timings(
-                narration_text,
-                narration_path,
-                config.voice,
-                tts=tts,
-                whisper=whisper,
-                whisper_model=config.whisper_model,
-                fallback_duration=float(config.chapter_duration),
-                prefer_whisper=config.subtitle_source == "whisper",
-            )
-            narration_duration = _probe(narration.audio, probe)
-            if narration_duration <= 0:
-                raise OmniError(f"la narración del capítulo {chapter.index} no tiene duración válida")
-            chapter_duration = max(float(config.chapter_duration), narration_duration + 0.5)
-            shot_duration = chapter_duration / len(chapter.shots)
-            clips: list[Path] = []
-            for shot_index, shot in enumerate(chapter.shots):
-                image_path = chapter_dir / f"shot_{shot_index + 1:02d}.jpg"
-                result = _generate_image_for_scene(
-                    shot.visual_prompt,
-                    image_path,
+            chapter_speaker = getattr(chapter, "speaker", "") or config.default_speaker
+            if multi and voices is not None:
+                requests = segment_scenes(chapter.shots, default_speaker=chapter_speaker)
+                fallback_duration = float(config.chapter_duration) / max(1, len(requests))
+
+                def synthesize(text: str, dest: Path, voice: str) -> NarrationResult:
+                    result = tts_narrate_with_timings(
+                        text,
+                        dest,
+                        voice,
+                        tts=tts,
+                        whisper=True if config.subtitle_source == "whisper" else None,
+                        whisper_model=config.whisper_model,
+                        fallback_duration=fallback_duration,
+                        prefer_whisper=config.subtitle_source == "whisper",
+                    )
+                    if config.subtitle_source == "proportional":
+                        duration = result.words[-1].end if result.words else _probe(result.audio, probe)
+                        result = NarrationResult(
+                            result.audio,
+                            proportional_timings(text, duration),
+                            "proportional",
+                        )
+                    return result
+
+                narration = synthesize_requests(
+                    requests,
+                    chapter_dir / "voice",
+                    voices,
+                    synthesize=synthesize,
+                    probe=lambda path: _probe(path, probe),
+                    concat=lambda tracks, dest: concat_audio_tracks(tracks, dest, runner=runner),
+                    default_speaker=chapter_speaker,
+                )
+                narration_duration = _probe(narration.audio, probe)
+                if narration_duration <= 0:
+                    raise OmniError(f"la narración del capítulo {chapter.index} no tiene duración válida")
+                chapter_duration = max(float(config.chapter_duration), narration_duration + 0.5)
+                chapter_tempo = narration_tempo(narration_duration, chapter_duration)
+                shot_durations = assign_scene_durations(
+                    narration.segments,
+                    chapter_duration,
+                    chapter_tempo,
+                )
+                chapter_words = timeline_words(narration.segments, shot_durations, chapter_tempo)
+                clips, results = _render_clips(
+                    [shot.visual_prompt for shot in chapter.shots],
+                    shot_durations,
+                    chapter_dir,
+                    "shot",
                     config,
                     image_client,
-                    config.seed + shot_index,
+                    runner,
+                    seed_offset=(chapter.index - 1) * 100,
                 )
-                image_results.append(result)
-                clips.append(
-                    build_scene_clip(
-                        image_path,
-                        chapter_dir / f"shot_{shot_index + 1:02d}.mp4",
-                        shot_duration,
-                        runner=runner,
+                image_results.extend(results)
+                for segment in narration.segments:
+                    voice_segments.append(
+                        {
+                            "chapter": chapter.index,
+                            "index": segment.index,
+                            "scene_index": segment.scene_index,
+                            "speaker": segment.speaker,
+                            "text": segment.text,
+                            "audio": segment.audio,
+                            "duration": segment.duration,
+                            "start": offset + segment.start,
+                            "end": offset + segment.end,
+                        }
                     )
+            else:
+                narration_text = " ".join(shot.text for shot in chapter.shots)
+                narration_path = chapter_dir / "narration.mp3"
+                whisper = True if config.subtitle_source == "whisper" else None
+                narration = tts_narrate_with_timings(
+                    narration_text,
+                    narration_path,
+                    config.voice,
+                    tts=tts,
+                    whisper=whisper,
+                    whisper_model=config.whisper_model,
+                    fallback_duration=float(config.chapter_duration),
+                    prefer_whisper=config.subtitle_source == "whisper",
                 )
+                narration_duration = _probe(narration.audio, probe)
+                if narration_duration <= 0:
+                    raise OmniError(f"la narración del capítulo {chapter.index} no tiene duración válida")
+                chapter_duration = max(float(config.chapter_duration), narration_duration + 0.5)
+                chapter_tempo = narration_tempo(narration_duration, chapter_duration)
+                chapter_words = scale_timings(narration.words, 1.0 / chapter_tempo)
+                shot_duration = chapter_duration / len(chapter.shots)
+                clips, results = _render_clips(
+                    [shot.visual_prompt for shot in chapter.shots],
+                    [shot_duration] * len(chapter.shots),
+                    chapter_dir,
+                    "shot",
+                    config,
+                    image_client,
+                    runner,
+                    seed_offset=(chapter.index - 1) * 100,
+                )
+                image_results.extend(results)
             chapter_videos.append(concat_clips(clips, chapter_dir / "chapter.mp4", runner=runner))
             chapter_audios.append(
                 mix_audio(
@@ -1381,14 +2039,16 @@ def run_longform_pipeline(
                 )
             )
             chapter_durations.append(chapter_duration)
-            all_words.extend(offset_timings(narration.words, offset))
+            all_words.extend(offset_timings(chapter_words, offset))
             offset += chapter_duration
             logger.info("chapter %d: %.1fs", chapter.index, chapter_duration)
         total_duration = offset
 
         stage = "video"
+        _touch_manifest(manifest_path, manifest, stage, progress=0.88)
         video_path = concat_clips(chapter_videos, assets / "video.mp4", runner=runner)
         stage = "audio"
+        _touch_manifest(manifest_path, manifest, stage, progress=0.92)
         narration_full = concat_audio_tracks(chapter_audios, assets / "narration.m4a", runner=runner)
         music_path = _generate_music_track(
             config,
@@ -1406,21 +2066,43 @@ def run_longform_pipeline(
             runner=runner,
         )
         stage = "subtitles"
+        _touch_manifest(manifest_path, manifest, stage, progress=0.95)
+        resolution = config.resolution_size
+        play_res = (resolution.width, resolution.height)
         subtitles_path: Path | None = None
         if all_words:
-            _write_json(assets / "words.json", {"source": "mixed", "words": words_to_dict(all_words)})
+            _write_json(
+                assets / "words.json",
+                {"source": "mixed", "words": words_to_dict(all_words)},
+            )
         if not config.no_subtitles:
             if all_words:
-                subtitles_path = write_word_ass(assets / "subtitles.ass", all_words)
+                subtitles_path = write_word_ass(
+                    assets / "subtitles.ass",
+                    all_words,
+                    styles=_speaker_styles(all_words, play_res),
+                    play_res=play_res,
+                )
             else:
                 subtitles_path = write_ass(
                     assets / "subtitles.ass",
-                    caption_chunks(" ".join(shot.narration for shot in plan.shots)),
+                    caption_chunks(" ".join(shot.text for shot in plan.shots)),
                     total_duration,
+                    play_res=play_res,
                 )
         stage = "mux"
+        _touch_manifest(manifest_path, manifest, stage, progress=0.97)
         final_path = workdir / "final.mp4"
-        mux_video(video_path, audio_path, final_path, subtitles_path, runner=runner)
+        mux_video(
+            video_path,
+            audio_path,
+            final_path,
+            subtitles_path,
+            runner=runner,
+            preset=config.video_preset,
+            crf=config.video_crf,
+        )
+        contact_sheet = _build_contact_sheet(workdir)
         manifest.update(
             {
                 "status": "ok",
@@ -1432,21 +2114,29 @@ def run_longform_pipeline(
                 "word_timings": words_to_dict(all_words),
                 "music": music_path,
                 "subtitles": subtitles_path,
+                "multi_voice": multi,
+                "contact_sheet": contact_sheet,
             }
         )
-        _write_json(manifest_path, manifest)
+        if multi and voices is not None:
+            manifest["voices"] = [asdict(spec) for spec in voices.values()]
+            manifest["voice_segments"] = voice_segments
+        _touch_manifest(manifest_path, manifest, "done", progress=1.0)
         return PipelineResult(
             workdir=workdir,
             video=final_path,
-            script=_plan_to_script(plan),
+            script=_plan_to_script(plan, default_speaker=config.default_speaker),
             manifest=manifest_path,
         )
     except Exception as exc:
-        manifest.update({"status": "failed", "stage": stage, "error": str(exc)})
-        _write_json(manifest_path, manifest)
+        if manifest.get("status") != "failed":
+            manifest.update({"status": "failed", "stage": stage, "error": str(exc)})
+            _write_json(manifest_path, manifest)
         if isinstance(exc, OmniError):
             raise
         raise OmniError(f"falló la etapa {stage}: {exc}") from exc
+    finally:
+        _detach_run_logger(log_handler)
 
 
 # ---------------------------------------------------------------------------
@@ -1459,11 +2149,55 @@ def build_parser() -> argparse.ArgumentParser:
         prog="dxrk-omni",
         description="Genera un short vertical de 30s a partir de un tema.",
     )
-    parser.add_argument("topic", help="Tema o idea del video")
+    parser.add_argument("topic", nargs="?", default="", help="Tema o idea del video")
     parser.add_argument("--output-dir", default="outputs", help="Directorio raíz de salidas (default: outputs)")
     parser.add_argument("--duration", type=int, default=30, help="Duración objetivo en segundos (default: 30)")
     parser.add_argument("--scenes", type=int, default=5, help="Cantidad de escenas (default: 5)")
-    parser.add_argument("--voice", default=DEFAULT_VOICE, help="Voz de Edge-TTS")
+    parser.add_argument("--script", help="Script JSON propio (permite speakers y líneas)")
+    parser.add_argument("--voice", default=DEFAULT_VOICE, help="Voz por defecto de Edge-TTS")
+    parser.add_argument(
+        "--voice-map",
+        action="append",
+        default=[],
+        metavar="SPEAKER=VOICE",
+        help="Asignación repetible de voz por speaker (ej. narrator=es-AR-TomasNeural)",
+    )
+    parser.add_argument("--voices", help="JSON con el mapa de voces por speaker")
+    parser.add_argument(
+        "--default-speaker",
+        default=DEFAULT_SPEAKER,
+        help="Speaker que usa la voz por defecto (default: narrator)",
+    )
+    parser.add_argument(
+        "--resolution",
+        default="1080p",
+        help="Resolución de salida: 1080p, 1440p, 4k o WxH (default: 1080p)",
+    )
+    parser.add_argument(
+        "--upscale",
+        choices=("none", "auto", "ffmpeg", "realesrgan", "comfyui", "sdwebui"),
+        default="none",
+        help="Backend de upscaling de imágenes (default: none)",
+    )
+    parser.add_argument("--upscale-model", default="", help="Modelo/upscaler para el backend elegido")
+    parser.add_argument("--upscale-sharpen", type=float, default=0.0, help="Unsharp amount para FFmpeg")
+    parser.add_argument("--crf", type=int, default=20, help="CRF de x264 (default: 20)")
+    parser.add_argument(
+        "--preset",
+        choices=(
+            "ultrafast",
+            "superfast",
+            "veryfast",
+            "faster",
+            "fast",
+            "medium",
+            "slow",
+            "slower",
+            "veryslow",
+        ),
+        default="veryfast",
+        help="Preset de x264 (default: veryfast)",
+    )
     parser.add_argument(
         "--image-source",
         choices=("auto", "comfyui", "sdwebui", "pollinations", "local", "placeholder"),
@@ -1524,6 +2258,15 @@ def config_from_args(args: argparse.Namespace) -> OmniConfig:
     music_path = Path(args.music).expanduser() if args.music else None
     comfy_workflow_arg = getattr(args, "comfy_workflow", None)
     comfy_workflow = Path(comfy_workflow_arg).expanduser() if comfy_workflow_arg else None
+    script_arg = getattr(args, "script", None)
+    script_path = Path(script_arg).expanduser() if script_arg else None
+    voices_arg = getattr(args, "voices", None)
+    voices_path = Path(voices_arg).expanduser() if voices_arg else None
+    default_speaker = str(getattr(args, "default_speaker", DEFAULT_SPEAKER))
+    voice_map = parse_voice_specs(
+        getattr(args, "voice_map", []) or [],
+        default_speaker=default_speaker,
+    )
     longform = bool(getattr(args, "longform", False))
     chapters = int(getattr(args, "chapters", 3))
     chapter_duration = int(getattr(args, "chapter_duration", 60))
@@ -1534,6 +2277,16 @@ def config_from_args(args: argparse.Namespace) -> OmniConfig:
         duration=duration,
         scene_count=int(args.scenes),
         voice=str(args.voice),
+        script_path=script_path,
+        default_speaker=default_speaker,
+        voice_map=voice_map,
+        voices_path=voices_path,
+        resolution=str(getattr(args, "resolution", "1080p")),
+        upscale=str(getattr(args, "upscale", "none")),
+        upscale_model=str(getattr(args, "upscale_model", "")),
+        upscale_sharpen=float(getattr(args, "upscale_sharpen", 0.0)),
+        video_crf=int(getattr(args, "crf", 20)),
+        video_preset=str(getattr(args, "preset", "veryfast")),
         image_source=str(getattr(args, "image_source", "auto")),
         images_dir=images_dir,
         music_path=music_path,

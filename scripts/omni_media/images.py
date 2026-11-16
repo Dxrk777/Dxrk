@@ -143,7 +143,7 @@ def apply_workflow_template(
     return replace(copy.deepcopy(dict(template)))
 
 
-def _prepare_image_bytes(payload: bytes, dest: Path) -> Path:
+def _prepare_image_bytes(payload: bytes, dest: Path, width: int = 1080, height: int = 1920) -> Path:
     try:
         from PIL import Image, ImageOps
     except ImportError:  # pragma: no cover - optional dependency guard
@@ -151,7 +151,7 @@ def _prepare_image_bytes(payload: bytes, dest: Path) -> Path:
         return dest
     with Image.open(BytesIO(payload)) as image:
         prepared = ImageOps.exif_transpose(image).convert("RGB")
-        prepared = ImageOps.fit(prepared, (1080, 1920), method=Image.Resampling.LANCZOS)
+        prepared = ImageOps.fit(prepared, (width, height), method=Image.Resampling.LANCZOS)
         prepared.save(dest, "JPEG", quality=92)
     return dest
 
@@ -200,7 +200,7 @@ class ComfyUIClient:
         prompt_id = self._submit(workflow)
         image = self._wait_for_image(prompt_id)
         payload = self._download(image)
-        _prepare_image_bytes(payload, dest)
+        _prepare_image_bytes(payload, dest, width, height)
         return ImageResult(dest, "comfyui")
 
     @contextmanager
@@ -365,7 +365,7 @@ class SDWebUIClient:
             raw = base64.b64decode(encoded)
         except Exception as exc:
             raise ImageBackendError(f"SD WebUI devolvió una imagen inválida: {exc}") from exc
-        _prepare_image_bytes(raw, dest)
+        _prepare_image_bytes(raw, dest, width, height)
         return ImageResult(dest, "sdwebui")
 
     @contextmanager
