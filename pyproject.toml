@@ -46,7 +46,7 @@ Issues = "https://github.com/Dxrk777/Dxrk/issues"
 dxrk-py = "dxrk.__main__:main"
 
 [project.optional-dependencies]
-dev = ["pytest>=9.2.0", "pytest-cov>=7.1.0", "coverage>=7.17.0", "pytest-asyncio>=0.24"]
+dev = ["pytest>=9.2.0", "pytest-cov>=7.1.0", "coverage>=7.17.0", "pytest-asyncio>=1.4.1.post1"]
 typecheck = ["mypy>=2.4.1", "pytest>=9.2.0"]
 swe = ["fire>=0.7.1", "python-dotenv>=1.2.4"]
 bench = ["pytest-benchmark>=4.0"]
