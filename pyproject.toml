@@ -121,7 +121,7 @@ partial_branches = [
 [dependency-groups]
 dev = [
     "mkdocs-material[imaging]>=9.8.1,<10",
-    "mkdocstrings-python>=2.0.10",
+    "mkdocstrings-python>=2.0.11",
     "mike>=2.2.0",
     "mypy>=2.4.1",
 ]
